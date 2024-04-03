@@ -478,7 +478,7 @@ switch ($op) {
             $requete_search  = '<br><br><strong>See search request: </strong><br><br>';
             $requete_pagenav = '';
 
-            $user_uname = Request::getString('username');
+            $user_uname = Request::getString('user_uname');
             $user_uname_match = Request::getInt('user_uname_match', 0);
 
                        $criteria = new CriteriaCompo();
@@ -501,7 +501,7 @@ switch ($op) {
                 $requete_pagenav .= '&amp;user_uname=' . htmlspecialchars($user_uname, ENT_QUOTES | ENT_HTML5) . '&amp;user_uname_match=' . htmlspecialchars($user_uname_match, ENT_QUOTES | ENT_HTML5);
                 $requete_search .= 'uname : ' . $user_uname . ' et user_uname_match=' . $user_uname_match . '<br>';
             }
-            $user_name = Request::getString('username');
+            $user_name = Request::getString('user_name');
             $user_name_match = Request::getInt('user_name_match', 0);
             if (!empty($user_name)) {
                 $match = Request::getString('user_name_match', XOOPS_MATCH_START);
@@ -771,8 +771,9 @@ switch ($op) {
             }
 
             $start = Request::getInt('start');
-                $groups = [];
-            if (Request::hasVar('selgroups')) {
+            $groups = [];
+            $selgroups = [];
+            if (Request::hasVar('selgroups') && $_REQUEST['selgroups'] != '') {
                 $selgroups = Request::getArray('selgroups', []); // Default to an empty array if 'selgroups' is not set
                 if (empty($selgroups)) {
                     // If 'selgroups' is an empty array, try to get it as an integer
