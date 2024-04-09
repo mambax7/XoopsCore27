@@ -39,13 +39,10 @@ EOH;
         return [$code, $javascript];
     }
 
-    /**
-     * @param MyTextSanitizer $myts
-     */
     public function load(MyTextSanitizer $myts)
     {
         $myts->callbackPatterns[] = "/\[soundcloud\](http[s]?:\/\/[^\"'<>]*)(.*)\[\/soundcloud\]/sU";
-        $myts->callbacks[]        = __CLASS__ . '::myCallback';
+        $myts->callbacks[]        = self::class . '::myCallback';
     }
 
     /**

@@ -52,13 +52,13 @@ function xoops_setcookie()
     }
 
     // make samesite=strict the default
-    $args['options']['samesite'] = isset($args['options']['samesite']) ? $args['options']['samesite'] : 'strict';
+    $args['options']['samesite'] ??= 'strict';
     if (!isset($args['value'])){
         $args['value'] = '';
     }
     // after php 7.3 we just let php do it
     if (PHP_VERSION_ID >= 70300) {
-        return setcookie($args['name'], (string)$args['value'], $args['options']);
+        return setcookie($args['name'], (string)$args['value'], ['expires' => $args['options']]);
     }
     // render and send our own headers below php 7.3
     header(xoops_buildCookieHeader($args), false);
@@ -75,7 +75,7 @@ function xoops_buildCookieHeader($args)
     //$optionsKeys = array('expires', 'path', 'domain', 'secure', 'httponly', 'samesite');
     $options = $args['options'];
 
-    $header = 'Set-Cookie: ' . $args['name'] . '=' . rawurlencode($args['value']) . ' ';
+    $header = 'Set-Cookie: ' . $args['name'] . '=' . rawurlencode((string) $args['value']) . ' ';
 
     if (isset($options['expires']) && 0 !== $options['expires']) {
         $dateTime = new DateTime();

@@ -38,12 +38,10 @@ class XoopsUtility
     /**
      * XoopsUtility::recursive()
      *
-     * @param mixed $handler
-     * @param mixed $data
      *
      * @return array|mixed
      */
-    public static function recursive($handler, $data)
+    public static function recursive(mixed $handler, mixed $data)
     {
         if (is_array($data)) {
             $return = array_map([

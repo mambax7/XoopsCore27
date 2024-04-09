@@ -30,18 +30,11 @@ xoops_load('XoopsFormLoader');
 $cform = new XoopsThemeForm(_CM_POSTCOMMENT, 'commentform', 'comment_post.php', 'post', true);
 if (isset($xoopsModuleConfig['com_rule'])) {
     include_once $GLOBALS['xoops']->path('include/comment_constants.php');
-    switch ($xoopsModuleConfig['com_rule']) {
-        case XOOPS_COMMENT_APPROVEALL:
-            $rule_text = _CM_COMAPPROVEALL;
-            break;
-        case XOOPS_COMMENT_APPROVEUSER:
-            $rule_text = _CM_COMAPPROVEUSER;
-            break;
-        case XOOPS_COMMENT_APPROVEADMIN:
-        default:
-            $rule_text = _CM_COMAPPROVEADMIN;
-            break;
-    }
+    $rule_text = match ($xoopsModuleConfig['com_rule']) {
+        XOOPS_COMMENT_APPROVEALL => _CM_COMAPPROVEALL,
+        XOOPS_COMMENT_APPROVEUSER => _CM_COMAPPROVEUSER,
+        default => _CM_COMAPPROVEADMIN,
+    };
     $cform->addElement(new XoopsFormLabel(_CM_COMRULES, $rule_text));
 }
 

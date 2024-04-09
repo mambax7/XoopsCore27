@@ -53,12 +53,12 @@ class XoopsModelStats extends XoopsModelAbstract
             return 0;
         }
         if ($groupby == false) {
-            list($count) = $this->handler->db->fetchRow($result);
+            [$count] = $this->handler->db->fetchRow($result);
 
             return (int) $count;
         } else {
             $ret = [];
-            while (false !== (list($id, $count) = $this->handler->db->fetchRow($result))) {
+            while (false !== ([$id, $count] = $this->handler->db->fetchRow($result))) {
                 $ret[$id] = (int) $count;
             }
 
@@ -92,7 +92,7 @@ class XoopsModelStats extends XoopsModelAbstract
         if (!$this->handler->db->isResultSet($result)) {
             return $ret;
         }
-        while (false !== (list($id, $count) = $this->handler->db->fetchRow($result))) {
+        while (false !== ([$id, $count] = $this->handler->db->fetchRow($result))) {
             $ret[$id] = (int) $count;
         }
 

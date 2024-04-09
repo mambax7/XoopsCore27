@@ -27,9 +27,9 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsFormDateTime extends XoopsFormElementTray
 {
-    const SHOW_BOTH = 1;
-    const SHOW_DATE = 0;
-    const SHOW_TIME = 2;
+    public const SHOW_BOTH = 1;
+    public const SHOW_DATE = 0;
+    public const SHOW_TIME = 2;
 
     /**
      * XoopsFormDateTime::XoopsFormDateTime()
@@ -43,7 +43,7 @@ class XoopsFormDateTime extends XoopsFormElementTray
      *                           SHOW_DATE, false - only show date selector
      *                           SHOW_TIME        - only show time selector
      */
-    public function __construct($caption, $name, $size = 15, $value = 0, $showtime = true)
+    public function __construct($caption, $name, $size = 15, int $value = 0, mixed $showtime = true)
     {
         parent::__construct($caption, '&nbsp;');
         switch ((int) $showtime) {
@@ -60,7 +60,7 @@ class XoopsFormDateTime extends XoopsFormElementTray
                 $displayTime = true;
                 break;
         }
-        $value    = (int)$value;
+        $value    = $value;
         $value    = ($value > 0) ? $value : time();
         $datetime = getdate($value);
         if ($displayDate) {

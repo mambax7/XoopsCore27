@@ -30,9 +30,9 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsTree
 {
-    public $table; //table with parent-child structure
-    public $id; //name of unique id for records in table $table
-    public $pid; // name of parent id used in table $table
+    // public $table; //table with parent-child structure
+    // public $id; //name of unique id for records in table $table
+    // public $pid; // name of parent id used in table $table
     public $order; //specifies the order of query results
     public $title; // name of a field in table $table which will be used when  selection box and paths are generated
     /**
@@ -47,13 +47,10 @@ class XoopsTree
      * @param $id_name
      * @param $pid_name
      */
-    public function __construct($table_name, $id_name, $pid_name)
+    public function __construct(public $table, public $id, public $pid)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated("Class '" . __CLASS__ . "' is deprecated, check 'XoopsObjectTree' in tree.php");
+        $GLOBALS['xoopsLogger']->addDeprecated("Class '" . self::class . "' is deprecated, check 'XoopsObjectTree' in tree.php");
         $this->db = XoopsDatabaseFactory::getDatabaseConnection();
-        $this->table = $table_name;
-        $this->id    = $id_name;
-        $this->pid   = $pid_name;
     }
 
     // returns an array of first child objects for a given id($sel_id)
@@ -109,7 +106,7 @@ class XoopsTree
         if ($count == 0) {
             return $idarray;
         }
-        while (false !== (list($id) = $this->db->fetchRow($result))) {
+        while (false !== ([$id] = $this->db->fetchRow($result))) {
             $idarray[] = $id;
         }
 
@@ -141,7 +138,7 @@ class XoopsTree
         if ($count == 0) {
             return $idarray;
         }
-        while (false !== (list($r_id) = $this->db->fetchRow($result))) {
+        while (false !== ([$r_id] = $this->db->fetchRow($result))) {
             $idarray[] = $r_id;
             $idarray   = $this->getAllChildId($r_id, $order, $idarray);
         }
@@ -171,7 +168,7 @@ class XoopsTree
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(), E_USER_ERROR
             );
         }
-        list($r_id) = $this->db->fetchRow($result);
+        [$r_id] = $this->db->fetchRow($result);
         $r_id = (int)$r_id;
         if ($r_id === 0) {
             return $idarray;
@@ -204,7 +201,7 @@ class XoopsTree
         if ($this->db->getRowsNum($result) == 0) {
             return $path;
         }
-        list($parentid, $name) = $this->db->fetchRow($result);
+        [$parentid, $name] = $this->db->fetchRow($result);
         $myts = \MyTextSanitizer::getInstance();
         $parentid = (int)$parentid;
         $name = $myts->htmlSpecialChars($name);
@@ -252,7 +249,7 @@ class XoopsTree
         if ($none) {
             echo "<option value='0'>----</option>\n";
         }
-        while (false !== (list($catid, $name) = $this->db->fetchRow($result))) {
+        while (false !== ([$catid, $name] = $this->db->fetchRow($result))) {
             $sel = '';
             if ($catid == $preset_id) {
                 $sel = " selected";
@@ -261,7 +258,7 @@ class XoopsTree
             $sel = '';
             $arr = $this->getChildTreeArray($catid, $order);
             foreach ($arr as $option) {
-                $option['prefix'] = str_replace('.', '--', $option['prefix']);
+                $option['prefix'] = str_replace('.', '--', (string) $option['prefix']);
                 $catpath          = $option['prefix'] . '&nbsp;' . $myts->htmlSpecialChars($option[$title]);
                 if ($option[$this->id] == $preset_id) {
                     $sel = " selected";
@@ -296,7 +293,7 @@ class XoopsTree
         if ($this->db->getRowsNum($result) == 0) {
             return $path;
         }
-        list($parentid, $name) = $this->db->fetchRow($result);
+        [$parentid, $name] = $this->db->fetchRow($result);
         $myts = \MyTextSanitizer::getInstance();
         $name = $myts->htmlSpecialChars($name);
         $parentid = (int)$parentid;
@@ -330,7 +327,7 @@ class XoopsTree
         if ($this->db->getRowsNum($result) == 0) {
             return $path;
         }
-        list($parentid) = $this->db->fetchRow($result);
+        [$parentid] = $this->db->fetchRow($result);
         $path = '/' . $sel_id . $path . '';
         $parentid = (int)$parentid;
         if ($parentid === 0) {

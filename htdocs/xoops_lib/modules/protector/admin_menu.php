@@ -17,7 +17,7 @@ $xoopsModule    = XoopsModule::getByDirname($mydirname);
 $moduleInfo = $module_handler->get($xoopsModule->getVar('mid'));
 $pathIcon32 = $moduleInfo->getInfo('icons32');
 
-$constpref = '_MI_' . strtoupper($mydirname);
+$constpref = '_MI_' . strtoupper((string) $mydirname);
 
 $adminmenu = [
     [

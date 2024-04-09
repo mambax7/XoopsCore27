@@ -341,7 +341,6 @@ class XoopsTplfileHandler extends XoopsObjectHandler
     /**
      * Update XoopsTplfile, even if a safe transaction (i.e. http get)
      *
-     * @param  XoopsTplfile $tplfile
      * @return bool true on success, otherwise false
      */
     public function forceUpdate(XoopsTplfile $tplfile)
@@ -444,7 +443,6 @@ class XoopsTplfileHandler extends XoopsObjectHandler
     /**
      * Get count
      *
-     * @param  CriteriaElement|CriteriaCompo $criteria
      * @return int
      */
     public function getCount(CriteriaElement $criteria = null)
@@ -457,7 +455,7 @@ class XoopsTplfileHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }

@@ -30,7 +30,7 @@ class XoopsFormHidden extends XoopsFormElement
      * @var string
      * @access private
      */
-    public $_value;
+    public string $_value;
 
     /**
      * Constructor
@@ -38,7 +38,7 @@ class XoopsFormHidden extends XoopsFormElement
      * @param string $name  "name" attribute
      * @param string $value "value" attribute
      */
-    public function __construct($name, $value)
+    public function __construct(string $name, string $value)
     {
         $this->setName($name);
         $this->setHidden();
@@ -52,7 +52,7 @@ class XoopsFormHidden extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): string
     {
         return $encode ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
     }
@@ -63,7 +63,7 @@ class XoopsFormHidden extends XoopsFormElement
      * @patam $value    string
      * @param $value
      */
-    public function setValue($value)
+    public function setValue($value): void
     {
         $this->_value = $value;
     }
@@ -73,7 +73,7 @@ class XoopsFormHidden extends XoopsFormElement
      *
      * @return string HTML
      */
-    public function render()
+    public function render(): string
     {
         return '<input type="hidden" name="' . $this->getName() . '" id="' . $this->getName() . '" value="' . $this->getValue() . '" />';
     }

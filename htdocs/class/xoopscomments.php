@@ -36,7 +36,6 @@ $GLOBALS['xoopsLogger']->addDeprecated("'/class/xoopscommments.php' is deprecate
  */
 class XoopsComments extends XoopsObject
 {
-    public $ctable;
     /**
      * @var \XoopsMySQLDatabase
      */
@@ -62,9 +61,8 @@ class XoopsComments extends XoopsObject
      * @param      $ctable
      * @param null|array $id
      */
-    public function __construct($ctable, $id = null)
+    public function __construct(public $ctable, $id = null)
     {
-        $this->ctable = $ctable;
         $this->db     = XoopsDatabaseFactory::getDatabaseConnection();
         parent::__construct();
         $this->initVar('comment_id', XOBJ_DTYPE_INT, null, false);
@@ -122,7 +120,7 @@ class XoopsComments extends XoopsObject
             return false;
         }
         foreach ($this->cleanVars as $k => $v) {
-            $$k = $v;
+            ${$k} = $v;
         }
         $isnew = false;
         if (empty($comment_id)) {
@@ -431,7 +429,7 @@ class XoopsComments extends XoopsObject
         if ($color_num == 1) {
             $bg = 'even';
         }
-        $prefix = str_replace('.', '&nbsp;&nbsp;&nbsp;&nbsp;', $this->getVar('prefix'));
+        $prefix = str_replace('.', '&nbsp;&nbsp;&nbsp;&nbsp;', (string) $this->getVar('prefix'));
         $date   = formatTimestamp($this->getVar('date'), 'm');
         $icon   = 'icons/no_posticon.gif';
         if ($this->getVar('icon') != '') {

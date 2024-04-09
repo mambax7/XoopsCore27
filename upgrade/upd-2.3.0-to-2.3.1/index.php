@@ -64,7 +64,7 @@ class Upgrade_231 extends XoopsUpgrade
                 if ($row['Field'] != $field) {
                     continue;
                 }
-                if (strtoupper($row['Null']) !== 'YES') {
+                if (strtoupper((string) $row['Null']) !== 'YES') {
                     return false;
                 }
             }

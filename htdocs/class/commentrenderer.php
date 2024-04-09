@@ -44,11 +44,9 @@ class XoopsCommentRenderer
     /**
      * *#@-
      */
-
     /**
      * Constructor
      *
-     * @param XoopsTpl $tpl
      * @param boolean  $use_icons
      * @param boolean  $do_iconcheck
      *

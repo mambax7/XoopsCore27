@@ -105,7 +105,7 @@ class ModuleAdmin
      */
     public function getClassMethods()
     {
-        $myMethods = get_class_methods(__CLASS__);
+        $myMethods = get_class_methods(self::class);
 
         return $myMethods;
     }
@@ -147,7 +147,7 @@ class ModuleAdmin
         $ret = "<div class=\"rmmenuicon\">\n";
         foreach (array_keys($this->_obj->adminmenu) as $i) {
             if ($this->_obj->adminmenu[$i]['link'] !== 'admin/index.php') {
-                $ret .= "<a href=\"../" . $this->_obj->adminmenu[$i]['link'] . "\" title=\"" . (isset($this->_obj->adminmenu[$i]['desc']) ? $this->_obj->adminmenu[$i]['desc'] : '') . "\">";
+                $ret .= "<a href=\"../" . $this->_obj->adminmenu[$i]['link'] . "\" title=\"" . ($this->_obj->adminmenu[$i]['desc'] ?? '') . "\">";
                 //$ret .= "<img src=\"" . $path . $this->_obj->adminmenu[$i]['icon']. "\" alt=\"" . $this->_obj->adminmenu[$i]['title'] . "\" />";
                 //mb for direct URL access to icons in modules Admin
                 $ret .= "<img src=\"" . (filter_var($this->_obj->adminmenu[$i]['icon'], FILTER_VALIDATE_URL) ? $this->_obj->adminmenu[$i]['icon'] : $path . $this->_obj->adminmenu[$i]['icon']) . "\" alt=\"" . $this->_obj->adminmenu[$i]['title'] . "\" />";
@@ -357,11 +357,11 @@ class ModuleAdmin
                 $reqVer            = $curVer = 0;
                 for ($i = 0; $i < $icount; ++$i) {
                     $j--;
-                    $reqVer += $iReqVerParts[$i] * pow(10, $j);
+                    $reqVer += $iReqVerParts[$i] * 10 ** $j;
                     if (isset($iCurrentVerParts[$i])) {
-                        $curVer += $iCurrentVerParts[$i] * pow(10, $j);
+                        $curVer += $iCurrentVerParts[$i] * 10 ** $j;
                     } else {
-                        $curVer *= pow(10, $j);
+                        $curVer *= 10 ** $j;
                     }
                 }
                 if ($reqVer > $curVer) {

@@ -51,7 +51,7 @@ if (isset($_POST['delete_messages']) && (isset($_POST['msg_id']) || isset($_POST
         include $GLOBALS['xoops']->path('footer.php');
         exit();
     } else {
-        $clean_msg_id = json_decode($_POST['msg_ids'], true, 2);
+        $clean_msg_id = json_decode((string) $_POST['msg_ids'], true, 2);
         if (!empty($clean_msg_id)) {
             $clean_msg_id = array_map('intval', $clean_msg_id);
         }
@@ -194,7 +194,7 @@ $GLOBALS['xoopsTpl']->assign('op', $op);
 
 if ($total_messages > $GLOBALS['xoopsModuleConfig']['perpage']) {
     include_once $GLOBALS['xoops']->path('class/pagenav.php');
-    $nav = new XoopsPageNav($total_messages, $GLOBALS['xoopsModuleConfig']['perpage'], $start, 'start', 'op=' . htmlspecialchars($op, ENT_QUOTES | ENT_HTML5));
+    $nav = new XoopsPageNav($total_messages, $GLOBALS['xoopsModuleConfig']['perpage'], $start, 'start', 'op=' . htmlspecialchars((string) $op, ENT_QUOTES | ENT_HTML5));
     $GLOBALS['xoopsTpl']->assign('pagenav', $nav->renderNav(4));
 }
 

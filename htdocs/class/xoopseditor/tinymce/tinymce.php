@@ -181,9 +181,9 @@ class TinyMCE
             for ($i = 1; $i <= 4; ++$i) {
                 $buttons = [];
                 if (isset($this->setting['theme_' . $this->setting['theme'] . "_buttons{$i}"])) {
-                    $checklist = explode(',', $this->setting['theme_' . $this->setting['theme'] . "_buttons{$i}"]);
+                    $checklist = explode(',', (string) $this->setting['theme_' . $this->setting['theme'] . "_buttons{$i}"]);
                     foreach ($checklist as $plugin) {
-                        if (strpos(strtolower($plugin), 'xoops') != false) {
+                        if (str_contains(strtolower($plugin), 'xoops')) {
                             if (in_array($plugin, $this->xoopsPlugins)) {
                                 $buttons[] = $plugin;
                             }
@@ -224,10 +224,10 @@ class TinyMCE
         if (empty($this->setting['plugins'])) {
             $plugins = $plugins_list;
         } else {
-            $plugins = array_intersect(explode(',', $this->setting['plugins']), $plugins_list);
+            $plugins = array_intersect(explode(',', (string) $this->setting['plugins']), $plugins_list);
         }
         if (!empty($this->setting['exclude_plugins'])) {
-            $plugins = array_diff($plugins, explode(',', $this->setting['exclude_plugins']));
+            $plugins = array_diff($plugins, explode(',', (string) $this->setting['exclude_plugins']));
         }
         if (!empty($this->config['plugins'])) {
             $plugins = array_merge($plugins, $this->config['plugins']);
@@ -245,7 +245,7 @@ class TinyMCE
         $xoopsPlugins = [];
         $allplugins   = XoopsLists::getDirListAsArray(XOOPS_ROOT_PATH . $this->rootpath . '/plugins');
         foreach ($allplugins as $plugin) {
-            if (strpos(strtolower($plugin), 'xoops') != false && file_exists(XOOPS_ROOT_PATH . $this->config['rootpath'] . "/include/$plugin.php")) {
+            if (str_contains(strtolower((string) $plugin), 'xoops') && file_exists(XOOPS_ROOT_PATH . $this->config['rootpath'] . "/include/$plugin.php")) {
                 if ($right = @include XOOPS_ROOT_PATH . $this->config['rootpath'] . "/include/$plugin.php") {
                     $xoopsPlugins[$plugin] = $plugin;
                 }

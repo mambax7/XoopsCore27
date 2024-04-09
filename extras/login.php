@@ -11,8 +11,8 @@ if (!defined('XOOPS_ROOT_PATH')) {
 include_once XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/user.php';
 $op = (isset($_POST['op']) && $_POST['op'] === 'dologin') ? 'dologin' : 'login';
 
-$username = isset($_POST['username']) ? trim($_POST['username']) : '';
-$password = isset($_POST['userpass']) ? trim($_POST['userpass']) : '';
+$username = isset($_POST['username']) ? trim((string) $_POST['username']) : '';
+$password = isset($_POST['userpass']) ? trim((string) $_POST['userpass']) : '';
 if ($username == '' || $password == '') {
     $op = 'login';
 }

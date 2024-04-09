@@ -68,7 +68,7 @@ class XoopsCache
     {
         static $instance;
         if (!isset($instance)) {
-            $class    = __CLASS__;
+            $class    = self::class;
             $instance = new $class();
         }
 
@@ -212,7 +212,7 @@ class XoopsCache
      * @return boolean True if the data was successfully cached, false on failure
      * @access public
      */
-    public static function write($key, $value, $duration = null)
+    public static function write($key, mixed $value, mixed $duration = null)
     {
         $key    = substr(md5(XOOPS_URL), 0, 8) . '_' . $key;
         $_this  = XoopsCache::getInstance();
@@ -247,7 +247,7 @@ class XoopsCache
         if (!$duration) {
             $duration = $settings['duration'];
         }
-        $duration = is_numeric($duration) ? (int)$duration : strtotime($duration) - time();
+        $duration = is_numeric($duration) ? (int)$duration : strtotime((string) $duration) - time();
 
         if ($duration < 1) {
             return false;
@@ -454,9 +454,9 @@ class XoopsCacheEngine
      * @return boolean True if the data was successfully cached, false on failure
      * @access public
      */
-    public function write($key, $value, $duration = null)
+    public function write($key, mixed $value, mixed $duration = null)
     {
-        trigger_error(sprintf(__('Method write() not implemented in %s', true), get_class($this)), E_USER_ERROR);
+        trigger_error(sprintf(__('Method write() not implemented in %s', true), static::class), E_USER_ERROR);
     }
 
     /**
@@ -468,7 +468,7 @@ class XoopsCacheEngine
      */
     public function read($key)
     {
-        trigger_error(sprintf(__('Method read() not implemented in %s', true), get_class($this)), E_USER_ERROR);
+        trigger_error(sprintf(__('Method read() not implemented in %s', true), static::class), E_USER_ERROR);
     }
 
     /**

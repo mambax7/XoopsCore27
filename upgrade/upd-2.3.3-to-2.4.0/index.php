@@ -137,16 +137,16 @@ class Upgrade_240 extends XoopsUpgrade
         $uu     = 0;
         $num    = 6;
         $length = 30;
-        $strip  = floor(strlen($xoops_key) / 6);
-        for ($i = 0; $i < strlen($xoops_key); ++$i) {
+        $strip  = floor(strlen((string) $xoops_key) / 6);
+        for ($i = 0; $i < strlen((string) $xoops_key); ++$i) {
             if ($i < $length) {
                 ++$uu;
                 if ($uu == $strip) {
-                    $ret .= substr($xoops_key, $i, 1) . '-';
+                    $ret .= substr((string) $xoops_key, $i, 1) . '-';
                     $uu = 0;
                 } else {
-                    if (substr($xoops_key, $i, 1) != '-') {
-                        $ret .= substr($xoops_key, $i, 1);
+                    if (substr((string) $xoops_key, $i, 1) != '-') {
+                        $ret .= substr((string) $xoops_key, $i, 1);
                     } else {
                         $uu--;
                     }
@@ -154,7 +154,7 @@ class Upgrade_240 extends XoopsUpgrade
             }
         }
         $ret = str_replace('--', '-', $ret);
-        if (substr($ret, 0, 1) == '-') {
+        if (str_starts_with($ret, '-')) {
             $ret = substr($ret, 2, strlen($ret));
         }
         if (substr($ret, strlen($ret) - 1, 1) == '-') {

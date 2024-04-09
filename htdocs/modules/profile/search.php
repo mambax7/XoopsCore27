@@ -21,7 +21,7 @@ include __DIR__ . '/header.php';
 $myts = \MyTextSanitizer::getInstance();
 
 $limit_default    = 20;
-$op               = isset($_REQUEST['op']) ? $_REQUEST['op'] : 'search';
+$op               = $_REQUEST['op'] ?? 'search';
 $groups           = $GLOBALS['xoopsUser'] ? $GLOBALS['xoopsUser']->getGroups() : [XOOPS_GROUP_ANONYMOUS];
 $searchable_types = [
     'textbox',
@@ -183,7 +183,7 @@ switch ($op) {
         $criteria = new CriteriaCompo(new Criteria('level', 0, '>'));
 
         if (isset($_REQUEST['uname']) && $_REQUEST['uname'] !== '') {
-            $string = $myts->addSlashes(trim($_REQUEST['uname']));
+            $string = $myts->addSlashes(trim((string) $_REQUEST['uname']));
             switch ($_REQUEST['uname_match']) {
                 case XOOPS_MATCH_START:
                     $string .= '%';
@@ -203,7 +203,7 @@ switch ($op) {
             $searchvars[] = 'uname';
         }
         if (isset($_REQUEST['email']) && $_REQUEST['email'] !== '') {
-            $string = $myts->addSlashes(trim($_REQUEST['email']));
+            $string = $myts->addSlashes(trim((string) $_REQUEST['email']));
             switch ($_REQUEST['email_match']) {
                 case XOOPS_MATCH_START:
                     $string .= '%';
@@ -265,7 +265,7 @@ switch ($op) {
                             case 'date':
                             case 'datetime':
                                 $value = $_REQUEST[$fieldname . '_larger'];
-                                if (!($value = strtotime($_REQUEST[$fieldname . '_larger']))) {
+                                if (!($value = strtotime((string) $_REQUEST[$fieldname . '_larger']))) {
                                     $value = (int)$_REQUEST[$fieldname . '_larger'];
                                 }
                                 if ($value > 0) {
@@ -275,7 +275,7 @@ switch ($op) {
                                 }
 
                                 $value = $_REQUEST[$fieldname . '_smaller'];
-                                if (!($value = strtotime($_REQUEST[$fieldname . '_smaller']))) {
+                                if (!($value = strtotime((string) $_REQUEST[$fieldname . '_smaller']))) {
                                     $value = (int)$_REQUEST[$fieldname . '_smaller'];
                                 }
                                 if ($value > 0) {
@@ -323,7 +323,7 @@ switch ($op) {
                     case XOBJ_DTYPE_TXTBOX:
                     case XOBJ_DTYPE_TXTAREA:
                         if (isset($_REQUEST[$fieldname]) && $_REQUEST[$fieldname] !== '') {
-                            $value = $myts->addSlashes(trim($_REQUEST[$fieldname]));
+                            $value = $myts->addSlashes(trim((string) $_REQUEST[$fieldname]));
                             switch ($_REQUEST[$fieldname . '_match']) {
                                 case XOOPS_MATCH_START:
                                     $value .= '%';
@@ -394,7 +394,7 @@ switch ($op) {
         $start = isset($_REQUEST['start']) ? (int)$_REQUEST['start'] : 0;
         $criteria->setStart($start);
 
-        list($users, $profiles, $total_users) = $profile_handler->search($criteria, $searchvars, $searchgroups);
+        [$users, $profiles, $total_users] = $profile_handler->search($criteria, $searchvars, $searchgroups);
 
         $total = sprintf(_PROFILE_MA_FOUNDUSER, "<span class='red'>{$total_users}</span>") . ' ';
         $GLOBALS['xoopsTpl']->assign('total_users', $total);
@@ -428,8 +428,8 @@ switch ($op) {
             $search_url[] = 'op=results';
             $search_url[] = 'order=' . $order;
             //TODO remove it for final release
-            //            $search_url[] = "sortby=" . htmlspecialchars($_REQUEST['sortby']);
-            $search_url[] = 'sortby=' . htmlspecialchars($sortby, ENT_QUOTES | ENT_HTML5); // change by zyspec
+            //            $search_url[] = "sortby=" . htmlspecialchars((string) $_REQUEST['sortby']);
+            $search_url[] = 'sortby=' . htmlspecialchars((string) $sortby, ENT_QUOTES | ENT_HTML5); // change by zyspec
             $search_url[] = 'limit=' . $limit;
             if (isset($search_url)) {
                 $args = implode('&amp;', $search_url);

@@ -30,7 +30,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormButton(XoopsFormButton $element);
+    public function renderFormButton(XoopsFormButton $element): string;
 
     /**
      * Render support for XoopsFormButtonTray
@@ -39,7 +39,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormButtonTray(XoopsFormButtonTray $element);
+    public function renderFormButtonTray(XoopsFormButtonTray $element): string;
 
     /**
      * Render support for XoopsFormCheckBox
@@ -48,7 +48,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormCheckBox(XoopsFormCheckBox $element);
+    public function renderFormCheckBox(XoopsFormCheckBox $element): string;
 
     /**
      * Render support for XoopsFormColorPicker
@@ -57,7 +57,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormColorPicker(XoopsFormColorPicker $element);
+    public function renderFormColorPicker(XoopsFormColorPicker $element): string;
 
     /**
      * Render support for XoopsFormDhtmlTextArea
@@ -66,7 +66,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormDhtmlTextArea(XoopsFormDhtmlTextArea $element);
+    public function renderFormDhtmlTextArea(XoopsFormDhtmlTextArea $element): string;
 
     /**
      * Render support for XoopsFormElementTray
@@ -75,7 +75,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormElementTray(XoopsFormElementTray $element);
+    public function renderFormElementTray(XoopsFormElementTray $element): string;
 
     /**
      * Render support for XoopsFormFile
@@ -84,7 +84,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormFile(XoopsFormFile $element);
+    public function renderFormFile(XoopsFormFile $element): string;
 
     /**
      * Render support for XoopsFormLabel
@@ -93,7 +93,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormLabel(XoopsFormLabel $element);
+    public function renderFormLabel(XoopsFormLabel $element): string;
 
     /**
      * Render support for XoopsFormPassword
@@ -102,7 +102,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormPassword(XoopsFormPassword $element);
+    public function renderFormPassword(XoopsFormPassword $element): string;
 
     /**
      * Render support for XoopsFormRadio
@@ -111,7 +111,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormRadio(XoopsFormRadio $element);
+    public function renderFormRadio(XoopsFormRadio $element): string;
 
     /**
      * Render support for XoopsFormSelect
@@ -120,7 +120,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormSelect(XoopsFormSelect $element);
+    public function renderFormSelect(XoopsFormSelect $element): string;
 
     /**
      * Render support for XoopsFormText
@@ -129,7 +129,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormText(XoopsFormText $element);
+    public function renderFormText(XoopsFormText $element): string;
 
     /**
      * Render support for XoopsFormTextArea
@@ -138,7 +138,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormTextArea(XoopsFormTextArea $element);
+    public function renderFormTextArea(XoopsFormTextArea $element): string;
 
     /**
      * Render support for XoopsFormTextDateSelect
@@ -147,7 +147,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormTextDateSelect(XoopsFormTextDateSelect $element);
+    public function renderFormTextDateSelect(XoopsFormTextDateSelect $element): string;
 
     /**
      * Render support for XoopsThemeForm
@@ -156,7 +156,7 @@ interface XoopsFormRendererInterface
      *
      * @return string rendered form
      */
-    public function renderThemeForm(XoopsThemeForm $form);
+    public function renderThemeForm(XoopsThemeForm $form): string;
 
     /**
      * Support for themed addBreak
@@ -167,5 +167,5 @@ interface XoopsFormRendererInterface
      *
      * @return void
      */
-    public function addThemeFormBreak(XoopsThemeForm $form, $extra, $class);
+    public function addThemeFormBreak(XoopsThemeForm $form, string $extra, string $class): void;
 }

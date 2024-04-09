@@ -58,7 +58,7 @@ class XoopsModelSync extends XoopsModelAbstract
         }
 
         if (empty($this->handler->field_object) || empty($this->handler->table_link) || empty($this->handler->field_link)) {
-            trigger_error("The link information is not set for '" . get_class($this->handler) . "' yet.", E_USER_WARNING);
+            trigger_error("The link information is not set for '" . $this->handler::class . "' yet.", E_USER_WARNING);
 
             return null;
         }

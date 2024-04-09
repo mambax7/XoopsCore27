@@ -130,8 +130,8 @@ function profile_install_addField($name, $title, $description, $category, $type,
     $obj->setVar('field_show', 1);
     $obj->setVar('field_edit', $canedit ? 1 : 0);
     $obj->setVar('field_config', 0);
-    $obj->setVar('field_title', strip_tags($title), true);
-    $obj->setVar('field_description', strip_tags($description), true);
+    $obj->setVar('field_title', strip_tags((string) $title), true);
+    $obj->setVar('field_description', strip_tags((string) $description), true);
     $obj->setVar('field_type', $type, true);
     $obj->setVar('field_valuetype', $valuetype, true);
     $obj->setVar('field_options', $options, true);

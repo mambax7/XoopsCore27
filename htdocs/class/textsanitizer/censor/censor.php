@@ -59,9 +59,9 @@ class MytsCensor extends MyTextSanitizerExtension
 
         $replacement = $censorConf['censor_replace'];
         foreach ($censorConf['censor_words'] as $bad) {
-            $bad = trim($bad);
+            $bad = trim((string) $bad);
             if (!empty($bad)) {
-                if (false === strpos($text, $bad)) {
+                if (!str_contains((string) $text, $bad)) {
                     continue;
                 }
                 if (!empty($censorConf['censor_terminate'])) {
@@ -72,7 +72,7 @@ class MytsCensor extends MyTextSanitizerExtension
                 }
                 $patterns[]     = "/(^|[^0-9a-z_]){$bad}([^0-9a-z_]|$)/siU";
                 $replacements[] = "\\1{$replacement}\\2";
-                $text           = preg_replace($patterns, $replacements, $text);
+                $text           = preg_replace($patterns, $replacements, (string) $text);
             }
         }
 

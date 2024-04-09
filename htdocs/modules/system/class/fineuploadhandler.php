@@ -175,7 +175,7 @@ abstract class SystemFineUploadHandler
             return ['error' => "No files were uploaded."];
         }
 
-        if (strpos(strtolower($type), 'multipart/') !== 0) {
+        if (!str_starts_with(strtolower((string) $type), 'multipart/')) {
             return [
                 'error' => "Server error. Not a multipart request. Please set forceMultipart to default value (true)."
             ];
@@ -212,7 +212,7 @@ abstract class SystemFineUploadHandler
         }
 
         // Validate file extension
-        $pathinfo = pathinfo($name);
+        $pathinfo = pathinfo((string) $name);
         $ext = isset($pathinfo['extension']) ? strtolower($pathinfo['extension']) : '';
 
         if ($this->allowedExtensions
@@ -288,8 +288,8 @@ abstract class SystemFineUploadHandler
 
     protected function storeUploadedFile($target, $mimeType, $uuid)
     {
-        if (!is_dir(dirname($target))) {
-            if (!mkdir($concurrentDirectory = dirname($target), 0775, true) && !is_dir($concurrentDirectory)) {
+        if (!is_dir(dirname((string) $target))) {
+            if (!mkdir($concurrentDirectory = dirname((string) $target), 0775, true) && !is_dir($concurrentDirectory)) {
                 throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
             }
         }
@@ -369,7 +369,7 @@ abstract class SystemFineUploadHandler
 
         $pathinfo = pathinfo($filename);
         $base = $pathinfo['filename'];
-        $ext = isset($pathinfo['extension']) ? $pathinfo['extension'] : '';
+        $ext = $pathinfo['extension'] ?? '';
         $ext = '' == $ext ? $ext : '.' . $ext;
 
         $unique = $base;
@@ -378,7 +378,7 @@ abstract class SystemFineUploadHandler
         // Get unique file name for the file, by appending random suffix.
 
         while (file_exists($uploadDirectory . DIRECTORY_SEPARATOR . $unique . $ext)) {
-            $suffix += rand(1, 999);
+            $suffix += random_int(1, 999);
             $unique = $base.'-'.$suffix;
         }
 

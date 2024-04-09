@@ -20,40 +20,8 @@ defined('XOOPS_ROOT_PATH') || exit('XOOPS root path not defined');
 
 xoops_load('XoopsFormElement');
 
-/**
- *
- *
- * @package             kernel
- * @subpackage          form
- *
- * @author              Kazumi Ono    <onokazu@xoops.org>
- * @copyright       (c) 2000-2016 XOOPS Project (www.xoops.org)
- */
-
-/**
- * A button
- *
- * @author              Kazumi Ono    <onokazu@xoops.org>
- * @copyright       (c) 2000-2016 XOOPS Project (www.xoops.org)
- *
- * @package             kernel
- * @subpackage          form
- */
 class XoopsFormButton extends XoopsFormElement
 {
-    /**
-     * Value
-     * @var string
-     * @access    private
-     */
-    public $_value;
-
-    /**
-     * Type of the button. This could be either "button", "submit", or "reset"
-     * @var string
-     * @access    private
-     */
-    public $_type;
 
     /**
      * Constructor
@@ -63,45 +31,42 @@ class XoopsFormButton extends XoopsFormElement
      * @param string $value
      * @param string $type    Type of the button. Potential values: "button", "submit", or "reset"
      */
-    public function __construct($caption, $name, $value = '', $type = 'button')
+    public function __construct(string $caption, string $name,
+        /**
+         * value
+         * @access    private
+         */
+                                public $value = '', /**
+         * Type of the button. This could be either "button", "submit", or "reset"
+         * @access    private
+         */
+                                public $type = 'button')
     {
         $this->setCaption($caption);
         $this->setName($name);
-        $this->_type = $type;
-        $this->setValue($value);
+
     }
 
     /**
      * Get the initial value
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param bool $encode To sanitizer the text?
      * @return string
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): string
     {
-        return $encode ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
+        return $encode ? htmlspecialchars($this->value, ENT_QUOTES | ENT_HTML5) : $this->value;
     }
 
-    /**
-     * Set the initial value
-     *
-     * @param $value
-     *
-     * @return string
-     */
-    public function setValue($value)
-    {
-        $this->_value = $value;
-    }
 
     /**
      * Get the type
      *
      * @return string
      */
-    public function getType()
+    public function getType(): string
     {
-        return in_array(strtolower($this->_type), ['button', 'submit', 'reset']) ? $this->_type : 'button';
+        return in_array(strtolower($this->type), ['button', 'submit', 'reset']) ? $this->type : 'button';
     }
 
     /**
@@ -109,7 +74,7 @@ class XoopsFormButton extends XoopsFormElement
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormButton($this);
     }

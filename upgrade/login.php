@@ -25,8 +25,8 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
     <?php
 } else {
     $myts  = \MyTextSanitizer::getInstance();
-    $uname = !isset($_POST['uname']) ? '' : $myts->addSlashes(trim($_POST['uname']));
-    $pass  = !isset($_POST['pass']) ? '' : $myts->addSlashes(trim($_POST['pass']));
+    $uname = !isset($_POST['uname']) ? '' : $myts->addSlashes(trim((string) $_POST['uname']));
+    $pass  = !isset($_POST['pass']) ? '' : $myts->addSlashes(trim((string) $_POST['pass']));
 
     $member_handler = xoops_getHandler('member');
 
@@ -42,8 +42,8 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
         try {
             $criteria = new CriteriaCompo(new Criteria('loginname', $uname));
             $criteria->add(new Criteria('pass', md5($pass)));
-            list($user) = $member_handler->getUsers($criteria);
-        } catch (\RuntimeException $e) {
+            [$user] = $member_handler->getUsers($criteria);
+        } catch (\RuntimeException) {
             $user = false;
         }
     }

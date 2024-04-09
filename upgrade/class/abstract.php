@@ -105,11 +105,9 @@ class XoopsUpgrade
     /**
      * Relocated here from upgrade/index.php
      *
-     * @param XoopsDatabase $db
      * @param        $table
      * @param        $field
      * @param string $condition
-     *
      * @return bool
      */
     protected function getDbValue(XoopsDatabase $db, $table, $field, $condition = '')

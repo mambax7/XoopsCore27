@@ -217,7 +217,7 @@ class XoopsFileHandler
      * @return mixed   True on success, false on failure (set mode), false on failure or integer offset on success (get mode)
      * @access public
      */
-    public function offset($offset = false, $seek = SEEK_SET)
+    public function offset(mixed $offset = false, $seek = SEEK_SET)
     {
         if ($offset === false) {
             if (is_resource($this->handle)) {
@@ -241,7 +241,7 @@ class XoopsFileHandler
     public function prepare($data)
     {
         $lineBreak = "\n";
-        if (substr(PHP_OS, 0, 3) === 'WIN') {
+        if (str_starts_with(PHP_OS, 'WIN')) {
             $lineBreak = "\r\n";
         }
 
@@ -353,11 +353,8 @@ class XoopsFileHandler
         if ($this->info == null) {
             $this->info();
         }
-        if (isset($this->info['extension'])) {
-            return $this->info['extension'];
-        }
 
-        return false;
+        return $this->info['extension'] ?? false;
     }
 
     /**
@@ -407,7 +404,7 @@ class XoopsFileHandler
      * @return string|false md5 Checksum {@link https://php.net/md5_file See md5_file()}
      * @access public
      */
-    public function md5($maxsize = 5)
+    public function md5(mixed $maxsize = 5)
     {
         if ($maxsize === true) {
             return md5_file($this->pwd());

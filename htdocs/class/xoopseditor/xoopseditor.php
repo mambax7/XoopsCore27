@@ -50,7 +50,7 @@ class XoopsEditor extends XoopsFormTextArea
             $configs = $args[0];
         }
         // TODO: switch to property_exists() as of PHP 5.1.0
-        $vars = get_class_vars(__CLASS__);
+        $vars = get_class_vars(self::class);
         foreach ($configs as $key => $val) {
             if (method_exists($this, 'set' . ucfirst($key))) {
                 $this->{'set' . ucfirst($key)}($val);
@@ -112,7 +112,7 @@ class XoopsEditorHandler
     {
         static $instance;
         if (!isset($instance)) {
-            $class    = __CLASS__;
+            $class    = self::class;
             $instance = new $class();
         }
 
@@ -145,11 +145,10 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::getList()
      *
-     * @param mixed $noHtml
      *
      * @return array
      */
-    public function getList($noHtml = false)
+    public function getList(mixed $noHtml = false)
     {
         /*
             Do NOT use this method statically, please use
@@ -205,10 +204,9 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::render()
      *
-     * @param mixed $editor
      * @return
      */
-    public function render($editor)
+    public function render(mixed $editor)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated');
 
@@ -218,11 +216,9 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::setConfig()
      *
-     * @param  mixed $editor
-     * @param  mixed $options
      * @return void
      */
-    public function setConfig($editor, $options)
+    public function setConfig(mixed $editor, mixed $options)
     {
         if (method_exists($editor, 'setConfig')) {
             $editor->setConfig($options);
@@ -236,11 +232,9 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::_loadEditor()
      *
-     * @param mixed $name
-     * @param mixed $options
      * @return
      */
-    public function _loadEditor($name, $options = null)
+    public function _loadEditor(mixed $name, mixed $options = null)
     {
         $editor = null;
         if (empty($name) || !array_key_exists($name, $this->getList())) {

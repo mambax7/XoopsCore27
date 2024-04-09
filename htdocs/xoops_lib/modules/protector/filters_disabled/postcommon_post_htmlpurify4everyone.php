@@ -48,9 +48,9 @@ class Protector_postcommon_post_htmlpurify4everyone extends ProtectorFilterAbstr
     public function purify_recursive($data)
     {
         if (is_array($data)) {
-            return array_map([$this, 'purify_recursive'], $data);
+            return array_map($this->purify_recursive(...), $data);
         } else {
-            return strlen($data) > 32 ? call_user_func([$this->purifier, $this->method], $data) : $data;
+            return strlen((string) $data) > 32 ? call_user_func([$this->purifier, $this->method], $data) : $data;
         }
     }
 }

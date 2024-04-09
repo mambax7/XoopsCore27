@@ -104,7 +104,7 @@ if ($handler === '' || $moddir === '') {
  * - a legacy handler name
  */
 $className = $handler;
-if (false === strpos($handler, '\\')) {
+if (!str_contains((string) $handler, '\\')) {
     XoopsLoad::load($handler, $moddir);
     $className = $moddir . $handler;
 }

@@ -24,7 +24,7 @@ function smarty_function_xoInboxCount($params, $smarty)
     // unset cache in pm programs so stale cache won't show inconsistencies
     $freshRead = isset($GLOBALS['xoInboxCountFresh']);
     $pmScripts = ['pmlite', 'readpmsg', 'viewpmsg'];
-    if (in_array(basename($_SERVER['SCRIPT_FILENAME'], '.php'), $pmScripts)) {
+    if (in_array(basename((string) $_SERVER['SCRIPT_FILENAME'], '.php'), $pmScripts)) {
         if (!$freshRead) {
             unset($_SESSION['xoops_inbox_count'], $_SESSION['xoops_inbox_total'], $_SESSION['xoops_inbox_count_expire']);
             $GLOBALS['xoInboxCountFresh'] = true;

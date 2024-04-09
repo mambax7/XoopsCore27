@@ -52,12 +52,12 @@ if (!$allowed) {
                           'xoops_theme'       => $xoopsConfig['theme_set'],
                           'xoops_imageurl'    => XOOPS_THEME_URL . '/' . $xoopsConfig['theme_set'] . '/',
                           'xoops_themecss'    => xoops_getcss($xoopsConfig['theme_set']),
-                          'xoops_requesturi'  => htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
-                          'xoops_sitename'    => htmlspecialchars($xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5),
-                          'xoops_slogan'      => htmlspecialchars($xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_requesturi'  => htmlspecialchars((string) $_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_sitename'    => htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_slogan'      => htmlspecialchars((string) $xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),
                           'xoops_dirname'     => !empty($xoopsModule) ? $xoopsModule->getVar('dirname') : 'system',
                           'xoops_banner'      => $xoopsConfig['banners'] ? xoops_getbanner() : '&nbsp;',
-                          'xoops_pagetitle'   => isset($xoopsModule) && is_object($xoopsModule) ? $xoopsModule->getVar('name') : htmlspecialchars($xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_pagetitle'   => isset($xoopsModule) && is_object($xoopsModule) ? $xoopsModule->getVar('name') : htmlspecialchars((string) $xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),
                           'lang_login'        => _LOGIN,
                           'lang_username'     => _USERNAME,
                           'lang_password'     => _PASSWORD,
@@ -78,11 +78,11 @@ if (!$allowed) {
         $value = $config[$i]->getVar('conf_value', 'n');
         // limited substitutions for {X_SITEURL} and {X_YEAR}
         if ($name === 'footer' || $name === 'meta_copyright') {
-            $value = str_replace('{X_SITEURL}', XOOPS_URL . '/', $value);
+            $value = str_replace('{X_SITEURL}', XOOPS_URL . '/', (string) $value);
             $value = str_replace('{X_YEAR}', date('Y', time()), $value);
         }
-        if (substr($name, 0, 5) === 'meta_') {
-            $xoopsTpl->assign("xoops_$name", htmlspecialchars($value, ENT_QUOTES | ENT_HTML5));
+        if (str_starts_with((string) $name, 'meta_')) {
+            $xoopsTpl->assign("xoops_$name", htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5));
         } else {
             // prefix each tag with 'xoops_'
             $xoopsTpl->assign("xoops_$name", $value);

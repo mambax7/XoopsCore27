@@ -33,7 +33,7 @@ class XoopsThemeForm extends XoopsForm
      * @param string $extra HTML to be displayed in the empty row.
      * @param string $class CSS class name for <td> tag
      */
-    public function insertBreak($extra = '', $class = '')
+    public function insertBreak(string|null $extra = '', string $class = '' ): void
     {
         XoopsFormRenderer::getInstance()->get()->addThemeFormBreak($this, $extra, $class);
     }
@@ -51,7 +51,7 @@ class XoopsThemeForm extends XoopsForm
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderThemeForm($this);
     }

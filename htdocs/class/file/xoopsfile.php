@@ -43,7 +43,7 @@ class XoopsFile
     {
         static $instance;
         if (!isset($instance)) {
-            $class    = __CLASS__;
+            $class    = self::class;
             $instance = new $class();
         }
 
@@ -92,12 +92,9 @@ class XoopsFile
      * XoopsFile::getHandler()
      *
      * @param string $name
-     * @param mixed  $path
-     * @param mixed  $create
-     * @param mixed  $mode
      * @return
      */
-    public static function getHandler($name = 'file', $path = false, $create = false, $mode = null)
+    public static function getHandler($name = 'file', mixed $path = false, mixed $create = false, mixed $mode = null)
     {
         $handler = null;
         XoopsFile::load($name);

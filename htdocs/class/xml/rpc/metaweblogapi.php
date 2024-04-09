@@ -178,7 +178,7 @@ class MetaWeblogApi extends XoopsXmlRpcApi
                             $struct->add('title', new XoopsXmlRpcString($value));
                             break;
                         default :
-                            $content .= '<' . $key . '>' . trim($value) . '</' . $key . '>';
+                            $content .= '<' . $key . '>' . trim((string) $value) . '</' . $key . '>';
                             break;
                     }
                 }
@@ -225,7 +225,7 @@ class MetaWeblogApi extends XoopsXmlRpcApi
                                     $struct->add('title', new XoopsXmlRpcString($value));
                                     break;
                                 default :
-                                    $content .= '<' . $key . '>' . trim($value) . '</' . $key . '>';
+                                    $content .= '<' . $key . '>' . trim((string) $value) . '</' . $key . '>';
                                     break;
                             }
                         }

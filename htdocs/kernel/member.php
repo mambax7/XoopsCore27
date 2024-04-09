@@ -333,16 +333,16 @@ class XoopsMemberHandler
         }
 
         $hash = $user[0]->pass();
-        $type = substr($user[0]->pass(), 0, 1);
+        $type = substr((string) $user[0]->pass(), 0, 1);
         // see if we have a crypt like signature, old md5 hash is just hex digits
         if ($type==='$') {
-            if (!password_verify($pwd, $hash)) {
+            if (!password_verify((string) $pwd, (string) $hash)) {
                 return false;
             }
             // check if hash uses the best algorithm (i.e. after a PHP upgrade)
             $rehash = password_needs_rehash($hash, PASSWORD_DEFAULT);
         } else {
-            if ($hash!=md5($pwd)) {
+            if ($hash!=md5((string) $pwd)) {
                 return false;
             }
             $rehash = true; // automatically update old style
@@ -352,7 +352,7 @@ class XoopsMemberHandler
             if ($this->getColumnCharacterLength('users', 'pass') < 255) {
                 error_log('Upgrade required on users table!');
             } else {
-                $user[0]->setVar('pass', password_hash($pwd, PASSWORD_DEFAULT));
+                $user[0]->setVar('pass', password_hash((string) $pwd, PASSWORD_DEFAULT));
                 $this->userHandler->insert($user[0]);
             }
         }
@@ -531,7 +531,6 @@ class XoopsMemberHandler
      * Temporary solution
      *
      * @param  array           $groups IDs of groups
-     * @param  CriteriaElement $criteria
      * @return int             count of users
      */
     public function getUserCountByGroupLink(array $groups, CriteriaElement $criteria = null)
@@ -557,7 +556,7 @@ class XoopsMemberHandler
         if (!$this->userHandler->db->isResultSet($result)) {
             return $ret;
         }
-        list($ret) = $this->userHandler->db->fetchRow($result);
+        [$ret] = $this->userHandler->db->fetchRow($result);
 
         return (int)$ret;
     }

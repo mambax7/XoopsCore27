@@ -45,7 +45,7 @@ function fatalPhpErrorHandler($e = null) {
         }
     } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
         /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+        printf($messageFormat, $e::class, $e->getMessage(), $e->getFile(), $e->getLine());
     }
 }
 register_shutdown_function('fatalPhpErrorHandler');

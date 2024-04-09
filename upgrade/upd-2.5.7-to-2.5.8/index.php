@@ -90,7 +90,7 @@ class Upgrade_258 extends XoopsUpgrade
         // kill any indexes based on pass column
         $indexes = $migrate->getTableIndexes('users');
         foreach ($indexes as $name => $def) {
-            if (preg_match('/\b(pass)\b/', $def['columns'])) {
+            if (preg_match('/\b(pass)\b/', (string) $def['columns'])) {
                 $migrate->dropIndex($name, 'users');
             }
         }

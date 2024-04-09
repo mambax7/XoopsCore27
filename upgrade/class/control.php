@@ -39,7 +39,7 @@ class UpgradeControl
         $dirlist = [];
         if (is_dir($dirname) && $handle = opendir($dirname)) {
             while (false !== ($file = readdir($handle))) {
-                if (substr($file, 0, 1) !== '.' && strtolower($file) !== 'cvs') {
+                if (!str_starts_with($file, '.') && strtolower($file) !== 'cvs') {
                     if (is_dir("{$dirname}/{$file}")) {
                         $dirlist[] = $file;
                     }
@@ -67,7 +67,7 @@ class UpgradeControl
     {
         $supports = null;
 
-        $language = (null === $language) ? $this->upgradeLanguage : $language;
+        $language ??= $this->upgradeLanguage;
 
         if (file_exists(__DIR__ . "/../language/{$language}/{$domain}.php")) {
             include_once __DIR__ . "/../language/{$language}/{$domain}.php";
@@ -142,7 +142,7 @@ class UpgradeControl
 
         if ($this->needUpgrade && !empty($files)) {
             foreach ($files as $k => $file) {
-                $testFile = preg_match('/^([.\/\\\\:])|([a-z]:)/i', $file) ? $file : "../{$file}";
+                $testFile = preg_match('/^([.\/\\\\:])|([a-z]:)/i', (string) $file) ? $file : "../{$file}";
                 if (is_writable($testFile) || !file_exists($testFile)) {
                     unset($files[$k]);
                 }

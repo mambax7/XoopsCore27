@@ -83,7 +83,7 @@ class XoopsInstallWizard
             return false;
         }
 
-        $pagename = preg_replace('~(page_)(.*)~', '$2', basename($_SERVER['PHP_SELF'], '.php'));
+        $pagename = preg_replace('~(page_)(.*)~', '$2', basename((string) $_SERVER['PHP_SELF'], '.php'));
         $this->setPage($pagename);
 
         // Prevent client caching
@@ -154,7 +154,7 @@ class XoopsInstallWizard
      */
     public function initLanguage($language)
     {
-        $language = preg_replace("/[^a-z0-9_\-]/i", '', $language);
+        $language = preg_replace("/[^a-z0-9_\-]/i", '', (string) $language);
         if (!file_exists("./language/{$language}/install.php")) {
             $language = 'english';
         }
@@ -194,7 +194,7 @@ class XoopsInstallWizard
     {
         $proto = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')) ? 'https' : 'http';
         $host  = $_SERVER['HTTP_HOST'];
-        $base  = substr($_SERVER['PHP_SELF'], 0, strrpos($_SERVER['PHP_SELF'], '/'));
+        $base  = substr((string) $_SERVER['PHP_SELF'], 0, strrpos((string) $_SERVER['PHP_SELF'], '/'));
 
         return $proto . '://' . $host . $base;
     }
@@ -210,9 +210,9 @@ class XoopsInstallWizard
         $pageIndex = $this->pageIndex;
         if (!(int)$page[0]) {
             if ($page[0] == '+') {
-                $pageIndex += substr($page, 1);
+                $pageIndex += substr((string) $page, 1);
             } elseif ($page[0] == '-') {
-                $pageIndex -= substr($page, 1);
+                $pageIndex -= substr((string) $page, 1);
             } else {
                 $pageIndex = (int)array_search($page, $pages);
             }

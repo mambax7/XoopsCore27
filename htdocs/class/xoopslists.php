@@ -110,12 +110,12 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
                 '_darcs'
             ];
             $list    = [];
-            if (substr($dirname, -1) !== '/') {
+            if (!str_ends_with((string) $dirname, '/')) {
                 $dirname .= '/';
             }
             if ($handle = opendir($dirname)) {
                 while ($file = readdir($handle)) {
-                    if (substr($file, 0, 1) === '.' || in_array(strtolower($file), $ignored)) {
+                    if (str_starts_with($file, '.') || in_array(strtolower($file), $ignored)) {
                         continue;
                     }
                     if (is_dir($dirname . $file)) {
@@ -139,8 +139,8 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
         public static function getFileListAsArray($dirname, $prefix = '')
         {
             $filelist = [];
-            if (substr($dirname, -1) === '/') {
-                $dirname = substr($dirname, 0, -1);
+            if (str_ends_with((string) $dirname, '/')) {
+                $dirname = substr((string) $dirname, 0, -1);
             }
             if (is_dir($dirname) && $handle = opendir($dirname)) {
                 while (false !== ($file = readdir($handle))) {
@@ -170,9 +170,7 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
         {
             $filelist = [];
 
-            $extToLower = function($ext) {
-                return strtolower($ext);
-            };
+            $extToLower = fn($ext) => strtolower((string) $ext);
 
             $extensionList = array_map($extToLower, $extensions);
 

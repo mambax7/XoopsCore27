@@ -96,8 +96,8 @@ class PathStuffController
             $request = $_POST;
             foreach ($this->path_lookup as $req => $sess) {
                 if (isset($request[$req])) {
-                    $request[$req] = str_replace("\\", '/', trim($request[$req]));
-                    if (substr($request[$req], -1) === '/') {
+                    $request[$req] = str_replace("\\", '/', trim((string) $request[$req]));
+                    if (str_ends_with($request[$req], '/')) {
                         $request[$req] = substr($request[$req], 0, -1);
                     }
                     $this->xoopsPath[$req] = $request[$req];

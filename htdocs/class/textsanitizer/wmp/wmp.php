@@ -69,9 +69,6 @@ EOH;
         ];
     }
 
-    /**
-     * @param MyTextSanitizer $myts
-     */
     public function load(MyTextSanitizer $myts)
     {
         $myts->patterns[] = "/\[wmp=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/wmp\]/sU";

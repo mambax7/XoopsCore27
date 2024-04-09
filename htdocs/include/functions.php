@@ -57,11 +57,10 @@ function xoops_getHandler($name, $optional = false)
  * xoops_getModuleHandler()
  *
  * @param string $name
- * @param mixed  $module_dir
  * @param bool   $optional
  * @return XoopsObjectHandler|false
  */
-function xoops_getModuleHandler($name = null, $module_dir = null, $optional = false)
+function xoops_getModuleHandler($name = null, mixed $module_dir = null, $optional = false)
 {
     static $handlers;
     // if $module_dir is not specified
@@ -73,14 +72,14 @@ function xoops_getModuleHandler($name = null, $module_dir = null, $optional = fa
             trigger_error('No Module is loaded', E_USER_ERROR);
         }
     } else {
-        $module_dir = trim($module_dir);
+        $module_dir = trim((string) $module_dir);
     }
     $name = (!isset($name)) ? $module_dir : trim($name);
     if (!isset($handlers[$module_dir][$name])) {
         if (file_exists($hnd_file = XOOPS_ROOT_PATH . "/modules/{$module_dir}/class/{$name}.php")) {
             include_once $hnd_file;
         }
-        $class = ucfirst(strtolower($module_dir)) . ucfirst($name) . 'Handler';
+        $class = ucfirst(strtolower((string) $module_dir)) . ucfirst((string) $name) . 'Handler';
         if (class_exists($class)) {
             $xoopsDB                      = XoopsDatabaseFactory::getDatabaseConnection();
             $handlers[$module_dir][$name] = new $class($xoopsDB);
@@ -227,10 +226,9 @@ function xoops_isActiveModule($dirname)
 /**
  * xoops_header()
  *
- * @param mixed $closehead
  * @return void
  */
-function xoops_header($closehead = true)
+function xoops_header(mixed $closehead = true)
 {
     global $xoopsConfig;
 
@@ -308,11 +306,10 @@ function xoops_footer()
 /**
  * xoops_error
  *
- * @param mixed  $msg
  * @param string $title
  * @return void
  */
-function xoops_error($msg, $title = '')
+function xoops_error(mixed $msg, $title = '')
 {
     echo '<div class="errorMsg">';
     if ($title != '') {
@@ -337,11 +334,10 @@ function xoops_error($msg, $title = '')
 /**
  * xoops_warning
  *
- * @param mixed  $msg
  * @param string $title
  * @return void
  */
-function xoops_warning($msg, $title = '')
+function xoops_warning(mixed $msg, $title = '')
 {
     echo '<div class="warningMsg">';
     if ($title != '') {
@@ -366,11 +362,10 @@ function xoops_warning($msg, $title = '')
 /**
  * xoops_result
  *
- * @param mixed  $msg
  * @param string $title
  * @return void
  */
-function xoops_result($msg, $title = '')
+function xoops_result(mixed $msg, $title = '')
 {
     echo '<div class="resultMsg">';
     if ($title != '') {
@@ -395,14 +390,10 @@ function xoops_result($msg, $title = '')
 /**
  * xoops_confirm()
  *
- * @param mixed  $hiddens
- * @param mixed  $action
- * @param mixed  $msg
  * @param string $submit
- * @param mixed  $addtoken
  * @return void
  */
-function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
+function xoops_confirm(mixed $hiddens, mixed $action, mixed $msg, $submit = '', mixed $addtoken = true)
 {
     if (!isset($GLOBALS['xoTheme']) || !is_object($GLOBALS['xoTheme'])) {
         include_once $GLOBALS['xoops']->path('/class/theme.php');
@@ -416,11 +407,11 @@ function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
     foreach ($hiddens as $name => $value) {
         if (is_array($value)) {
             foreach ($value as $caption => $newvalue) {
-                $tempHiddens .= '<input type="radio" name="' . $name . '" value="' . htmlspecialchars($newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
+                $tempHiddens .= '<input type="radio" name="' . $name . '" value="' . htmlspecialchars((string) $newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
             }
             $tempHiddens .= '<br>';
         } else {
-            $tempHiddens .= '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '" />';
+            $tempHiddens .= '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . '" />';
         }
     }
     $confirmTpl->assign('hiddens', $tempHiddens);
@@ -440,11 +431,11 @@ function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
 		foreach ($hiddens as $name => $value) {
 			if (is_array($value)) {
 				foreach ($value as $caption => $newvalue) {
-					echo '<input type="radio" name="' . $name . '" value="' . htmlspecialchars($newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
+					echo '<input type="radio" name="' . $name . '" value="' . htmlspecialchars((string) $newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
 				}
 				echo '<br>';
 			} else {
-				echo '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '" />';
+				echo '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . '" />';
 			}
 		}
 		if ($addtoken != false) {
@@ -461,11 +452,10 @@ function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
 /**
  * xoops_getUserTimestamp()
  *
- * @param mixed  $time
  * @param string $timeoffset
  * @return int
  */
-function xoops_getUserTimestamp($time, $timeoffset = '')
+function xoops_getUserTimestamp(mixed $time, $timeoffset = '')
 {
     global $xoopsConfig, $xoopsUser;
     if ($timeoffset == '') {
@@ -619,16 +609,14 @@ function xoops_makepass()
 /**
  * checkEmail()
  *
- * @param mixed $email
- * @param mixed $antispam
  * @return bool|mixed
  */
-function checkEmail($email, $antispam = false)
+function checkEmail(mixed $email, mixed $antispam = false)
 {
-    if (!$email || !preg_match('/^[^@]{1,64}@[^@]{1,255}$/', $email)) {
+    if (!$email || !preg_match('/^[^@]{1,64}@[^@]{1,255}$/', (string) $email)) {
         return false;
     }
-    $email_array      = explode('@', $email);
+    $email_array      = explode('@', (string) $email);
     $local_array      = explode('.', $email_array[0]);
     $local_arrayCount = count($local_array);
     for ($i = 0; $i < $local_arrayCount; ++$i) {
@@ -648,7 +636,7 @@ function checkEmail($email, $antispam = false)
         }
     }
     if ($antispam) {
-        $email = str_replace('@', ' at ', $email);
+        $email = str_replace('@', ' at ', (string) $email);
         $email = str_replace('.', ' dot ', $email);
     }
 
@@ -658,12 +646,11 @@ function checkEmail($email, $antispam = false)
 /**
  * formatURL()
  *
- * @param mixed $url
  * @return mixed|string
  */
-function formatURL($url)
+function formatURL(mixed $url)
 {
-    $url = trim($url);
+    $url = trim((string) $url);
     if ($url != '') {
         if ((!preg_match('/^http[s]*:\/\//i', $url)) && (!preg_match('/^ftp*:\/\//i', $url)) && (!preg_match('/^ed2k*:\/\//i', $url))) {
             $url = 'http://' . $url;
@@ -688,7 +675,7 @@ function xoops_getbanner()
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
         );
     }
-    list($numrows) = $db->fetchRow($result);
+    [$numrows] = $db->fetchRow($result);
     if ($numrows > 1) {
         --$numrows;
         $bannum = mt_rand(0, $numrows);
@@ -703,7 +690,7 @@ function xoops_getbanner()
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
             );
         }
-        list($bid, $cid, $imptotal, $impmade, $clicks, $imageurl, $clickurl, $date, $htmlbanner, $htmlcode) = $db->fetchRow($result);
+        [$bid, $cid, $imptotal, $impmade, $clicks, $imageurl, $clickurl, $date, $htmlbanner, $htmlcode] = $db->fetchRow($result);
         if ($xoopsConfig['my_ip'] == xoops_getenv('REMOTE_ADDR')) {
             // EMPTY
         } else {
@@ -736,7 +723,7 @@ function xoops_getbanner()
             }
         } else {
             $bannerobject = '<div id="xo-bannerfix">';
-            if (false !== stripos($imageurl, '.swf')) {
+            if (false !== stripos((string) $imageurl, '.swf')) {
                 $bannerobject = $bannerobject . '<div id ="xo-fixbanner">' . '<a href="' . XOOPS_URL . '/banners.php?op=click&amp;bid=' . $bid . '" rel="external" title="' . $clickurl . '"></a></div>' . '<object type="application/x-shockwave-flash" width="468" height="60" data="' . $imageurl . '" style="z-index:100;">' . '<param name="movie" value="' . $imageurl . '" />' . '<param name="wmode" value="opaque" />' . '</object>';
             } else {
                 $bannerobject = $bannerobject . '<a href="' . XOOPS_URL . '/banners.php?op=click&amp;bid=' . $bid . '" rel="external" title="' . $clickurl . '"><img src="' . $imageurl . '" alt="' . $clickurl . '" /></a>';
@@ -767,14 +754,14 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
     // under normal circumstance this event will exit, so listen for the .start above
     $xoopsPreload->triggerEvent('core.include.functions.redirectheader', [$url, $time, $message, $addredirect, $allowExternalLink]);
 
-    if (preg_match("/[\\0-\\31]|about:|script:/i", $url)) {
-        if (!preg_match('/^\b(java)?script:([\s]*)history\.go\(-\d*\)([\s]*[;]*[\s]*)$/si', $url)) {
+    if (preg_match("/[\\0-\\31]|about:|script:/i", (string) $url)) {
+        if (!preg_match('/^\b(java)?script:([\s]*)history\.go\(-\d*\)([\s]*[;]*[\s]*)$/si', (string) $url)) {
             $url = XOOPS_URL;
         }
     }
-    if (!$allowExternalLink && $pos = strpos($url, '://')) {
+    if (!$allowExternalLink && $pos = strpos((string) $url, '://')) {
         $xoopsLocation = substr(XOOPS_URL, strpos(XOOPS_URL, '://') + 3);
-        if (strcasecmp(substr($url, $pos + 3, strlen($xoopsLocation)), $xoopsLocation)) {
+        if (strcasecmp(substr((string) $url, $pos + 3, strlen($xoopsLocation)), $xoopsLocation)) {
             $url = XOOPS_URL;
         }
     }
@@ -799,11 +786,11 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
                           'xoops_theme'      => $theme,
                           'xoops_imageurl'   => XOOPS_THEME_URL . '/' . $theme . '/',
                           'xoops_themecss'   => xoops_getcss($theme),
-                          'xoops_requesturi' => htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
-                          'xoops_sitename'   => htmlspecialchars($xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5),
-                          'xoops_slogan'     => htmlspecialchars($xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_requesturi' => htmlspecialchars((string) $_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_sitename'   => htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5),
+                          'xoops_slogan'     => htmlspecialchars((string) $xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),
                           'xoops_dirname'    => isset($xoopsModule) && is_object($xoopsModule) ? $xoopsModule->getVar('dirname') : 'system',
-                          'xoops_pagetitle'  => isset($xoopsModule) && is_object($xoopsModule) ? $xoopsModule->getVar('name') : htmlspecialchars($xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5)
+                          'xoops_pagetitle'  => isset($xoopsModule) && is_object($xoopsModule) ? $xoopsModule->getVar('name') : htmlspecialchars((string) $xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5)
                       ]);
     if ($xoopsConfig['debug_mode'] == 2 && $xoopsUserIsAdmin) {
         $xoopsTpl->assign('time', 300);
@@ -811,21 +798,21 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
     } else {
         $xoopsTpl->assign('time', (int)$time);
     }
-    if (!empty($_SERVER['REQUEST_URI']) && $addredirect && false !== strpos($url, 'user.php')) {
-        if (false === strpos($url, '?')) {
-            $url .= '?xoops_redirect=' . urlencode($_SERVER['REQUEST_URI']);
+    if (!empty($_SERVER['REQUEST_URI']) && $addredirect && str_contains((string) $url, 'user.php')) {
+        if (!str_contains((string) $url, '?')) {
+            $url .= '?xoops_redirect=' . urlencode((string) $_SERVER['REQUEST_URI']);
         } else {
-            $url .= '&amp;xoops_redirect=' . urlencode($_SERVER['REQUEST_URI']);
+            $url .= '&amp;xoops_redirect=' . urlencode((string) $_SERVER['REQUEST_URI']);
         }
     }
     if (defined('SID') && SID && (!isset($_COOKIE[session_name()]) || ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '' && !isset($_COOKIE[$xoopsConfig['session_name']])))) {
-        if (false === strpos($url, '?')) {
+        if (!str_contains((string) $url, '?')) {
             $url .= '?' . SID;
         } else {
             $url .= '&amp;' . SID;
         }
     }
-    $url = preg_replace('/&amp;/i', '&', htmlspecialchars($url, ENT_QUOTES | ENT_HTML5));
+    $url = preg_replace('/&amp;/i', '&', htmlspecialchars((string) $url, ENT_QUOTES | ENT_HTML5));
     $xoopsTpl->assign('url', $url);
     $message = trim($message) != '' ? $message : _TAKINGBACK;
     $xoopsTpl->assign('message', $message);
@@ -838,10 +825,9 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
 /**
  * xoops_getenv()
  *
- * @param mixed $key
  * @return string
  */
-function xoops_getenv($key)
+function xoops_getenv(mixed $key)
 {
     $ret = '';
     if (array_key_exists($key, $_SERVER) && isset($_SERVER[$key])) {
@@ -925,10 +911,9 @@ function xoops_getMailer()
  * xoops_getrank()
  *
  * @param integer $rank_id
- * @param mixed   $posts
  * @return
  */
-function xoops_getrank($rank_id = 0, $posts = 0)
+function xoops_getrank($rank_id = 0, mixed $posts = 0)
 {
     $db      = XoopsDatabaseFactory::getDatabaseConnection();
     $myts    = \MyTextSanitizer::getInstance();
@@ -987,10 +972,9 @@ function xoops_notification_deletebymodule($module_id)
 /**
  * xoops_notification_deletebyuser()
  *
- * @param mixed $user_id
  * @return
  */
-function xoops_notification_deletebyuser($user_id)
+function xoops_notification_deletebyuser(mixed $user_id)
 {
     $notification_handler = xoops_getHandler('notification');
 
@@ -1000,12 +984,9 @@ function xoops_notification_deletebyuser($user_id)
 /**
  * xoops_notification_deletebyitem()
  *
- * @param mixed $module_id
- * @param mixed $category
- * @param mixed $item_id
  * @return
  */
-function xoops_notification_deletebyitem($module_id, $category, $item_id)
+function xoops_notification_deletebyitem(mixed $module_id, mixed $category, mixed $item_id)
 {
     $notification_handler = xoops_getHandler('notification');
 
@@ -1015,11 +996,9 @@ function xoops_notification_deletebyitem($module_id, $category, $item_id)
 /**
  * xoops_comment_count()
  *
- * @param mixed $module_id
- * @param mixed $item_id
  * @return
  */
-function xoops_comment_count($module_id, $item_id = null)
+function xoops_comment_count(mixed $module_id, mixed $item_id = null)
 {
     /** @var \XoopsCommentHandler $comment_handler */
     $comment_handler = xoops_getHandler('comment');
@@ -1034,11 +1013,9 @@ function xoops_comment_count($module_id, $item_id = null)
 /**
  * xoops_comment_delete()
  *
- * @param mixed $module_id
- * @param mixed $item_id
  * @return bool
  */
-function xoops_comment_delete($module_id, $item_id)
+function xoops_comment_delete(mixed $module_id, mixed $item_id)
 {
     if ((int)$module_id > 0 && (int)$item_id > 0) {
         /** @var \XoopsCommentHandler $comment_handler */
@@ -1078,12 +1055,9 @@ function xoops_comment_delete($module_id, $item_id)
  *
  * Group Permission Helper Functions
  *
- * @param mixed $module_id
- * @param mixed $perm_name
- * @param mixed $item_id
  * @return bool
  */
-function xoops_groupperm_deletebymoditem($module_id, $perm_name, $item_id = null)
+function xoops_groupperm_deletebymoditem(mixed $module_id, mixed $perm_name, mixed $item_id = null)
 {
     // do not allow system permissions to be deleted
     if ((int)$module_id <= 1) {
@@ -1098,10 +1072,9 @@ function xoops_groupperm_deletebymoditem($module_id, $perm_name, $item_id = null
 /**
  * xoops_utf8_encode()
  *
- * @param mixed $text
  * @return string
  */
-function xoops_utf8_encode(&$text)
+function xoops_utf8_encode(mixed &$text)
 {
     xoops_load('XoopsLocal');
 
@@ -1111,10 +1084,9 @@ function xoops_utf8_encode(&$text)
 /**
  * xoops_utf8_decode()
  *
- * @param mixed $text
  * @return string
  */
-function xoops_utf8_decode(&$text)
+function xoops_utf8_decode(mixed &$text)
 {
     xoops_load('XoopsLocal');
 
@@ -1124,10 +1096,9 @@ function xoops_utf8_decode(&$text)
 /**
  * xoops_convert_encoding()
  *
- * @param mixed $text
  * @return string
  */
-function xoops_convert_encoding(&$text)
+function xoops_convert_encoding(mixed &$text)
 {
     return xoops_utf8_encode($text);
 }
@@ -1135,10 +1106,9 @@ function xoops_convert_encoding(&$text)
 /**
  * xoops_trim()
  *
- * @param mixed $text
  * @return string
  */
-function xoops_trim($text)
+function xoops_trim(mixed $text)
 {
     xoops_load('XoopsLocal');
 
@@ -1151,12 +1121,11 @@ function xoops_trim($text)
 /**
  * xoops_getOption()
  *
- * @param mixed $option
  * @internal param string $type
  * @deprecated
  * @return string
  */
-function xoops_getOption($option)
+function xoops_getOption(mixed $option)
 {
     $ret = '';
     if (isset($GLOBALS['xoopsOption'][$option])) {
@@ -1172,13 +1141,12 @@ function xoops_getOption($option)
 /**
  * xoops_getConfigOption()
  *
- * @param mixed  $option
  * @param array|string $type
  * @internal param string $dirname
  * @deprecated
  * @return bool
  */
-function xoops_getConfigOption($option, $type = 'XOOPS_CONF')
+function xoops_getConfigOption(mixed $option, $type = 'XOOPS_CONF')
 {
     static $coreOptions = [];
 
@@ -1203,14 +1171,13 @@ function xoops_getConfigOption($option, $type = 'XOOPS_CONF')
  * YOU SHOULD NOT USE THIS METHOD, IT WILL BE REMOVED
  */
 /**
- * xoops_setConfigOption()
- *
- * @param mixed $option
- * @param null  $new
- * @return void
+* xoops_setConfigOption()
+*
+* @param null  $new
+* @return void
 @deprecated
- */
-function xoops_setConfigOption($option, $new = null)
+*/
+function xoops_setConfigOption(mixed $option, $new = null)
 {
     if (isset($GLOBALS['xoopsConfig'][$option]) && null !== $new) {
         $GLOBALS['xoopsConfig'][$option] = $new;
@@ -1221,16 +1188,15 @@ function xoops_setConfigOption($option, $new = null)
  * YOU SHOULD NOT USE THIS METHOD, IT WILL BE REMOVED
  */
 /**
- * xoops_getModuleOption
- *
- * Method for module developers getting a module config item. This could be from any module requested.
- *
- * @param mixed  $option
- * @param string $dirname
- * @return bool
+* xoops_getModuleOption
+*
+* Method for module developers getting a module config item. This could be from any module requested.
+*
+* @param string $dirname
+* @return bool
 @deprecated
- */
-function xoops_getModuleOption($option, $dirname = '')
+*/
+function xoops_getModuleOption(mixed $option, $dirname = '')
 {
     static $modOptions = [];
     if (is_array($modOptions) && isset($modOptions[$dirname][$option])) {
@@ -1282,7 +1248,7 @@ function xoops_getBaseDomain($url)
         $regdom = new \Geekwright\RegDom\RegisteredDomain();
         $host = $regdom->getRegisteredDomain($host);
     }
-    return (null === $host) ? '' : $host;
+    return $host ?? '';
 }
 
 /**
@@ -1318,7 +1284,7 @@ function xoops_getUrlDomain($url)
  *
  * @return mixed the value in $name
  */
-function makeSet(&$name, $default)
+function makeSet(mixed &$name, mixed $default)
 {
     if (!isset($name)) {
         $name = $default;

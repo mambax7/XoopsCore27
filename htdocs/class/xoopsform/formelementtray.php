@@ -24,8 +24,8 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsFormElementTray extends XoopsFormElement
 {
-    const ORIENTATION_HORIZONTAL = 'horizontal';
-    const ORIENTATION_VERTICAL   = 'vertical';
+    public const ORIENTATION_HORIZONTAL = 'horizontal';
+    public const ORIENTATION_VERTICAL   = 'vertical';
 
     /**
      * array of form element objects
@@ -33,24 +33,16 @@ class XoopsFormElementTray extends XoopsFormElement
      * @var array
      * @access private
      */
-    private $_elements = [];
+    private array $_elements = [];
 
     /**
      * required elements
      *
      * @var array
      */
-    public $_required = [];
+    public mixed $required = [];
 
-    protected $orientation;
-
-    /**
-     * HTML to seperate the elements
-     *
-     * @var string
-     * @access private
-     */
-    private $_delimeter;
+    protected string $orientation;
 
     /**
      * constructor
@@ -58,13 +50,16 @@ class XoopsFormElementTray extends XoopsFormElement
      * @param string $caption   Caption for the group.
      * @param string $delimeter HTML to separate the elements
      * @param string $name
-     *
      */
-    public function __construct($caption, $delimeter = '&nbsp;', $name = '')
+    public function __construct(string  $caption, /**
+     * HTML to seperate the elements
+     *
+     * @access private
+     */
+                                            private $delimeter = '&nbsp;', string $name = '')
     {
         $this->setName($name);
         $this->setCaption($caption);
-        $this->_delimeter = $delimeter;
     }
 
     /**
@@ -72,7 +67,7 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return bool true
      */
-    public function isContainer()
+    public function isContainer(): bool
     {
         return true;
     }
@@ -82,31 +77,30 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return bool
      */
-    public function isRequired()
+    public function isRequired(): bool
     {
-        return !empty($this->_required);
+        return !empty($this->required);
     }
 
     /**
      * Add an element to the group
      *
      * @param XoopsFormElement $formElement {@link XoopsFormElement} to add
-     * @param bool             $required
      *
      */
-    public function addElement(XoopsFormElement $formElement, $required = false)
+    public function addElement(XoopsFormElement $formElement, bool $required = false): void
     {
         $this->_elements[] = $formElement;
         if (!$formElement->isContainer()) {
             if ($required) {
-                $formElement->_required = true;
-                $this->_required[]      = $formElement;
+                $formElement->required = true;
+                $this->required[]      = $formElement;
             }
         } else {
             $required_elements = $formElement->getRequired();
             $count             = count($required_elements);
             for ($i = 0; $i < $count; ++$i) {
-                $this->_required[] = &$required_elements[$i];
+                $this->required[] = &$required_elements[$i];
             }
         }
     }
@@ -116,18 +110,18 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return array array of {@link XoopsFormElement}s
      */
-    public function &getRequired()
+    public function &getRequired(): array
     {
-        return $this->_required;
+        return $this->required;
     }
 
     /**
      * Get an array of the elements in this group
      *
-     * @param  bool $recurse get elements recursively?
+     * @param bool $recurse get elements recursively?
      * @return XoopsFormElement[]  Array of {@link XoopsFormElement} objects.
      */
-    public function &getElements($recurse = false)
+    public function &getElements(bool $recurse = false): array
     {
         if (!$recurse) {
             return $this->_elements;
@@ -154,12 +148,12 @@ class XoopsFormElementTray extends XoopsFormElement
     /**
      * Get the delimiter of this group
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param bool $encode To sanitizer the text?
      * @return string The delimiter
      */
-    public function getDelimeter($encode = false)
+    public function getDelimeter(bool $encode = false): string
     {
-        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->_delimeter), ENT_QUOTES | ENT_HTML5) : $this->_delimeter;
+        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->delimeter), ENT_QUOTES | ENT_HTML5) : $this->delimeter;
     }
 
     /**
@@ -171,7 +165,7 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @param string $direction ORIENTATION constant
      */
-    public function setOrientation($direction)
+    public function setOrientation(string $direction): void
     {
         if ($direction !== self::ORIENTATION_VERTICAL) {
             $direction = self::ORIENTATION_HORIZONTAL;
@@ -184,23 +178,23 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * The value will be assigned a default value if not previously set.
      *
-     * The default logic considers the presence of an HTML br tag in _delimeter
+     * The default logic considers the presence of an HTML br tag in delimeter
      * as implying ORIENTATION_VERTICAL for bc
      *
      * @return string either \XoopsFormElementTray::ORIENTATION_HORIZONTAL
      *                    or \XoopsFormElementTray::ORIENTATION_VERTICAL\
     */
-    public function getOrientation()
+    public function getOrientation(): string
     {
         if (!isset($this->orientation)) {
-            if(false !== stripos($this->_delimeter, '<br')) {
+            if(false !== stripos($this->delimeter, '<br')) {
                 $this->orientation = self::ORIENTATION_VERTICAL;
                 // strip tag as renderer should supply the relevant html
             } else {
                 $this->orientation = self::ORIENTATION_HORIZONTAL;
             }
         }
-        $this->_delimeter = preg_replace('#<br ?\/?>#i', '', $this->_delimeter);
+        $this->delimeter = preg_replace('#<br ?\/?>#i', '', $this->delimeter);
         return $this->orientation;
     }
 
@@ -209,7 +203,7 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return string HTML output
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormElementTray($this);
     }

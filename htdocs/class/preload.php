@@ -87,8 +87,8 @@ class XoopsPreload
                 if (is_dir($dir = XOOPS_ROOT_PATH . "/modules/{$module}/preloads/")) {
                     $file_list = XoopsLists::getFileListAsArray($dir);
                     foreach ($file_list as $file) {
-                        if (preg_match('/(\.php)$/i', $file)) {
-                            $file = substr($file, 0, -4);
+                        if (preg_match('/(\.php)$/i', (string) $file)) {
+                            $file = substr((string) $file, 0, -4);
                             if ('index' !== $file) {
                                 $this->_preloads[$i]['module'] = $module;
                                 $this->_preloads[$i]['file'] = $file;
@@ -110,13 +110,13 @@ class XoopsPreload
     {
         foreach ($this->_preloads as $preload) {
             include_once XOOPS_ROOT_PATH . '/modules/' . $preload['module'] . '/preloads/' . $preload['file'] . '.php';
-            $class_name = ucfirst($preload['module']) . ucfirst($preload['file']) . 'Preload';
+            $class_name = ucfirst((string) $preload['module']) . ucfirst((string) $preload['file']) . 'Preload';
             if (!class_exists($class_name)) {
                 continue;
             }
             $class_methods = get_class_methods($class_name);
             foreach ($class_methods as $method) {
-                if (strpos($method, 'event') === 0) {
+                if (str_starts_with($method, 'event')) {
                     $event_name                   = strtolower(str_replace('event', '', $method));
                     $event                        = ['class_name' => $class_name, 'method' => $method];
                     $this->_events[$event_name][] = $event;

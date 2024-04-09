@@ -158,20 +158,12 @@ class BloggerApi extends XoopsXmlRpcApi
                 $content = '';
                 foreach ($ret as $key => $value) {
                     $maptag = $this->_getXoopsTagMap($key);
-                    switch ($maptag) {
-                        case 'userid':
-                            $struct->add('userid', new XoopsXmlRpcString($value));
-                            break;
-                        case 'dateCreated':
-                            $struct->add('dateCreated', new XoopsXmlRpcDatetime($value));
-                            break;
-                        case 'postid':
-                            $struct->add('postid', new XoopsXmlRpcString($value));
-                            break;
-                        default :
-                            $content .= '<' . $key . '>' . trim($value) . '</' . $key . '>';
-                            break;
-                    }
+                    match ($maptag) {
+                        'userid' => $struct->add('userid', new XoopsXmlRpcString($value)),
+                        'dateCreated' => $struct->add('dateCreated', new XoopsXmlRpcDatetime($value)),
+                        'postid' => $struct->add('postid', new XoopsXmlRpcString($value)),
+                        default => $content .= '<' . $key . '>' . trim((string) $value) . '</' . $key . '>',
+                    };
                 }
                 $struct->add('content', new XoopsXmlRpcString($content));
                 $this->response->add($struct);
@@ -202,20 +194,12 @@ class BloggerApi extends XoopsXmlRpcApi
                         $content = '';
                         foreach ($ret[$i] as $key => $value) {
                             $maptag = $this->_getXoopsTagMap($key);
-                            switch ($maptag) {
-                                case 'userid':
-                                    $struct->add('userid', new XoopsXmlRpcString($value));
-                                    break;
-                                case 'dateCreated':
-                                    $struct->add('dateCreated', new XoopsXmlRpcDatetime($value));
-                                    break;
-                                case 'postid':
-                                    $struct->add('postid', new XoopsXmlRpcString($value));
-                                    break;
-                                default :
-                                    $content .= '<' . $key . '>' . trim($value) . '</' . $key . '>';
-                                    break;
-                            }
+                            match ($maptag) {
+                                'userid' => $struct->add('userid', new XoopsXmlRpcString($value)),
+                                'dateCreated' => $struct->add('dateCreated', new XoopsXmlRpcDatetime($value)),
+                                'postid' => $struct->add('postid', new XoopsXmlRpcString($value)),
+                                default => $content .= '<' . $key . '>' . trim((string) $value) . '</' . $key . '>',
+                            };
                         }
                         $struct->add('content', new XoopsXmlRpcString($content));
                         $arr->add($struct);
@@ -265,17 +249,11 @@ class BloggerApi extends XoopsXmlRpcApi
         if (!$this->_checkUser($this->params[2], $this->params[3])) {
             $this->response->add(new XoopsXmlRpcFault(104));
         } else {
-            switch ($this->params[5]) {
-                case 'main':
-                    $this->response->add(new XoopsXmlRpcFault(107));
-                    break;
-                case 'archiveIndex':
-                    $this->response->add(new XoopsXmlRpcFault(107));
-                    break;
-                default:
-                    $this->response->add(new XoopsXmlRpcFault(107));
-                    break;
-            }
+            match ($this->params[5]) {
+                'main' => $this->response->add(new XoopsXmlRpcFault(107)),
+                'archiveIndex' => $this->response->add(new XoopsXmlRpcFault(107)),
+                default => $this->response->add(new XoopsXmlRpcFault(107)),
+            };
         }
     }
 

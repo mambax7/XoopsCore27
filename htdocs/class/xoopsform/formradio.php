@@ -28,15 +28,7 @@ class XoopsFormRadio extends XoopsFormElement
      * @var array
      * @access private
      */
-    public $_options = [];
-
-    /**
-     * Pre-selected value
-     *
-     * @var string
-     * @access private
-     */
-    public $_value;
+    public array $options = [];
 
     /**
      * Columns per line for rendering
@@ -47,15 +39,7 @@ class XoopsFormRadio extends XoopsFormElement
      * @var int
      * @access public
      */
-    public $columns;
-
-    /**
-     * HTML to seperate the elements
-     *
-     * @var string
-     * @access private
-     */
-    public $_delimeter;
+    public int $columns;
 
     /**
      * Constructor
@@ -63,16 +47,25 @@ class XoopsFormRadio extends XoopsFormElement
      * @param string      $caption Caption
      * @param string      $name    "name" attribute
      * @param string|null $value   Pre-selected value
-     * @param string $delimeter
+     * @param string $delimeter HTML to seperate the elements
      */
-    public function __construct($caption, $name, $value = null, $delimeter = '&nbsp;')
+    public function __construct(string $caption, string $name, /**
+     * Pre-selected value
+     *
+     * @access private
+     */
+     public $value = null, /**
+     * HTML to seperate the elements
+     *
+     * @access private
+     */
+    public $delimeter = '&nbsp;')
     {
         $this->setCaption($caption);
         $this->setName($name);
         if (isset($value)) {
             $this->setValue($value);
         }
-        $this->_delimeter = $delimeter;
     }
 
     /**
@@ -81,19 +74,17 @@ class XoopsFormRadio extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): ?string
     {
-        return ($encode && $this->_value !== null) ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
+        return ($encode && $this->value !== null) ? htmlspecialchars((string) $this->value, ENT_QUOTES | ENT_HTML5) : $this->value;
     }
 
     /**
      * Set the pre-selected value
-     *
-     * @param string $value
      */
-    public function setValue($value)
+    public function setValue(string $value): void
     {
-        $this->_value = $value;
+        $this->value = $value;
     }
 
     /**
@@ -102,12 +93,12 @@ class XoopsFormRadio extends XoopsFormElement
      * @param string $value "value" attribute - This gets submitted as form-data.
      * @param string $name  "name" attribute - This is displayed. If empty, we use the "value" instead.
      */
-    public function addOption($value, $name = '')
+    public function addOption(string $value, string $name = ''): void
     {
         if ($name != '') {
-            $this->_options[$value] = $name;
+            $this->options[$value] = $name;
         } else {
-            $this->_options[$value] = $value;
+            $this->options[$value] = $value;
         }
     }
 
@@ -116,7 +107,7 @@ class XoopsFormRadio extends XoopsFormElement
      *
      * @param array $options Associative array of value->name pairs.
      */
-    public function addOptionArray($options)
+    public function addOptionArray(array $options): void
     {
         if (is_array($options)) {
             foreach ($options as $k => $v) {
@@ -132,14 +123,14 @@ class XoopsFormRadio extends XoopsFormElement
      *
      * @return array Associative array of value->name pairs
      */
-    public function getOptions($encode = false)
+    public function getOptions(bool|int $encode = false): array
     {
         if (!$encode) {
-            return $this->_options;
+            return $this->options;
         }
         $value = [];
-        foreach ($this->_options as $val => $name) {
-            $value[$encode ? htmlspecialchars($val, ENT_QUOTES | ENT_HTML5) : $val] = ($encode > 1) ? htmlspecialchars($name, ENT_QUOTES | ENT_HTML5) : $name;
+        foreach ($this->options as $val => $name) {
+            $value[$encode ? htmlspecialchars((string) $val, ENT_QUOTES | ENT_HTML5) : $val] = ($encode > 1) ? htmlspecialchars((string) $name, ENT_QUOTES | ENT_HTML5) : $name;
         }
 
         return $value;
@@ -151,9 +142,9 @@ class XoopsFormRadio extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return string The delimiter
      */
-    public function getDelimeter($encode = false)
+    public function getDelimeter(bool $encode = false): string
     {
-        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->_delimeter), ENT_QUOTES | ENT_HTML5) : $this->_delimeter;
+        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->delimeter), ENT_QUOTES | ENT_HTML5) : $this->delimeter;
     }
 
     /**
@@ -161,7 +152,7 @@ class XoopsFormRadio extends XoopsFormElement
      *
      * @return string HTML
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormRadio($this);
     }

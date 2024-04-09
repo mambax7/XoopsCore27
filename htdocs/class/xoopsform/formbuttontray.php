@@ -1,6 +1,9 @@
 <?php
+
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+
 /**
- * XOOPS Form Class Elements
+ * XoopsFormButtonTray
  *
  * @copyright       (c) 2000-2017 XOOPS Project (www.xoops.org)
  * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
@@ -10,56 +13,28 @@
  * @author              John Neill <catzwolf@xoops.org>
  *
  */
-defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
-/**
- * XoopsFormButtonTray
- *
- * @author         John Neill <catzwolf@xoops.org>
- * @package        kernel
- * @subpackage     form
- * @access         public
- */
 class XoopsFormButtonTray extends XoopsFormElement
 {
-    /**
-     * Value
-     *
-     * @var string
-     * @access private
-     */
-    public $_value;
-
-    /**
-     * Type of the button. This could be either "button", "submit", or "reset"
-     *
-     * @var string
-     * @access private
-     */
-    public $_type;
-
-    public $_showDelete;
 
     /**
      * Constructor
      *
      * @param mixed  $name
      * @param string $value
-     * @param string $type
+     * @param string $type Type of the button. This could be either "button", "submit", or "reset"
      * @param string $onclick
      * @param bool   $showDelete
      */
-    public function __construct($name, $value = '', $type = '', $onclick = '', $showDelete = false)
+    public function __construct(mixed         $name,
+                                public string $value = '',
+                                public string $type = 'submit',
+                                string        $onclick = '',
+                                public bool   $showDelete = false)
     {
         $this->setName($name);
-        $this->setValue($value);
-        $this->_type       = (!empty($type)) ? $type : 'submit';
-        $this->_showDelete = $showDelete;
-        if ($onclick) {
-            $this->setExtra($onclick);
-        } else {
-            $this->setExtra('');
-        }
+        $this->setExtra($onclick);
+
     }
 
     /**
@@ -67,21 +42,9 @@ class XoopsFormButtonTray extends XoopsFormElement
      *
      * @return string
      */
-    public function getValue()
+    public function getValue(): string
     {
-        return $this->_value;
-    }
-
-    /**
-     * XoopsFormButtonTray::setValue()
-     *
-     * @param mixed $value
-     *
-     * @return void
-     */
-    public function setValue($value)
-    {
-        $this->_value = $value;
+        return $this->value;
     }
 
     /**
@@ -89,9 +52,9 @@ class XoopsFormButtonTray extends XoopsFormElement
      *
      * @return string
      */
-    public function getType()
+    public function getType(): string
     {
-        return $this->_type;
+        return $this->type;
     }
 
     /**

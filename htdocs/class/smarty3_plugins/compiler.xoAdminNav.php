@@ -40,5 +40,5 @@ function smarty_compiler_xoAdminNav($params, $smarty)
         }
     }
 
-    return "<?php echo '" . addslashes($url) . "'; ?>";
+    return "<?php echo '" . addslashes((string) $url) . "'; ?>";
 }

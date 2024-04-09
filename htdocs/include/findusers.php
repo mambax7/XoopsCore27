@@ -134,7 +134,6 @@ class XoopsRankHandler extends XoopsObjectHandler
     /**
      * Get List
      *
-     * @param  CriteriaElement $criteria
      * @param  int             $limit
      * @param  int             $start
      * @return array
@@ -231,7 +230,6 @@ class XoUserHandler extends XoopsObjectHandler
     /**
      * Get Count
      *
-     * @param  CriteriaElement $criteria
      * @param  array           $groups
      * @return int
      */
@@ -260,7 +258,7 @@ class XoUserHandler extends XoopsObjectHandler
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(), E_USER_ERROR
             );
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }
@@ -268,7 +266,6 @@ class XoUserHandler extends XoopsObjectHandler
     /**
      * GetAll
      *
-     * @param  CriteriaElement $criteria
      * @param  array           $groups
      * @return array of matching objects
      */
@@ -464,7 +461,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
         if ($mode == $_mode) {
             continue;
         }
-        $modes_switch[] = "<a href='findusers.php?target=" . htmlspecialchars(Request::getString('target', ''), ENT_QUOTES | ENT_HTML5) . '&amp;multiple=' . (string)$multiple . '&amp;token=' . htmlspecialchars($token, ENT_QUOTES | ENT_HTML5) . "&amp;mode={$_mode}'>{$title}</a>";
+        $modes_switch[] = "<a href='findusers.php?target=" . htmlspecialchars(Request::getString('target', ''), ENT_QUOTES | ENT_HTML5) . '&amp;multiple=' . (string)$multiple . '&amp;token=' . htmlspecialchars((string) $token, ENT_QUOTES | ENT_HTML5) . "&amp;mode={$_mode}'>{$title}</a>";
     }
     echo '<h4>' . implode(' | ', $modes_switch) . '</h4>';
     echo '(' . sprintf(_MA_USER_ACTUS, "<span style='color:#ff0000;'>$acttotal</span>") . ' ' . sprintf(_MA_USER_INACTUS, "<span style='color:#ff0000;'>$inacttotal</span>") . ')';
@@ -623,7 +620,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
     ';
 
     echo '</html><body>';
-    echo "<a href='findusers.php?target=" . htmlspecialchars(Request::getString('target', '', 'POST'), ENT_QUOTES | ENT_HTML5) . '&amp;multiple=' . (string)$multiple . '&amp;token=' . htmlspecialchars($token, ENT_QUOTES | ENT_HTML5) . "'>" . _MA_USER_FINDUS . "</a>&nbsp;<span style='font-weight:bold;'>&raquo;</span>&nbsp;" . _MA_USER_RESULTS . '<br><br>';
+    echo "<a href='findusers.php?target=" . htmlspecialchars(Request::getString('target', '', 'POST'), ENT_QUOTES | ENT_HTML5) . '&amp;multiple=' . (string)$multiple . '&amp;token=' . htmlspecialchars((string) $token, ENT_QUOTES | ENT_HTML5) . "'>" . _MA_USER_FINDUS . "</a>&nbsp;<span style='font-weight:bold;'>&raquo;</span>&nbsp;" . _MA_USER_RESULTS . '<br><br>';
     if (empty($start) && empty($foundusers)) {
         echo '<h4>' . _MA_USER_NOFOUND, '</h4>';
         $hiddenform = "<form name='findnext' action='findusers.php' method='post'>";
@@ -633,10 +630,10 @@ if (!Request::hasVar('user_submit', 'POST')) {
                 $hiddenform .= $GLOBALS['xoopsSecurity']->getTokenHTML() . "\n";
             } elseif (is_array($v)) {
                 foreach ($v as $temp) {
-                    $hiddenform .= "<input type='hidden' name='". htmlspecialchars($k, ENT_QUOTES | ENT_HTML5)."' value='" . htmlspecialchars($temp, ENT_QUOTES | ENT_HTML5) . "' />\n";
+                    $hiddenform .= "<input type='hidden' name='". htmlspecialchars((string) $k, ENT_QUOTES | ENT_HTML5)."' value='" . htmlspecialchars((string) $temp, ENT_QUOTES | ENT_HTML5) . "' />\n";
                 }
             } else {
-                $hiddenform .= "<input type='hidden' name='" . htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars($v, ENT_QUOTES | ENT_HTML5) . "' />\n";
+                $hiddenform .= "<input type='hidden' name='" . htmlspecialchars((string) $k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars((string) $v, ENT_QUOTES | ENT_HTML5) . "' />\n";
             }
         }
         if (!Request::hasVar('limit', 'POST')) {
@@ -645,7 +642,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
         if (!Request::hasVar('start', 'POST')) {
             $hiddenform .= "<input type='hidden' name='start' value='{$start}' />\n";
         }
-        $hiddenform .= "<input type='hidden' name='token' value='" . htmlspecialchars($token, ENT_QUOTES | ENT_HTML5) . "' />\n";
+        $hiddenform .= "<input type='hidden' name='token' value='" . htmlspecialchars((string) $token, ENT_QUOTES | ENT_HTML5) . "' />\n";
         $hiddenform .= '</form>';
 
         echo '<div>' . $hiddenform;
@@ -707,7 +704,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
             } else {
                 echo "<input type='button' value='" . _MA_USER_ADD_SELECTED . "' onclick='addusers();' />";
             }
-            echo "<input type='hidden' name='token' value='" . htmlspecialchars($token, ENT_QUOTES | ENT_HTML5) . "' />\n";
+            echo "<input type='hidden' name='token' value='" . htmlspecialchars((string) $token, ENT_QUOTES | ENT_HTML5) . "' />\n";
             echo "</td></tr></table></form>\n";
         }
 
@@ -718,11 +715,11 @@ if (!Request::hasVar('user_submit', 'POST')) {
                 $hiddenform .= $GLOBALS['xoopsSecurity']->getTokenHTML() . "\n";
             } elseif (is_array($v)) {
                 foreach ($v as $temp) {
-                    $hiddenform .= "<input type='hidden' name='". htmlspecialchars($k, ENT_QUOTES | ENT_HTML5)."' value='" . htmlspecialchars($temp, ENT_QUOTES | ENT_HTML5) . "' />\n";
+                    $hiddenform .= "<input type='hidden' name='". htmlspecialchars((string) $k, ENT_QUOTES | ENT_HTML5)."' value='" . htmlspecialchars((string) $temp, ENT_QUOTES | ENT_HTML5) . "' />\n";
                 }
             } else {
 
-                $hiddenform .= "<input type='hidden' name='" . htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars($myts->stripSlashesGPC($v), ENT_QUOTES | ENT_HTML5) . "' />\n";
+                $hiddenform .= "<input type='hidden' name='" . htmlspecialchars((string) $k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars((string) $myts->stripSlashesGPC($v), ENT_QUOTES | ENT_HTML5) . "' />\n";
             }
         }
         if (!Request::hasVar('limit', 'POST')) {
@@ -731,7 +728,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
         if (!Request::hasVar('start', 'POST')) {
             $hiddenform .= "<input type='hidden' name='start' value='" . $start . "' />\n";
         }
-        $hiddenform .= "<input type='hidden' name='token' value='" . htmlspecialchars($token, ENT_QUOTES | ENT_HTML5) . "' />\n";
+        $hiddenform .= "<input type='hidden' name='token' value='" . htmlspecialchars((string) $token, ENT_QUOTES | ENT_HTML5) . "' />\n";
         if (!isset($total) || ($totalpages = ceil($total / $limit)) > 1) {
             $prev = $start - $limit;
             if ($start - $limit >= 0) {

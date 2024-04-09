@@ -12,7 +12,7 @@ class Upgrade_2014 extends XoopsUpgrade
     {
         $lines = file('../mainfile.php');
         foreach ($lines as $line) {
-            if (strpos($line, "\$_REQUEST[\$bad_global]") !== false) {
+            if (str_contains($line, "\$_REQUEST[\$bad_global]")) {
                 // Patch found: do not apply again
                 return true;
             }
@@ -47,7 +47,7 @@ class Upgrade_2014 extends XoopsUpgrade
         $matchDefault   = "\$xoopsOption['nocommon']";
 
         foreach ($lines as $k => $line) {
-            if (strpos($line, "\$_REQUEST[\$bad_global]") !== false) {
+            if (str_contains($line, "\$_REQUEST[\$bad_global]")) {
                 // Patch found: do not apply again
                 $insert = -2;
                 break;

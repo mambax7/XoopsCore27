@@ -8,56 +8,25 @@
 
 function xtube_returnsource($returnsource)
 {
-    switch ($returnsource) {
-        case 0:
-            $returnsource = _AM_XTUBE_YOUTUBE;
-            break;
-        case 1:
-            $returnsource = _AM_XTUBE_METACAFE;
-            break;
-        case 2:
-            $returnsource = _AM_XTUBE_IFILM;
-            break;
-        case 3:
-            $returnsource = _AM_XTUBE_PHOTOBUCKET;
-            break;
-        case 4:
-            $returnsource = _AM_XTUBE_VIDDLER;
-            break;
-        case 100:
-            $returnsource = _AM_XTUBE_GOOGLEVIDEO;
-            break;
-        case 101:
-            $returnsource = _AM_XTUBE_MYSPAVETV;
-            break;
-        case 102:
-            $returnsource = _AM_XTUBE_DAILYMOTION;
-            break;
-        case 103:
-            $returnsource = _AM_XTUBE_BLIPTV;
-            break;
-        case 104:
-            $returnsource = _AM_XTUBE_CLIPFISH;
-            break;
-        case 105:
-            $returnsource = _AM_XTUBE_LIVELEAK;
-            break;
-        case 106:
-            $returnsource = _AM_XTUBE_MAKTOOB;
-            break;
-        case 107:
-            $returnsource = _AM_XTUBE_VEOH;
-            break;
-        case 108:
-            $returnsource = _AM_XTUBE_VIMEO;
-            break;
-        case 109:
-            $returnsource = _AM_XTUBE_MEGAVIDEO;
-            break;
-        case 200:
-            $returnsource = _AM_XTUBE_XOOPSTUBE;
-            break;
-    }
+    $returnsource = match ($returnsource) {
+        0 => _AM_XTUBE_YOUTUBE,
+        1 => _AM_XTUBE_METACAFE,
+        2 => _AM_XTUBE_IFILM,
+        3 => _AM_XTUBE_PHOTOBUCKET,
+        4 => _AM_XTUBE_VIDDLER,
+        100 => _AM_XTUBE_GOOGLEVIDEO,
+        101 => _AM_XTUBE_MYSPAVETV,
+        102 => _AM_XTUBE_DAILYMOTION,
+        103 => _AM_XTUBE_BLIPTV,
+        104 => _AM_XTUBE_CLIPFISH,
+        105 => _AM_XTUBE_LIVELEAK,
+        106 => _AM_XTUBE_MAKTOOB,
+        107 => _AM_XTUBE_VEOH,
+        108 => _AM_XTUBE_VIMEO,
+        109 => _AM_XTUBE_MEGAVIDEO,
+        200 => _AM_XTUBE_XOOPSTUBE,
+        default => $returnsource,
+    };
 
     return $returnsource;
 }
@@ -91,7 +60,7 @@ function xtube_videothumb($vidid, $title, $source, $picurl, $screenshot, $width 
 
         // MetaCafe
         case 1:
-            list($metaclip) = preg_split('[/]', $vidid);
+            [$metaclip] = preg_split('[/]', (string) $vidid);
             $videothumb['metathumb'] = $metaclip;
             $thumb                   = '<img src="https://www.metacafe.com/thumb/' . $videothumb['metathumb'] . '.jpg" title="' . $title . '" alt="' . $title . '" width="' . $width . '" height="' . $height . '" style="padding: 0px; border-style: none;" />';
             break;
@@ -164,7 +133,7 @@ function xtube_videopublisher($vidid, $publisher, $source = 0)
         // Determine if video source Photobucket for publisher
         case 3:
             $string = 'th_';
-            list($photobucket) = explode($string, $vidid);
+            [$photobucket] = explode($string, (string) $vidid);
             $ppublisher['ppublisher'] = $photobucket;
             $publisher                = '<a href="https://s39.photobucket.com/albums/' . $ppublisher['ppublisher'] . '" target="_blank">' . $publisher . '</a>';
             break;
@@ -266,7 +235,7 @@ function xtube_showvideo($vidid, $source, $screenshot, $picurl)
 
         // Photobucket
         case 3:
-            $vidid     = str_replace('th_', '', $vidid);
+            $vidid     = str_replace('th_', '', (string) $vidid);
             $showvideo = '<embed width="853" height="480" type="application/x-shockwave-flash" wmode="transparent" src="https://i51.photobucket.com/player.swf?file=https://vid51.photobucket.com/albums/' . $vidid . '.flv' . $photobucket . '"></embed>';
             break;
 

@@ -27,28 +27,19 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsObjectTree
 {
-    /**
-     * @access private
-     */
-    protected $parentId;
-    protected $myId;
     protected $rootId;
     protected $tree = [];
-    protected $objects;
 
     /**
      * Constructor
      *
-     * @param array  $objectArr Array of {@link XoopsObject}s
+     * @param array $objects Array of {@link XoopsObject}s
      * @param string $myId      field name of object ID
      * @param string $parentId  field name of parent object ID
      * @param string $rootId    field name of root object ID
      */
-    public function __construct(&$objectArr, $myId, $parentId, $rootId = null)
+    public function __construct(protected $objects, protected $myId, protected $parentId, $rootId = null)
     {
-        $this->objects = $objectArr;
-        $this->myId     = $myId;
-        $this->parentId = $parentId;
         if (isset($rootId)) {
             $this->rootId = $rootId;
         }
@@ -309,7 +300,7 @@ class XoopsObjectTree
             return $this->tree;
         }
         $message = 'Undefined property: XoopsObjectTree::$' . $name . " in {$trace[0]['file']} line {$trace[0]['line']}";
-        $GLOBALS['xoopsLogger']->addExtra(get_called_class(), $message);
+        $GLOBALS['xoopsLogger']->addExtra(static::class, $message);
 
         return null;
     }

@@ -87,7 +87,7 @@ class XoopsOnlineHandler
             );
         }
 
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
         if ($count > 0) {
             $sql = 'UPDATE ' . $this->db->prefix('online')
                    . " SET online_updated = {$time}, online_module = {$module} WHERE online_uid = {$uid}";
@@ -198,7 +198,7 @@ class XoopsOnlineHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($ret) = $this->db->fetchRow($result);
+        [$ret] = $this->db->fetchRow($result);
 
         return (int)$ret;
     }

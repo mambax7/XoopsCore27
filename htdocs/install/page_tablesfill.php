@@ -72,7 +72,7 @@ if (!$result) {
     exit();
 }
 
-list($count) = $dbm->db->fetchRow($result);
+[$count] = $dbm->db->fetchRow($result);
 $process = ($count == 0);
 $update  = false;
 
@@ -93,7 +93,7 @@ if ($touched) {
 }
 $error = false;
 
-$hashedAdminPass = password_hash($adminpass, PASSWORD_DEFAULT);
+$hashedAdminPass = password_hash((string) $adminpass, PASSWORD_DEFAULT);
 
 if ($process) {
     $result  = $dbm->queryFromFile('./sql/' . XOOPS_DB_TYPE . '.data.sql');

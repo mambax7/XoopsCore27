@@ -54,7 +54,7 @@ if ('system' === $xoopsModule->getVar('dirname')) {
             $extraVar = Request::getString($extra_param, 'POST', '');
             $extra_params .=
                 ($extraVar !== '')
-                    ? $extra_param . '=' . htmlspecialchars($extraVar, ENT_QUOTES | ENT_HTML5) . '&amp;'
+                    ? $extra_param . '=' . htmlspecialchars((string) $extraVar, ENT_QUOTES | ENT_HTML5) . '&amp;'
                     : $extra_param . '=&amp;';
         }
         $redirect_page .= $extra_params;
@@ -391,11 +391,11 @@ switch ($op) {
                 }
             }
             // call custom approve function if any
-            if (false !== $call_approvefunc && isset($comment_config['callback']['approve']) && trim($comment_config['callback']['approve']) != '') {
+            if (false !== $call_approvefunc && isset($comment_config['callback']['approve']) && trim((string) $comment_config['callback']['approve']) != '') {
                 $skip = false;
                 if (!function_exists($comment_config['callback']['approve'])) {
                     if (isset($comment_config['callbackFile'])) {
-                        $callbackfile = trim($comment_config['callbackFile']);
+                        $callbackfile = trim((string) $comment_config['callbackFile']);
                         if ($callbackfile != '' && file_exists($GLOBALS['xoops']->path('modules/' . $moddir . '/' . $callbackfile))) {
                             include_once $GLOBALS['xoops']->path('modules/' . $moddir . '/' . $callbackfile);
                         }
@@ -412,11 +412,11 @@ switch ($op) {
             }
 
             // call custom update function if any
-            if (false !== $call_updatefunc && isset($comment_config['callback']['update']) && trim($comment_config['callback']['update']) != '') {
+            if (false !== $call_updatefunc && isset($comment_config['callback']['update']) && trim((string) $comment_config['callback']['update']) != '') {
                 $skip = false;
                 if (!function_exists($comment_config['callback']['update'])) {
                     if (isset($comment_config['callbackFile'])) {
-                        $callbackfile = trim($comment_config['callbackFile']);
+                        $callbackfile = trim((string) $comment_config['callbackFile']);
                         if ($callbackfile != '' && file_exists($GLOBALS['xoops']->path('modules/' . $moddir . '/' . $callbackfile))) {
                             include_once $GLOBALS['xoops']->path('modules/' . $moddir . '/' . $callbackfile);
                         }
@@ -478,7 +478,7 @@ switch ($op) {
                     if (isset($com_config['extraParams']) && \is_array($com_config['extraParams'])) {
                         $extra_params = '';
                         foreach ($com_config['extraParams'] as $extra_param) {
-                            $extra_params .= isset($_POST[$extra_param]) ? $extra_param . '=' . htmlspecialchars($_POST[$extra_param], ENT_QUOTES | ENT_HTML5) . '&amp;' : $extra_param . '=&amp;';
+                            $extra_params .= isset($_POST[$extra_param]) ? $extra_param . '=' . htmlspecialchars((string) $_POST[$extra_param], ENT_QUOTES | ENT_HTML5) . '&amp;' : $extra_param . '=&amp;';
                         }
                         $comment_url .= $extra_params;
                     }

@@ -86,7 +86,7 @@ function smarty_function_xoops_link($params, &$smarty)
     }
     if (!isset($params['page'])) {
         $cur  = $_SERVER['PHP_SELF'];
-        $page = substr($cur, strrpos($cur, '/') + 1);
+        $page = substr((string) $cur, strrpos((string) $cur, '/') + 1);
     } else {
         $page = $params['page'];
     }

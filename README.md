@@ -7,9 +7,9 @@
 [![Quality Score](https://img.shields.io/scrutinizer/g/XOOPS/XoopsCore25.svg?style=flat)](https://scrutinizer-ci.com/g/XOOPS/XoopsCore25)
 [![Latest Version](https://img.shields.io/github/release/XOOPS/XoopsCore25.svg?style=flat)](https://github.com/XOOPS/XoopsCore25/releases)
 
-> **Note:** This repository contains the core code of the XOOPS Core 2.5.x. Our next generation is currently under development on [GitHub](https://github.com/XOOPS/XoopsCore).
+> **Note:** This repository contains the core code of the XOOPS Core 2.7.x. Our next generation is currently under development on [GitHub](https://github.com/XOOPS/XoopsCore).
 
-To install this version of XOOPS 2.5.x follow the instructions in [The XOOPS Install & Upgrade Guide](https://xoops.gitbook.io/xoops-install-upgrade/)
+To install this version of XOOPS 2.7.x follow the instructions in [The XOOPS Install & Upgrade Guide](https://xoops.gitbook.io/xoops-install-upgrade/)
 
 For more information on building a web site using XOOPS, visit the main [XOOPS Web Site](https://xoops.org).
 

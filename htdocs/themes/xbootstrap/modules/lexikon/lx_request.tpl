@@ -1,21 +1,24 @@
+<nav aria-label="breadcrumb">
 <ol class="breadcrumb">
-  <li><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-  <li><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
-  <li><{$smarty.const._MD_LEXIKON_ASKFORDEF}></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
+        <li class="breadcrumb-item active" aria-current="page"><{$smarty.const._MD_LEXIKON_ASKFORDEF}></li>
 </ol>
+</nav>
 
 <div class="row">
   <div class="col-md-12">
-    <div class="panel panel-info">
-      <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
         <h4><{$smarty.const._MD_LEXIKON_ASKFORDEF}></h4>
       </div>
-      <div class="panel-body">
+            <div class="card-body">
         <p><{$smarty.const._MD_LEXIKON_INTROREQUEST}></p>
       </div>
     </div>
   </div>
 </div>
+
 <div class="row" >
   <div class="col-md-6 col-sm-12">
     <{$requestform.javascript}>
@@ -31,14 +34,13 @@
                 <{$element.body}>
             <{/if}>
         <{/foreach}>
-
-
     </form>
   </div>
 </div>
-<script type="text/javascript">
-$('#sub-lex input[type=text]').each(function(){
-  $( this ).addClass( "form-control" );
+
+<script>
+    $(document).ready(function() {
+        $('#sub-lex input[type=text]').addClass('form-control');
+        $('input[type=submit]').addClass('btn btn-success btn-sm');
 });
-$('input[type=submit]').addClass( "btn btn-success btn-sm" );
 </script>

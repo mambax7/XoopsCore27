@@ -37,5 +37,5 @@ function smarty_compiler_xoModuleIcons16($params, $smarty)
         }
     }
 
-    return "<?php echo '" . addslashes($url) . "'; ?>";
+    return "<?php echo '" . addslashes((string) $url) . "'; ?>";
 }

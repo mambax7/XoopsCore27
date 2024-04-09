@@ -25,25 +25,21 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 class XoopsFormLabel extends XoopsFormElement
 {
     /**
-     * Text
-     *
-     * @var string
-     * @access private
-     */
-    public $_value;
-
-    /**
      * Constructor
      *
      * @param string $caption Caption
      * @param string $value   Text
      * @param string $name
      */
-    public function __construct($caption = '', $value = '', $name = '')
+    public function __construct(string $caption = '', /**
+     * Text
+     *
+     * @access private
+     */
+    public $value = '', string $name = '')
     {
         $this->setCaption($caption);
         $this->setName($name);
-        $this->_value = $value;
     }
 
     /**
@@ -52,9 +48,9 @@ class XoopsFormLabel extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): string
     {
-        return $encode ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
+        return $encode ? htmlspecialchars($this->value, ENT_QUOTES | ENT_HTML5) : $this->value;
     }
 
     /**
@@ -62,7 +58,7 @@ class XoopsFormLabel extends XoopsFormElement
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormLabel($this);
     }

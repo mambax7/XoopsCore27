@@ -30,7 +30,7 @@ function fatalPhpErrorHandler($e = null) {
         }
     } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
         /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+        printf($messageFormat, $e::class, $e->getMessage(), $e->getFile(), $e->getLine());
     }
 }
 register_shutdown_function('fatalPhpErrorHandler');
@@ -45,7 +45,7 @@ set_exception_handler('fatalPhpErrorHandler');
  * Here we save the current IP address if needed
  */
 $ip = $_SERVER['REMOTE_ADDR'];
-if (strlen($_SERVER['REMOTE_ADDR']) > 15) {
+if (strlen((string) $_SERVER['REMOTE_ADDR']) > 15) {
     //new IP for upgrade
     $_SERVER['REMOTE_ADDR'] = '::1';
 }

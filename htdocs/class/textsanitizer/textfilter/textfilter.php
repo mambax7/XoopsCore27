@@ -88,7 +88,7 @@ class MytsTextfilter extends MyTextSanitizerExtension
         $search[]  = "/<IFRAME[^>]*?>([^<]*)<\/IFRAME>/si";
         $replace[] = " [!IFRAME FILTERED! \\1] ";
         // action
-        $text = preg_replace($search, $replace, $text);
+        $text = preg_replace($search, $replace, (string) $text);
 
         return $text;
     }

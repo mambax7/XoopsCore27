@@ -294,10 +294,10 @@ class xos_opal_Theme
         $tempPath = str_replace('\\', '/', realpath(XOOPS_ROOT_PATH) . '/');
         $tempName = str_replace('\\', '/', realpath($_SERVER['SCRIPT_FILENAME']));
         $xoops_page = str_replace($tempPath, '', $tempName);
-        if (strpos($xoops_page, 'modules') !== false) {
+        if (str_contains($xoops_page, 'modules')) {
             $xoops_page = str_replace('modules/', '', $xoops_page);
         }
-        $tempScriptname = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
+        $tempScriptname = str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']);
         $tempRequesturi = str_replace('\\', '/', Request::getString('REQUEST_URI', '', 'SERVER'));
         if (strlen($tempRequesturi) > strlen($tempScriptname)) {
             $xoops_modulepage =  $xoops_page . str_replace($tempScriptname, '', $tempRequesturi);
@@ -324,9 +324,9 @@ class xos_opal_Theme
             'xoops_theme'      => $GLOBALS['xoopsConfig']['theme_set'],
             'xoops_imageurl'   => XOOPS_THEME_URL . '/' . $GLOBALS['xoopsConfig']['theme_set'] . '/',
             'xoops_themecss'   => xoops_getcss($GLOBALS['xoopsConfig']['theme_set']),
-            'xoops_requesturi' => htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
-            'xoops_sitename'   => htmlspecialchars($GLOBALS['xoopsConfig']['sitename'], ENT_QUOTES | ENT_HTML5),
-            'xoops_slogan'     => htmlspecialchars($GLOBALS['xoopsConfig']['slogan'], ENT_QUOTES | ENT_HTML5),
+            'xoops_requesturi' => htmlspecialchars((string) $_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
+            'xoops_sitename'   => htmlspecialchars((string) $GLOBALS['xoopsConfig']['sitename'], ENT_QUOTES | ENT_HTML5),
+            'xoops_slogan'     => htmlspecialchars((string) $GLOBALS['xoopsConfig']['slogan'], ENT_QUOTES | ENT_HTML5),
             'xoops_dirname'    => isset($GLOBALS['xoopsModule']) && is_object($GLOBALS['xoopsModule'])
                 ? $GLOBALS['xoopsModule']->getVar('dirname') : 'system',
             'xoops_page'       => $xoops_page,
@@ -336,7 +336,7 @@ class xos_opal_Theme
                 ? xoops_getbanner() : '&nbsp;',
             'xoops_pagetitle'  => isset($GLOBALS['xoopsModule']) && is_object($GLOBALS['xoopsModule'])
                 ? $GLOBALS['xoopsModule']->getVar('name')
-                : htmlspecialchars($GLOBALS['xoopsConfig']['slogan'], ENT_QUOTES | ENT_HTML5),
+                : htmlspecialchars((string) $GLOBALS['xoopsConfig']['slogan'], ENT_QUOTES | ENT_HTML5),
             'xoops_search'     => $xoops_search,
                                 ]);
         if (isset($GLOBALS['xoopsUser']) && is_object($GLOBALS['xoopsUser'])) {
@@ -366,11 +366,11 @@ class xos_opal_Theme
             $value = $config[$i]->getVar('conf_value', 'n');
             // limited substitutions for {X_SITEURL} and {X_YEAR}
             if ($name === 'footer' || $name === 'meta_copyright') {
-                $value = str_replace('{X_SITEURL}', XOOPS_URL . '/', $value);
+                $value = str_replace('{X_SITEURL}', XOOPS_URL . '/', (string) $value);
                 $value = str_replace('{X_YEAR}', date('Y', time()), $value);
             }
-            if (substr($name, 0, 5) === 'meta_') {
-                $this->addMeta('meta', substr($name, 5), $value);
+            if (str_starts_with((string) $name, 'meta_')) {
+                $this->addMeta('meta', substr((string) $name, 5), $value);
             } else {
                 // prefix each tag with 'xoops_'
                 $this->template->assign("xoops_$name", $value);
@@ -446,12 +446,12 @@ class xos_opal_Theme
             $template                       = $this->contentTemplate ?: 'db:system_dummy.tpl';
             $this->template->caching        = 2;
             $this->template->cache_lifetime = $this->contentCacheLifetime;
-            $uri                            = str_replace(XOOPS_URL, '', $_SERVER['REQUEST_URI']);
+            $uri                            = str_replace(XOOPS_URL, '', (string) $_SERVER['REQUEST_URI']);
             // Clean uri by removing session id
             if (defined('SID') && SID && strpos($uri, SID)) {
                 $uri = preg_replace("/([\?&])(" . SID . "$|" . SID . '&)/', "\\1", $uri);
             }
-            $this->contentCacheId = $this->generateCacheId('page_' . substr(md5($uri), 0, 8));
+            $this->contentCacheId = $this->generateCacheId('page_' . substr(md5((string) $uri), 0, 8));
             if ($this->template->isCached($template, $this->contentCacheId)) {
                 $xoopsLogger = XoopsLogger::getInstance();
                 $xoopsLogger->addExtra($template, sprintf('Cached (regenerates every %d seconds)', $this->contentCacheLifetime));
@@ -530,7 +530,7 @@ class xos_opal_Theme
         ];
         foreach ($this->metas['meta'] as $name => $value) {
             if (in_array($name, $old)) {
-                $this->template->assign("xoops_meta_$name", htmlspecialchars($value, ENT_QUOTES | ENT_HTML5));
+                $this->template->assign("xoops_meta_$name", htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5));
                 unset($this->metas['meta'][$name]);
             }
         }
@@ -611,7 +611,7 @@ class xos_opal_Theme
      */
     public function addLanguage($type = 'main', $language = null)
     {
-        $language = (null === $language) ? $GLOBALS['xoopsConfig']['language'] : $language;
+        $language ??= $GLOBALS['xoopsConfig']['language'];
         if (!file_exists($fileinc = $this->path . "/language/{$language}/{$type}.php")) {
             if (!file_exists($fileinc = $this->path . "/language/english/{$type}.php")) {
                 return false;
@@ -767,14 +767,10 @@ class xos_opal_Theme
     /**
      * xos_opal_Theme::headContent()
      *
-     * @param mixed $params
-     * @param mixed $content
-     * @param mixed $smarty
-     * @param mixed $repeat
      *
      * @return void
      */
-    public function headContent($params, $content, &$smarty, &$repeat)
+    public function headContent(mixed $params, mixed $content, mixed &$smarty, mixed &$repeat)
     {
         if (!$repeat) {
             $this->htmlHeadStrings[] = $content;
@@ -784,11 +780,9 @@ class xos_opal_Theme
     /**
      * xos_opal_Theme::renderMetas()
      *
-     * @param  mixed $type
-     * @param  mixed $return
      * @return bool|string
      */
-    public function renderMetas($type = null, $return = false)
+    public function renderMetas(mixed $type = null, mixed $return = false)
     {
         $str = '';
         if (!isset($type)) {
@@ -817,7 +811,7 @@ class xos_opal_Theme
                 case 'stylesheet':
                     foreach ($this->metas[$type] as $attrs) {
                         if (isset($attrs['_'])) {
-                            $str .= '<style' . $this->renderAttributes($attrs) . ">\n/* <![CDATA[ */\n" . (isset($attrs['_'])?$attrs['_']:'') . "\n/* //]]> */\n</style>";
+                            $str .= '<style' . $this->renderAttributes($attrs) . ">\n/* <![CDATA[ */\n" . ($attrs['_'] ?? '') . "\n/* //]]> */\n</style>";
                         } else {
                             $str .= '<link rel="stylesheet"' . $this->renderAttributes($attrs) . " />\n";
                         }
@@ -825,12 +819,12 @@ class xos_opal_Theme
                     break;
                 case 'http':
                     foreach ($this->metas[$type] as $name => $content) {
-                        $str .= '<meta http-equiv="' . htmlspecialchars($name, ENT_QUOTES | ENT_HTML5) . '" content="' . htmlspecialchars($content, ENT_QUOTES | ENT_HTML5) . "\" />\n";
+                        $str .= '<meta http-equiv="' . htmlspecialchars((string) $name, ENT_QUOTES | ENT_HTML5) . '" content="' . htmlspecialchars((string) $content, ENT_QUOTES | ENT_HTML5) . "\" />\n";
                     }
                     break;
                 default:
                     foreach ($this->metas[$type] as $name => $content) {
-                        $str .= '<meta name="' . htmlspecialchars($name, ENT_QUOTES | ENT_HTML5) . '" content="' . htmlspecialchars($content, ENT_QUOTES | ENT_HTML5) . "\" />\n";
+                        $str .= '<meta name="' . htmlspecialchars((string) $name, ENT_QUOTES | ENT_HTML5) . '" content="' . htmlspecialchars((string) $content, ENT_QUOTES | ENT_HTML5) . "\" />\n";
                     }
                     break;
             }
@@ -870,7 +864,7 @@ class xos_opal_Theme
         $str = '';
         foreach ($coll as $name => $val) {
             if ($name !== '_') {
-                $str .= ' ' . $name . '="' . htmlspecialchars($val, ENT_QUOTES | ENT_HTML5) . '"';
+                $str .= ' ' . $name . '="' . htmlspecialchars((string) $val, ENT_QUOTES | ENT_HTML5) . '"';
             }
         }
 
@@ -886,7 +880,7 @@ class xos_opal_Theme
     public function resourcePath($path)
     {
         $path = (string) $path;
-        if (substr($path, 0, 1) === '/') {
+        if (str_starts_with($path, '/')) {
             $path = substr($path, 1);
         }
 

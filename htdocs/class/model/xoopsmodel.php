@@ -49,7 +49,7 @@ class XoopsModelFactory
     {
         static $instance;
         if (!isset($instance)) {
-            $class    = __CLASS__;
+            $class    = self::class;
             $instance = new $class();
         }
 
@@ -68,7 +68,7 @@ class XoopsModelFactory
      * @internal param XoopsPersistableObjectHandler $ohandler reference to {@link XoopsPersistableObjectHandler}
      * @return object of handler
      */
-    public static function loadHandler(XoopsPersistableObjectHandler $ohandler, $name, $args = null)
+    public static function loadHandler(XoopsPersistableObjectHandler $ohandler, $name, mixed $args = null)
     {
         static $handlers;
         if (!isset($handlers[$name])) {
@@ -130,10 +130,9 @@ class XoopsModelAbstract
     /**
      * XoopsModelAbstract::setHandler()
      *
-     * @param  mixed $handler
      * @return bool
      */
-    public function setHandler($handler)
+    public function setHandler(mixed $handler)
     {
         if (is_object($handler) && is_a($handler, 'XoopsPersistableObjectHandler')) {
             $this->handler =& $handler;
@@ -147,10 +146,9 @@ class XoopsModelAbstract
     /**
      * XoopsModelAbstract::setVars()
      *
-     * @param  mixed $args
      * @return bool
      */
-    public function setVars($args)
+    public function setVars(mixed $args)
     {
         if (!empty($args) && \is_array($args)) {
             foreach ($args as $key => $value) {

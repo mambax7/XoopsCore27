@@ -106,7 +106,7 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_INI')):
     function mod_loadRenderer($class, $dirname = '')
     {
         $dirname  = !empty($dirname) ? $dirname : $GLOBALS['xoopsModule']->getVar('dirname', 'n');
-        $renderer = ucfirst($dirname) . ucfirst($class) . 'Renderer';
+        $renderer = ucfirst((string) $dirname) . ucfirst($class) . 'Renderer';
         if (!class_exists($renderer)) {
             require_once XOOPS_ROOT_PATH . "/modules/{$dirname}/class/{$class}.renderer.php";
         }
@@ -128,14 +128,14 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_INI')):
          */
         function mod_constant($name)
         {
-            if (!empty($GLOBALS['VAR_PREFIXU']) && @defined($GLOBALS['VAR_PREFIXU'] . '_' . strtoupper($name))) {
-                return constant($GLOBALS['VAR_PREFIXU'] . '_' . strtoupper($name));
+            if (!empty($GLOBALS['VAR_PREFIXU']) && @defined($GLOBALS['VAR_PREFIXU'] . '_' . strtoupper((string) $name))) {
+                return constant($GLOBALS['VAR_PREFIXU'] . '_' . strtoupper((string) $name));
             } elseif (!empty($GLOBALS['xoopsModule']) && @defined(strtoupper($GLOBALS['xoopsModule']->getVar('dirname', 'n') . '_' . $name))) {
                 return constant(strtoupper($GLOBALS['xoopsModule']->getVar('dirname', 'n') . '_' . $name));
-            } elseif (defined(strtoupper($name))) {
-                return constant(strtoupper($name));
+            } elseif (defined(strtoupper((string) $name))) {
+                return constant(strtoupper((string) $name));
             } else {
-                return str_replace('_', ' ', strtolower($name));
+                return str_replace('_', ' ', strtolower((string) $name));
             }
         }
     }
@@ -229,9 +229,9 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_INI')):
     function mod_getDirname($current_path = null)
     {
         if (DIRECTORY_SEPARATOR !== '/') {
-            $current_path = str_replace(strpos($current_path, '\\\\', 2) ? '\\\\' : DIRECTORY_SEPARATOR, '/', $current_path);
+            $current_path = str_replace(strpos((string) $current_path, '\\\\', 2) ? '\\\\' : DIRECTORY_SEPARATOR, '/', (string) $current_path);
         }
-        $url_arr = explode('/', strstr($current_path, '/modules/'));
+        $url_arr = explode('/', strstr((string) $current_path, '/modules/'));
 
         return $url_arr[2];
     }

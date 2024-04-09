@@ -12,7 +12,6 @@
  * @subpackage  xos_opal_Smarty
  * @since       2.0.14
  */
-
 /**
  * Build application relative URL
  *
@@ -25,7 +24,6 @@
  * The path should be in a form understood by Xoops::url()
  *
  * @param string[] $params
- * @param Smarty   $smarty
  * @return string
  */
 function smarty_compiler_xoAppUrl($params, Smarty $smarty)
@@ -34,8 +32,8 @@ function smarty_compiler_xoAppUrl($params, Smarty $smarty)
     $arg = reset($params);
     $url = trim($arg, " '\"\t\n\r\0\x0B");
 
-    if (strpos($url, '/') === 0) {
+    if (str_starts_with($url, '/')) {
         $url = 'www' . $url;
     }
-    return "<?php echo '" . addslashes(htmlspecialchars($xoops->url($url), ENT_QUOTES | ENT_HTML5)) . "'; ?>";
+    return "<?php echo '" . addslashes(htmlspecialchars((string) $xoops->url($url), ENT_QUOTES | ENT_HTML5)) . "'; ?>";
 }

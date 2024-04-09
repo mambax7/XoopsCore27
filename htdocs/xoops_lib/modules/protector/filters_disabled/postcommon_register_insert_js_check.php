@@ -10,7 +10,7 @@ class Protector_postcommon_register_insert_js_check extends ProtectorFilterAbstr
      */
     public function execute()
     {
-        ob_start([$this, 'ob_filter']);
+        ob_start($this->ob_filter(...));
 
         if (!empty($_POST)) {
             if (!$this->checkValidate()) {
@@ -31,7 +31,7 @@ class Protector_postcommon_register_insert_js_check extends ProtectorFilterAbstr
     {
         $antispam_htmls = $this->getHtml4Assign();
 
-        return preg_replace('/<form[^>]*action=["\'](|#|register.php)["\'][^>]+>/i', '$0' . "\n" . $antispam_htmls['html_in_form'] . "\n" . $antispam_htmls['js_global'], $s, 1);
+        return preg_replace('/<form[^>]*action=["\'](|#|register.php)["\'][^>]+>/i', '$0' . "\n" . $antispam_htmls['html_in_form'] . "\n" . $antispam_htmls['js_global'], (string) $s, 1);
     }
 
     // import from D3forumAntispamDefault.clas.php
@@ -92,7 +92,7 @@ class Protector_postcommon_register_insert_js_check extends ProtectorFilterAbstr
      */
     public function checkValidate()
     {
-        $user_md5 = isset($_POST['antispam_md5']) ? trim($_POST['antispam_md5']) : '';
+        $user_md5 = isset($_POST['antispam_md5']) ? trim((string) $_POST['antispam_md5']) : '';
 
         // 2-3 hour margin
         if ($user_md5 != $this->getMd5() && $user_md5 != $this->getMd5(time() - 3600) && $user_md5 != $this->getMd5(time() - 7200)) {

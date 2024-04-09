@@ -44,9 +44,9 @@ $admin         = $gperm_handler->checkRight('system_admin', XOOPS_SYSTEM_SMILE, 
 
 $op = '';
 if (!empty($_GET['op'])) {
-    $op = trim($_GET['op']);
+    $op = trim((string) $_GET['op']);
 } elseif (!empty($_POST['op'])) {
-    $op = trim($_POST['op']);
+    $op = trim((string) $_POST['op']);
 }
 
 $myts = \MyTextSanitizer::getInstance();

@@ -26,8 +26,6 @@ include_once $GLOBALS['xoops']->path('language/' . $xoopsConfig['language'] . '/
 class MytsImage extends MyTextSanitizerExtension
 {
     /**
-     * @param MyTextSanitizer $myts
-     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)

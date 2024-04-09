@@ -77,7 +77,7 @@ switch ($op) {
         foreach ($installed_mods as $module) {
             /** @var XoopsModule $module */
             $listed_mods[$i]                  = $module->toArray();
-            $listed_mods[$i]['name']          = htmlspecialchars($module->getVar('name'), ENT_QUOTES | ENT_HTML5);
+            $listed_mods[$i]['name']          = htmlspecialchars((string) $module->getVar('name'), ENT_QUOTES | ENT_HTML5);
             $listed_mods[$i]['image']         = $module->getInfo('image');
             $listed_mods[$i]['adminindex']    = $module->getInfo('adminindex');
             $listed_mods[$i]['version']       = $module->getVar('version');
@@ -93,7 +93,7 @@ switch ($op) {
                 $listed_mods[$i]['warning_update'] = false;
             }
 			// Only to request the update because since xoops 2.5.11 the version is a character string.This condition can be removed from xoops 2.5.12.
-			if (strpos($listed_mods[$i]['version'], '.') === false){
+			if (!str_contains((string) $listed_mods[$i]['version'], '.')){
 				$listed_mods[$i]['warning_update'] = true;
 			}
 			
@@ -108,7 +108,7 @@ switch ($op) {
         foreach ($dirlist as $file) {
             if (file_exists(XOOPS_ROOT_PATH . '/modules/' . $file . '/xoops_version.php')) {
                 clearstatcache();
-                $file = trim($file);
+                $file = trim((string) $file);
                 if (!in_array($file, $install_mods)) {
                     ++$i;
                 }
@@ -157,11 +157,11 @@ switch ($op) {
         foreach ($dirlist as $file) {
             if (file_exists(XOOPS_ROOT_PATH . '/modules/' . $file . '/xoops_version.php')) {
                 clearstatcache();
-                $file = trim($file);
+                $file = trim((string) $file);
                 if (!in_array($file, $install_mods)) {
                     $module = $module_handler->create();
                     $module->loadInfo($file);
-                    $toinstall_mods[$i]['name']          = htmlspecialchars($module->getInfo('name'), ENT_QUOTES | ENT_HTML5);
+                    $toinstall_mods[$i]['name']          = htmlspecialchars((string) $module->getInfo('name'), ENT_QUOTES | ENT_HTML5);
                     $toinstall_mods[$i]['dirname']       = $module->getInfo('dirname');
                     $toinstall_mods[$i]['image']         = $module->getInfo('image');
                     $toinstall_mods[$i]['version']       = $module->getInfo('version');
@@ -234,7 +234,7 @@ switch ($op) {
         $module      = empty($_POST['module']) ? [] : $_POST['module'];
         foreach ($module as $mid) {
             $mid                          = (int)$mid;
-            $newname[$mid]                = trim(XoopsFilterInput::clean($newname[$mid], 'STRING'));
+            $newname[$mid]                = trim((string) XoopsFilterInput::clean($newname[$mid], 'STRING'));
             $modifs_mods[$i]['mid']       = $mid;
             $modifs_mods[$i]['oldname']   = $myts->htmlSpecialChars($myts->stripSlashesGPC($oldname[$mid]));
             $modifs_mods[$i]['newname']   = $myts->htmlSpecialChars(trim($myts->stripSlashesGPC($newname[$mid])));
@@ -302,7 +302,7 @@ switch ($op) {
                     $ret[] = xoops_module_deactivate($mid);
                 }
             }
-            $newname[$mid] = trim(XoopsFilterInput::clean($newname[$mid], 'STRING'));
+            $newname[$mid] = trim((string) XoopsFilterInput::clean($newname[$mid], 'STRING'));
             if ($oldname[$mid] != $newname[$mid]) {
                 $ret[] = xoops_module_change($mid, $newname[$mid]);
                 $write = true;

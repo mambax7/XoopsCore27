@@ -30,7 +30,7 @@ class XoopsFormText extends XoopsFormElement
      * @var int
      * @access private
      */
-    public $_size;
+    public int $_size;
 
     /**
      * Maximum length of the text
@@ -38,7 +38,7 @@ class XoopsFormText extends XoopsFormElement
      * @var int
      * @access private
      */
-    public $_maxlength;
+    public int $_maxlength;
 
     /**
      * Initial text
@@ -46,7 +46,7 @@ class XoopsFormText extends XoopsFormElement
      * @var string
      * @access private
      */
-    public $_value;
+    public string $_value;
 
     /**
      * Constructor
@@ -57,12 +57,12 @@ class XoopsFormText extends XoopsFormElement
      * @param int    $maxlength Maximum length of text
      * @param string $value     Initial text
      */
-    public function __construct($caption, $name, $size, $maxlength, $value = '')
+    public function __construct(string $caption, string $name, int $size, int $maxlength, string $value = '')
     {
         $this->setCaption($caption);
         $this->setName($name);
-        $this->_size      = (int)$size;
-        $this->_maxlength = (int)$maxlength;
+        $this->_size      = $size;
+        $this->_maxlength = $maxlength;
         $this->setValue($value);
     }
 
@@ -71,7 +71,7 @@ class XoopsFormText extends XoopsFormElement
      *
      * @return int
      */
-    public function getSize()
+    public function getSize(): int
     {
         return $this->_size;
     }
@@ -81,7 +81,7 @@ class XoopsFormText extends XoopsFormElement
      *
      * @return int
      */
-    public function getMaxlength()
+    public function getMaxlength(): int
     {
         return $this->_maxlength;
     }
@@ -92,17 +92,15 @@ class XoopsFormText extends XoopsFormElement
      * @param  bool $encode To sanitizer the text? Default value should be "true"; however we have to set "false" for backward compatibility
      * @return string
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): string
     {
         return $encode ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
     }
 
     /**
      * Set initial text value
-     *
-     * @param string $value
      */
-    public function setValue($value)
+    public function setValue(string $value): void
     {
         $this->_value = $value;
     }
@@ -112,7 +110,7 @@ class XoopsFormText extends XoopsFormElement
      *
      * @return string HTML
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormText($this);
     }

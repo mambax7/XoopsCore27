@@ -32,14 +32,14 @@ if ($email == '') {
 $myts           = \MyTextSanitizer::getInstance();
 /** @var XoopsMemberHandler $member_handler */
 $member_handler = xoops_getHandler('member');
-list($user) = $member_handler->getUsers(new Criteria('email', $myts->addSlashes($email)));
+[$user] = $member_handler->getUsers(new Criteria('email', $myts->addSlashes($email)));
 
 if (empty($user)) {
     $msg = _US_SORRYNOTFOUND;
     redirect_header('user.php', 2, $msg, false);
 } else {
     $code   = Request::getString('code', '', 'GET');
-    $areyou = substr(md5($user->getVar('pass')), 0, 5);
+    $areyou = substr(md5((string) $user->getVar('pass')), 0, 5);
     if ($code != '' && $areyou == $code) {
         $newpass     = xoops_makepass();
         $xoopsMailer = xoops_getMailer();

@@ -39,7 +39,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
     xoops_loadLanguage('comment');
 
     $comment_config = $xoopsModule->getInfo('comments');
-    $com_itemid = (trim($comment_config['itemName']) != '') ? Request::getInt($comment_config['itemName'], 0, 'GET') : 0;
+    $com_itemid = (trim((string) $comment_config['itemName']) != '') ? Request::getInt($comment_config['itemName'], 0, 'GET') : 0;
 
     if ($com_itemid > 0) {
         $com_mode = htmlspecialchars(Request::getString('com_mode', '', 'GET'), ENT_QUOTES | ENT_HTML5);
@@ -187,7 +187,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             foreach ($comment_config['extraParams'] as $extra_param) {
                 if (isset(${$extra_param})) {
                     $link_extra .= '&amp;' . $extra_param . '=' . ${$extra_param};
-                    $hidden_value    = htmlspecialchars(${$extra_param}, ENT_QUOTES | ENT_HTML5);
+                    $hidden_value    = htmlspecialchars((string) ${$extra_param}, ENT_QUOTES | ENT_HTML5);
                     $extra_param_val = ${$extra_param};
                 } elseif (isset($_POST[$extra_param])) {
                     $extra_param_val = Request::getString($extra_param, '', 'POST');
@@ -196,7 +196,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
                 }
                 if (isset($extra_param_val)) {
                     $link_extra .= '&amp;' . $extra_param . '=' . $extra_param_val;
-                    $hidden_value = htmlspecialchars($extra_param_val, ENT_QUOTES | ENT_HTML5);
+                    $hidden_value = htmlspecialchars((string) $extra_param_val, ENT_QUOTES | ENT_HTML5);
                     $commentBarHidden .= '<input type="hidden" name="' . $extra_param . '" value="' . $hidden_value . '" />';
                 }
             }
@@ -231,18 +231,11 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             $cform->addElement(new XoopsFormElementTray(''));
             if (isset($xoopsModuleConfig['com_rule'])) {
                 include_once $GLOBALS['xoops']->path('include/comment_constants.php');
-                switch ($xoopsModuleConfig['com_rule']) {
-                    case XOOPS_COMMENT_APPROVEALL:
-                        $rule_text = _CM_COMAPPROVEALL;
-                        break;
-                    case XOOPS_COMMENT_APPROVEUSER:
-                        $rule_text = _CM_COMAPPROVEUSER;
-                        break;
-                    case XOOPS_COMMENT_APPROVEADMIN:
-                    default:
-                        $rule_text = _CM_COMAPPROVEADMIN;
-                        break;
-                }
+                $rule_text = match ($xoopsModuleConfig['com_rule']) {
+                    XOOPS_COMMENT_APPROVEALL => _CM_COMAPPROVEALL,
+                    XOOPS_COMMENT_APPROVEUSER => _CM_COMAPPROVEUSER,
+                    default => _CM_COMAPPROVEADMIN,
+                };
                 $cform->addElement(new XoopsFormLabel(_CM_COMRULES, $rule_text));
             }
             $cform->addElement(new XoopsFormText(_CM_TITLE, 'com_title', 50, 255, $com_title), true);

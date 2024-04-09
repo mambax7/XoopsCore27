@@ -92,14 +92,14 @@ class XoopsApi extends XoopsXmlRpcApi
                         } else {
                             $story->setTopicId(1);
                         }
-                        $story->setTitle(addslashes(trim($post['title'])));
+                        $story->setTitle(addslashes(trim((string) $post['title'])));
                         if (isset($post['moretext'])) {
-                            $story->setBodytext(addslashes(trim($post['moretext'])));
+                            $story->setBodytext(addslashes(trim((string) $post['moretext'])));
                         }
                         if (!isset($post['hometext'])) {
-                            $story->setHometext(addslashes(trim($this->params[3]['xoops_text'])));
+                            $story->setHometext(addslashes(trim((string) $this->params[3]['xoops_text'])));
                         } else {
-                            $story->setHometext(addslashes(trim($post['hometext'])));
+                            $story->setHometext(addslashes(trim((string) $post['hometext'])));
                         }
                         $story->setUid($this->user->getVar('uid'));
                         $story->setHostname($_SERVER['REMOTE_ADDR']);
@@ -161,14 +161,14 @@ class XoopsApi extends XoopsXmlRpcApi
                     } elseif (!$this->_checkAdmin()) {
                         $this->response->add(new XoopsXmlRpcFault(111));
                     } else {
-                        $story->setTitle(addslashes(trim($post['title'])));
+                        $story->setTitle(addslashes(trim((string) $post['title'])));
                         if (isset($post['moretext'])) {
-                            $story->setBodytext(addslashes(trim($post['moretext'])));
+                            $story->setBodytext(addslashes(trim((string) $post['moretext'])));
                         }
                         if (!isset($post['hometext'])) {
-                            $story->setHometext(addslashes(trim($this->params[3]['xoops_text'])));
+                            $story->setHometext(addslashes(trim((string) $this->params[3]['xoops_text'])));
                         } else {
-                            $story->setHometext(addslashes(trim($post['hometext'])));
+                            $story->setHometext(addslashes(trim((string) $post['hometext'])));
                         }
                         if ($this->params[4]) {
                             $story->setApproved(true);
@@ -253,7 +253,7 @@ class XoopsApi extends XoopsXmlRpcApi
                                 $struct->add('title', new XoopsXmlRpcString($value));
                                 break;
                             default :
-                                $content .= '<' . $key . '>' . trim($value) . '</' . $key . '>';
+                                $content .= '<' . $key . '>' . trim((string) $value) . '</' . $key . '>';
                                 break;
                         }
                     }
@@ -322,7 +322,7 @@ class XoopsApi extends XoopsXmlRpcApi
                                     $struct->add('title', new XoopsXmlRpcString($value));
                                     break;
                                 default :
-                                    $content .= '<' . $key . '>' . trim($value) . '</' . $key . '>';
+                                    $content .= '<' . $key . '>' . trim((string) $value) . '</' . $key . '>';
                                     break;
                             }
                         }

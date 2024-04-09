@@ -49,7 +49,7 @@ class XoopsLoad
                 'userutility' => 'xoopsuserutility'
             ];
         }
-        $name = strtolower($name);
+        $name = strtolower((string) $name);
         if (in_array($type, ['core', 'class']) && array_key_exists($name, $deprecated)) {
             if (isset($GLOBALS['xoopsLogger'])) {
                 $GLOBALS['xoopsLogger']->addDeprecated("xoops_load('{$name}') is deprecated, use xoops_load('{$deprecated[$name]}')");
@@ -111,7 +111,7 @@ class XoopsLoad
             return true;
         } elseif (file_exists($file = XOOPS_ROOT_PATH . '/class/' . $name . '.php')) {
             include_once $file;
-            $class = 'Xoops' . ucfirst($name);
+            $class = 'Xoops' . ucfirst((string) $name);
             if (class_exists($class)) {
                 return $class;
             } else {
@@ -137,7 +137,7 @@ class XoopsLoad
             return false;
         }
         include_once $file;
-        $class = 'Xoops' . ucfirst($name);
+        $class = 'Xoops' . ucfirst((string) $name);
         if (class_exists($class)) {
             return $class;
         }
@@ -242,11 +242,10 @@ class XoopsLoad
     /**
      * XoopsLoad::loadConfig()
      *
-     * @param mixed $data
      *
      * @return array|bool
      */
-    public function loadConfig($data = null)
+    public function loadConfig(mixed $data = null)
     {
         if (is_array($data)) {
             $configs = $data;

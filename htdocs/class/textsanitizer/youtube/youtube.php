@@ -69,13 +69,10 @@ EOH;
         return self::decode($match[4], $match[2], $match[3]);
     }
 
-    /**
-     * @param MyTextSanitizer $myts
-     */
     public function load(MyTextSanitizer $myts)
     {
         $myts->callbackPatterns[] = "/\[youtube=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/youtube\]/sU";
-        $myts->callbacks[]        = __CLASS__ . '::myCallback';
+        $myts->callbacks[]        = self::class . '::myCallback';
     }
 
     /**
@@ -105,17 +102,11 @@ EOH;
         }
 
         $width = empty($width) ? 426 : (int) $width;
-        switch ($width) {
-            case 4:
-                $height = 3;
-                break;
-            case 16:
-                $height = 9;
-                break;
-            default:
-                $height = empty($height) ? 240 : (int) $height;
-                break;
-        }
+        $height = match ($width) {
+            4 => 3,
+            16 => 9,
+            default => empty($height) ? 240 : (int) $height,
+        };
 
         $aspectRatio = $width/$height; // 16x9 = 1.777777778, 4x3 = 1.333333333
         $responsiveAspect = ($aspectRatio < 1.4) ? 'embed-responsive-4by3' : 'embed-responsive-16by9';

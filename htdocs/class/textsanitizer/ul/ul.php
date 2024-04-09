@@ -25,8 +25,6 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 class MytsUl extends MyTextSanitizerExtension
 {
     /**
-     * @param MyTextSanitizer $myts
-     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)

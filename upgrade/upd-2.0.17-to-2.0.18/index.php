@@ -19,7 +19,7 @@ class Upgrade_2018 extends XoopsUpgrade
             );
         }
         while (false !== ($row = $db->fetchArray($result))) {
-            if (strtolower(trim($row['Type'])) === 'varchar(255)') {
+            if (strtolower(trim((string) $row['Type'])) === 'varchar(255)') {
                 return true;
             }
         }

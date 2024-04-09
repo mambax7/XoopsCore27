@@ -24,29 +24,31 @@ class PathStuffController
         'data' => '',
         'lib'  => '',
     ];
-    /**
-     * @var array
-     */
-    public $xoopsPathDefault = [
-        'data' => 'xoops_data',
-        'lib'  => 'xoops_lib',
-    ];
-    /**
-     * @var array
-     */
-    public $dataPath = [
-        'caches'    => [
-            'smarty_cache',
-            'smarty_compile',
-            'xoops_cache',
-        ],
-        'configs'   => [
-            'captcha',
-            'textsanitizer',
-        ],
-        'data'      => null,
-        'protector' => null,
-    ];
+
+//    /**
+//     * @var array
+//     */
+//    public $xoopsPathDefault = [
+//        'data' => 'xoops_data',
+//        'lib'  => 'xoops_lib',
+//    ];
+//    /**
+//     * @var array
+//     */
+//    public $dataPath = [
+//        'caches'    => [
+//            'smarty_cache',
+//            'smarty_compile',
+//            'xoops_cache',
+//        ],
+//        'configs'   => [
+//            'captcha',
+//            'textsanitizer',
+//        ],
+//        'data'      => null,
+//        'protector' => null,
+//    ];
+
     /**
      * @var array
      */
@@ -78,21 +80,18 @@ class PathStuffController
     ];
 
     /**
-     * @param $xoopsPathDefault
-     * @param $dataPath
+     * @param mixed[] $xoopsPathDefault
+     * @param mixed[] $dataPath
      */
-    public function __construct($xoopsPathDefault, $dataPath)
+    public function __construct(public $xoopsPathDefault, public $dataPath)
     {
-        $this->xoopsPathDefault = $xoopsPathDefault;
-        $this->dataPath         = $dataPath;
-
         if (isset($_SESSION['settings']['ROOT_PATH'])) {
             foreach ($this->path_lookup as $req => $sess) {
                 $this->xoopsPath[$req] = $_SESSION['settings'][$sess];
             }
         } else {
             $path = str_replace("\\", '/', realpath(dirname(__DIR__, 2) . '/'));
-            if (substr($path, -1) === '/') {
+            if (str_ends_with($path, '/')) {
                 $path = substr($path, 0, -1);
             }
             if (file_exists("$path/mainfile.dist.php")) {
@@ -115,7 +114,7 @@ class PathStuffController
             $this->xoopsUrl = $_SESSION['settings']['URL'];
         } else {
             $path           = $GLOBALS['wizard']->baseLocation();
-            $this->xoopsUrl = substr($path, 0, strrpos($path, '/'));
+            $this->xoopsUrl = substr((string) $path, 0, strrpos((string) $path, '/'));
         }
         if (isset($_SESSION['settings']['COOKIE_DOMAIN'])) {
             $this->xoopsCookieDomain = $_SESSION['settings']['COOKIE_DOMAIN'];
@@ -148,22 +147,22 @@ class PathStuffController
             $request = $_POST;
             foreach ($this->path_lookup as $req => $sess) {
                 if (isset($request[$req])) {
-                    $request[$req] = str_replace("\\", '/', trim($request[$req]));
-                    if (substr($request[$req], -1) === '/') {
+                    $request[$req] = str_replace("\\", '/', trim((string) $request[$req]));
+                    if (str_ends_with($request[$req], '/')) {
                         $request[$req] = substr($request[$req], 0, -1);
                     }
                     $this->xoopsPath[$req] = $request[$req];
                 }
             }
             if (isset($request['URL'])) {
-                $request['URL'] = trim($request['URL']);
-                if (substr($request['URL'], -1) === '/') {
+                $request['URL'] = trim((string) $request['URL']);
+                if (str_ends_with($request['URL'], '/')) {
                     $request['URL'] = substr($request['URL'], 0, -1);
                 }
                 $this->xoopsUrl = $request['URL'];
             }
             if (isset($request['COOKIE_DOMAIN'])) {
-                $tempCookieDomain = trim($request['COOKIE_DOMAIN']);
+                $tempCookieDomain = trim((string) $request['COOKIE_DOMAIN']);
                 $tempParts = parse_url($tempCookieDomain);
                 if (!empty($tempParts['host'])) {
                     $tempCookieDomain = $tempParts['host'];

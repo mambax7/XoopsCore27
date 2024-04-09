@@ -135,7 +135,7 @@ switch ($action) {
         $criteria->add(new Criteria('isactive', 1));
         $criteria->add(new Criteria('mid', '(' . implode(',', $available_modules) . ')', 'IN'));
         $modules = $module_handler->getObjects($criteria, true);
-        $mids    = isset($_REQUEST['mids']) ? $_REQUEST['mids'] : [];
+        $mids    = $_REQUEST['mids'] ?? [];
         if (empty($mids) || !is_array($mids)) {
             unset($mids);
             $mids = array_keys($modules);
@@ -154,7 +154,7 @@ switch ($action) {
             if (!empty($ignored_queries)) {
 				$error_length = sprintf(_SR_IGNOREDWORDS, $xoopsConfigSearch['keyword_min']);
                 foreach ($ignored_queries as $q) {
-					$error_keywords .= htmlspecialchars(stripslashes($q), ENT_QUOTES | ENT_HTML5) . ' ';
+					$error_keywords .= htmlspecialchars(stripslashes((string) $q), ENT_QUOTES | ENT_HTML5) . ' ';
                 }
             }
         } else {
@@ -184,7 +184,7 @@ switch ($action) {
 							$results_arr[$i]['image_link'] = 'images/icons/posticon2.gif';
                         }
 						$results_arr[$i]['image_title'] = $module->getVar('name');
-                        if (!preg_match("/^http[s]*:\/\//i", $results[$i]['link'])) {
+                        if (!preg_match("/^http[s]*:\/\//i", (string) $results[$i]['link'])) {
                             $results[$i]['link'] = 'modules/' . $module->getVar('dirname') . '/' . $results[$i]['link'];
                         }
 						$results_arr[$i]['link'] = $results[$i]['link'];
@@ -203,7 +203,7 @@ switch ($action) {
                     if ($count >= 5) {
                         $search_url = XOOPS_URL . '/search.php?query=' . urlencode(stripslashes(implode(' ', $queries)));
                         $search_url .= "&mid={$mid}&action=showall&andor={$andor}";
-						$search_arr['module_show_all'] = htmlspecialchars($search_url, ENT_QUOTES | ENT_HTML5);
+						$search_arr['module_show_all'] = htmlspecialchars((string) $search_url, ENT_QUOTES | ENT_HTML5);
                     }
 					$search_arr['module_name'] = $module_name;
 					$search_arr['module_data'] = $results_arr;
@@ -260,7 +260,7 @@ switch ($action) {
 					$results_arr['image_link'] = 'images/icons/posticon2.gif';
                 }
 				$results_arr['image_title'] = $module->getVar('name');
-                if (!preg_match("/^http[s]*:\/\//i", $results[$i]['link'])) {
+                if (!preg_match("/^http[s]*:\/\//i", (string) $results[$i]['link'])) {
                     $results[$i]['link'] = 'modules/' . $module->getVar('dirname') . '/' . $results[$i]['link'];
                 }
 				$results_arr['link'] = $results[$i]['link'];
@@ -285,12 +285,12 @@ switch ($action) {
             if ($start > 0) {
                 $prev = $start - 20;
                 $search_url_prev = $search_url . "&start={$prev}";
-				$xoopsTpl->assign('previous', htmlspecialchars($search_url_prev, ENT_QUOTES | ENT_HTML5));
+				$xoopsTpl->assign('previous', htmlspecialchars((string) $search_url_prev, ENT_QUOTES | ENT_HTML5));
             }
             if (false !== $has_next) {
                 $next            = $start + 20;
                 $search_url_next = $search_url . "&start={$next}";
-				$xoopsTpl->assign('next', htmlspecialchars($search_url_next, ENT_QUOTES | ENT_HTML5));
+				$xoopsTpl->assign('next', htmlspecialchars((string) $search_url_next, ENT_QUOTES | ENT_HTML5));
             }
         } else {
 			$xoopsTpl->assign('nomatch', true);

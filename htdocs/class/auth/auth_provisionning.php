@@ -50,7 +50,6 @@ class XoopsAuthProvisionning
 
     /**
      * Authentication Service constructor
-     * @param XoopsAuth $auth_instance
      */
     public function __construct(XoopsAuth $auth_instance = null)
     {
@@ -129,14 +128,14 @@ class XoopsAuthProvisionning
         // Create XOOPS Database User
         $newuser = $member_handler->createUser();
         $newuser->setVar('uname', $uname);
-        $newuser->setVar('pass', password_hash(stripslashes($pwd), PASSWORD_DEFAULT));
+        $newuser->setVar('pass', password_hash(stripslashes((string) $pwd), PASSWORD_DEFAULT));
         $newuser->setVar('rank', 0);
         $newuser->setVar('level', 1);
         $newuser->setVar('timezone_offset', $this->default_TZ);
         $newuser->setVar('theme', $this->theme_set);
         $newuser->setVar('umode', $this->com_mode);
         $newuser->setVar('uorder', $this->com_order);
-        $tab_mapping = explode('|', $this->ldap_field_mapping);
+        $tab_mapping = explode('|', (string) $this->ldap_field_mapping);
         foreach ($tab_mapping as $mapping) {
             $fields = explode('=', trim($mapping));
             if ($fields[0] && $fields[1]) {
@@ -171,8 +170,8 @@ class XoopsAuthProvisionning
         $ret            = false;
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
-        $xoopsUser->setVar('pass', password_hash(stripcslashes($pwd), PASSWORD_DEFAULT));
-        $tab_mapping = explode('|', $this->ldap_field_mapping);
+        $xoopsUser->setVar('pass', password_hash(stripcslashes((string) $pwd), PASSWORD_DEFAULT));
+        $tab_mapping = explode('|', (string) $this->ldap_field_mapping);
         foreach ($tab_mapping as $mapping) {
             $fields = explode('=', trim($mapping));
             if ($fields[0] && $fields[1]) {

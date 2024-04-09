@@ -36,8 +36,8 @@ $sel = [
 
 foreach ($sel as $key => $value) {
     $temp = isset($_SESSION[$key]) ? (int)$_SESSION[$key] : $value;
-    $$key = Request::getInt($key, $temp);
-    $_SESSION[$key] = $$key;
+    ${$key} = Request::getInt($key, $temp);
+    $_SESSION[$key] = ${$key};
 }
 
 $type = Request::getString('type', '');
@@ -256,7 +256,7 @@ switch ($op) {
         $block_handler = xoops_getModuleHandler('block');
         $block         = $block_handler->create();
         $block->setVars($_POST);
-        $content = isset($_POST['content_block']) ? $_POST['content_block'] : '';
+        $content = $_POST['content_block'] ?? '';
         $block->setVar('content', $content);
         $myts = \MyTextSanitizer::getInstance();
         echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', $block->getVar('c_type')) . '</div>';
@@ -299,25 +299,17 @@ switch ($op) {
             }
         } else {
             $block->setVars($_POST);
-            switch ($block->getVar('c_type')) {
-                case 'H':
-                    $name = _AM_SYSTEM_BLOCKS_CUSTOMHTML;
-                    break;
-                case 'P':
-                    $name = _AM_SYSTEM_BLOCKS_CUSTOMPHP;
-                    break;
-                case 'S':
-                    $name = _AM_SYSTEM_BLOCKS_CUSTOMSMILE;
-                    break;
-                default:
-                    $name = _AM_SYSTEM_BLOCKS_CUSTOMNOSMILE;
-                    break;
-            }
+            $name = match ($block->getVar('c_type')) {
+                'H' => _AM_SYSTEM_BLOCKS_CUSTOMHTML,
+                'P' => _AM_SYSTEM_BLOCKS_CUSTOMPHP,
+                'S' => _AM_SYSTEM_BLOCKS_CUSTOMSMILE,
+                default => _AM_SYSTEM_BLOCKS_CUSTOMNOSMILE,
+            };
         }
         $block->setVar('name', $name);
         $block->setVar('isactive', 1);
 
-        $content = isset($_POST['content_block']) ? $_POST['content_block'] : '';
+        $content = $_POST['content_block'] ?? '';
         $block->setVar('content', $content);
 
         if (!$newid = $block_handler->insert($block)) {

@@ -35,9 +35,9 @@ class XoopsFormRadioYN extends XoopsFormRadio
      * @param string $name
      * @param string $value Pre-selected value, can be "0" (No) or "1" (Yes)
      * @param string $yes   String for "Yes"
-     * @param string $no    String for "No"
+     * @param int|string $no    String for "No"
      */
-    public function __construct($caption, $name, $value = null, $yes = _YES, $no = _NO)
+    public function __construct(string $caption, string $name, $value = null, $yes = _YES, int|string $no = _NO)
     {
         parent::__construct($caption, $name, $value);
         $this->addOption(1, $yes);

@@ -415,7 +415,7 @@ class RpcDateTimeHandler extends XmlTagHandler
     public function handleCharacterData($parser, &$data)
     {
         $matches = [];
-        if (!preg_match("/^(\d{4})(\d{2})(\d{2})T(\d{2}):(\d{2}):(\d{2})$/", $data, $matches)) {
+        if (!preg_match("/^(\d{4})(\d{2})(\d{2})T(\d{2}):(\d{2}):(\d{2})$/", (string) $data, $matches)) {
             $parser->setTempValue(time());
         } else {
             $parser->setTempValue(gmmktime($matches[4], $matches[5], $matches[6], $matches[2], $matches[3], $matches[1]));
@@ -442,7 +442,7 @@ class RpcBase64Handler extends XmlTagHandler
      */
     public function handleCharacterData($parser, &$data)
     {
-        $parser->setTempValue(base64_decode($data));
+        $parser->setTempValue(base64_decode((string) $data));
     }
 }
 
@@ -521,18 +521,11 @@ class RpcValueHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
-        switch ($parser->getCurrentTag()) {
-            case 'member':
-                $parser->setTempMember($parser->getTempName(), $parser->getTempValue());
-                break;
-            case 'array':
-            case 'data':
-                $parser->setTempArray($parser->getTempValue());
-                break;
-            default:
-                $parser->setParam($parser->getTempValue());
-                break;
-        }
+        match ($parser->getCurrentTag()) {
+            'member' => $parser->setTempMember($parser->getTempName(), $parser->getTempValue()),
+            'array', 'data' => $parser->setTempArray($parser->getTempValue()),
+            default => $parser->setParam($parser->getTempValue()),
+        };
         $parser->resetTempValue();
     }
 }

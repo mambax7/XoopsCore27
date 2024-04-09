@@ -185,15 +185,13 @@ class XoopsObject
      *
      * @param string   $key
      * @param int      $data_type set to one of XOBJ_DTYPE_XXX constants (set to XOBJ_DTYPE_OTHER if no data type checking nor text sanitizing is required)
-     * @param mixed    $value
      * @param bool     $required  require html form input?
      * @param int|null $maxlength for XOBJ_DTYPE_TXTBOX type only
      * @param string   $options
      * @param string   $enumerations
-     *
      * @return void
      */
-    public function initVar($key, $data_type, $value = null, $required = false, $maxlength = null, $options = '', $enumerations = '')
+    public function initVar($key, $data_type, mixed $value = null, $required = false, $maxlength = null, $options = '', $enumerations = '')
     {
         $this->vars[$key] = [
             'value'       => $value,
@@ -213,7 +211,7 @@ class XoopsObject
      * @param string $key   name of the variable to assign
      * @param mixed  $value value to assign
      */
-    public function assignVar($key, $value)
+    public function assignVar($key, mixed $value)
     {
         if (isset($key) && isset($this->vars[$key])) {
             switch ($this->vars[$key]['data_type']) {
@@ -238,21 +236,21 @@ class XoopsObject
                     if (!is_string($value) && is_numeric($value)) {
                         $this->vars[$key]['value'] = date(_DBDATESTRING, $value);
                     } else {
-                        $this->vars[$key]['value'] = date(_DBDATESTRING, strtotime($value));
+                        $this->vars[$key]['value'] = date(_DBDATESTRING, strtotime((string) $value));
                     }
                     break;
                 case XOBJ_DTYPE_TIME:
                     if (!is_string($value) && is_numeric($value)) {
                         $this->vars[$key]['value'] = date(_DBTIMESTRING, $value);
                     } else {
-                        $this->vars[$key]['value'] = date(_DBTIMESTRING, strtotime($value));
+                        $this->vars[$key]['value'] = date(_DBTIMESTRING, strtotime((string) $value));
                     }
                     break;
                 case XOBJ_DTYPE_TIMESTAMP:
                     if (!is_string($value) && is_numeric($value)) {
                         $this->vars[$key]['value'] = date(_DBTIMESTAMPSTRING, $value);
                     } else {
-                        $this->vars[$key]['value'] = date(_DBTIMESTAMPSTRING, strtotime($value));
+                        $this->vars[$key]['value'] = date(_DBTIMESTAMPSTRING, strtotime((string) $value));
                     }
                     break;
                 // YOU SHOULD NOT USE THE ABOVE TYPES, THEY WILL BE REMOVED
@@ -285,7 +283,7 @@ class XoopsObject
      * @param mixed  $value value to assign
      * @param bool   $not_gpc
      */
-    public function setVar($key, $value, $not_gpc = false)
+    public function setVar($key, mixed $value, $not_gpc = false)
     {
         if (!empty($key) && isset($value) && isset($this->vars[$key])) {
             $this->vars[$key]['value']   =& $value;
@@ -316,11 +314,10 @@ class XoopsObject
      *
      * @access public
      *
-     * @param mixed $var
      *
      * @return bool
      */
-    public function destroyVars($var)
+    public function destroyVars(mixed $var)
     {
         if (empty($var)) {
             return true;
@@ -337,11 +334,10 @@ class XoopsObject
     }
 
     /**
-     * @param mixed $var
      * @return bool
      * @deprecated use destroyVars() instead,  destoryVars() will be removed in the next major release
      */
-    public function destoryVars($var)
+    public function destoryVars(mixed $var)
     {
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . "() is deprecated, called from {$trace[0]['file']}line {$trace[0]['line']}");
@@ -397,7 +393,7 @@ class XoopsObject
      * @param  int    $maxDepth Maximum level of recursion to use if some vars are objects themselves
      * @return array  associative array of key->value pairs
      */
-    public function getValues($keys = null, $format = 's', $maxDepth = 1)
+    public function getValues(mixed $keys = null, $format = 's', $maxDepth = 1)
     {
         if (!isset($keys)) {
             $keys = array_keys($this->vars);
@@ -543,7 +539,7 @@ class XoopsObject
                         break 1;
                     case 'e':
                     case 'edit':
-                        return htmlspecialchars($ret, ENT_QUOTES | ENT_HTML5);
+                        return htmlspecialchars((string) $ret, ENT_QUOTES | ENT_HTML5);
                         break 1;
                     case 'p':
                     case 'preview':
@@ -684,8 +680,8 @@ class XoopsObject
                     switch (strtolower($format)) {
                         case 's':
                         case 'show':
-                            $selected = explode('|', $ret);
-                            $options  = explode('|', $this->vars[$key]['options']);
+                            $selected = explode('|', (string) $ret);
+                            $options  = explode('|', (string) $this->vars[$key]['options']);
                             $i        = 1;
                             $ret      = [];
                             foreach ($options as $op) {
@@ -698,7 +694,7 @@ class XoopsObject
                             return implode(', ', $ret);
                         case 'e':
                         case 'edit':
-                            $ret = explode('|', $ret);
+                            $ret = explode('|', (string) $ret);
                             break 1;
                         default:
                             break 1;
@@ -731,20 +727,20 @@ class XoopsObject
                 $cleanv = is_string($cleanv) ? trim($cleanv) : $cleanv;
                 switch ($v['data_type']) {
                     case XOBJ_DTYPE_TIMESTAMP:
-                        $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBTIMESTAMPSTRING, $cleanv) : date(_DBTIMESTAMPSTRING, strtotime($cleanv));
+                        $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBTIMESTAMPSTRING, $cleanv) : date(_DBTIMESTAMPSTRING, strtotime((string) $cleanv));
                         break;
                     case XOBJ_DTYPE_TIME:
-                        $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBTIMESTRING, $cleanv) : date(_DBTIMESTRING, strtotime($cleanv));
+                        $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBTIMESTRING, $cleanv) : date(_DBTIMESTRING, strtotime((string) $cleanv));
                         break;
                     case XOBJ_DTYPE_DATE:
-                        $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBDATESTRING, $cleanv) : date(_DBDATESTRING, strtotime($cleanv));
+                        $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBDATESTRING, $cleanv) : date(_DBDATESTRING, strtotime((string) $cleanv));
                         break;
                     case XOBJ_DTYPE_TXTBOX:
                         if ($v['required'] && $cleanv != '0' && $cleanv == '') {
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
                         }
-                        if (isset($v['maxlength']) && strlen($cleanv) > (int)$v['maxlength']) {
+                        if (isset($v['maxlength']) && strlen((string) $cleanv) > (int)$v['maxlength']) {
                             $this->setErrors(sprintf(_XOBJ_ERR_SHORTERTHAN, $k, (int)$v['maxlength']));
                             continue 2;
                         }
@@ -779,7 +775,7 @@ class XoopsObject
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
                         }
-                        if ($cleanv != '' && !preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i", $cleanv)) {
+                        if ($cleanv != '' && !preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i", (string) $cleanv)) {
                             $this->setErrors('Invalid Email'); //_XOBJ_ERR_INVALID_EMAIL
                             continue 2;
                         }
@@ -792,7 +788,7 @@ class XoopsObject
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
                         }
-                        if ($cleanv != '' && !preg_match("/^http[s]*:\/\//i", $cleanv)) {
+                        if ($cleanv != '' && !preg_match("/^http[s]*:\/\//i", (string) $cleanv)) {
                             $cleanv = XOOPS_PROT . $cleanv;
                         }
                         if (!$v['not_gpc']) {
@@ -853,7 +849,7 @@ class XoopsObject
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
                         }
-                        if ($cleanv != '' && !preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i", $cleanv)) {
+                        if ($cleanv != '' && !preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i", (string) $cleanv)) {
                             $this->setErrors('Invalid Email');
                             continue 2;
                         }
@@ -867,7 +863,7 @@ class XoopsObject
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
                         }
-                        if ($cleanv != '' && !preg_match("/^http[s]*:\/\//i", $cleanv)) {
+                        if ($cleanv != '' && !preg_match("/^http[s]*:\/\//i", (string) $cleanv)) {
                             $cleanv = XOOPS_PROT . $cleanv;
                         }
                         $cleanv = xoops_convert_encode($cleanv);
@@ -928,7 +924,7 @@ class XoopsObject
         if (file_exists($file = $path . '/filter.php')) {
             include_once $file;
             foreach ($this->_filters as $f) {
-                if (file_exists($file = $path . '/' . strtolower($f) . 'php')) {
+                if (file_exists($file = $path . '/' . strtolower((string) $f) . 'php')) {
                     include_once $file;
                 }
             }
@@ -956,7 +952,7 @@ class XoopsObject
         $this->_loadFilters();
 
         xoops_load('XoopsCache');
-        $class = get_class($this);
+        $class = static::class;
         if (!$modules_active = XoopsCache::read('system_modules_active')) {
             /** @var XoopsModuleHandler $module_handler */
             $module_handler = xoops_getHandler('module');
@@ -986,7 +982,7 @@ class XoopsObject
      */
     public function xoopsClone()
     {
-        $class = get_class($this);
+        $class = static::class;
         $clone = null;
         $clone = new $class();
         foreach ($this->vars as $k => $v) {
@@ -1135,7 +1131,6 @@ class XoopsObjectHandler
     /**
      * insert/update object
      *
-     * @param XoopsObject $object
      * @abstract
      */
     public function insert(XoopsObject $object)
@@ -1145,7 +1140,6 @@ class XoopsObjectHandler
     /**
      * delete object from database
      *
-     * @param XoopsObject $object
      * @abstract
      */
     public function delete(XoopsObject $object)
@@ -1204,16 +1198,6 @@ class XoopsPersistableObjectHandler extends XoopsObjectHandler
     /**
      * @var string
      */
-    public $keyName;
-
-    /**
-     * @var string
-     */
-    public $className;
-
-    /**
-     * @var string
-     */
     public $identifierName;
 
     /**
@@ -1236,14 +1220,12 @@ class XoopsPersistableObjectHandler extends XoopsObjectHandler
      * @param string             $identifierName Name of the property holding an identifier
      *                                            name (title, name ...), used on getList()
      */
-    public function __construct(XoopsDatabase $db = null, $table = '', $className = '', $keyName = '', $identifierName = '')
+    public function __construct(XoopsDatabase $db = null, $table = '', public $className = '', public $keyName = '', $identifierName = '')
     {
         $db    = XoopsDatabaseFactory::getDatabaseConnection();
         $table = $db->prefix($table);
         parent::__construct($db);
         $this->table     = $table;
-        $this->keyName   = $keyName;
-        $this->className = $className;
         if ($identifierName) {
             $this->identifierName = $identifierName;
         }
@@ -1300,7 +1282,7 @@ class XoopsPersistableObjectHandler extends XoopsObjectHandler
      * @param  mixed  $args args
      * @return XoopsModelAbstract of handler {@link XoopsModelAbstract}
      */
-    public function loadHandler($name, $args = null)
+    public function loadHandler($name, mixed $args = null)
     {
         static $handlers;
         if (!isset($handlers[$name])) {
@@ -1469,7 +1451,7 @@ class XoopsPersistableObjectHandler extends XoopsObjectHandler
      * @param  bool            $force      force to query
      * @return bool
      */
-    public function updateAll($fieldname, $fieldvalue, CriteriaElement $criteria = null, $force = false)
+    public function updateAll($fieldname, mixed $fieldvalue, CriteriaElement $criteria = null, $force = false)
     {
         $handler = $this->loadHandler('write');
 

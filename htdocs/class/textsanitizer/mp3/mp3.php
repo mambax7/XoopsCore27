@@ -70,14 +70,12 @@ EOF;
     }
 
     /**
-     * @param MyTextSanitizer $myts
-     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)
     {
         $myts->callbackPatterns[] = "/\[mp3\](.*?)\[\/mp3\]/s";
-        $myts->callbacks[]        = __CLASS__ . '::myCallback';
+        $myts->callbacks[]        = self::class . '::myCallback';
 
         return true;
     }

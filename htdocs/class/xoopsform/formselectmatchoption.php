@@ -31,12 +31,12 @@ class XoopsFormSelectMatchOption extends XoopsFormSelect
      *
      * @param string $caption
      * @param string $name
-     * @param mixed  $value   Pre-selected value (or array of them).
+     * @param mixed|null $value Pre-selected value (or array of them).
      *                        Legal values are {@link XOOPS_MATCH_START}, {@link XOOPS_MATCH_END},
      *                        {@link XOOPS_MATCH_EQUAL}, and {@link XOOPS_MATCH_CONTAIN}
      * @param int    $size    Number of rows. "1" makes a drop-down-list
      */
-    public function __construct($caption, $name, $value = null, $size = 1)
+    public function __construct(string $caption, string $name, mixed $value = null, int $size = 1)
     {
         parent::__construct($caption, $name, $value, $size, false);
         $this->addOption(XOOPS_MATCH_START, _STARTSWITH);

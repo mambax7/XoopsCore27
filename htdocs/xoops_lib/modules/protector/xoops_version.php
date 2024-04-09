@@ -17,7 +17,7 @@ if (file_exists(__DIR__ . '/language/' . $language . '/modinfo.php')) {
         include __DIR__ . '/language/english/modinfo.php';
     }
 }
-$constpref = '_MI_' . strtoupper($mydirname);
+$constpref = '_MI_' . strtoupper((string) $mydirname);
 // end hack
 
 $modversion['name']           = constant($constpref . '_NAME');
@@ -78,7 +78,7 @@ $modversion['config'][]  = [
     'description' => $constpref . '_DEFAULT_LANGDSC',
     'formtype'    => 'text',
     'valuetype'   => 'text',
-    'default'     => isset($GLOBALS['xoopsConfig']['language']) ? $GLOBALS['xoopsConfig']['language'] : 'english',
+    'default'     => $GLOBALS['xoopsConfig']['language'] ?? 'english',
     'options'     => []
 ];
 $modversion['config'][]  = [

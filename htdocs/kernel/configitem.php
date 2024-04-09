@@ -217,7 +217,7 @@ class XoopsConfigItem extends XoopsObject
      * @param mixed &$value Value
      * @param bool  $force_slash
      */
-    public function setConfValueForInput(&$value, $force_slash = false)
+    public function setConfValueForInput(mixed &$value, $force_slash = false)
     {
         switch ($this->getVar('conf_valuetype')) {
             case 'array':
@@ -240,7 +240,7 @@ class XoopsConfigItem extends XoopsObject
      *
      * @param mixed $option either a {@link XoopsConfigItemOption} object or an array of them
      */
-    public function setConfOptions($option)
+    public function setConfOptions(mixed $option)
     {
         if (is_array($option)) {
             $count = count($option);
@@ -452,7 +452,7 @@ class XoopsConfigItemHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }

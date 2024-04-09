@@ -37,10 +37,10 @@ $vars =& $_SESSION['siteconfig'];
 $error =& $_SESSION['error'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $vars['adminname']  = trim($_POST['adminname']);
-    $vars['adminmail']  = trim($_POST['adminmail']);
-    $vars['adminpass']  = trim($_POST['adminpass']);
-    $vars['adminpass2'] = trim($_POST['adminpass2']);
+    $vars['adminname']  = trim((string) $_POST['adminname']);
+    $vars['adminmail']  = trim((string) $_POST['adminmail']);
+    $vars['adminpass']  = trim((string) $_POST['adminpass']);
+    $vars['adminpass2'] = trim((string) $_POST['adminpass2']);
     $error              = [];
 
     if (empty($vars['adminname'])) {
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sql = 'SELECT COUNT(*) FROM ' . $dbm->db->prefix('users');
     $result = $dbm->db->query($sql);
     if ($dbm->db->isResultSet($result)) {
-        list($isadmin) = $dbm->db->fetchRow($result);
+        [$isadmin] = $dbm->db->fetchRow($result);
     }
 }
 
@@ -107,7 +107,7 @@ if ($isadmin) {
 
         <?php
         echo '<div class="row"><div class="col-md-9">';
-        xoFormField('adminname', isset($vars['adminname']) ? $vars['adminname'] : '', ADMIN_LOGIN_LABEL);
+        xoFormField('adminname', $vars['adminname'] ?? '', ADMIN_LOGIN_LABEL);
 
         if (isset($error['name'])) {
             foreach ($error['name'] as $errmsg) {
@@ -115,7 +115,7 @@ if ($isadmin) {
             }
         }
 
-        xoFormField('adminmail', isset($vars['adminmail']) ? $vars['adminmail'] : '', ADMIN_EMAIL_LABEL);
+        xoFormField('adminmail', $vars['adminmail'] ?? '', ADMIN_EMAIL_LABEL);
         if (isset($error['email'])) {
             foreach ($error['email'] as $errmsg) {
                 echo '<div class="alert alert-danger"><span class="fa fa-ban text-danger"></span> ' . $errmsg . '</div>';

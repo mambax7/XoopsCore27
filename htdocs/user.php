@@ -58,11 +58,11 @@ if ($op === 'main') {
             // catch https:example.com (no //)
             $badScheme = (isset($urlParts['path']) && !isset($urlParts['host']) && isset($urlParts['scheme']));
             // no host or matching host
-            $hostMatch = (!isset($urlParts['host'])) || (0 === strcasecmp($urlParts['host'], $xoopsUrlParts['host']));
+            $hostMatch = (!isset($urlParts['host'])) || (0 === strcasecmp($urlParts['host'], (string) $xoopsUrlParts['host']));
             // path only, or path matches
             $pathMatch = (isset($urlParts['path']) && !isset($urlParts['host']) && !isset($urlParts['scheme']))
                 || ($hostMatch && isset($urlParts['path']) && isset($xoopsUrlParts['path'])
-                    && 0 === strncmp($urlParts['path'], $xoopsUrlParts['path'], strlen($xoopsUrlParts['path'])));
+                    && str_starts_with($urlParts['path'], (string) $xoopsUrlParts['path']));
             if ($badScheme || !($hostMatch && $pathMatch)) {
                 $redirect = XOOPS_URL;
             }

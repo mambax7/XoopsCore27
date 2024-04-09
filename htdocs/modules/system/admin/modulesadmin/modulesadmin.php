@@ -31,7 +31,7 @@ if ( !is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin(
 function xoops_module_install($dirname)
 {
     global $xoopsUser, $xoopsConfig;
-    $dirname        = trim($dirname);
+    $dirname        = trim((string) $dirname);
     $db             =& $GLOBALS['xoopsDB'];
     $reservedTables = [
         'avatar',
@@ -188,7 +188,7 @@ function xoops_module_install($dirname)
                     $msgs[] = _AM_SYSTEM_MODULES_TEMPLATES_ADD;
                     foreach ($templates as $tpl) {
                         $tplfile = $tplfile_handler->create();
-                        $type    = (isset($tpl['type']) ? $tpl['type'] : 'module');
+                        $type    = ($tpl['type'] ?? 'module');
                         $tpldata =&  xoops_module_gettemplate($dirname, $tpl['file'], $type);
                         $tplfile->setVar('tpl_source', $tpldata, true);
                         $tplfile->setVar('tpl_refid', $newmid);
@@ -233,21 +233,21 @@ function xoops_module_install($dirname)
                             } else {
                                 $options = $block['options'];
                             }
-                            $options = trim($options);
+                            $options = trim((string) $options);
                         }
                         $newbid    = $db->genId($db->prefix('newblocks') . '_bid_seq');
-                        $edit_func = isset($block['edit_func']) ? trim($block['edit_func']) : '';
+                        $edit_func = isset($block['edit_func']) ? trim((string) $block['edit_func']) : '';
                         $template  = '';
-                        if (isset($block['template']) && trim($block['template']) != '') {
+                        if (isset($block['template']) && trim((string) $block['template']) != '') {
                             $content =& xoops_module_gettemplate($dirname, $block['template'], 'blocks');
                         }
                         if (empty($content)) {
                             $content = '';
                         } else {
-                            $template = trim($block['template']);
+                            $template = trim((string) $block['template']);
                         }
-                        $block_name = addslashes(trim($block['name']));
-                        $sql        = 'INSERT INTO ' . $db->prefix('newblocks') . " (bid, mid, func_num, options, name, title, content, side, weight, visible, block_type, c_type, isactive, dirname, func_file, show_func, edit_func, template, bcachetime, last_modified) VALUES ($newbid, $newmid, " . (int)$blockkey . ", '$options', '" . $block_name . "','" . $block_name . "', '', 0, 0, 0, 'M', 'H', 1, '" . addslashes($dirname) . "', '" . addslashes(trim($block['file'])) . "', '" . addslashes(trim($block['show_func'])) . "', '" . addslashes($edit_func) . "', '" . $template . "', 0, " . time() . ')';
+                        $block_name = addslashes(trim((string) $block['name']));
+                        $sql        = 'INSERT INTO ' . $db->prefix('newblocks') . " (bid, mid, func_num, options, name, title, content, side, weight, visible, block_type, c_type, isactive, dirname, func_file, show_func, edit_func, template, bcachetime, last_modified) VALUES ($newbid, $newmid, " . (int)$blockkey . ", '$options', '" . $block_name . "','" . $block_name . "', '', 0, 0, 0, 'M', 'H', 1, '" . addslashes($dirname) . "', '" . addslashes(trim((string) $block['file'])) . "', '" . addslashes(trim((string) $block['show_func'])) . "', '" . addslashes($edit_func) . "', '" . $template . "', 0, " . time() . ')';
                         if (!$db->query($sql)) {
                             $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">' . sprintf(_AM_SYSTEM_MODULES_BLOCK_ADD_ERROR, '<strong>' . $block['name'] . '</strong>') . sprintf(_AM_SYSTEM_MODULES_BLOCK_ADD_ERROR_DATABASE, '<strong>' . $db->error() . '</strong>') . '</span>';
                         } else {
@@ -405,7 +405,7 @@ function xoops_module_install($dirname)
                         $confobj->setVar('conf_catid', 0);
                         $confobj->setVar('conf_name', $config['name']);
                         $confobj->setVar('conf_title', $config['title'], true);
-                        $confobj->setVar('conf_desc', isset($config['description']) ? $config['description'] : '', true);
+                        $confobj->setVar('conf_desc', $config['description'] ?? '', true);
                         $confobj->setVar('conf_formtype', $config['formtype']);
                         $confobj->setVar('conf_valuetype', $config['valuetype']);
                         $confobj->setConfValueForInput($config['default'], true);
@@ -549,15 +549,10 @@ function &xoops_module_gettemplate($dirname, $template, $type = '')
 {
     global $xoopsConfig;
     $ret = '';
-    switch ($type) {
-        case 'blocks':
-        case 'admin':
-            $path = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/templates/' . $type . '/' . $template;
-            break;
-        default:
-            $path = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/templates/' . $template;
-            break;
-    }
+    $path = match ($type) {
+        'blocks', 'admin' => XOOPS_ROOT_PATH . '/modules/' . $dirname . '/templates/' . $type . '/' . $template,
+        default => XOOPS_ROOT_PATH . '/modules/' . $dirname . '/templates/' . $template,
+    };
     if (!file_exists($path)) {
         return $ret;
     } else {
@@ -802,7 +797,7 @@ function xoops_module_uninstall($dirname)
 function xoops_module_update($dirname)
 {
     global $xoopsUser, $xoopsConfig, $xoopsTpl;
-    $dirname = trim($dirname);
+    $dirname = trim((string) $dirname);
     $xoopsDB =& $GLOBALS['xoopsDB'];
 
     $myts = \MyTextSanitizer::getInstance();
@@ -890,10 +885,10 @@ function xoops_module_update($dirname)
         if ($templates !== false) {
             $msgs[] = _AM_SYSTEM_MODULES_TEMPLATES_UPDATE;
             foreach ($templates as $tpl) {
-                $tpl['file'] = trim($tpl['file']);
+                $tpl['file'] = trim((string) $tpl['file']);
                 // START irmtfan solve templates duplicate issue
                 // if (!in_array($tpl['file'], $delng)) { // irmtfan bug fix: remove codes for delete templates
-                $type = (isset($tpl['type']) ? $tpl['type'] : 'module');
+                $type = ($tpl['type'] ?? 'module');
                 if (preg_match("/\.css$/i", $tpl['file'])) {
                     $type = 'css';
                 }
@@ -947,12 +942,12 @@ function xoops_module_update($dirname)
             $funcfiles = [];
             foreach ($blocks as $i => $block) {
                 if (isset($block['show_func']) && $block['show_func'] != '' && isset($block['file']) && $block['file'] != '') {
-                    $editfunc    = isset($block['edit_func']) ? $block['edit_func'] : '';
+                    $editfunc    = $block['edit_func'] ?? '';
                     $showfuncs[] = $block['show_func'];
                     $funcfiles[] = $block['file'];
                     $content = '';
                     $template = '';
-                    if (isset($block['template']) && trim($block['template']) != '') {
+                    if (isset($block['template']) && trim((string) $block['template']) != '') {
                         $content =& xoops_module_gettemplate($dirname, $block['template'], 'blocks');
                     }
                     if (!$content) {
@@ -964,7 +959,7 @@ function xoops_module_update($dirname)
                     if (!empty($block['options'])) {
                         $options = $block['options'];
                     }
-                    $sql     = 'SELECT bid, name FROM ' . $xoopsDB->prefix('newblocks') . ' WHERE mid=' . $module->getVar('mid') . ' AND func_num=' . $i . " AND show_func='" . addslashes($block['show_func']) . "' AND func_file='" . addslashes($block['file']) . "'";
+                    $sql     = 'SELECT bid, name FROM ' . $xoopsDB->prefix('newblocks') . ' WHERE mid=' . $module->getVar('mid') . ' AND func_num=' . $i . " AND show_func='" . addslashes((string) $block['show_func']) . "' AND func_file='" . addslashes((string) $block['file']) . "'";
                     $fresult = $xoopsDB->query($sql);
                     if (!$xoopsDB->isResultSet($fresult)) {
                         throw new \RuntimeException(
@@ -974,7 +969,7 @@ function xoops_module_update($dirname)
                     $fcount  = 0;
                     while (false !== ($fblock = $xoopsDB->fetchArray($fresult))) {
                         ++$fcount;
-                        $sql    = 'UPDATE ' . $xoopsDB->prefix('newblocks') . " SET name='" . addslashes($block['name']) . "', edit_func='" . addslashes($editfunc) . "', content='', template='" . $template . "', last_modified=" . time() . ' WHERE bid=' . $fblock['bid'];
+                        $sql    = 'UPDATE ' . $xoopsDB->prefix('newblocks') . " SET name='" . addslashes((string) $block['name']) . "', edit_func='" . addslashes((string) $editfunc) . "', content='', template='" . $template . "', last_modified=" . time() . ' WHERE bid=' . $fblock['bid'];
                         $result = $xoopsDB->query($sql);
                         if (!$result) {
                             $msgs[] = '&nbsp;&nbsp;' . sprintf(_AM_SYSTEM_MODULES_UPDATE_ERROR, $fblock['name']);
@@ -1014,9 +1009,9 @@ function xoops_module_update($dirname)
                     }
                     if ($fcount == 0) {
                         $newbid     = $xoopsDB->genId($xoopsDB->prefix('newblocks') . '_bid_seq');
-                        $block_name = addslashes($block['name']);
+                        $block_name = addslashes((string) $block['name']);
                         $block_type = ($module->getVar('dirname') === 'system') ? 'S' : 'M';
-                        $sql        = 'INSERT INTO ' . $xoopsDB->prefix('newblocks') . ' (bid, mid, func_num, options, name, title, content, side, weight, visible, block_type, isactive, dirname, func_file, show_func, edit_func, template, last_modified) VALUES (' . $newbid . ', ' . $module->getVar('mid') . ', ' . $i . ",'" . addslashes($options) . "','" . $block_name . "', '" . $block_name . "', '', 0, 0, 0, '{$block_type}', 1, '" . addslashes($dirname) . "', '" . addslashes($block['file']) . "', '" . addslashes($block['show_func']) . "', '" . addslashes($editfunc) . "', '" . $template . "', " . time() . ')';
+                        $sql        = 'INSERT INTO ' . $xoopsDB->prefix('newblocks') . ' (bid, mid, func_num, options, name, title, content, side, weight, visible, block_type, isactive, dirname, func_file, show_func, edit_func, template, last_modified) VALUES (' . $newbid . ', ' . $module->getVar('mid') . ', ' . $i . ",'" . addslashes((string) $options) . "','" . $block_name . "', '" . $block_name . "', '', 0, 0, 0, '{$block_type}', 1, '" . addslashes($dirname) . "', '" . addslashes((string) $block['file']) . "', '" . addslashes((string) $block['show_func']) . "', '" . addslashes((string) $editfunc) . "', '" . $template . "', " . time() . ')';
                         $result     = $xoopsDB->query($sql);
                         if (!$result) {
                             $msgs[] = '&nbsp;&nbsp;' . sprintf(_AM_SYSTEM_MODULES_SQL_NOT_CREATE, $block['name']);
@@ -1459,16 +1454,16 @@ function xoops_module_log_header($module, $title)
     $msgs[] = '<div class="header">';
     $msgs[] = $errs[] = '<h4>' . $title . $module->getInfo('name', 's') . '</h4>';
 
-    if ($module->getInfo('image') !== false && trim($module->getInfo('image')) != '') {
+    if ($module->getInfo('image') !== false && trim((string) $module->getInfo('image')) != '') {
         if (_AM_SYSTEM_MODULES_ACTIVATE === $title) {
-            $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . $module->getInfo('adminindex') . '"><img src="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . trim($module->getInfo('image')) . '" alt="" /></a>';
+            $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . $module->getInfo('adminindex') . '"><img src="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . trim((string) $module->getInfo('image')) . '" alt="" /></a>';
         } else {
-            $msgs[] = '<img src="' . XOOPS_URL . '/modules/' . $module->getVar('dirname') . '/' . trim($module->getInfo('image')) . '" alt="" />';
+            $msgs[] = '<img src="' . XOOPS_URL . '/modules/' . $module->getVar('dirname') . '/' . trim((string) $module->getInfo('image')) . '" alt="" />';
         }
     }
     $msgs[] = '<strong>' . _VERSION . ':</strong> ' . $module->getInfo('version');
-    if ($module->getInfo('author') !== false && trim($module->getInfo('author')) != '') {
-        $msgs[] = '<strong>' . _AUTHOR . ':</strong> ' . htmlspecialchars(trim($module->getInfo('author')), ENT_QUOTES | ENT_HTML5);
+    if ($module->getInfo('author') !== false && trim((string) $module->getInfo('author')) != '') {
+        $msgs[] = '<strong>' . _AUTHOR . ':</strong> ' . htmlspecialchars(trim((string) $module->getInfo('author')), ENT_QUOTES | ENT_HTML5);
     }
     $msgs[] = '</div>';
 

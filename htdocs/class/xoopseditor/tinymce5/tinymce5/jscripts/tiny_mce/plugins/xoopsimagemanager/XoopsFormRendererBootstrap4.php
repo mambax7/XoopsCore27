@@ -47,7 +47,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
     public function renderFormButtonTray(XoopsFormButtonTray $element)
     {
         $ret = '';
-        if ($element->_showDelete) {
+        if ($element->showDelete) {
             $ret .= '<button type="submit" class="btn btn-danger mr-1" name="delete" id="delete" onclick="this.form.elements.op.value=\'delete\'">' . _DELETE
             . '</button>';
         }
@@ -73,19 +73,16 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
         $elementName = $element->getName();
         $elementId = $elementName;
         $elementOptions = $element->getOptions();
-        if (count($elementOptions) > 1 && substr($elementName, -2, 2) !== '[]') {
+        if (count($elementOptions) > 1 && !str_ends_with($elementName, '[]')) {
             $elementName .= '[]';
             $element->setName($elementName);
         }
 
-        switch ((int) ($element->columns)) {
-            case 0:
-                return $this->renderCheckedInline($element, 'checkbox', $elementId, $elementName);
-            case 1:
-                return $this->renderCheckedOneColumn($element, 'checkbox', $elementId, $elementName);
-            default:
-                return $this->renderCheckedColumnar($element, 'checkbox', $elementId, $elementName);
-        }
+        return match ((int) ($element->columns)) {
+            0 => $this->renderCheckedInline($element, 'checkbox', $elementId, $elementName),
+            1 => $this->renderCheckedOneColumn($element, 'checkbox', $elementId, $elementName),
+            default => $this->renderCheckedColumnar($element, 'checkbox', $elementId, $elementName),
+        };
     }
 
     /**
@@ -110,8 +107,8 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
 
             $ret .= '<div class="form-check form-check-inline  m-2">';
             $ret .= "<input class='form-check-input' type='" . $type . "' name='{$elementName}' id='{$elementId}{$idSuffix}' title='"
-                . htmlspecialchars(strip_tags($name), ENT_QUOTES | ENT_HTML5) . "' value='"
-                . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . "'";
+                . htmlspecialchars(strip_tags((string) $name), ENT_QUOTES | ENT_HTML5) . "' value='"
+                . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "'";
 
             if (is_array($elementValue) ? in_array($value, $elementValue): $value == $elementValue) {
                 $ret .= ' checked';
@@ -146,8 +143,8 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
             $ret .= '<div class="' . $class . '">';
             $ret .= '<label>';
             $ret .= "<input type='" . $type . "' name='{$elementName}' id='{$elementId}{$idSuffix}' title='"
-                . htmlspecialchars(strip_tags($name), ENT_QUOTES | ENT_HTML5) . "' value='"
-                . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . "'";
+                . htmlspecialchars(strip_tags((string) $name), ENT_QUOTES | ENT_HTML5) . "' value='"
+                . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "'";
 
             if (is_array($elementValue) ? in_array($value, $elementValue): $value == $elementValue) {
                 $ret .= ' checked';
@@ -182,8 +179,8 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
 
             $ret .= '<div class="form-check m-2">';
             $ret .= "<input class='form-check-input' type='" . $type . "' name='{$elementName}' id='{$elementId}{$idSuffix}' title='"
-                . htmlspecialchars(strip_tags($name), ENT_QUOTES | ENT_HTML5) . "' value='"
-                . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . "'";
+                . htmlspecialchars(strip_tags((string) $name), ENT_QUOTES | ENT_HTML5) . "' value='"
+                . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "'";
 
             if (is_array($elementValue) ? in_array($value, $elementValue): $value == $elementValue) {
                 $ret .= ' checked';
@@ -296,12 +293,12 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
         $extensions = array_filter($myts->config['extensions']);
         foreach (array_keys($extensions) as $key) {
             $extension = $myts->loadExtension($key);
-            @list($encode, $js) = $extension->encode($textarea_id);
+            @[$encode, $js] = $extension->encode($textarea_id);
             if (empty($encode)) {
                 continue;
             }
             // TODO - MyTextSanitizer button rendering should go through XoopsFormRenderer
-            $encode = str_replace('btn-default', 'btn-secondary', $encode);
+            $encode = str_replace('btn-default', 'btn-secondary', (string) $encode);
 
             $code .= $encode;
             if (!empty($js)) {
@@ -328,7 +325,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
     protected function renderFormDhtmlTATypography(XoopsFormDhtmlTextArea $element)
     {
         $textarea_id = $element->getName();
-        $hiddentext  = $element->_hiddenText;
+        $hiddentext  = $element->hiddenText;
 
         $fontarray = !empty($GLOBALS['formtextdhtml_fonts']) ? $GLOBALS['formtextdhtml_fonts'] : [
             'Arial',
@@ -410,7 +407,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
         $fontStr .= "&nbsp;{$styleStr}&nbsp;{$alignStr}&nbsp;\n";
 
         $fontStr .= "<button type='button' class='btn btn-secondary btn-sm' onclick=\"XoopsCheckLength('"
-            . $element->getName() . "', '" . (isset($element->configs['maxlength'])?$element->configs['maxlength']:'') . "', '"
+            . $element->getName() . "', '" . ($element->configs['maxlength'] ?? '') . "', '"
             . _XOOPS_FORM_ALT_LENGTH . "', '" . _XOOPS_FORM_ALT_LENGTH_MAX . "');\" title='"
             . _XOOPS_FORM_ALT_CHECKLENGTH . "'><span class='fa fa-check-square-o' aria-hidden='true'></span></button>";
         $fontStr .= "</div></div>";
@@ -511,14 +508,11 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
         $elementName = $element->getName();
         $elementId = $elementName;
 
-        switch ((int) ($element->columns)) {
-            case 0:
-                return $this->renderCheckedInline($element, 'radio', $elementId, $elementName);
-            case 1:
-                return $this->renderCheckedOneColumn($element, 'radio', $elementId, $elementName);
-            default:
-                return $this->renderCheckedColumnar($element, 'radio', $elementId, $elementName);
-        }
+        return match ((int) ($element->columns)) {
+            0 => $this->renderCheckedInline($element, 'radio', $elementId, $elementName),
+            1 => $this->renderCheckedOneColumn($element, 'radio', $elementId, $elementName),
+            default => $this->renderCheckedColumnar($element, 'radio', $elementId, $elementName),
+        };
     }
 
     /**
@@ -543,7 +537,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
             $ret .= ' name="' . $ele_name . '" id="' . $ele_name . '" title="' . $ele_title . '">';
         }
         foreach ($ele_options as $value => $name) {
-            $ret .= '<option value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '"';
+            $ret .= '<option value="' . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . '"';
             if (count($ele_value) > 0 && in_array($value, $ele_value)) {
                 $ret .= ' selected';
             }

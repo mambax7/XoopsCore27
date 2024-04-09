@@ -27,7 +27,7 @@ if (!is_object($GLOBALS['xoopsUser'])) {
 }
 
 $myts                       = \MyTextSanitizer::getInstance();
-$op                         = isset($_REQUEST['op']) ? $_REQUEST['op'] : 'editprofile';
+$op                         = $_REQUEST['op'] ?? 'editprofile';
 /** @var XoopsConfigHandler $config_handler */
 $config_handler             = xoops_getHandler('config');
 $GLOBALS['xoopsConfigUser'] = $config_handler->getConfigsByCat(XOOPS_CONF_USER);
@@ -41,8 +41,8 @@ if ($op === 'save') {
     $errors   = [];
     $edituser =& $GLOBALS['xoopsUser'];
     if ($GLOBALS['xoopsUser']->isAdmin()) {
-        $edituser->setVar('uname', trim($_POST['uname']));
-        $edituser->setVar('email', trim($_POST['email']));
+        $edituser->setVar('uname', trim((string) $_POST['uname']));
+        $edituser->setVar('email', trim((string) $_POST['email']));
     }
     xoops_load('XoopsUserUtility');
     $stop = XoopsUserUtility::validate($edituser);
@@ -182,12 +182,12 @@ if ($op === 'avatarupload') {
                     @unlink($uploader->getSavedDestination());
                 } else {
                     $oldavatar = $GLOBALS['xoopsUser']->getVar('user_avatar');
-                    if (!empty($oldavatar) && false !== strpos(strtolower($oldavatar), 'cavt')) {
+                    if (!empty($oldavatar) && str_contains(strtolower((string) $oldavatar), 'cavt')) {
                         $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
                         if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
                             $avt_handler->delete($avatars[0]);
                             $oldavatar_path = realpath(XOOPS_UPLOAD_PATH . '/' . $oldavatar);
-                            if (0 === strpos($oldavatar_path, XOOPS_UPLOAD_PATH) && is_file($oldavatar_path)) {
+                            if (str_starts_with($oldavatar_path, XOOPS_UPLOAD_PATH) && is_file($oldavatar_path)) {
                                 unlink($oldavatar_path);
                             }
                         }
@@ -218,7 +218,7 @@ if ($op === 'avatarchoose') {
     $user_avatar = '';
     $avt_handler = xoops_getHandler('avatar');
     if (!empty($_POST['user_avatar'])) {
-        $user_avatar     = $myts->addSlashes(trim($_POST['user_avatar']));
+        $user_avatar     = $myts->addSlashes(trim((string) $_POST['user_avatar']));
         $criteria_avatar = new CriteriaCompo(new Criteria('avatar_file', $user_avatar));
         $criteria_avatar->add(new Criteria('avatar_type', 'S'));
         $avatars = $avt_handler->getObjects($criteria_avatar);
@@ -228,7 +228,7 @@ if ($op === 'avatarchoose') {
         unset($avatars, $criteria_avatar);
     }
     $user_avatarpath = realpath(XOOPS_UPLOAD_PATH . '/' . $user_avatar);
-    if (0 === strpos($user_avatarpath, realpath(XOOPS_UPLOAD_PATH)) && is_file($user_avatarpath)) {
+    if (str_starts_with($user_avatarpath, realpath(XOOPS_UPLOAD_PATH)) && is_file($user_avatarpath)) {
         $oldavatar = $GLOBALS['xoopsUser']->getVar('user_avatar');
         $GLOBALS['xoopsUser']->setVar('user_avatar', $user_avatar);
         /** @var XoopsMemberHandler $member_handler */
@@ -240,12 +240,12 @@ if ($op === 'avatarchoose') {
             exit();
         }
         //        if ($oldavatar && preg_match("/^cavt/", strtolower(substr($oldavatar, 8)))) {
-        if ($oldavatar && 0 === strpos(strtolower(substr($oldavatar, 8)), 'cavt')) {
+        if ($oldavatar && str_starts_with(strtolower(substr((string) $oldavatar, 8)), 'cavt')) {
             $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
             if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
                 $avt_handler->delete($avatars[0]);
                 $oldavatar_path = realpath(XOOPS_UPLOAD_PATH . '/' . $oldavatar);
-                if (0 === strpos($oldavatar_path, realpath(XOOPS_UPLOAD_PATH)) && is_file($oldavatar_path)) {
+                if (str_starts_with($oldavatar_path, realpath(XOOPS_UPLOAD_PATH)) && is_file($oldavatar_path)) {
                     unlink($oldavatar_path);
                 }
             }

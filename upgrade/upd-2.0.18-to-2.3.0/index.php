@@ -52,7 +52,7 @@ class Upgrade_230 extends XoopsUpgrade
         if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
             return false;
         }
-        list($count) = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
 
         return ($count == 2);
     }
@@ -162,7 +162,7 @@ class Upgrade_230 extends XoopsUpgrade
         $sql                   = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` = 'welcome_type'";
         $result = $GLOBALS['xoopsDB']->queryF($sql);
         if ($GLOBALS['xoopsDB']->isResultSet($result)) {
-            list($count) = $GLOBALS['xoopsDB']->fetchRow($result);
+            [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
             if ($count == 1) {
                 $welcometype_installed = true;
             }
@@ -260,8 +260,8 @@ class Upgrade_230 extends XoopsUpgrade
             return false;
         }
         if ($task === 'db' && !empty($vars['XOOPS_DB_COLLATION'])) {
-            if ($pos = strpos($vars['XOOPS_DB_COLLATION'], '_')) {
-                $vars['XOOPS_DB_CHARSET'] = substr($vars['XOOPS_DB_COLLATION'], 0, $pos);
+            if ($pos = strpos((string) $vars['XOOPS_DB_COLLATION'], '_')) {
+                $vars['XOOPS_DB_CHARSET'] = substr((string) $vars['XOOPS_DB_COLLATION'], 0, $pos);
                 $this->convert_db($vars['XOOPS_DB_CHARSET'], $vars['XOOPS_DB_COLLATION']);
             }
         }
@@ -289,7 +289,7 @@ class Upgrade_230 extends XoopsUpgrade
             return false;
         }
         $tables = [];
-        while (false !== (list($table) = $GLOBALS['xoopsDB']->fetchRow($result))) {
+        while (false !== ([$table] = $GLOBALS['xoopsDB']->fetchRow($result))) {
             $tables[] = $table;
             //$GLOBALS["xoopsDB"]->queryF( "ALTER TABLE `{$table}` DEFAULT CHARACTER SET " . $GLOBALS["xoopsDB"]->quote($charset) . " COLLATE " . $GLOBALS["xoopsDB"]->quote($collation) );
             //$GLOBALS["xoopsDB"]->queryF( "ALTER TABLE `{$table}` CONVERT TO CHARACTER SET " . $GLOBALS["xoopsDB"]->quote($charset) . " COLLATE " . $GLOBALS["xoopsDB"]->quote($collation) );
@@ -329,15 +329,15 @@ class Upgrade_230 extends XoopsUpgrade
                     );
                 }
                 while (false !== ($myrow = $GLOBALS['xoopsDB']->fetchArray($result))) {
-                    if (preg_match('/(char)|(text)|(enum)|(set)/', $myrow['Type'])) {
+                    if (preg_match('/(char)|(text)|(enum)|(set)/', (string) $myrow['Type'])) {
                         // String Type SQL Sentence.
                         $string_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . " CHARACTER SET $charset COLLATE $collation " . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
 
                         // Binary String Type SQL Sentence.
-                        if (preg_match('/(enum)|(set)/', $myrow['Type'])) {
+                        if (preg_match('/(enum)|(set)/', (string) $myrow['Type'])) {
                             $binary_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . ' CHARACTER SET binary ' . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
                         } else {
-                            $myrow['Type']  = str_replace('char', 'binary', $myrow['Type']);
+                            $myrow['Type']  = str_replace('char', 'binary', (string) $myrow['Type']);
                             $myrow['Type']  = str_replace('text', 'blob', $myrow['Type']);
                             $binary_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . ' ' . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
                         }
@@ -354,7 +354,7 @@ class Upgrade_230 extends XoopsUpgrade
                     );
                 }
                 while (false !== ($myrow = $GLOBALS['xoopsDB']->fetchArray($result))) {
-                    if (preg_match('/FULLTEXT/', $myrow['Index_type'])) {
+                    if (preg_match('/FULLTEXT/', (string) $myrow['Index_type'])) {
                         $fulltext_indexes[$myrow['Key_name']][$myrow['Column_name']] = 1;
                     }
                 }
@@ -407,12 +407,12 @@ class Upgrade_230 extends XoopsUpgrade
 
         $lines = file($file);
         foreach (array_keys($lines) as $ln) {
-            if (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", $lines[$ln], $matches)) {
+            if (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", (string) $lines[$ln], $matches)) {
                 $val        = isset($vars[$matches[3]]) ? (string)constant($matches[3]) : (defined($matches[3]) ? (string)constant($matches[3]) : '0');
-                $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", "define('" . $matches[3] . "', " . $val . ' )', $lines[$ln]);
-            } elseif (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])([^\"']*?)\\4\s*\)/", $lines[$ln], $matches)) {
+                $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", "define('" . $matches[3] . "', " . $val . ' )', (string) $lines[$ln]);
+            } elseif (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])([^\"']*?)\\4\s*\)/", (string) $lines[$ln], $matches)) {
                 $val        = isset($vars[$matches[3]]) ? (string)$vars[$matches[3]] : (defined($matches[3]) ? (string)constant($matches[3]) : '');
-                $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])(.*?)\\4\s*\)/", "define('" . $matches[3] . "', '" . $val . "' )", $lines[$ln]);
+                $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])(.*?)\\4\s*\)/", "define('" . $matches[3] . "', '" . $val . "' )", (string) $lines[$ln]);
             }
         }
 

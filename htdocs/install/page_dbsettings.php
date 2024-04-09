@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($vars['DB_NAME'])) {
-    $dbName   = mysqli_real_escape_string($link, $vars['DB_NAME']);
+    $dbName   = mysqli_real_escape_string($link, (string) $vars['DB_NAME']);
     $error    = validateDbCharset($link, $vars['DB_CHARSET'], $vars['DB_COLLATION']);
     $db_exist = true;
     if (empty($error)) {
@@ -72,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($vars['DB_NAME'])) {
         }
         if ($db_exist && $vars['DB_CHARSET']) {
             $sql = 'ALTER DATABASE `' . $dbName . '` DEFAULT CHARACTER SET '
-                   . mysqli_real_escape_string($link, $vars['DB_CHARSET'])
-                   . ($vars['DB_COLLATION'] ? ' COLLATE ' . mysqli_real_escape_string($link, $vars['DB_COLLATION']) : '');
+                   . mysqli_real_escape_string($link, (string) $vars['DB_CHARSET'])
+                   . ($vars['DB_COLLATION'] ? ' COLLATE ' . mysqli_real_escape_string($link, (string) $vars['DB_COLLATION']) : '');
             if (!mysqli_query($link, $sql)) {
                 $error = ERR_CHARSET_NOT_SET . $sql;
             }
@@ -98,7 +98,7 @@ if (@empty($vars['DB_NAME'])) {
 ob_start();
 ?>
 <?php if (!empty($error)) {
-    echo '<div class="alert alert-danger"><span class="fa fa-ban text-danger"></span> ' . htmlspecialchars($error, ENT_QUOTES | ENT_HTML5) . "</div>\n";
+    echo '<div class="alert alert-danger"><span class="fa fa-ban text-danger"></span> ' . htmlspecialchars((string) $error, ENT_QUOTES | ENT_HTML5) . "</div>\n";
 } ?>
 
     <script type="text/javascript">

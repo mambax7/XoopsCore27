@@ -371,16 +371,11 @@ class XoopsStory
         if ($this->nosmiley()) {
             $smiley = 0;
         }
-        switch ($format) {
-            case 'Show':
-            case 'Edit':
-                $title = $myts->htmlSpecialChars($this->title);
-                break;
-            case 'Preview':
-            case 'InForm':
-                $title = $myts->htmlSpecialChars($myts->stripSlashesGPC($this->title));
-                break;
-        }
+        $title = match ($format) {
+            'Show', 'Edit' => $myts->htmlSpecialChars($this->title),
+            'Preview', 'InForm' => $myts->htmlSpecialChars($myts->stripSlashesGPC($this->title)),
+            default => $title,
+        };
 
         return $title;
     }
@@ -402,20 +397,13 @@ class XoopsStory
         if ($this->nosmiley()) {
             $smiley = 0;
         }
-        switch ($format) {
-            case 'Show':
-                $hometext = $myts->displayTarea($this->hometext, $html, $smiley, $xcodes);
-                break;
-            case 'Edit':
-                $hometext = htmlspecialchars($this->hometext, ENT_QUOTES | ENT_HTML5);
-                break;
-            case 'Preview':
-                $hometext = $myts->previewTarea($this->hometext, $html, $smiley, $xcodes);
-                break;
-            case 'InForm':
-                $hometext = htmlspecialchars($myts->stripSlashesGPC($this->hometext), ENT_QUOTES | ENT_HTML5);
-                break;
-        }
+        $hometext = match ($format) {
+            'Show' => $myts->displayTarea($this->hometext, $html, $smiley, $xcodes),
+            'Edit' => htmlspecialchars((string) $this->hometext, ENT_QUOTES | ENT_HTML5),
+            'Preview' => $myts->previewTarea($this->hometext, $html, $smiley, $xcodes),
+            'InForm' => htmlspecialchars($myts->stripSlashesGPC($this->hometext), ENT_QUOTES | ENT_HTML5),
+            default => $hometext,
+        };
 
         return $hometext;
     }
@@ -437,20 +425,13 @@ class XoopsStory
         if ($this->nosmiley()) {
             $smiley = 0;
         }
-        switch ($format) {
-            case 'Show':
-                $bodytext = $myts->displayTarea($this->bodytext, $html, $smiley, $xcodes);
-                break;
-            case 'Edit':
-                $bodytext = htmlspecialchars($this->bodytext, ENT_QUOTES | ENT_HTML5);
-                break;
-            case 'Preview':
-                $bodytext = $myts->previewTarea($this->bodytext, $html, $smiley, $xcodes);
-                break;
-            case 'InForm':
-                $bodytext = htmlspecialchars($myts->stripSlashesGPC($this->bodytext), ENT_QUOTES | ENT_HTML5);
-                break;
-        }
+        $bodytext = match ($format) {
+            'Show' => $myts->displayTarea($this->bodytext, $html, $smiley, $xcodes),
+            'Edit' => htmlspecialchars((string) $this->bodytext, ENT_QUOTES | ENT_HTML5),
+            'Preview' => $myts->previewTarea($this->bodytext, $html, $smiley, $xcodes),
+            'InForm' => htmlspecialchars($myts->stripSlashesGPC($this->bodytext), ENT_QUOTES | ENT_HTML5),
+            default => $bodytext,
+        };
 
         return $bodytext;
     }

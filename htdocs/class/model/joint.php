@@ -59,7 +59,6 @@ class XoopsModelJoint extends XoopsModelAbstract
     /**
      * get a list of objects matching a condition joint with another related object
      *
-     * @param CriteriaElement|CriteriaCompo $criteria
      * @param  array          $fields       variables to fetch
      * @param  bool           $asObject     flag indicating as object, otherwise as array
      * @param  string         $field_link   field of linked object for JOIN; deprecated, for backward compatibility
@@ -175,7 +174,7 @@ class XoopsModelJoint extends XoopsModelAbstract
             return false;
         }
         $ret = [];
-        while (false !== (list($id, $count) = $this->handler->db->fetchRow($result))) {
+        while (false !== ([$id, $count] = $this->handler->db->fetchRow($result))) {
             $ret[$id] = $count;
         }
 

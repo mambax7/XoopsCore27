@@ -84,7 +84,6 @@ class XoopsMediaUploader
     public $mediaTmpName;
     public $mediaError;
     public $mediaRealType           = '';
-    public $uploadDir               = '';
     public $allowedMimeTypes        = [];
     public $deniedMimeTypes         = [
         'application/x-httpd-php'
@@ -144,7 +143,7 @@ class XoopsMediaUploader
      * @param bool   $randomFilename
      */
 
-    public function __construct($uploadDir, $allowedMimeTypes, $maxFileSize = 0, $maxWidth = null, $maxHeight = null, $randomFilename = false)
+    public function __construct(public $uploadDir, $allowedMimeTypes, $maxFileSize = 0, $maxWidth = null, $maxHeight = null, $randomFilename = false)
     {
         $this->extensionToMime = include $GLOBALS['xoops']->path('include/mimetypes.inc.php');
         if (!is_array($this->extensionToMime)) {
@@ -155,7 +154,6 @@ class XoopsMediaUploader
         if (is_array($allowedMimeTypes)) {
             $this->allowedMimeTypes =& $allowedMimeTypes;
         }
-        $this->uploadDir = $uploadDir;
 
         $limits = [];
         $limits = $this->arrayPushIfPositive($limits, $maxFileSize);
@@ -187,19 +185,12 @@ class XoopsMediaUploader
      */
     public function return_bytes($size_str)
     {
-        switch (substr($size_str, -1)) {
-            case 'K':
-            case 'k':
-                return (int)$size_str * 1024;
-            case 'M':
-            case 'm':
-                return (int)$size_str * 1048576;
-            case 'G':
-            case 'g':
-                return (int)$size_str * 1073741824;
-            default:
-                return $size_str;
-        }
+        return match (substr((string) $size_str, -1)) {
+            'K', 'k' => (int)$size_str * 1024,
+            'M', 'm' => (int)$size_str * 1048576,
+            'G', 'g' => (int)$size_str * 1073741824,
+            default => $size_str,
+        };
     }
 
     /**
@@ -266,8 +257,8 @@ class XoopsMediaUploader
             $this->mediaError   = !empty($file['error']) ? $file['error'] : 0;
         }
 
-        if (($ext = strrpos($this->mediaName, '.')) !== false) {
-            $ext = strtolower(substr($this->mediaName, $ext + 1));
+        if (($ext = strrpos((string) $this->mediaName, '.')) !== false) {
+            $ext = strtolower(substr((string) $this->mediaName, $ext + 1));
             if (isset($this->extensionToMime[$ext])) {
                 $this->mediaRealType = $this->extensionToMime[$ext];
             }
@@ -465,7 +456,7 @@ class XoopsMediaUploader
     public function _copyFile($chmod)
     {
         $matched = [];
-        if (!preg_match("/\.([a-zA-Z0-9]+)$/", $this->mediaName, $matched)) {
+        if (!preg_match("/\.([a-zA-Z0-9]+)$/", (string) $this->mediaName, $matched)) {
             $this->setErrors(_ER_UP_INVALIDFILENAME);
             return false;
         }
@@ -473,14 +464,14 @@ class XoopsMediaUploader
         if (isset($this->targetFileName)) {
             $this->savedFileName = $this->targetFileName;
         } elseif (isset($this->prefix)) {
-            $this->savedFileName = uniqid($this->prefix, false) . '.' . strtolower($matched[1]); //TODO: for true, need to increase size of image_name field in image table
+            $this->savedFileName = uniqid((string) $this->prefix, false) . '.' . strtolower($matched[1]); //TODO: for true, need to increase size of image_name field in image table
         } else {
-            $this->savedFileName = strtolower($this->mediaName);
+            $this->savedFileName = strtolower((string) $this->mediaName);
         }
 
-        $this->savedFileName = iconv('UTF-8', 'ASCII//TRANSLIT', $this->savedFileName);
+        $this->savedFileName = iconv('UTF-8', 'ASCII//TRANSLIT', (string) $this->savedFileName);
         $this->savedFileName = preg_replace('!\s+!', '_', $this->savedFileName);
-        $this->savedFileName = preg_replace("/[^a-zA-Z0-9\._-]/", '', $this->savedFileName);
+        $this->savedFileName = preg_replace("/[^a-zA-Z0-9\._-]/", '', (string) $this->savedFileName);
 
         $this->savedDestination = $this->uploadDir . '/' . $this->savedFileName;
 
@@ -580,7 +571,7 @@ class XoopsMediaUploader
     public function checkMimeType()
     {
         // if the browser supplied mime type looks suspicious, refuse it
-        $structureCheck = (bool) preg_match('/^\w+\/[-+.\w]+$/', $this->mediaType);
+        $structureCheck = (bool) preg_match('/^\w+\/[-+.\w]+$/', (string) $this->mediaType);
         if (false === $structureCheck) {
             $this->mediaType = 'invalid';
             $this->setErrors(_ER_UP_UNKNOWNFILETYPEREJECTED);
@@ -594,7 +585,7 @@ class XoopsMediaUploader
         }
 
         if ((!empty($this->allowedMimeTypes) && !in_array($this->mediaRealType, $this->allowedMimeTypes)) || (!empty($this->deniedMimeTypes) && in_array($this->mediaRealType, $this->deniedMimeTypes))) {
-            $this->setErrors(sprintf(_ER_UP_MIMETYPENOTALLOWED, htmlspecialchars($this->mediaRealType, ENT_QUOTES | ENT_HTML5)));
+            $this->setErrors(sprintf(_ER_UP_MIMETYPENOTALLOWED, htmlspecialchars((string) $this->mediaRealType, ENT_QUOTES | ENT_HTML5)));
 
             return false;
         }
@@ -613,7 +604,7 @@ class XoopsMediaUploader
             return true;
         }
 
-        if (('image' === substr($this->mediaType, 0, strpos($this->mediaType, '/'))) || (!empty($this->mediaRealType) && 'image' === substr($this->mediaRealType, 0, strpos($this->mediaRealType, '/')))) {
+        if (('image' === substr((string) $this->mediaType, 0, strpos((string) $this->mediaType, '/'))) || (!empty($this->mediaRealType) && 'image' === substr((string) $this->mediaRealType, 0, strpos((string) $this->mediaRealType, '/')))) {
             if (!($info = @getimagesize($this->mediaTmpName))) {
                 $this->setErrors(_ER_UP_INVALIDIMAGEFILE);
 
@@ -636,10 +627,10 @@ class XoopsMediaUploader
         $patterns = [];
         $replaces = [];
         foreach ($this->extensionsToBeSanitized as $ext) {
-            $patterns[] = "/\." . preg_quote($ext, '/') . "\./i";
+            $patterns[] = "/\." . preg_quote((string) $ext, '/') . "\./i";
             $replaces[] = '_' . $ext . '.';
         }
-        $this->mediaName = preg_replace($patterns, $replaces, $this->mediaName);
+        $this->mediaName = preg_replace($patterns, $replaces, (string) $this->mediaName);
     }
 
     /**
@@ -665,7 +656,7 @@ class XoopsMediaUploader
         } else {
             $ret = '';
             if (count($this->errors) > 0) {
-                $ret = '<h4>' . sprintf(_ER_UP_ERRORSRETURNED, htmlspecialchars($this->mediaName, ENT_QUOTES | ENT_HTML5)) . '</h4>';
+                $ret = '<h4>' . sprintf(_ER_UP_ERRORSRETURNED, htmlspecialchars((string) $this->mediaName, ENT_QUOTES | ENT_HTML5)) . '</h4>';
                 foreach ($this->errors as $error) {
                     $ret .= $error . '<br>';
                 }

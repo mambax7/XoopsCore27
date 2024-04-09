@@ -269,7 +269,6 @@ class XoopsConfigOptionHandler extends XoopsObjectHandler
     /**
      * get count of matching configoption rows
      *
-     * @param CriteriaElement $criteria
      *
      * @return int Count of matching XoopsConfigOption
      */

@@ -32,7 +32,7 @@ class XoopsFormCheckBox extends XoopsFormElement
      * @var array
      * @access private
      */
-    public $_options = [];
+    public array $options = [];
 
     /**
      * pre-selected values in array
@@ -40,15 +40,7 @@ class XoopsFormCheckBox extends XoopsFormElement
      * @var array
      * @access private
      */
-    public $_value = [];
-
-    /**
-     * HTML to seperate the elements
-     *
-     * @var string
-     * @access private
-     */
-    public $_delimeter;
+    public array $_value = [];
 
     /**
      * Columns per line for rendering
@@ -59,24 +51,28 @@ class XoopsFormCheckBox extends XoopsFormElement
      * @var int
      * @access public
      */
-    public $columns;
+    public int $columns;
 
     /**
      * Constructor
      *
      * @param string $caption
      * @param string $name
-     * @param mixed  $value Either one value as a string or an array of them.
-     * @param string $delimeter
+     * @param mixed|null $value     Either one value as a string or an array of them.
+     * @param string $delimeter HTML to separate the elements
      */
-    public function __construct($caption, $name, $value = null, $delimeter = '&nbsp;')
+    public function __construct(string $caption, string $name, mixed $value = null, /**
+     * HTML to seperate the elements
+     *
+     * @access private
+     */
+    public $delimeter = '&nbsp;')
     {
         $this->setCaption($caption);
         $this->setName($name);
         if (isset($value)) {
             $this->setValue($value);
         }
-        $this->_delimeter = $delimeter;
         $this->setFormType('checkbox');
     }
 
@@ -86,14 +82,14 @@ class XoopsFormCheckBox extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return array
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): array
     {
         if (!$encode) {
             return $this->_value;
         }
         $value = [];
         foreach ($this->_value as $val) {
-            $value[] = $val ? htmlspecialchars($val, ENT_QUOTES | ENT_HTML5) : $val;
+            $value[] = $val ? htmlspecialchars((string) $val, ENT_QUOTES | ENT_HTML5) : $val;
         }
 
         return $value;
@@ -102,10 +98,9 @@ class XoopsFormCheckBox extends XoopsFormElement
     /**
      * Set the "value"
      *
-     * @param array $value
      *
      */
-    public function setValue($value)
+    public function setValue(array $value): void
     {
         $this->_value = [];
         if (is_array($value)) {
@@ -119,16 +114,13 @@ class XoopsFormCheckBox extends XoopsFormElement
 
     /**
      * Add an option
-     *
-     * @param string $value
-     * @param string $name
      */
-    public function addOption($value, $name = '')
+    public function addOption(string $value, string $name = ''): void
     {
         if ($name != '') {
-            $this->_options[$value] = $name;
+            $this->options[$value] = $name;
         } else {
-            $this->_options[$value] = $value;
+            $this->options[$value] = $value;
         }
     }
 
@@ -137,7 +129,7 @@ class XoopsFormCheckBox extends XoopsFormElement
      *
      * @param array $options Associative array of value->name pairs
      */
-    public function addOptionArray($options)
+    public function addOptionArray(array $options): void
     {
         if (is_array($options)) {
             foreach ($options as $k => $v) {
@@ -152,14 +144,14 @@ class XoopsFormCheckBox extends XoopsFormElement
      * @param  bool|int $encode To sanitizer the text? potential values: 0 - skip; 1 - only for value; 2 - for both value and name
      * @return array    Associative array of value->name pairs
      */
-    public function getOptions($encode = false)
+    public function getOptions(bool|int $encode = false): array
     {
         if (!$encode) {
-            return $this->_options;
+            return $this->options;
         }
         $value = [];
-        foreach ($this->_options as $val => $name) {
-            $value[$encode ? htmlspecialchars($val, ENT_QUOTES | ENT_HTML5) : $val] = ($encode > 1) ? htmlspecialchars($name, ENT_QUOTES | ENT_HTML5) : $name;
+        foreach ($this->options as $val => $name) {
+            $value[$encode ? htmlspecialchars((string) $val, ENT_QUOTES | ENT_HTML5) : $val] = ($encode > 1) ? htmlspecialchars((string) $name, ENT_QUOTES | ENT_HTML5) : $name;
         }
 
         return $value;
@@ -171,9 +163,9 @@ class XoopsFormCheckBox extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return string The delimiter
      */
-    public function getDelimeter($encode = false)
+    public function getDelimeter(bool $encode = false): string
     {
-        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->_delimeter), ENT_QUOTES | ENT_HTML5) : $this->_delimeter;
+        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->delimeter), ENT_QUOTES | ENT_HTML5) : $this->delimeter;
     }
 
     /**
@@ -181,7 +173,7 @@ class XoopsFormCheckBox extends XoopsFormElement
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormCheckBox($this);
     }

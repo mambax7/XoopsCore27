@@ -138,7 +138,7 @@ if (file_exists($file = $GLOBALS['xoops']->path('var/configs/xoopsconfig.php')))
 /**
  * clickjack protection - Add option to HTTP header restricting using site in an iframe
  */
-$xFrameOptions = isset($xoopsConfig['xFrameOptions']) ? $xoopsConfig['xFrameOptions'] : 'sameorigin';
+$xFrameOptions = $xoopsConfig['xFrameOptions'] ?? 'sameorigin';
 if (!headers_sent() && !empty($xFrameOptions)) {
     header('X-Frame-Options: ' . $xFrameOptions);
 }
@@ -203,12 +203,12 @@ if ($xoopsConfig['use_ssl'] && isset($_POST[$xoopsConfig['sslpost_name']]) && $_
     @ini_set('session.gc_maxlifetime', $xoopsConfig['session_expire'] * 60);
 }
 session_set_save_handler(
-    [$sess_handler, 'open'],
-    [$sess_handler, 'close'],
-    [$sess_handler, 'read'],
-    [$sess_handler, 'write'],
-    [$sess_handler, 'destroy'],
-    [$sess_handler, 'gc']
+    $sess_handler->open(...),
+    $sess_handler->close(...),
+    $sess_handler->read(...),
+    $sess_handler->write(...),
+    $sess_handler->destroy(...),
+    $sess_handler->gc(...)
 );
 
 if (function_exists('session_status')) {
@@ -264,7 +264,7 @@ if (!empty($_SESSION['xoopsUserId'])) {
                    . "' WHERE uid = " . $_SESSION['xoopsUserId'];
             try {
                 $xoopsDB->queryF($sql);
-            } catch (Exception $e) {
+            } catch (Exception) {
                 throw new \RuntimeException(
                     \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
                 );
@@ -343,7 +343,7 @@ if ($xoopsConfig['closesite'] == 1) {
  * Load Xoops Module
  */
 if (file_exists('./xoops_version.php')) {
-    $url_arr        = explode('/', stristr($_SERVER['PHP_SELF'], '/modules/'));
+    $url_arr        = explode('/', stristr((string) $_SERVER['PHP_SELF'], '/modules/'));
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');
     $xoopsModule    = $module_handler->getByDirname($url_arr[2]);

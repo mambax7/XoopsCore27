@@ -350,7 +350,7 @@ function &notificationSubscribableCategoryInfo($module_id = null)
     $all_categories =& notificationCategoryInfo('', $module_id);
 
     // FIXME: better or more standardized way to do this?
-    $script_url  = explode('/', $_SERVER['PHP_SELF']);
+    $script_url  = explode('/', (string) $_SERVER['PHP_SELF']);
     $script_name = $script_url[count($script_url) - 1];
 
     $sub_categories = [];
@@ -409,16 +409,9 @@ function &notificationSubscribableCategoryInfo($module_id = null)
  */
 function notificationGenerateConfig(&$category, &$event, $type)
 {
-    switch ($type) {
-        case 'option_value':
-        case 'name':
-            return 'notify:' . $category['name'] . '-' . $event['name'];
-            break;
-        case 'option_name':
-            return $category['name'] . '-' . $event['name'];
-            break;
-        default:
-            return false;
-            break;
-    }
+    return match ($type) {
+        'option_value', 'name' => 'notify:' . $category['name'] . '-' . $event['name'],
+        'option_name' => $category['name'] . '-' . $event['name'],
+        default => false,
+    };
 }

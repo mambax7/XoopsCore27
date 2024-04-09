@@ -71,8 +71,6 @@ EOH;
     }
 
     /**
-     * @param MyTextSanitizer $myts
-     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)

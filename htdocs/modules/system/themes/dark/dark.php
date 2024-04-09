@@ -67,7 +67,7 @@ class XoopsGuiDark extends XoopsSystemGui
         $tpl =& $this->template;
 
         // Determine if information box must be shown
-        $currentScript = str_replace(XOOPS_ROOT_PATH . '/', '', $_SERVER['SCRIPT_FILENAME']);
+        $currentScript = str_replace(XOOPS_ROOT_PATH . '/', '', (string) $_SERVER['SCRIPT_FILENAME']);
 
         if('admin.php' == $currentScript){
             $show = Request::getString('show', '', 'GET');
@@ -200,7 +200,7 @@ class XoopsGuiDark extends XoopsSystemGui
                 } else {
                     $rtn['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
                 }
-                $rtn['title']    = htmlspecialchars($mod->name(), ENT_QUOTES | ENT_HTML5);
+                $rtn['title']    = htmlspecialchars((string) $mod->name(), ENT_QUOTES | ENT_HTML5);
                 $rtn['absolute'] = 1;
                 $rtn['url']      = XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/'; //add for sub menus
                 $modOptions      = $mod->getAdminMenu();                                        //add for sub menus
@@ -285,7 +285,7 @@ class XoopsGuiDark extends XoopsSystemGui
             $sadmin = $moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups());
             if ($sadmin && ($mod->getVar('hasnotification') || \is_array($mod->getInfo('config')) || \is_array($mod->getInfo('comments')))) {
                 $rtn['link']     = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
-                $rtn['title']    = htmlspecialchars($mod->name(), ENT_QUOTES | ENT_HTML5);
+                $rtn['title']    = htmlspecialchars((string) $mod->name(), ENT_QUOTES | ENT_HTML5);
                 $rtn['absolute'] = 1;
                 $rtn['icon']     = XOOPS_ADMINTHEME_URL . '/gui/oxygen/icons/prefs_small.png';
                 $menu[]          = $rtn;
@@ -352,7 +352,7 @@ class XoopsGuiDark extends XoopsSystemGui
                 } else {
                     $rtn ['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
                 }
-                $rtn ['title']       = htmlspecialchars($mod->getVar('name'), ENT_QUOTES | ENT_HTML5);
+                $rtn ['title']       = htmlspecialchars((string) $mod->getVar('name'), ENT_QUOTES | ENT_HTML5);
                 $rtn ['description'] = $mod->getInfo('description');
                 $rtn ['absolute']    = 1;
                 if (isset($info ['icon_big'])) {

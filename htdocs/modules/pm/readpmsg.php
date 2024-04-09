@@ -92,8 +92,8 @@ if (is_object($pm) && !empty($_POST['action'])) {
                 break;
         }
     }
-    $res_message = isset($res_message) ? $res_message : ($res ? _PM_ACTION_DONE : _PM_ACTION_ERROR);
-    redirect_header('viewpmsg.php?op=' . htmlspecialchars($_REQUEST['op'], ENT_QUOTES | ENT_HTML5), 2, $res_message);
+    $res_message ??= $res ? _PM_ACTION_DONE : _PM_ACTION_ERROR;
+    redirect_header('viewpmsg.php?op=' . htmlspecialchars((string) $_REQUEST['op'], ENT_QUOTES | ENT_HTML5), 2, $res_message);
 }
 $start                        = Request::getInt('start', 0, 'GET');
 $total_messages               = Request::getInt('total_messages', 0, 'GET');
@@ -124,7 +124,7 @@ if (!is_object($pm)) {
     $criteria->setStart($start);
     $criteria->setSort('msg_time');
     $criteria->setOrder('DESC');
-    list($pm) = $pm_handler->getObjects($criteria);
+    [$pm] = $pm_handler->getObjects($criteria);
 }
 
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');

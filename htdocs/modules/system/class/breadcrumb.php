@@ -19,8 +19,6 @@
  */
 class SystemBreadcrumb
 {
-    /* Variables */
-    public $_directory;
     public $_bread = [];
     public $_help;
     public $_tips;
@@ -28,9 +26,8 @@ class SystemBreadcrumb
     /**
      * @param $directory
      */
-    public function __construct($directory)
+    public function __construct(public $_directory)
     {
-        $this->_directory = $directory;
     }
 
     /**

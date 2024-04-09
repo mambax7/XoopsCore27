@@ -125,7 +125,7 @@ class POP3
     /**
      * Line break constant
      */
-    const CRLF = "\r\n";
+    public const CRLF = "\r\n";
 
     /**
      * Simple static wrapper for all-in-one POP before SMTP
@@ -213,7 +213,7 @@ class POP3
 
         //On Windows this will raise a PHP Warning error if the hostname doesn't exist.
         //Rather than suppress it with @fsockopen, capture it cleanly instead
-        set_error_handler([$this, 'catchWarning']);
+        set_error_handler($this->catchWarning(...));
 
         if (false === $port) {
             $port = $this->POP3_PORT;
@@ -300,7 +300,7 @@ class POP3
         //So ignore errors here
         try {
             @fclose($this->pop_conn);
-        } catch (Exception $e) {
+        } catch (Exception) {
             //Do nothing
         };
     }
@@ -347,7 +347,7 @@ class POP3
      */
     protected function checkResponse($string)
     {
-        if (substr($string, 0, 3) !== '+OK') {
+        if (!str_starts_with($string, '+OK')) {
             $this->setError([
                 'error' => "Server reported an error: $string",
                 'errno' => 0,

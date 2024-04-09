@@ -53,11 +53,11 @@ if (!function_exists('protector_onupdate_base')) {
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
             );
         } else {
-            list(, $create_string) = $db->fetchRow($result);
+            [, $create_string] = $db->fetchRow($result);
         }
 
 
-        foreach (explode('KEY', $create_string) as $line) {
+        foreach (explode('KEY', (string) $create_string) as $line) {
             if (preg_match('/(\`conf\_title_\d+\`) \(\`conf\_title\`\)/', $line, $regs)) {
                 $db->query('ALTER TABLE ' . $db->prefix('config') . ' DROP KEY ' . $regs[1]);
             }
@@ -73,11 +73,11 @@ if (!function_exists('protector_onupdate_base')) {
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
             );
         } else {
-            list(, $create_string) = $db->fetchRow($result);
+            [, $create_string] = $db->fetchRow($result);
         }
 
 
-        if (preg_match('/timestamp\(/i', $create_string)) {
+        if (preg_match('/timestamp\(/i', (string) $create_string)) {
             $db->query('ALTER TABLE ' . $db->prefix($mydirname . '_log') . ' MODIFY `timestamp` DATETIME');
         }
 
@@ -90,7 +90,7 @@ if (!function_exists('protector_onupdate_base')) {
             // Try to open the directory
             if ($handler = opendir($tpl_path . '/')) {
                 while (($file = readdir($handler)) !== false) {
-                    if (substr($file, 0, 1) === '.') {
+                    if (str_starts_with($file, '.')) {
                         continue;
                     }
                     $file_path = $tpl_path . '/' . $file;
@@ -107,17 +107,17 @@ if (!function_exists('protector_onupdate_base')) {
                         $tplfile->setVar('tpl_lastimported', 0);
                         $tplfile->setVar('tpl_type', 'module');
                         if (!$tplfile_handler->insert($tplfile)) {
-                        $ret[] = '<span style="color:#ff0000;">ERROR: Could not insert template <b>' . htmlspecialchars($mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b> to the database.</span><br>';
+                        $ret[] = '<span style="color:#ff0000;">ERROR: Could not insert template <b>' . htmlspecialchars((string) $mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b> to the database.</span><br>';
                         } else {
                             $tplid  = $tplfile->getVar('tpl_id');
-                            $msgs[] = 'Template <b>' . htmlspecialchars($mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b> added to the database. (ID: <b>' . $tplid . '</b>)<br>';
+                            $msgs[] = 'Template <b>' . htmlspecialchars((string) $mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b> added to the database. (ID: <b>' . $tplid . '</b>)<br>';
                             // generate compiled file
                             include_once XOOPS_ROOT_PATH . '/class/xoopsblock.php';
                             include_once XOOPS_ROOT_PATH . '/class/template.php';
                             if (!xoops_template_touch((string)$tplid)) {
-                                $msgs[] = '<span style="color:#ff0000;">ERROR: Failed compiling template <b>' . htmlspecialchars($mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b>.</span><br>';
+                                $msgs[] = '<span style="color:#ff0000;">ERROR: Failed compiling template <b>' . htmlspecialchars((string) $mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b>.</span><br>';
                             } else {
-                                $msgs[] = 'Template <b>' . htmlspecialchars($mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b> compiled.</span><br>';
+                                $msgs[] = 'Template <b>' . htmlspecialchars((string) $mydirname . '_' . $file, ENT_QUOTES | ENT_HTML5) . '</b> compiled.</span><br>';
                             }
                         }
                     }
@@ -125,11 +125,11 @@ if (!function_exists('protector_onupdate_base')) {
                 closedir($handler);
             } else {
                 // Handle the error condition when opendir fails
-                $msgs[] = '<span style="color:#ff0000;">ERROR: Could not open the template directory:  <b>' . htmlspecialchars($tpl_path) . '</b>.</span>';
+                $msgs[] = '<span style="color:#ff0000;">ERROR: Could not open the template directory:  <b>' . htmlspecialchars((string) $tpl_path) . '</b>.</span>';
             }
         } else {
             // Directory does not exist; handle this condition
-            $msgs[] = '<span style="color:#ff0000;">ERROR: The template directory does not exist or is not readable: <b>' . htmlspecialchars($tpl_path) . '</b>.</span><br>';
+            $msgs[] = '<span style="color:#ff0000;">ERROR: The template directory does not exist or is not readable: <b>' . htmlspecialchars((string) $tpl_path) . '</b>.</span><br>';
         }
 
         include_once XOOPS_ROOT_PATH . '/class/xoopsblock.php';
@@ -147,7 +147,7 @@ if (!function_exists('protector_onupdate_base')) {
     {
         if (isset($GLOBALS['msgs']) && is_array($GLOBALS['msgs'])) {
             foreach ($GLOBALS['msgs'] as $message) {
-                $log->add(strip_tags($message));
+                $log->add(strip_tags((string) $message));
             }
         }
 

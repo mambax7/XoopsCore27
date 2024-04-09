@@ -3,7 +3,7 @@
 if (defined('FOR_XOOPS_LANG_CHECKER')) {
     $mydirname = 'protector';
 }
-$constpref = '_MI_' . strtoupper($mydirname);
+$constpref = '_MI_' . strtoupper((string) $mydirname);
 
 if (defined('FOR_XOOPS_LANG_CHECKER') || !defined($constpref . '_LOADED')) {
     define($constpref . '_LOADED', 1);

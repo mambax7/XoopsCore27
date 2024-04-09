@@ -62,7 +62,7 @@ class SystemUsers extends XoopsUser
         $imageselect_img->addOption("$blank_img", $blank_img);
         foreach ($image_array_img as $image_img) {
 //            if (preg_match('#avt#', $image_img)) {
-            if (false !== strpos($image_img, 'avt')) {
+            if (str_contains($image_img, 'avt')) {
                 $imageselect_img->addOption("$image_img", $image_img);
             }
         }

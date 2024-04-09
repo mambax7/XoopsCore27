@@ -21,7 +21,6 @@
 class XoopsHttpGet
 {
     protected $useCurl = true;
-    protected $url;
     protected $error;
 
     /**
@@ -31,9 +30,8 @@ class XoopsHttpGet
      *
      * @throws \RuntimeException if neither curl extension nor stream wrappers (allow_url_fopen) is available
      */
-    public function __construct($url)
+    public function __construct(protected $url)
     {
-        $this->url = $url;
         if (!function_exists('curl_init')) {
             $this->useCurl = false;
             $urlFopen = (int) ini_get('allow_url_fopen');

@@ -66,9 +66,6 @@ EOH;
         return [$code, $javascript];
     }
 
-    /**
-     * @param MyTextSanitizer $myts
-     */
     public function load(MyTextSanitizer $myts)
     {
         $myts->patterns[] = "/\[rtsp=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/rtsp\]/sU";

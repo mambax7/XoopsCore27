@@ -28,7 +28,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormButton(XoopsFormButton $element)
+    public function renderFormButton(XoopsFormButton $element): string
     {
         return '<button type="' . $element->getType() . '"'
             . ' class="btn btn-secondary" name="' . $element->getName() . '"'
@@ -44,10 +44,10 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormButtonTray(XoopsFormButtonTray $element)
+    public function renderFormButtonTray(XoopsFormButtonTray $element): string
     {
         $ret = '';
-        if ($element->_showDelete) {
+        if ($element->showDelete) {
             $ret .= '<button type="submit" class="btn btn-danger mr-1" name="delete" id="delete" onclick="this.form.elements.op.value=\'delete\'">' . _DELETE
             . '</button>';
         }
@@ -68,36 +68,33 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormCheckBox(XoopsFormCheckBox $element)
+    public function renderFormCheckBox(XoopsFormCheckBox $element): string
     {
         $elementName = $element->getName();
         $elementId = $elementName;
         $elementOptions = $element->getOptions();
-        if (count($elementOptions) > 1 && substr($elementName, -2, 2) !== '[]') {
+        if (count($elementOptions) > 1 && !str_ends_with($elementName, '[]')) {
             $elementName .= '[]';
             $element->setName($elementName);
         }
 
-        switch ((int) ($element->columns)) {
-            case 0:
-                return $this->renderCheckedInline($element, 'checkbox', $elementId, $elementName);
-            case 1:
-                return $this->renderCheckedOneColumn($element, 'checkbox', $elementId, $elementName);
-            default:
-                return $this->renderCheckedColumnar($element, 'checkbox', $elementId, $elementName);
-        }
+        return match (($element->columns)) {
+            0 => $this->renderCheckedInline($element, 'checkbox', $elementId, $elementName),
+            1 => $this->renderCheckedOneColumn($element, 'checkbox', $elementId, $elementName),
+            default => $this->renderCheckedColumnar($element, 'checkbox', $elementId, $elementName),
+        };
     }
 
     /**
      * Render a inline checkbox or radio element
      *
-     * @param XoopsFormCheckBox|XoopsFormRadio $element element being rendered
-     * @param string                           $type    'checkbox' or 'radio;
+     * @param XoopsFormRadio|XoopsFormCheckBox $element     element being rendered
+     * @param string                           $type        'checkbox' or 'radio;
      * @param string                           $elementId   input 'id' attribute of element
      * @param string                           $elementName input 'name' attribute of element
      * @return string
      */
-    protected function renderCheckedInline($element, $type, $elementId, $elementName)
+    protected function renderCheckedInline(XoopsFormRadio|XoopsFormCheckBox $element, string $type, string $elementId, string $elementName): string
     {
         $class = $type . '-inline';
         $ret = '';
@@ -110,8 +107,8 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
 
             $ret .= '<div class="form-check form-check-inline  m-2">';
             $ret .= "<input class='form-check-input' type='" . $type . "' name='{$elementName}' id='{$elementId}{$idSuffix}' title='"
-                . htmlspecialchars(strip_tags($name), ENT_QUOTES | ENT_HTML5) . "' value='"
-                . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . "'";
+                . htmlspecialchars(strip_tags((string) $name), ENT_QUOTES | ENT_HTML5) . "' value='"
+                . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "'";
 
             if (is_array($elementValue) ? in_array($value, $elementValue): $value == $elementValue) {
                 $ret .= ' checked';
@@ -127,13 +124,13 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
     /**
      * Render a single column checkbox or radio element
      *
-     * @param XoopsFormCheckBox|XoopsFormRadio $element element being rendered
-     * @param string                           $type    'checkbox' or 'radio;
+     * @param XoopsFormRadio|XoopsFormCheckBox $element     element being rendered
+     * @param string                           $type        'checkbox' or 'radio;
      * @param string                           $elementId   input 'id' attribute of element
      * @param string                           $elementName input 'name' attribute of element
      * @return string
      */
-    protected function renderCheckedOneColumn($element, $type, $elementId, $elementName)
+    protected function renderCheckedOneColumn(XoopsFormRadio|XoopsFormCheckBox $element, string $type, string $elementId, string $elementName): string
     {
         $class = $type;
         $ret = '';
@@ -146,8 +143,8 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
             $ret .= '<div class="' . $class . '">';
             $ret .= '<label>';
             $ret .= "<input type='" . $type . "' name='{$elementName}' id='{$elementId}{$idSuffix}' title='"
-                . htmlspecialchars(strip_tags($name), ENT_QUOTES | ENT_HTML5) . "' value='"
-                . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . "'";
+                . htmlspecialchars(strip_tags((string) $name), ENT_QUOTES | ENT_HTML5) . "' value='"
+                . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "'";
 
             if (is_array($elementValue) ? in_array($value, $elementValue): $value == $elementValue) {
                 $ret .= ' checked';
@@ -163,13 +160,13 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
     /**
      * Render a multicolumn checkbox or radio element
      *
-     * @param XoopsFormCheckBox|XoopsFormRadio $element element being rendered
-     * @param string                           $type    'checkbox' or 'radio;
+     * @param XoopsFormRadio|XoopsFormCheckBox $element     element being rendered
+     * @param string                           $type        'checkbox' or 'radio;
      * @param string                           $elementId   input 'id' attribute of element
      * @param string                           $elementName input 'name' attribute of element
      * @return string
      */
-    protected function renderCheckedColumnar($element, $type, $elementId, $elementName)
+    protected function renderCheckedColumnar(XoopsFormRadio|XoopsFormCheckBox $element, string $type, string $elementId, string $elementName): string
     {
         $class = $type;
         $ret = '';
@@ -182,8 +179,8 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
 
             $ret .= '<div class="form-check m-2">';
             $ret .= "<input class='form-check-input' type='" . $type . "' name='{$elementName}' id='{$elementId}{$idSuffix}' title='"
-                . htmlspecialchars(strip_tags($name), ENT_QUOTES | ENT_HTML5) . "' value='"
-                . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . "'";
+                . htmlspecialchars(strip_tags((string) $name), ENT_QUOTES | ENT_HTML5) . "' value='"
+                . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "'";
 
             if (is_array($elementValue) ? in_array($value, $elementValue): $value == $elementValue) {
                 $ret .= ' checked';
@@ -202,7 +199,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormColorPicker(XoopsFormColorPicker $element)
+    public function renderFormColorPicker(XoopsFormColorPicker $element): string
     {
         if (isset($GLOBALS['xoTheme'])) {
             $GLOBALS['xoTheme']->addScript('include/spectrum.js');
@@ -223,7 +220,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface
      *
      * @return string rendered form element
      */
-    public function renderFormDhtmlTextArea(XoopsFormDhtmlTextArea $element)
+    public function renderFormDhtmlTextArea(XoopsFormDhtmlTextArea $element): string
     {
         xoops_loadLanguage('formdhtmltextarea');
         $ret = '';
@@ -287,14 +284,14 @@ EOJS;
      *
      * @return string rendered buttons for xoopscode assistance
      */
-    protected function renderFormDhtmlTAXoopsCode(XoopsFormDhtmlTextArea $element)
+    protected function renderFormDhtmlTAXoopsCode(XoopsFormDhtmlTextArea $element): string
     {
         $textarea_id = $element->getName();
         $code = '';
         $code .= "<div class='row'><div class='col-lg-12'>";
-        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeUrl(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERURL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ENTERWEBTITLE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_URL . "'><span class='fa fa-fw fa-link' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeEmail(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTEREMAIL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ENTERWEBTITLE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_EMAIL . "'><span class='fa fa-fw fa-envelope-o' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeImg(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERIMGURL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ENTERIMGPOS, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_IMGPOSRORL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ERRORIMGPOS, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_IMG . "'><span class='fa fa-fw fa-file-image-o' aria-hidden='true'></span></button>";
+        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeUrl(\"{$textarea_id}\", \"" . htmlspecialchars((string) _ENTERURL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars((string) _ENTERWEBTITLE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_URL . "'><span class='fa fa-fw fa-link' aria-hidden='true'></span></button>";
+        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeEmail(\"{$textarea_id}\", \"" . htmlspecialchars((string) _ENTEREMAIL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars((string) _ENTERWEBTITLE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_EMAIL . "'><span class='fa fa-fw fa-envelope-o' aria-hidden='true'></span></button>";
+        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeImg(\"{$textarea_id}\", \"" . htmlspecialchars((string) _ENTERIMGURL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars((string) _ENTERIMGPOS, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars((string) _IMGPOSRORL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars((string) _ERRORIMGPOS, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars((string) _XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_IMG . "'><span class='fa fa-fw fa-file-image-o' aria-hidden='true'></span></button>";
         $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='openWithSelfMain(\"" . XOOPS_URL . "/imagemanager.php?target={$textarea_id}\",\"imgmanager\",400,430);' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_IMAGE . "'><span class='fa fa-file-image-o' aria-hidden='true'></span><small> Manager</small></button>";
         $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='openWithSelfMain(\"" . XOOPS_URL . "/misc.php?action=showpopups&amp;type=smilies&amp;target={$textarea_id}\",\"smilies\",300,475);' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_SMILEY . "'><span class='fa fa-fw fa-smile-o' aria-hidden='true'></span></button>";
 
@@ -303,20 +300,20 @@ EOJS;
         $extensions = array_filter($myts->config['extensions']);
         foreach (array_keys($extensions) as $key) {
             $extension = $myts->loadExtension($key);
-            @list($encode, $js) = $extension->encode($textarea_id);
+            @[$encode, $js] = $extension->encode($textarea_id);
             if (empty($encode)) {
                 continue;
             }
             // TODO - MyTextSanitizer button rendering should go through XoopsFormRenderer
-            $encode = str_replace('btn-default', 'btn-secondary', $encode);
+            $encode = str_replace('btn-default', 'btn-secondary', (string) $encode);
 
             $code .= $encode;
             if (!empty($js)) {
                 $element->js .= $js;
             }
         }
-        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeCode(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERCODE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_CODE . "'><span class='fa fa-fw fa-code' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeQuote(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERQUOTE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_QUOTE . "'><span class='fa fa-fw fa-quote-right' aria-hidden='true'></span></button>";
+        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeCode(\"{$textarea_id}\", \"" . htmlspecialchars((string) _ENTERCODE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_CODE . "'><span class='fa fa-fw fa-code' aria-hidden='true'></span></button>";
+        $code .= "<button type='button' class='btn btn-secondary btn-sm' onclick='xoopsCodeQuote(\"{$textarea_id}\", \"" . htmlspecialchars((string) _ENTERQUOTE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_QUOTE . "'><span class='fa fa-fw fa-quote-right' aria-hidden='true'></span></button>";
         $code .= "</div></div>";
 
         $xoopsPreload = XoopsPreload::getInstance();
@@ -332,10 +329,10 @@ EOJS;
      *
      * @return string rendered typography controls
      */
-    protected function renderFormDhtmlTATypography(XoopsFormDhtmlTextArea $element)
+    protected function renderFormDhtmlTATypography(XoopsFormDhtmlTextArea $element): string
     {
         $textarea_id = $element->getName();
-        $hiddentext  = $element->_hiddenText;
+        $hiddentext  = $element->hiddenText;
 
         $fontarray = !empty($GLOBALS['formtextdhtml_fonts']) ? $GLOBALS['formtextdhtml_fonts'] : [
             'Arial',
@@ -416,7 +413,7 @@ EOJS;
 
         $fontStr .= "&nbsp;{$styleStr}&nbsp;{$alignStr}&nbsp;\n";
 
-        $maxlength = isset($element->configs['maxlength']) ? $element->configs['maxlength'] : 0;
+        $maxlength = $element->configs['maxlength'] ?? 0;
         $fontStr .= "<button type='button' class='btn btn-secondary btn-sm' onclick=\"XoopsCheckLength('"
             . $element->getName() . "', '" . $maxlength . "', '"
             . _XOOPS_FORM_ALT_LENGTH . "', '" . _XOOPS_FORM_ALT_LENGTH_MAX . "');\" title='"
@@ -433,7 +430,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormElementTray(XoopsFormElementTray $element)
+    public function renderFormElementTray(XoopsFormElementTray $element): string
     {
         $count = 0;
         $inline = (\XoopsFormElementTray::ORIENTATION_VERTICAL === $element->getOrientation());
@@ -471,7 +468,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormFile(XoopsFormFile $element)
+    public function renderFormFile(XoopsFormFile $element): string
     {
         return '<input type="hidden" name="MAX_FILE_SIZE" value="' . $element->getMaxFileSize() . '">'
             . '<input type="file" class="form-control"  name="' . $element->getName()
@@ -488,7 +485,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormLabel(XoopsFormLabel $element)
+    public function renderFormLabel(XoopsFormLabel $element): string
     {
         return '<label class="col-form-label" id="' . $element->getName() . '">' . $element->getValue();
     }
@@ -500,7 +497,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormPassword(XoopsFormPassword $element)
+    public function renderFormPassword(XoopsFormPassword $element): string
     {
         return '<input class="form-control" type="password" name="'
             . $element->getName() . '" id="' . $element->getName() . '" size="' . $element->getSize()
@@ -515,20 +512,17 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormRadio(XoopsFormRadio $element)
+    public function renderFormRadio(XoopsFormRadio $element): string
     {
 
         $elementName = $element->getName();
         $elementId = $elementName;
 
-        switch ((int) ($element->columns)) {
-            case 0:
-                return $this->renderCheckedInline($element, 'radio', $elementId, $elementName);
-            case 1:
-                return $this->renderCheckedOneColumn($element, 'radio', $elementId, $elementName);
-            default:
-                return $this->renderCheckedColumnar($element, 'radio', $elementId, $elementName);
-        }
+        return match (($element->columns)) {
+            0 => $this->renderCheckedInline($element, 'radio', $elementId, $elementName),
+            1 => $this->renderCheckedOneColumn($element, 'radio', $elementId, $elementName),
+            default => $this->renderCheckedColumnar($element, 'radio', $elementId, $elementName),
+        };
     }
 
     /**
@@ -538,7 +532,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormSelect(XoopsFormSelect $element)
+    public function renderFormSelect(XoopsFormSelect $element): string
     {
         $ele_name    = $element->getName();
         $ele_title   = $element->getTitle();
@@ -553,7 +547,7 @@ EOJS;
             $ret .= ' name="' . $ele_name . '" id="' . $ele_name . '" title="' . $ele_title . '">';
         }
         foreach ($ele_options as $value => $name) {
-            $ret .= '<option value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '"';
+            $ret .= '<option value="' . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . '"';
             if (count($ele_value) > 0 && in_array($value, $ele_value)) {
                 $ret .= ' selected';
             }
@@ -571,7 +565,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormText(XoopsFormText $element)
+    public function renderFormText(XoopsFormText $element): string
     {
         return "<input class='form-control' type='text' name='"
             . $element->getName() . "' title='" . $element->getTitle() . "' id='" . $element->getName()
@@ -586,7 +580,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormTextArea(XoopsFormTextArea $element)
+    public function renderFormTextArea(XoopsFormTextArea $element): string
     {
         return "<textarea class='form-control' name='"
             . $element->getName() . "' id='" . $element->getName() . "'  title='" . $element->getTitle()
@@ -601,7 +595,7 @@ EOJS;
      *
      * @return string rendered form element
      */
-    public function renderFormTextDateSelect(XoopsFormTextDateSelect $element)
+    public function renderFormTextDateSelect(XoopsFormTextDateSelect $element): string
     {
         static $included = false;
         if (file_exists(XOOPS_ROOT_PATH . '/language/' . $GLOBALS['xoopsConfig']['language'] . '/calendar.php')) {
@@ -731,7 +725,7 @@ EOJS;
      *
      * @return string rendered form
      */
-    public function renderThemeForm(XoopsThemeForm $form)
+    public function renderThemeForm(XoopsThemeForm $form): string
     {
         $ele_name = $form->getName();
 
@@ -789,7 +783,7 @@ EOJS;
      *
      * @return void
      */
-    public function addThemeFormBreak(XoopsThemeForm $form, $extra, $class)
+    public function addThemeFormBreak(XoopsThemeForm $form, string $extra, string $class): void
     {
         $class = ($class != '') ? preg_replace('/[^A-Za-z0-9\s\s_-]/i', '', $class) : '';
         $form->addElement('<div class="col-md-12 ' . $class .'">'. $extra . '</div>');

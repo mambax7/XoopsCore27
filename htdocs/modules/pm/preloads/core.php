@@ -30,7 +30,7 @@ class PmCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCorePmliteStart($args)
+    public static function eventCorePmliteStart($args): never
     {
         header('location: ./modules/pm/pmlite.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
         exit();
@@ -39,7 +39,7 @@ class PmCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCoreReadpmsgStart($args)
+    public static function eventCoreReadpmsgStart($args): never
     {
         header('location: ./modules/pm/readpmsg.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
         exit();
@@ -48,7 +48,7 @@ class PmCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCoreViewpmsgStart($args)
+    public static function eventCoreViewpmsgStart($args): never
     {
         header('location: ./modules/pm/viewpmsg.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
         exit();

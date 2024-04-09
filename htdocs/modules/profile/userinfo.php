@@ -203,7 +203,7 @@ if ($GLOBALS['xoopsModuleConfig']['profile_search']) {
                         } else {
                             $results[$i]['image'] = XOOPS_URL . '/images/icons/posticon2.gif';
                         }
-                        if (!preg_match("/^http[s]*:\/\//i", $results[$i]['link'])) {
+                        if (!preg_match("/^http[s]*:\/\//i", (string) $results[$i]['link'])) {
                             $results[$i]['link'] = XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname', 'n') . '/' . $results[$i]['link'];
                         }
                         $results[$i]['title'] = $myts->htmlSpecialChars($results[$i]['title']);

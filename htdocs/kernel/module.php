@@ -135,10 +135,9 @@ class XoopsModule extends XoopsObject
      * Set module info
      *
      * @param  string $name
-     * @param  mixed  $value
      * @return bool
      **/
-    public function setInfo($name, $value)
+    public function setInfo($name, mixed $value)
     {
         if (empty($name)) {
             $this->modinfo = $value;
@@ -180,7 +179,7 @@ class XoopsModule extends XoopsObject
      */
     public function getStatus()
     {
-        return substr(strrchr($this->getVar('version'), '-'), 1);
+        return substr(strrchr((string) $this->getVar('version'), '-'), 1);
     }
 
     /**
@@ -195,10 +194,10 @@ class XoopsModule extends XoopsObject
     {
         $version1 = strtolower($version1);
         $version2 = strtolower($version2);
-        if (false !== strpos($version2, '-stable')){
+        if (str_contains($version2, '-stable')){
             $version2 = substr($version2, 0, strpos($version2, '-stable'));
         }
-        if (false !== strpos($version1, '-stable')){
+        if (str_contains($version1, '-stable')){
             $version1 = substr($version1, 0, strpos($version1, '-stable'));
         }
         return version_compare($version1, $version2, $operator);
@@ -765,7 +764,7 @@ class XoopsModuleHandler extends XoopsObjectHandler
         $dirname = $this->db->escape(trim($dirname));
 
         //could not we check for spaces instead??
-        if (strpos(strtolower($dirname), ' union ')) {
+        if (strpos(strtolower((string) $dirname), ' union ')) {
             return false;
         }
         static $_cachedModule_mid;
@@ -964,7 +963,7 @@ class XoopsModuleHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }
@@ -972,7 +971,6 @@ class XoopsModuleHandler extends XoopsObjectHandler
     /**
      * returns an array of module names
      *
-     * @param  CriteriaElement $criteria
      * @param  boolean         $dirname_as_key if true, array keys will be module directory names
      *                                         if false, array keys will be module id
      * @return array

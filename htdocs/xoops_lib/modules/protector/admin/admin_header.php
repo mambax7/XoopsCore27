@@ -16,7 +16,7 @@
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  */
 
-//include_once dirname(dirname(dirname(__DIR__))) . '/mainfile.php';
+//include_once dirname(__DIR__, 3) . '/mainfile.php';
 include_once XOOPS_ROOT_PATH . '/mainfile.php';
 
 include_once XOOPS_ROOT_PATH . '/include/cp_header.php';

@@ -272,7 +272,7 @@ class CriteriaCompo extends CriteriaElement
         if ($count > 0) {
             $retval = $this->criteriaElements[0]->renderLdap();
             for ($i = 1; $i < $count; ++$i) {
-                $cond   = strtoupper($this->conditions[$i]);
+                $cond   = strtoupper((string) $this->conditions[$i]);
                 $op     = ($cond === 'OR') ? '|' : '&';
                 $retval = "({$op}{$retval}" . $this->criteriaElements[$i]->renderLdap() . ')';
             }
@@ -289,16 +289,6 @@ class CriteriaCompo extends CriteriaElement
 class Criteria extends CriteriaElement
 {
     /**
-     *
-     * @var string
-     */
-    public $prefix;
-    public $function;
-    public $column;
-    public $operator;
-    public $value;
-
-    /**
      * Constructor
      *
      * @param string $column
@@ -307,14 +297,8 @@ class Criteria extends CriteriaElement
      * @param string $prefix
      * @param string $function
      */
-    public function __construct($column, $value = '', $operator = '=', $prefix = '', $function = '')
+    public function __construct(public $column, public $value = '', public $operator = '=', public $prefix = '', public $function = '')
     {
-        $this->prefix   = $prefix;
-        $this->function = $function;
-        $this->column   = $column;
-        $this->value    = $value;
-        $this->operator = $operator;
-
         /**
          * A common custom in some older programs was to use "new Criteria(1, '1')" to
          * create an always true clause, WHERE 1 = "1"
@@ -324,7 +308,7 @@ class Criteria extends CriteriaElement
          *
          * The following is a temporary workaround for the old technique
          */
-        if ((int) $column === 1 && (int) $value === 1 && $operator === '=') {
+        if ((int) $this->column === 1 && (int) $this->value === 1 && $this->operator === '=') {
             $this->column = '';
             $this->value  = '';
         }
@@ -337,20 +321,20 @@ class Criteria extends CriteriaElement
      */
     public function render()
     {
-        $backtick = (false === strpos($this->column, '.')) ? '`' : '';
-        $backtick = (false !== strpos($this->column, '(')) ? '' : $backtick;
+        $backtick = (!str_contains((string) $this->column, '.')) ? '`' : '';
+        $backtick = (str_contains((string) $this->column, '(')) ? '' : $backtick;
         $clause = (!empty($this->prefix) ? "{$this->prefix}." : '') . $backtick . $this->column . $backtick;
         if (!empty($this->function)) {
             $clause = sprintf($this->function, $clause);
         }
-        if (in_array(strtoupper($this->operator), ['IS NULL', 'IS NOT NULL'])) {
+        if (in_array(strtoupper((string) $this->operator), ['IS NULL', 'IS NOT NULL'])) {
             $clause .= ' ' . $this->operator;
         } else {
             if ('' === ($value = trim((string)$this->value))) {
                 return '';
             }
-            if (!in_array(strtoupper($this->operator), ['IN', 'NOT IN'])) {
-                if ((substr($value, 0, 1) !== '`') && (substr($value, -1) !== '`')) {
+            if (!in_array(strtoupper((string) $this->operator), ['IN', 'NOT IN'])) {
+                if ((!str_starts_with($value, '`')) && (!str_ends_with($value, '`'))) {
                     $value = "'{$value}'";
                 } elseif (!preg_match('/^[a-zA-Z0-9_\.\-`]*$/', $value)) {
                     $value = '``';
@@ -382,7 +366,7 @@ class Criteria extends CriteriaElement
             $clause   = '(!(' . $this->column . $operator . $this->value . '))';
         } else {
             if ($this->operator === 'IN') {
-                $newvalue = str_replace(['(', ')'], '', $this->value);
+                $newvalue = str_replace(['(', ')'], '', (string) $this->value);
                 $tab      = explode(',', $newvalue);
                 $clause = '';
                 foreach ($tab as $uid) {

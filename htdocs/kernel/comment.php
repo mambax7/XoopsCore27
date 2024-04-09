@@ -466,9 +466,7 @@ class XoopsCommentHandler extends XoopsObjectHandler
     /**
      * Get some {@link XoopsComment}s
      *
-     * @param CriteriaElement|CriteriaCompo $criteria
      * @param bool   $id_as_key Use IDs as keys into the array?
-     *
      * @return array Array of {@link XoopsComment} objects
      **/
     public function getObjects(CriteriaElement $criteria = null, $id_as_key = false)
@@ -519,7 +517,7 @@ class XoopsCommentHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }
@@ -664,7 +662,7 @@ class XoopsCommentHandler extends XoopsObjectHandler
      *
      * @return bool
      **/
-    public function updateByField(XoopsComment $comment, $field_name, $field_value)
+    public function updateByField(XoopsComment $comment, $field_name, mixed $field_value)
     {
         $comment->unsetNew();
         $comment->setVar($field_name, $field_value);

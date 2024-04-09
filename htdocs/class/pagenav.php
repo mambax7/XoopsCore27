@@ -34,11 +34,9 @@ class XoopsPageNav
     public $perpage;
     public $current;
     public $url;
-    public $extra;
     /**
      * *#@-
      */
-
     /**
      * Constructor
      *
@@ -46,16 +44,15 @@ class XoopsPageNav
      * @param int    $items_perpage Number of items per page
      * @param int    $current_start First item on the current page
      * @param string $start_name    Name for "start" or "offset"
-     * @param string $extra_arg     Additional arguments to pass in the URL
+     * @param string $extra Additional arguments to pass in the URL
      */
-    public function __construct($total_items, $items_perpage, $current_start, $start_name = 'start', $extra_arg = '')
+    public function __construct($total_items, $items_perpage, $current_start, $start_name = 'start', public $extra = '')
     {
         $this->total   = (int)$total_items;
         $this->perpage = (int)$items_perpage;
         $this->current = (int)$current_start;
-        $this->extra   = $extra_arg;
-        if ($extra_arg != '' && (substr($extra_arg, -5) !== '&amp;' || substr($extra_arg, -1) !== '&')) {
-            $this->extra = '&amp;' . $extra_arg;
+        if ($this->extra != '' && (!str_ends_with((string) $this->extra, '&amp;') || !str_ends_with((string) $this->extra, '&'))) {
+            $this->extra = '&amp;' . $this->extra;
         }
         $this->url = htmlspecialchars(Request::getString('PHP_SELF', '', 'SERVER'), ENT_QUOTES | ENT_HTML5) . '?' . trim($start_name) . '=';
     }

@@ -79,7 +79,7 @@ function altsys_get_core_type()
     } elseif (strstr(XOOPS_VERSION, 'JP')) {
         return ALTSYS_CORE_TYPE_X20;
     } else {
-        $versions = array_map('intval', explode('.', preg_replace('/[^0-9.]/', '', XOOPS_VERSION)));
+        $versions = array_map('intval', explode('.', (string) preg_replace('/[^0-9.]/', '', XOOPS_VERSION)));
         if ($versions[0] == 2 && $versions[1] == 2) {
             return ALTSYS_CORE_TYPE_X22;
         } elseif ($versions[0] == 2 && ($versions[1] > 2 || $versions[2] > 13)) {
@@ -97,17 +97,11 @@ function altsys_get_core_type()
  */
 function altsys_get_link2modpreferences($mid, $coretype)
 {
-    switch ($coretype) {
-        case ALTSYS_CORE_TYPE_X20:
-        case ALTSYS_CORE_TYPE_X20S:
-        case ALTSYS_CORE_TYPE_ORE:
-        case ALTSYS_CORE_TYPE_X22:
-            return XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mid;
-        case ALTSYS_CORE_TYPE_XC21L:
-            return XOOPS_URL . '/modules/legacy/admin/index.php?action=PreferenceEdit&confmod_id=' . $mid;
-    }
-
-    return null;
+    return match ($coretype) {
+        ALTSYS_CORE_TYPE_X20, ALTSYS_CORE_TYPE_X20S, ALTSYS_CORE_TYPE_ORE, ALTSYS_CORE_TYPE_X22 => XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mid,
+        ALTSYS_CORE_TYPE_XC21L => XOOPS_URL . '/modules/legacy/admin/index.php?action=PreferenceEdit&confmod_id=' . $mid,
+        default => null,
+    };
 }
 
 /**
@@ -128,10 +122,10 @@ function altsys_clear_templates_c()
 {
     $dh = opendir(XOOPS_COMPILE_PATH);
     while ($file = readdir($dh)) {
-        if (substr($file, 0, 1) === '.') {
+        if (str_starts_with($file, '.')) {
             continue;
         }
-        if (substr($file, -4) !== '.php') {
+        if (!str_ends_with($file, '.php')) {
             continue;
         }
         @unlink(XOOPS_COMPILE_PATH . '/' . $file);

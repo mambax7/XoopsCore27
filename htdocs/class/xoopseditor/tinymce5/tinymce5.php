@@ -132,7 +132,7 @@ class TinyMCE
         if (empty($this->setting['plugins'])) {
             $plugins = $plugins_list;
         } else {
-            $plugins = array_intersect(explode(',', $this->setting['plugins']), $plugins_list);
+            $plugins = array_intersect(explode(',', (string) $this->setting['plugins']), $plugins_list);
         }
         if (!empty($this->config['plugins'])) {
             $plugins = array_merge($plugins, $this->config['plugins']);

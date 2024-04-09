@@ -84,7 +84,7 @@ class XoopsLogger
             // Always catch errors, for security reasons
             set_error_handler('XoopsErrorHandler_HandleError');
             // grab any uncaught exception
-            set_exception_handler([$instance, 'handleException']);
+            set_exception_handler($instance->handleException(...));
         }
 
         return $instance;
@@ -99,7 +99,7 @@ class XoopsLogger
     public function enableRendering()
     {
         if (!$this->renderingEnabled) {
-            ob_start([&$this, 'render']);
+            ob_start($this->render(...));
             $this->renderingEnabled = true;
         }
     }
@@ -291,8 +291,8 @@ class XoopsLogger
     public function handleException($e)
     {
         if ($this->isThrowable($e)) {
-            $msg = get_class($e) . ': ' . $this->sanitizePath($this->sanitizeDbMessage($e->getMessage()));
-            $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine(), $e->getTrace());
+            $msg = $e::class . ': ' . $this->sanitizePath($this->sanitizeDbMessage($e->getMessage()));
+            $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine());
         }
     }
 
@@ -303,7 +303,7 @@ class XoopsLogger
      *
      * @return bool true if related to Throwable or Exception, otherwise false
      */
-    protected function isThrowable($e)
+    protected function isThrowable(mixed $e)
     {
         $type = interface_exists('\Throwable', false) ? '\Throwable' : '\Exception';
         return $e instanceof $type;
@@ -356,9 +356,9 @@ class XoopsLogger
         $log                    = $this->dump($this->usePopup ? 'popup' : '');
         $this->renderingEnabled = $this->activated = false;
         $pattern                = '<!--{xo-logger-output}-->';
-        $pos                    = strpos($output, $pattern);
+        $pos                    = strpos((string) $output, $pattern);
         if ($pos !== false) {
-            return substr($output, 0, $pos) . $log . substr($output, $pos + strlen($pattern));
+            return substr((string) $output, 0, $pos) . $log . substr((string) $output, $pos + strlen($pattern));
         } else {
             return $output . $log;
         }
@@ -394,7 +394,7 @@ class XoopsLogger
         if (!isset($this->logstart[$name])) {
             return 0;
         }
-        $stop  = isset($this->logend[$name]) ? $this->logend[$name] : $this->microtime();
+        $stop  = $this->logend[$name] ?? $this->microtime();
         $start = $this->logstart[$name];
 
         if ($unset) {

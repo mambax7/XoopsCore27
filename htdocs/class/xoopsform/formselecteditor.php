@@ -26,31 +26,20 @@ xoops_load('XoopsFormElementTray');
  */
 class XoopsFormSelectEditor extends XoopsFormElementTray
 {
-    public $allowed_editors = [];
-    public $form;
-    public $value;
-    public $name;
-    public $nohtml;
-
     /**
      * Constructor
      *
      * @param string    $form  the form calling the editor selection
      * @param string    $name  editor name
-     * @param string    $value Pre-selected text value
+     * @param string|null $value Pre-selected text value
      * @param bool      $nohtml
      * @param array     $allowed_editors
      *
      */
 
-    public function __construct($form, $name = 'editor', $value = null, $nohtml = false, $allowed_editors = [])
+    public function __construct(public string $form, public $name = 'editor', public string $value = '', public bool $nohtml = false, public array $allowed_editors = [])
     {
         parent::__construct(_SELECT);
-        $this->allowed_editors = $allowed_editors;
-        $this->form            = $form;
-        $this->name            = $name;
-        $this->value           = $value;
-        $this->nohtml          = $nohtml;
     }
 
     /**
@@ -58,7 +47,7 @@ class XoopsFormSelectEditor extends XoopsFormElementTray
      *
      * @return string
      */
-    public function render()
+    public function render(): string
     {
         xoops_load('XoopsEditorHandler');
         $editor_handler                  = XoopsEditorHandler::getInstance();

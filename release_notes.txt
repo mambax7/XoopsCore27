@@ -3,9 +3,9 @@ XOOPS 2.7.0 Alpha 1 NOT RELEASED
 The XOOPS Development Team is pleased to announce the start of development on XOOPS 2.7.0 Alpha 1
 
 Some of the minimum requirements:
-- PHP 8.1
+- PHP 8.2
 - MySQL 8.0
-- Smarty 4
+- Smarty 4 (soon Smarty 5)
 
 See the Changelog for more details.
 
@@ -16,10 +16,10 @@ System requirements
 -----------------------------------
 
 PHP:
-Any PHP version >= 8.1.0 (PHP 8.3 or higher is strongly recommended)
+Any PHP version >= 8.2.0 (PHP 8.3 or higher is strongly recommended)
 
 MySQL:
-MySQL server >= 8.0 (MySQL 8.2 or higher is strongly recommended)
+MySQL server >= 8.0 (MySQL 8.3 or higher is strongly recommended)
 
 Web server:
 Any server supporting the required PHP version (Apache or Nginx recommended)

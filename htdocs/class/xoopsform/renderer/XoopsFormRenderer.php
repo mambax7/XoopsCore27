@@ -20,24 +20,24 @@
  */
 final class XoopsFormRenderer
 {
-    const NOT_PERMITTED = 'Not supported for Singleton';
+    public const NOT_PERMITTED = 'Not supported for Singleton';
 
     /**
      * @var XoopsFormRenderer The reference to *Singleton* instance of this class
      */
-    private static $instance;
+    private static XoopsFormRenderer $instance;
 
     /**
      * @var XoopsFormRendererInterface The reference to *Singleton* instance of this class
      */
-    protected $renderer;
+    protected XoopsFormRendererInterface $renderer;
 
     /**
      * Returns the *Singleton* instance of this class.
      *
      * @return XoopsFormRenderer the singleton instance.
      */
-    public static function getInstance()
+    public static function getInstance(): XoopsFormRenderer
     {
         if (null === static::$instance) {
             static::$instance = new static();
@@ -87,7 +87,7 @@ final class XoopsFormRenderer
      *
      * @return void
      */
-    public function set(XoopsFormRendererInterface $renderer)
+    public function set(XoopsFormRendererInterface $renderer): void
     {
         $this->renderer = $renderer;
     }
@@ -97,7 +97,7 @@ final class XoopsFormRenderer
      *
      * @return XoopsFormRendererInterface
      */
-    public function get()
+    public function get(): XoopsFormRendererLegacy|XoopsFormRendererInterface
     {
         // return a default if not set
         if (null === $this->renderer) {

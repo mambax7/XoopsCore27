@@ -122,11 +122,11 @@ switch ($op) {
 
         $com_itemid = $comment->getVar('com_itemid');
         // execute updateStat callback function if set
-        if (isset($comment_config['callback']['update']) && trim($comment_config['callback']['update']) != '') {
+        if (isset($comment_config['callback']['update']) && trim((string) $comment_config['callback']['update']) != '') {
             $skip = false;
             if (!function_exists($comment_config['callback']['update'])) {
                 if (isset($comment_config['callbackFile'])) {
-                    $callbackfile = trim($comment_config['callbackFile']);
+                    $callbackfile = trim((string) $comment_config['callbackFile']);
                     if ($callbackfile != '' && file_exists($file = $GLOBALS['xoops']->path('modules/' . $moddir . '/' . $callbackfile))) {
                         include_once $file;
                     }
@@ -239,11 +239,11 @@ switch ($op) {
 
         $com_itemid = $comment->getVar('com_itemid');
         // execute updateStat callback function if set
-        if (isset($comment_config['callback']['update']) && trim($comment_config['callback']['update']) != '') {
+        if (isset($comment_config['callback']['update']) && trim((string) $comment_config['callback']['update']) != '') {
             $skip = false;
             if (!function_exists($comment_config['callback']['update'])) {
                 if (isset($comment_config['callbackFile'])) {
-                    $callbackfile = trim($comment_config['callbackFile']);
+                    $callbackfile = trim((string) $comment_config['callbackFile']);
                     if ($callbackfile != '' && file_exists($file = $GLOBALS['xoops']->path('modules/' . $moddir . '/' . $callbackfile))) {
                         include_once $file;
                     }

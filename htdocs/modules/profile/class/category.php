@@ -48,7 +48,7 @@ class ProfileCategory extends XoopsObject
      *
      * @return object
      */
-    public function getForm($action = false)
+    public function getForm(mixed $action = false)
     {
         if ($action === false) {
             $action = $_SERVER['REQUEST_URI'];

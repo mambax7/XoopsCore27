@@ -37,24 +37,16 @@ function genPathCheckHtml($path, $valid)
 {
     $myts = \MyTextSanitizer::getInstance();
     if ($valid) {
-        switch ($path) {
-            case 'lib':
-            case 'data':
-            default:
-                $msg = XOOPS_PATH_FOUND;
-                break;
-        }
+        $msg = match ($path) {
+            default => XOOPS_PATH_FOUND,
+        };
         $msg = $myts->htmlSpecialChars($msg, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
         return '<span class="result-y">y</span> ' . $msg;
     } else {
-        switch ($path) {
-            case 'lib':
-            case 'data':
-            default:
-                $msg = ERR_COULD_NOT_ACCESS;
-                break;
-        }
+        $msg = match ($path) {
+            default => ERR_COULD_NOT_ACCESS,
+        };
         $msg = $myts->htmlSpecialChars($msg, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
         return '<span class="result-x">x</span> ' . $msg;

@@ -102,9 +102,9 @@ function doConditionalGet($etag, $lastModified)
 {
     header("Last-Modified: $lastModified");
     header("ETag: \"{$etag}\"");
-    $ifNoneMatch = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? stripslashes($_SERVER['HTTP_IF_NONE_MATCH']) : false;
+    $ifNoneMatch = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? stripslashes((string) $_SERVER['HTTP_IF_NONE_MATCH']) : false;
     $ifModifiedSince = isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])
-        ? stripslashes($_SERVER['HTTP_IF_MODIFIED_SINCE']) : false;
+        ? stripslashes((string) $_SERVER['HTTP_IF_MODIFIED_SINCE']) : false;
     if (!$ifModifiedSince && !$ifNoneMatch) {
         return null;
     }
@@ -141,9 +141,9 @@ function imageCreateCorners($sourceImage, $radii)
             $b = 0;
             break;
         }
-        $r = rand(0, 255);
-        $g = rand(0, 255);
-        $b = rand(0, 255);
+        $r = random_int(0, 255);
+        $g = random_int(0, 255);
+        $b = random_int(0, 255);
     } while (imagecolorexact($sourceImage, $r, $g, $b) < 0);
 
     $imageWidth = imagesx($sourceImage);
@@ -215,7 +215,7 @@ function findSharp($orig, $final)
  *
  * Many different issues end up here, so message is generic 404. This keeps us from leaking info by probing
  */
-function exit404BadReq()
+function exit404BadReq(): never
 {
     header('HTTP/1.1 404 Not Found');
     exit();
@@ -243,10 +243,10 @@ function imageFilenameCheck($imageUrl)
     }
 
     $fullPath = XOOPS_ROOT_PATH . $imageUrl;
-    if (strpos($fullPath, XOOPS_VAR_PATH) === 0) { // no access to data (shouldn't be in root, but...)
+    if (str_starts_with($fullPath, XOOPS_VAR_PATH)) { // no access to data (shouldn't be in root, but...)
         exit404BadReq();
     }
-    if (strpos($fullPath, XOOPS_PATH) === 0) { // no access to lib (shouldn't be in root, but...)
+    if (str_starts_with($fullPath, XOOPS_PATH)) { // no access to lib (shouldn't be in root, but...)
         exit404BadReq();
     }
 
@@ -354,12 +354,12 @@ if (!empty($imageId)) {
 // Get image_data from the Xoops cache only if the edited image has been cached after the latest modification
 // of the original image
 xoops_load('XoopsCache');
-$edited_image_filename = 'editedimage_' . md5($_SERVER['REQUEST_URI']) . '_' . $imageFilename;
+$edited_image_filename = 'editedimage_' . md5((string) $_SERVER['REQUEST_URI']) . '_' . $imageFilename;
 $cached_image = XoopsCache::read($edited_image_filename);
 if (!isset($_GET['nocache']) && !isset($_GET['noservercache']) && !empty($cached_image)
     && ($cached_image['cached_time'] >= $imageCreatedTime)) {
     header("Content-type: {$imageMimetype}");
-    header('Content-Length: ' . strlen($cached_image['image_data']));
+    header('Content-Length: ' . strlen((string) $cached_image['image_data']));
     echo $cached_image['image_data'];
     exit();
 }
@@ -402,10 +402,10 @@ if (empty($width)
     && empty($radius)
     && empty($angle)) {
     $last_modified_string = gmdate('D, d M Y H:i:s', $imageCreatedTime) . ' GMT';
-    $etag = md5($imageData);
+    $etag = md5((string) $imageData);
     doConditionalGet($etag, $last_modified_string);
     header("Content-type: {$imageMimetype}");
-    header('Content-Length: ' . strlen($imageData));
+    header('Content-Length: ' . strlen((string) $imageData));
     echo $imageData;
     exit();
 }
@@ -562,7 +562,7 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
 if (ENABLE_IMAGEFILTER && !empty($filter)) {
     $filterSet = (array) $filter;
     foreach ($filterSet as $currentFilter) {
-        $rawFilterArgs = explode(',', $currentFilter);
+        $rawFilterArgs = explode(',', (string) $currentFilter);
         $filterConst = constant(array_shift($rawFilterArgs));
         if (null !== $filterConst) { // skip if unknown constant
             $filterArgs = [];

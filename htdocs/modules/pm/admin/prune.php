@@ -22,7 +22,7 @@ xoops_cp_header();
 $indexAdmin = new ModuleAdmin();
 echo $indexAdmin->addNavigation(basename(__FILE__));
 
-$op         = isset($_REQUEST['op']) ? $_REQUEST['op'] : 'form';
+$op         = $_REQUEST['op'] ?? 'form';
 /** @var \PmMessageHandler $pm_handler */
 $pm_handler = xoops_getModuleHandler('message');
 
@@ -36,10 +36,10 @@ switch ($op) {
     case 'prune':
         $criteria = new CriteriaCompo();
         if ($_REQUEST['after']['date'] && $_REQUEST['after']['date'] !== 'YYYY/MM/DD') {
-            $criteria->add(new Criteria('msg_time', strtotime($_REQUEST['after']['date']) + (int)$_REQUEST['after']['time'], '>'));
+            $criteria->add(new Criteria('msg_time', strtotime((string) $_REQUEST['after']['date']) + (int)$_REQUEST['after']['time'], '>'));
         }
         if ($_REQUEST['before']['date'] && $_REQUEST['before']['date'] !== 'YYYY/MM/DD') {
-            $criteria->add(new Criteria('msg_time', strtotime($_REQUEST['before']['date']) + (int)$_REQUEST['before']['time'], '<'));
+            $criteria->add(new Criteria('msg_time', strtotime((string) $_REQUEST['before']['date']) + (int)$_REQUEST['before']['time'], '<'));
         }
         if (isset($_REQUEST['onlyread']) && $_REQUEST['onlyread'] == 1) {
             $criteria->add(new Criteria('read_msg', 1));
@@ -65,7 +65,7 @@ switch ($op) {
             foreach ($uids as $uid => $messagecount) {
                 $pm = $pm_handler->create();
                 $pm->setVar('subject', $GLOBALS['xoopsModuleConfig']['prunesubject']);
-                $pm->setVar('msg_text', str_replace('{PM_COUNT}', $messagecount, $GLOBALS['xoopsModuleConfig']['prunemessage']));
+                $pm->setVar('msg_text', str_replace('{PM_COUNT}', $messagecount, (string) $GLOBALS['xoopsModuleConfig']['prunemessage']));
                 $pm->setVar('to_userid', $uid);
                 $pm->setVar('from_userid', $GLOBALS['xoopsUser']->getVar('uid'));
                 $pm->setVar('msg_time', time());

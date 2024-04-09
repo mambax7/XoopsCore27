@@ -68,7 +68,7 @@ if (is_object($xoopsUser)) {
                 \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
             );
         }
-        list($count) = $xoopsDB->fetchRow($result);
+        [$count] = $xoopsDB->fetchRow($result);
         if ($count != 1) {
             echo '<br><br><div><h4>' . _PM_USERNOEXIST . '<br>';
             echo _PM_PLZTRYAGAIN . '</h4><br>';
@@ -125,7 +125,7 @@ if (is_object($xoopsUser)) {
         if ($reply == 1) {
             $subject = $pm->getVar('subject', 'E');
             //TODO Fix harcoded string
-            if (!preg_match('/^' . _RE . '/i', $subject)) {
+            if (!preg_match('/^' . _RE . '/i', (string) $subject)) {
                 $subject = _RE . ' ' . $subject;
             }
         }

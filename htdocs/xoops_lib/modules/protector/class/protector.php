@@ -132,8 +132,8 @@ class Protector
             }
         } else {
             // check nullbyte attack
-            if (isset($this->_conf['san_nullbyte']) && $this->_conf['san_nullbyte'] && false !== strpos($val, chr(0))) {
-                $val = str_replace(chr(0), ' ', $val);
+            if (isset($this->_conf['san_nullbyte']) && $this->_conf['san_nullbyte'] && str_contains((string) $val, chr(0))) {
+                $val = str_replace(chr(0), ' ', (string) $val);
                 $this->replace_doubtful($key, $val);
                 $this->message .= "Injecting Null-byte '$val' found.\n";
                 $this->output_log('NullByte', 0, false, 32);
@@ -141,7 +141,7 @@ class Protector
             }
 
             // register as doubtful requests against SQL Injections
-            if (preg_match('?[\s\'"`/]?', $val)) {
+            if (preg_match('?[\s\'"`/]?', (string) $val)) {
                 $this->_doubtful_requests["$key"] = $val;
             }
         }
@@ -165,7 +165,7 @@ class Protector
      */
     public function updateConfFromDb()
     {
-        $constpref = '_MI_' . strtoupper($this->mydirname);
+        $constpref = '_MI_' . strtoupper((string) $this->mydirname);
 
         if (empty($this->_conn)) {
             return false;
@@ -176,7 +176,7 @@ class Protector
             return false;
         }
         $db_conf = [];
-        while (list($key, $val) = mysqli_fetch_row($result)) {
+        while ([$key, $val] = mysqli_fetch_row($result)) {
             $db_conf[$key] = $val;
         }
         $db_conf_serialized = serialize($db_conf);
@@ -245,8 +245,8 @@ class Protector
             $domain =  defined(XOOPS_COOKIE_DOMAIN) ? XOOPS_COOKIE_DOMAIN : '';
             $past = time() - 3600;
             foreach ($_COOKIE as $key => $value) {
-                setcookie($key, '', $past, '', $domain);
-                setcookie($key, '', $past, '/', $domain);
+                setcookie($key, '', ['expires' => $past, 'path' => '', 'domain' => $domain]);
+                setcookie($key, '', ['expires' => $past, 'path' => '/', 'domain' => $domain]);
             }
         }
     }
@@ -303,12 +303,12 @@ class Protector
         }
 
         $ip    = \Xmf\IPAddress::fromRequest()->asReadable();
-        $agent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+        $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
 
         if ($unique_check) {
             $result = mysqli_query($this->_conn, 'SELECT ip,type FROM ' . XOOPS_DB_PREFIX . '_' . $this->mydirname . '_log ORDER BY timestamp DESC LIMIT 1');
-            list($last_ip, $last_type) = mysqli_fetch_row($result);
+            [$last_ip, $last_type] = mysqli_fetch_row($result);
             if ($last_ip == $ip && $last_type == $type) {
                 $this->_logged = true;
 
@@ -320,9 +320,9 @@ class Protector
             $this->_conn,
             'INSERT INTO ' . XOOPS_DB_PREFIX . '_' . $this->mydirname . "_log SET ip='"
             . mysqli_real_escape_string($this->_conn, $ip) . "',agent='"
-            . mysqli_real_escape_string($this->_conn, $agent) . "',type='"
+            . mysqli_real_escape_string($this->_conn, (string) $agent) . "',type='"
             . mysqli_real_escape_string($this->_conn, $type) . "',description='"
-            . mysqli_real_escape_string($this->_conn, $this->message) . "',uid='"
+            . mysqli_real_escape_string($this->_conn, (string) $this->message) . "',uid='"
             . (int)$uid . "',timestamp=NOW()"
         );
         $this->_logged = true;
@@ -339,7 +339,7 @@ class Protector
     {
         $expire = min((int)$expire, time() + 300);
 
-        $fp = @fopen($this->get_filepath4bwlimit(), 'w');
+        $fp = @fopen(static::get_filepath4bwlimit(), 'w');
         if ($fp) {
             @flock($fp, LOCK_EX);
             fwrite($fp, $expire . "\n");
@@ -357,7 +357,7 @@ class Protector
      */
     public function get_bwlimit()
     {
-        list($expire) = @file(Protector::get_filepath4bwlimit());
+        [$expire] = @file(Protector::get_filepath4bwlimit());
         $expire = min((int)$expire, time() + 300);
 
         return $expire;
@@ -380,7 +380,7 @@ class Protector
     {
         asort($bad_ips);
 
-        $fp = @fopen($this->get_filepath4badips(), 'w');
+        $fp = @fopen(static::get_filepath4badips(), 'w');
         if ($fp) {
             @flock($fp, LOCK_EX);
             fwrite($fp, serialize($bad_ips) . "\n");
@@ -425,7 +425,7 @@ class Protector
         $filepath4badips = @file(Protector::get_filepath4badips());
 
         if (is_array($filepath4badips) && isset($filepath4badips[0])) {
-            list($bad_ips_serialized) = $filepath4badips;
+            [$bad_ips_serialized] = $filepath4badips;
         }
         $bad_ips = empty($bad_ips_serialized) ? [] : @unserialize($bad_ips_serialized, ['allowed_classes' => false]);
         if (!is_array($bad_ips) || isset($bad_ips[0])) {
@@ -475,7 +475,7 @@ class Protector
             } else {
                 // Proceed with your logic here
                 if (is_array($filepath4group1ips) && isset($filepath4group1ips[0])) {
-                    list($group1_ips_serialized) = $filepath4group1ips;
+                    [$group1_ips_serialized] = $filepath4group1ips;
                 }
 
                 $group1_ips = empty($group1_ips_serialized) ? [] : @unserialize($group1_ips_serialized, ['allowed_classes' => false]);
@@ -524,11 +524,11 @@ class Protector
         }
         foreach ($ips as $ip => $info) {
             if ($ip) {
-                switch (strtolower(substr($ip, -1))) {
+                switch (strtolower(substr((string) $ip, -1))) {
                     case '.' :
                     case ':' :
                         // foward match
-                        if (substr($requestIp, 0, strlen($ip)) == $ip) {
+                        if (str_starts_with($requestIp, (string) $ip)) {
                             $this->ip_matched_info = $info;
                             return true;
                         }
@@ -609,7 +609,7 @@ class Protector
         }
 
         if (preg_match("/^(.*)#PROTECTOR#\s+(DENY FROM .*)\n#PROTECTOR#\n(.*)$/si", $ht_body, $regs)) {
-            if (substr($regs[2], -strlen($ip)) == $ip) {
+            if (str_ends_with($regs[2], $ip)) {
                 return true;
             }
             $new_ht_body = $regs[1] . "#PROTECTOR#\n" . $regs[2] . " $ip\n#PROTECTOR#\n" . $regs[3];
@@ -647,16 +647,16 @@ class Protector
                 $this->_dblayertrap_check_recursive($subval);
             }
         } else {
-            if (strlen($val) < 6) {
+            if (strlen((string) $val) < 6) {
                 return null;
             }
             if (PHP_VERSION_ID < 50400) {
                 if (get_magic_quotes_gpc()) {
-                    $val = stripslashes($val);
+                    $val = stripslashes((string) $val);
                 }
             }
             foreach ($this->_dblayertrap_doubtful_needles as $needle) {
-                if (false !== stripos($val, $needle)) {
+                if (false !== stripos((string) $val, (string) $needle)) {
                     $this->_dblayertrap_doubtfuls[] = $val;
                 }
             }
@@ -697,7 +697,7 @@ class Protector
                 $this->_bigumbrella_check_recursive($subval);
             }
         } else {
-            if (preg_match('/[<\'"].{15}/s', $val, $regs)) {
+            if (preg_match('/[<\'"].{15}/s', (string) $val, $regs)) {
                 $this->_bigumbrella_doubtfuls[] = $regs[0];
             }
         }
@@ -707,11 +707,11 @@ class Protector
     {
         $this->_bigumbrella_doubtfuls = [];
         $this->_bigumbrella_check_recursive($_GET);
-        $this->_bigumbrella_check_recursive(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
+        $this->_bigumbrella_check_recursive($_SERVER['PHP_SELF'] ?? '');
 
 
         if (!empty($this->_bigumbrella_doubtfuls)) {
-            ob_start([$this, 'bigumbrella_outputcheck']);
+            ob_start($this->bigumbrella_outputcheck(...));
         }
     }
 
@@ -739,7 +739,7 @@ class Protector
         }
 
         foreach ($this->_bigumbrella_doubtfuls as $doubtful) {
-            if (false !== strpos($s, $doubtful)) {
+            if (str_contains((string) $s, (string) $doubtful)) {
                 return 'XSS found by Protector.';
             }
         }
@@ -752,7 +752,6 @@ class Protector
      */
     public function intval_allrequestsendid()
     {
-        global $HTTP_GET_VARS, $HTTP_POST_VARS, $HTTP_COOKIE_VARS;
 
         if ($this->_done_intval) {
             return true;
@@ -761,27 +760,27 @@ class Protector
         }
 
         foreach ($_GET as $key => $val) {
-            if (substr($key, -2) === 'id' && !is_array($_GET[$key])) {
-                $newval     = preg_replace('/[^0-9a-zA-Z_-]/', '', $val);
-                $_GET[$key] = $HTTP_GET_VARS[$key] = $newval;
+            if (str_ends_with($key, 'id') && !is_array($_GET[$key])) {
+                $newval     = preg_replace('/[^0-9a-zA-Z_-]/', '', (string) $val);
+                $_GET[$key] = $_GET[$key] = $newval;
                 if ($_REQUEST[$key] == $_GET[$key]) {
                     $_REQUEST[$key] = $newval;
                 }
             }
         }
         foreach ($_POST as $key => $val) {
-            if (substr($key, -2) === 'id' && !is_array($_POST[$key])) {
-                $newval      = preg_replace('/[^0-9a-zA-Z_-]/', '', $val);
-                $_POST[$key] = $HTTP_POST_VARS[$key] = $newval;
+            if (str_ends_with($key, 'id') && !is_array($_POST[$key])) {
+                $newval      = preg_replace('/[^0-9a-zA-Z_-]/', '', (string) $val);
+                $_POST[$key] = $_POST[$key] = $newval;
                 if ($_REQUEST[$key] == $_POST[$key]) {
                     $_REQUEST[$key] = $newval;
                 }
             }
         }
         foreach ($_COOKIE as $key => $val) {
-            if (substr($key, -2) === 'id' && !is_array($_COOKIE[$key])) {
-                $newval        = preg_replace('/[^0-9a-zA-Z_-]/', '', $val);
-                $_COOKIE[$key] = $HTTP_COOKIE_VARS[$key] = $newval;
+            if (str_ends_with($key, 'id') && !is_array($_COOKIE[$key])) {
+                $newval        = preg_replace('/[^0-9a-zA-Z_-]/', '', (string) $val);
+                $_COOKIE[$key] = $_COOKIE[$key] = $newval;
                 if ($_REQUEST[$key] == $_COOKIE[$key]) {
                     $_REQUEST[$key] = $newval;
                 }
@@ -796,7 +795,6 @@ class Protector
      */
     public function eliminate_dotdot()
     {
-        global $HTTP_GET_VARS, $HTTP_POST_VARS, $HTTP_COOKIE_VARS;
 
         if ($this->_done_dotdot) {
             return true;
@@ -808,15 +806,15 @@ class Protector
             if (is_array($_GET[$key])) {
                 continue;
             }
-            if (substr(trim($val), 0, 3) === '../' || false !== strpos($val, '/../')) {
+            if (str_starts_with(trim((string) $val), '../') || str_contains((string) $val, '/../')) {
                 $this->last_error_type = 'DirTraversal';
                 $this->message .= "Directory Traversal '$val' found.\n";
                 $this->output_log($this->last_error_type, 0, false, 64);
-                $sanitized_val = str_replace(chr(0), '', $val);
-                if (substr($sanitized_val, -2) !== ' .') {
+                $sanitized_val = str_replace(chr(0), '', (string) $val);
+                if (!str_ends_with($sanitized_val, ' .')) {
                     $sanitized_val .= ' .';
                 }
-                $_GET[$key] = $HTTP_GET_VARS[$key] = $sanitized_val;
+                $_GET[$key] = $sanitized_val;
                 if ($_REQUEST[$key] == $_GET[$key]) {
                     $_REQUEST[$key] = $sanitized_val;
                 }
@@ -864,7 +862,7 @@ class Protector
     public function &get_ref_from_base64index(&$current, $indexes)
     {
         foreach ($indexes as $index) {
-            $index = base64_decode($index);
+            $index = base64_decode((string) $index);
             if (!is_array($current)) {
                 return false;
             }
@@ -880,24 +878,23 @@ class Protector
      */
     public function replace_doubtful($key, $val)
     {
-        global $HTTP_GET_VARS, $HTTP_POST_VARS, $HTTP_COOKIE_VARS;
 
         $index_expression = '';
-        $indexes          = explode('_', $key);
+        $indexes          = explode('_', (string) $key);
         $base_array       = array_shift($indexes);
 
         switch ($base_array) {
             case 'G' :
                 $main_ref   =& $this->get_ref_from_base64index($_GET, $indexes);
-                $legacy_ref =& $this->get_ref_from_base64index($HTTP_GET_VARS, $indexes);
+                $legacy_ref =& $this->get_ref_from_base64index($_GET, $indexes);
                 break;
             case 'P' :
                 $main_ref   =& $this->get_ref_from_base64index($_POST, $indexes);
-                $legacy_ref =& $this->get_ref_from_base64index($HTTP_POST_VARS, $indexes);
+                $legacy_ref =& $this->get_ref_from_base64index($_POST, $indexes);
                 break;
             case 'C' :
                 $main_ref   =& $this->get_ref_from_base64index($_COOKIE, $indexes);
-                $legacy_ref =& $this->get_ref_from_base64index($HTTP_COOKIE_VARS, $indexes);
+                $legacy_ref =& $this->get_ref_from_base64index($_COOKIE, $indexes);
                 break;
             default :
                 exit;
@@ -1029,7 +1026,7 @@ class Protector
 
         foreach ($this->_doubtful_requests as $key => $val) {
             $str = $val;
-            while ($str = strstr($str, '/*')) { /* */
+            while ($str = strstr((string) $str, '/*')) { /* */
                 $str = strstr(substr($str, 2), '*/');
                 if ($str === false) {
                     $this->message .= "Isolated comment-in found. ($val)\n";
@@ -1059,12 +1056,12 @@ class Protector
         }
 
         foreach ($this->_doubtful_requests as $key => $val) {
-            $str = str_replace(['/*', '*/'], '', preg_replace('?/\*.+\*/?sU', '', $val));
+            $str = str_replace(['/*', '*/'], '', (string) preg_replace('?/\*.+\*/?sU', '', (string) $val));
             if (preg_match('/\sUNION\s+(ALL|SELECT)/i', $str)) {
                 $this->message .= "Pattern like SQL injection found. ($val)\n";
                 if ($sanitize) {
                     //                    $this->replace_doubtful($key, preg_replace('/union/i', 'uni-on', $val));
-                    $this->replace_doubtful($key, str_ireplace('union', 'uni-on', $val));
+                    $this->replace_doubtful($key, str_ireplace('union', 'uni-on', (string) $val));
                 }
                 $this->_safe_union     = false;
                 $this->last_error_type = 'UNION';
@@ -1086,9 +1083,9 @@ class Protector
         }
 
         $result = $this->stopForumSpamLookup(
-            isset($_POST['email']) ? $_POST['email'] : null,
+            $_POST['email'] ?? null,
             $_SERVER['REMOTE_ADDR'],
-            isset($_POST['uname']) ? $_POST['uname'] : null
+            $_POST['uname'] ?? null
         );
 
         if (false === $result || isset($result['http_code'])) {
@@ -1101,7 +1098,7 @@ class Protector
         }
 
         if (isset($result['ip']) && isset($result['ip']['lastseen'])) {
-            $last        = strtotime($result['ip']['lastseen']);
+            $last        = strtotime((string) $result['ip']['lastseen']);
             $oneMonth    = 60 * 60 * 24 * 31;
             $oneMonthAgo = time() - $oneMonth;
             if ($last > $oneMonthAgo) {
@@ -1189,7 +1186,7 @@ class Protector
         if (false === $ip->asReadable()) {
             return true;
         }
-        $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
 
         $ip4sql  = $xoopsDB->quote($ip->asReadable());
         $uri4sql = $xoopsDB->quote($uri);
@@ -1217,7 +1214,7 @@ class Protector
             $sql = 'SELECT COUNT(*) FROM ' . $xoopsDB->prefix($this->mydirname . '_access');
             $result = $xoopsDB->query($sql);
             if ($xoopsDB->isResultSet($result)) {
-                list($bw_count) = $xoopsDB->fetchRow($result);
+                [$bw_count] = $xoopsDB->fetchRow($result);
                 if ($bw_count > $this->_conf['bwlimit_count']) {
                     $this->write_file_bwlimit(time() + $this->_conf['dos_expire']);
                 }
@@ -1233,7 +1230,7 @@ class Protector
                 \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
             );
         }
-        list($f5_count) = $xoopsDB->fetchRow($result);
+        [$f5_count] = $xoopsDB->fetchRow($result);
         if ($f5_count > $this->_conf['dos_f5count']) {
 
             // delayed insert
@@ -1281,7 +1278,7 @@ class Protector
         }
 
         // Check its Agent
-        if (trim($this->_conf['dos_crsafe']) != '' && isset($_SERVER['HTTP_USER_AGENT']) && preg_match($this->_conf['dos_crsafe'], $_SERVER['HTTP_USER_AGENT'])) {
+        if (trim((string) $this->_conf['dos_crsafe']) != '' && isset($_SERVER['HTTP_USER_AGENT']) && preg_match($this->_conf['dos_crsafe'], (string) $_SERVER['HTTP_USER_AGENT'])) {
             // welcomed crawler
             $this->_done_dos = true;
 
@@ -1294,7 +1291,7 @@ class Protector
         if (!$xoopsDB->isResultSet($result)) {
             return false;
         }
-        list($crawler_count) = $xoopsDB->fetchRow($result);
+        [$crawler_count] = $xoopsDB->fetchRow($result);
 
         // delayed insert
         $xoopsDB->queryF($sql4insertlog);
@@ -1354,7 +1351,7 @@ class Protector
         if (false === $ip->asReadable()) {
             return true;
         }
-        $uri     = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        $uri     = $_SERVER['REQUEST_URI'] ?? '';
         $ip4sql  = $xoopsDB->quote($ip->asReadable());
         $uri4sql = $xoopsDB->quote($uri);
 
@@ -1379,7 +1376,7 @@ class Protector
         $sql = 'SELECT COUNT(*) FROM ' . $xoopsDB->prefix($this->mydirname . '_access') . " WHERE ip={$ip4sql} AND malicious_actions like 'BRUTE FORCE:%'";
         $result = $xoopsDB->query($sql);
         if ($xoopsDB->isResultSet($result)) {
-            list($bf_count) = $xoopsDB->fetchRow($result);
+            [$bf_count] = $xoopsDB->fetchRow($result);
         } else {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
@@ -1388,7 +1385,7 @@ class Protector
         if ($bf_count > $this->_conf['bf_count']) {
             $this->register_bad_ips(time() + $this->_conf['banip_time0']);
             $this->last_error_type = 'BruteForce';
-            $this->message .= "Trying to login as '" . addslashes($victim_uname) . "' found.\n";
+            $this->message .= "Trying to login as '" . addslashes((string) $victim_uname) . "' found.\n";
             $this->output_log('BRUTE FORCE', 0, true, 1);
             $ret = $this->call_filter('bruteforce_overrun');
             if ($ret == false) {
@@ -1416,8 +1413,8 @@ class Protector
 
             // count URI up
             $count = -1;
-            foreach (preg_split('#https?\:\/\/#i', $val) as $fragment) {
-                if (strncmp($fragment, $http_host, strlen($http_host)) !== 0) {
+            foreach (preg_split('#https?\:\/\/#i', (string) $val) as $fragment) {
+                if (!str_starts_with($fragment, (string) $http_host)) {
                     ++$count;
                 }
             }
@@ -1426,7 +1423,7 @@ class Protector
             }
 
             // count BBCode likd [url=www....] up (without [url=http://...])
-            $this->_spamcount_uri += count(preg_split('/\[url=(?!http|\\"http|\\\'http|' . $http_host . ')/i', $val)) - 1;
+            $this->_spamcount_uri += count(preg_split('/\[url=(?!http|\\"http|\\\'http|' . $http_host . ')/i', (string) $val)) - 1;
         }
     }
 
@@ -1440,7 +1437,7 @@ class Protector
         $this->_spam_check_point_recursive($_POST);
 
         if ($this->_spamcount_uri >= $points4deny) {
-            $this->message .= (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '') . " SPAM POINT: $this->_spamcount_uri\n";
+            $this->message .= ($_SERVER['REQUEST_URI'] ?? '') . " SPAM POINT: $this->_spamcount_uri\n";
             $this->output_log('URI SPAM', $uid, false, 128);
             $ret = $this->call_filter('spamcheck_overrun');
             if ($ret == false) {
@@ -1451,7 +1448,6 @@ class Protector
 
     public function disable_features()
     {
-        global $HTTP_POST_VARS, $HTTP_GET_VARS, $HTTP_COOKIE_VARS;
 
         // disable "Notice: Undefined index: ..."
         $error_reporting_level = error_reporting(0);
@@ -1462,7 +1458,7 @@ class Protector
         if ($this->_conf['disable_features'] & 1) {
 
             // zx 2005/1/5 disable xmlrpc.php in root
-            if (isset($_SERVER['SCRIPT_NAME']) && substr($_SERVER['SCRIPT_NAME'], -10) === 'xmlrpc.php') {
+            if (isset($_SERVER['SCRIPT_NAME']) && str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'xmlrpc.php')) {
                 $this->output_log('xmlrpc', 0, true, 1);
                 exit;
             }
@@ -1480,30 +1476,30 @@ class Protector
         if ($this->_conf['disable_features'] & 1024) {
 
             // root controllers
-            if (isset($_SERVER['SCRIPT_NAME']) && false === stripos($_SERVER['SCRIPT_NAME'], 'modules')) {
+            if (isset($_SERVER['SCRIPT_NAME']) && false === stripos((string) $_SERVER['SCRIPT_NAME'], 'modules')) {
                 // zx 2004/12/13 misc.php debug (file check)
-                if (substr($_SERVER['SCRIPT_NAME'], -8) === 'misc.php' && ((isset($_GET['type']) && $_GET['type'] === 'debug') || (isset($_POST['type']) && $_POST['type'] === 'debug')) && isset($_GET['file']) && !preg_match('/^dummy_\d+\.html$/', $_GET['file'])) {
+                if (str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'misc.php') && ((isset($_GET['type']) && $_GET['type'] === 'debug') || (isset($_POST['type']) && $_POST['type'] === 'debug')) && isset($_GET['file']) && !preg_match('/^dummy_\d+\.html$/', (string) $_GET['file'])) {
                     $this->output_log('misc debug');
                     exit;
                 }
 
                 // zx 2004/12/13 misc.php smilies
-                if (substr($_SERVER['SCRIPT_NAME'], -8) === 'misc.php' && ((isset($_GET['type']) && $_GET['type'] === 'smilies') || (isset($_POST['type']) && $_POST['type'] === 'smilies')) && isset($_GET['target']) && !preg_match('/^[0-9a-z_]*$/i', $_GET['target'])) {
+                if (str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'misc.php') && ((isset($_GET['type']) && $_GET['type'] === 'smilies') || (isset($_POST['type']) && $_POST['type'] === 'smilies')) && isset($_GET['target']) && !preg_match('/^[0-9a-z_]*$/i', (string) $_GET['target'])) {
                     $this->output_log('misc smilies');
                     exit;
                 }
 
                 // zx 2005/1/5 edituser.php avatarchoose
-                if (substr($_SERVER['SCRIPT_NAME'], -12) === 'edituser.php' && isset($_POST['op']) && $_POST['op'] === 'avatarchoose' && isset($_POST['user_avatar']) && false !== strpos($_POST['user_avatar'], '..')) {
+                if (str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'edituser.php') && isset($_POST['op']) && $_POST['op'] === 'avatarchoose' && isset($_POST['user_avatar']) && str_contains((string) $_POST['user_avatar'], '..')) {
                     $this->output_log('edituser avatarchoose');
                     exit;
                 }
             }
 
             // zx 2005/1/4 findusers
-            if (isset($_SERVER['SCRIPT_NAME']) && substr($_SERVER['SCRIPT_NAME'], -24) === 'modules/system/admin.php' && ((isset($_GET['fct']) && $_GET['fct'] === 'findusers') || (isset($_POST['fct']) && $_POST['fct'] === 'findusers'))) {
+            if (isset($_SERVER['SCRIPT_NAME']) && str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'modules/system/admin.php') && ((isset($_GET['fct']) && $_GET['fct'] === 'findusers') || (isset($_POST['fct']) && $_POST['fct'] === 'findusers'))) {
                 foreach ($_POST as $key => $val) {
-                    if (false !== strpos($key, "'") || false !== strpos($val, "'")) {
+                    if (str_contains($key, "'") || str_contains((string) $val, "'")) {
                         $this->output_log('findusers');
                         exit;
                     }
@@ -1512,23 +1508,23 @@ class Protector
 
             // preview CSRF zx 2004/12/14
             // news submit.php
-            if (isset($_SERVER['SCRIPT_NAME']) && substr($_SERVER['SCRIPT_NAME'], -23) === 'modules/news/submit.php' && isset($_POST['preview']) && isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], XOOPS_URL . '/modules/news/submit.php') !== 0) {
-                $HTTP_POST_VARS['nohtml'] = $_POST['nohtml'] = 1;
+            if (isset($_SERVER['SCRIPT_NAME']) && str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'modules/news/submit.php') && isset($_POST['preview']) && isset($_SERVER['HTTP_REFERER']) && !str_starts_with((string) $_SERVER['HTTP_REFERER'], XOOPS_URL . '/modules/news/submit.php')) {
+                $_POST['nohtml'] = 1;
             }
             // news admin/index.php
-            if (isset($_SERVER['SCRIPT_NAME']) && substr($_SERVER['SCRIPT_NAME'], -28) === 'modules/news/admin/index.php' && ($_POST['op'] === 'preview' || $_GET['op'] === 'preview') && isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], XOOPS_URL . '/modules/news/admin/index.php') !== 0) {
-                $HTTP_POST_VARS['nohtml'] = $_POST['nohtml'] = 1;
+            if (isset($_SERVER['SCRIPT_NAME']) && str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'modules/news/admin/index.php') && ($_POST['op'] === 'preview' || $_GET['op'] === 'preview') && isset($_SERVER['HTTP_REFERER']) && !str_starts_with((string) $_SERVER['HTTP_REFERER'], XOOPS_URL . '/modules/news/admin/index.php')) {
+                $_POST['nohtml'] = 1;
             }
             // comment comment_post.php
-            if (isset($_POST['com_dopreview']) && isset($_SERVER['HTTP_REFERER']) && false === strpos(substr($_SERVER['HTTP_REFERER'], -16), 'comment_post.php')) {
-                $HTTP_POST_VARS['dohtml'] = $_POST['dohtml'] = 0;
+            if (isset($_POST['com_dopreview']) && isset($_SERVER['HTTP_REFERER']) && !str_contains(substr((string) $_SERVER['HTTP_REFERER'], -16), 'comment_post.php')) {
+                $_POST['dohtml'] = 0;
             }
             // disable preview of system's blocksadmin
-            if (isset($_SERVER['SCRIPT_NAME']) && substr($_SERVER['SCRIPT_NAME'], -24) === 'modules/system/admin.php' && ($_GET['fct'] === 'blocksadmin' || $_POST['fct'] === 'blocksadmin') && isset($_POST['previewblock'])) {
+            if (isset($_SERVER['SCRIPT_NAME']) && str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'modules/system/admin.php') && ($_GET['fct'] === 'blocksadmin' || $_POST['fct'] === 'blocksadmin') && isset($_POST['previewblock'])) {
                 die("Danger! don't use this preview. Use 'altsys module' instead.(by Protector)");
             }
             // tpl preview
-            if (isset($_SERVER['SCRIPT_NAME']) && substr($_SERVER['SCRIPT_NAME'], -24) === 'modules/system/admin.php' && ($_GET['fct'] === 'tplsets' || $_POST['fct'] === 'tplsets')) {
+            if (isset($_SERVER['SCRIPT_NAME']) && str_ends_with((string) $_SERVER['SCRIPT_NAME'], 'modules/system/admin.php') && ($_GET['fct'] === 'tplsets' || $_POST['fct'] === 'tplsets')) {
                 if ($_POST['op'] === 'previewpopup' || $_GET['op'] === 'previewpopup' || isset($_POST['previewtpl'])) {
                     die("Danger! don't use this preview.(by Protector)");
                 }

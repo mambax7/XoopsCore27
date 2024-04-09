@@ -159,7 +159,7 @@
             </tr>
         </tbody>
         </table>
-        
+       
         <div  style="text-align: right">
         <a class="btn btn-success btn-sm" role="button" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/category.php" title="[ <{$publishedwords}> ]">
             <{$smarty.const._MD_LEXIKON_ALLCATS}>&nbsp;[<{$publishedwords}>]
@@ -225,7 +225,8 @@
 
         <dl class="dl-horizontal">
             <dt><{$smarty.const._MD_LEXIKON_SUB}></dt>
-            <{if isset($wehavesubs) && $wehavesubs == '0'}><dd><{$smarty.const._MD_LEXIKON_NOSUB}></dd><{/if}>
+                <{if isset($wehavesubs) && $wehavesubs == '0'}>
+                    <dd><{$smarty.const._MD_LEXIKON_NOSUB}></dd><{/if}>
             <dd>
             <{foreach item=subentries from=$blockS.substuff|default:null}>
                 <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/admin/entry.php?op=mod&entryID=<{$subentries.id}>"><{$subentries.linktext}></a>
@@ -236,7 +237,8 @@
 
        <dl class="dl-horizontal">
             <dt><{$smarty.const._MD_LEXIKON_REQ}></dt>
-            <{if isset($wehavereqs) && $wehavereqs == '0'}><dd><{$smarty.const._MD_LEXIKON_NOREQ}></dd><{/if}>
+                <{if isset($wehavereqs) && $wehavereqs == '0'}>
+                    <dd><{$smarty.const._MD_LEXIKON_NOREQ}></dd><{/if}>
             <dd>
             <{foreach item=reqentries from=$blockR.reqstuff|default:null}>
                 <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/admin/entry.php?op=mod&entryID=<{$reqentries.id}>"><{$reqentries.linktext}></a>

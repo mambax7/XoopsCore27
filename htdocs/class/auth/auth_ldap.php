@@ -191,11 +191,10 @@ class XoopsAuthLdap extends XoopsAuth
     /**
      * XoopsAuthLdap::cp1252_to_utf8()
      *
-     * @param mixed $str
      *
      * @return string
      */
-    public function cp1252_to_utf8($str)
+    public function cp1252_to_utf8(mixed $str)
     {
         return strtr(xoops_utf8_encode($str), $this->cp1252_map);
     }
@@ -233,7 +232,7 @@ class XoopsAuthLdap extends XoopsAuth
                 return false;
             }
             // We bind as user to test the credentials
-            $authenticated = ldap_bind($this->_ds, $userDN, stripslashes($pwd));
+            $authenticated = ldap_bind($this->_ds, $userDN, stripslashes((string) $pwd));
             if ($authenticated) {
                 // We load the Xoops User database
                 return $this->loadXoopsUser($userDN, $uname, $pwd);
@@ -259,7 +258,7 @@ class XoopsAuthLdap extends XoopsAuth
         $userDN = false;
         if (!$this->ldap_loginname_asdn) {
             // Bind with the manager
-            if (!ldap_bind($this->_ds, $this->ldap_manager_dn, stripslashes($this->ldap_manager_pass))) {
+            if (!ldap_bind($this->_ds, $this->ldap_manager_dn, stripslashes((string) $this->ldap_manager_pass))) {
                 $this->setErrors(ldap_errno($this->_ds), ldap_err2str(ldap_errno($this->_ds)) . '(' . $this->ldap_manager_dn . ')');
 
                 return false;
@@ -289,7 +288,7 @@ class XoopsAuthLdap extends XoopsAuth
     {
         $filter = '';
         if ($this->ldap_filter_person != '') {
-            $filter = str_replace('@@loginname@@', $uname, $this->ldap_filter_person);
+            $filter = str_replace('@@loginname@@', $uname, (string) $this->ldap_filter_person);
         } else {
             $filter = $this->ldap_loginldap_attr . '=' . $uname;
         }
@@ -300,12 +299,9 @@ class XoopsAuthLdap extends XoopsAuth
     /**
      * XoopsAuthLdap::loadXoopsUser()
      *
-     * @param  mixed $userdn
-     * @param  mixed $uname
-     * @param  mixed $pwd
      * @return bool
      */
-    public function loadXoopsUser($userdn, $uname, $pwd = null)
+    public function loadXoopsUser(mixed $userdn, mixed $uname, mixed $pwd = null)
     {
         $provisHandler = XoopsAuthProvisionning::getInstance($this);
         $sr            = ldap_read($this->_ds, $userdn, '(objectclass=*)');

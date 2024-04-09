@@ -89,7 +89,7 @@ if (!class_exists('\BaseStringHelper', false)) {
          */
         public static function byteSubstr($string, $start, $length = null)
         {
-            return mb_substr($string, $start, $length === null ? mb_strlen($string, '8bit') : $length, '8bit');
+            return mb_substr($string, $start, $length ?? mb_strlen($string, '8bit'), '8bit');
         }
 
         /**
@@ -219,8 +219,8 @@ if (!class_exists('\BaseStringHelper', false)) {
                     ++$depth;
                 } elseif ($token instanceof \HTMLPurifier_Token_Text && $totalCount <= $count) { //Text
                     if (false === $encoding) {
-                        preg_match('/^(\s*)/um', $token->data, $prefixSpace) ?: $prefixSpace = ['', ''];
-                        $token->data = $prefixSpace[1] . self::truncateWords(ltrim($token->data), $count - $totalCount, '');
+                        preg_match('/^(\s*)/um', (string) $token->data, $prefixSpace) ?: $prefixSpace = ['', ''];
+                        $token->data = $prefixSpace[1] . self::truncateWords(ltrim((string) $token->data), $count - $totalCount, '');
                         $currentCount = self::countWords($token->data);
                     } else {
                         $token->data = self::truncate($token->data, $count - $totalCount, '', $encoding);
@@ -316,24 +316,20 @@ if (!class_exists('\BaseStringHelper', false)) {
          * @return array
          * @since 2.0.4
          */
-        public static function explode($string, $delimiter = ',', $trim = true, $skipEmpty = false)
+        public static function explode($string, $delimiter = ',', mixed $trim = true, $skipEmpty = false)
         {
             $result = explode($delimiter, $string);
             if ($trim) {
                 if ($trim === true) {
                     $trim = 'trim';
                 } elseif (!is_callable($trim)) {
-                    $trim = function ($v) use ($trim) {
-                        return trim($v, $trim);
-                    };
+                    $trim = fn($v) => trim((string) $v, $trim);
                 }
                 $result = array_map($trim, $result);
             }
             if ($skipEmpty) {
                 // Wrapped with array_values to make array keys sequential after empty values removing
-                $result = array_values(array_filter($result, function ($value) {
-                    return $value !== '';
-                }));
+                $result = array_values(array_filter($result, fn($value) => $value !== ''));
             }
 
             return $result;
@@ -367,7 +363,7 @@ if (!class_exists('\BaseStringHelper', false)) {
             $value = (string)$value;
 
             $localeInfo = localeconv();
-            $decimalSeparator = isset($localeInfo['decimal_point']) ? $localeInfo['decimal_point'] : null;
+            $decimalSeparator = $localeInfo['decimal_point'] ?? null;
 
             if ($decimalSeparator !== null && $decimalSeparator !== '.') {
                 $value = str_replace($decimalSeparator, '.', $value);

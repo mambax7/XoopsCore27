@@ -114,7 +114,7 @@ class XoopsFolderHandler
      * @param boolean     $create Create folder if not found
      * @param mixed       $mode   Mode (CHMOD) to apply to created folder, false to ignore
      */
-    public function __construct($path = false, $create = true, $mode = false)
+    public function __construct($path = false, $create = true, mixed $mode = false)
     {
         if (empty($path)) {
             $path = XOOPS_VAR_PATH . '/caches/xoops_cache';
@@ -170,7 +170,7 @@ class XoopsFolderHandler
      * @return mixed Contents of current directory as an array, false on failure
      * @access public
      */
-    public function read($sort = true, $exceptions = false)
+    public function read($sort = true, mixed $exceptions = false)
     {
         $dirs = $files = [];
         $dir  = opendir($this->path);
@@ -222,10 +222,10 @@ class XoopsFolderHandler
         if (!is_array($data)) {
             return [];
         }
-        list($dirs, $files) = $data;
+        [$dirs, $files] = $data;
         $found = [];
         foreach ($files as $file) {
-            if (preg_match("/^{$regexp_pattern}$/i", $file)) {
+            if (preg_match("/^{$regexp_pattern}$/i", (string) $file)) {
                 $found[] = $file;
             }
         }
@@ -262,10 +262,10 @@ class XoopsFolderHandler
      */
     public function _findRecursive($pattern, $sort = false)
     {
-        list($dirs, $files) = $this->read($sort);
+        [$dirs, $files] = $this->read($sort);
         $found = [];
         foreach ($files as $file) {
-            if (preg_match("/^{$pattern}$/i", $file)) {
+            if (preg_match("/^{$pattern}$/i", (string) $file)) {
                 $found[] = $this->addPathElement($this->path, $file);
             }
         }
@@ -454,9 +454,9 @@ class XoopsFolderHandler
             }
         }
         if (is_dir($path)) {
-            list($paths) = $this->tree($path);
+            [$paths] = $this->tree($path);
             foreach ($paths as $key => $fullpath) {
-                $check = explode('/', $fullpath);
+                $check = explode('/', (string) $fullpath);
                 $count = count($check);
 
                 if (in_array($check[$count - 1], $exceptions)) {
@@ -640,7 +640,7 @@ class XoopsFolderHandler
             $files        = array_merge($normal_files, $hidden_files);
             if (is_array($files)) {
                 foreach ($files as $file) {
-                    if (preg_match("/(\.|\.\.)$/", $file)) {
+                    if (preg_match("/(\.|\.\.)$/", (string) $file)) {
                         continue;
                     }
                     if (is_file($file) === true) {
@@ -822,7 +822,7 @@ class XoopsFolderHandler
     public function realpath($path)
     {
         $path = trim($path);
-        if (strpos($path, '..') === false) {
+        if (!str_contains($path, '..')) {
             if (!$this->isAbsolute($path)) {
                 $path = $this->addPathElement($this->path, $path);
             }

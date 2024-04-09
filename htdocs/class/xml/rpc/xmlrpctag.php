@@ -80,7 +80,7 @@ class XoopsXmlRpcRequest extends XoopsXmlRpcDocument
      */
     public function __construct($methodName)
     {
-        $this->methodName = trim($methodName);
+        $this->methodName = trim((string) $methodName);
     }
 
     /**
@@ -129,7 +129,7 @@ class XoopsXmlRpcTag
                                          ], [
                                       '&lt;',
                                       '&gt;'
-                                         ], $text));
+                                         ], (string) $text));
 
         return $text;
     }
@@ -179,44 +179,20 @@ class XoopsXmlRpcFault extends XoopsXmlRpcTag
      */
     public function render()
     {
-        switch ($this->_code) {
-            case 101:
-                $string = 'Invalid server URI';
-                break;
-            case 102:
-                $string = 'Parser parse error';
-                break;
-            case 103:
-                $string = 'Module not found';
-                break;
-            case 104:
-                $string = 'User authentication failed';
-                break;
-            case 105:
-                $string = 'Module API not found';
-                break;
-            case 106:
-                $string = 'Method response error';
-                break;
-            case 107:
-                $string = 'Method not supported';
-                break;
-            case 108:
-                $string = 'Invalid parameter';
-                break;
-            case 109:
-                $string = 'Missing parameters';
-                break;
-            case 110:
-                $string = 'Selected blog application does not exist';
-                break;
-            case 111:
-                $string = 'Method permission denied';
-                break;
-            default:
-                $string = 'Method response error';
-                break;
-        }
+        $string = match ($this->_code) {
+            101 => 'Invalid server URI',
+            102 => 'Parser parse error',
+            103 => 'Module not found',
+            104 => 'User authentication failed',
+            105 => 'Module API not found',
+            106 => 'Method response error',
+            107 => 'Method not supported',
+            108 => 'Invalid parameter',
+            109 => 'Missing parameters',
+            110 => 'Selected blog application does not exist',
+            111 => 'Method permission denied',
+            default => 'Method response error',
+        };
         $string .= "\n" . $this->_extra;
 
         return '<fault><value><struct><member><name>faultCode</name><value>' . $this->_code . '</value></member><member><name>faultString</name><value>' . $this->encode($string) . '</value></member></struct></value></fault>';
@@ -332,7 +308,7 @@ class XoopsXmlRpcDatetime extends XoopsXmlRpcTag
     public function __construct($value)
     {
         if (!is_numeric($value)) {
-            $this->_value = strtotime($value);
+            $this->_value = strtotime((string) $value);
         } else {
             $this->_value = (int)$value;
         }
@@ -359,7 +335,7 @@ class XoopsXmlRpcBase64 extends XoopsXmlRpcTag
      */
     public function __construct($value)
     {
-        $this->_value = base64_encode($value);
+        $this->_value = base64_encode((string) $value);
     }
 
     /**

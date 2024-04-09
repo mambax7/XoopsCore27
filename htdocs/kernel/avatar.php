@@ -290,7 +290,6 @@ class XoopsAvatarHandler extends XoopsObjectHandler
     /**
      * Fetch a row of objects from the database
      *
-     * @param  CriteriaElement|CriteriaCompo $criteria
      * @param  bool  $id_as_key
      * @return array
      */
@@ -330,7 +329,6 @@ class XoopsAvatarHandler extends XoopsObjectHandler
     /**
      * Get count
      *
-     * @param  CriteriaElement|CriteriaCompo $criteria
      * @return int
      */
     public function getCount(CriteriaElement $criteria = null)
@@ -346,7 +344,7 @@ class XoopsAvatarHandler extends XoopsObjectHandler
             return 0;
         }
 
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }
@@ -378,7 +376,6 @@ class XoopsAvatarHandler extends XoopsObjectHandler
     /**
      * Get User
      *
-     * @param  XoopsAvatar $avatar
      * @return array|false
      */
     public function getUser(XoopsAvatar $avatar)

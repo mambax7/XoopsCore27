@@ -30,7 +30,7 @@ class XoopsFormPassword extends XoopsFormElement
      * @var int
      * @access private
      */
-    public $_size;
+    public int $_size;
 
     /**
      * Maximum length of the text
@@ -38,7 +38,7 @@ class XoopsFormPassword extends XoopsFormElement
      * @var int
      * @access private
      */
-    public $_maxlength;
+    public int $_maxlength;
 
     /**
      * Initial content of the field.
@@ -46,7 +46,7 @@ class XoopsFormPassword extends XoopsFormElement
      * @var string
      * @access private
      */
-    public $_value;
+    public string $_value;
 
     /**
      * Cache password with browser. Disabled by default for security consideration
@@ -55,7 +55,7 @@ class XoopsFormPassword extends XoopsFormElement
      * @var boolean
      * @access public
      */
-    public $autoComplete = false;
+    public bool $autoComplete = false;
 
     /**
      * Constructor
@@ -68,12 +68,12 @@ class XoopsFormPassword extends XoopsFormElement
      *                             <strong>Warning:</strong> this is readable in cleartext in the page's source!
      * @param bool   $autoComplete To enable autoComplete or browser cache
      */
-    public function __construct($caption, $name, $size, $maxlength, $value = '', $autoComplete = false)
+    public function __construct(string $caption, string $name, int $size, int $maxlength, string $value = '', bool $autoComplete = false)
     {
         $this->setCaption($caption);
         $this->setName($name);
-        $this->_size      = (int)$size;
-        $this->_maxlength = (int)$maxlength;
+        $this->_size      = $size;
+        $this->_maxlength = $maxlength;
         $this->setValue($value);
         $this->autoComplete = !empty($autoComplete);
     }
@@ -83,7 +83,7 @@ class XoopsFormPassword extends XoopsFormElement
      *
      * @return int
      */
-    public function getSize()
+    public function getSize(): int
     {
         return $this->_size;
     }
@@ -93,7 +93,7 @@ class XoopsFormPassword extends XoopsFormElement
      *
      * @return int
      */
-    public function getMaxlength()
+    public function getMaxlength(): int
     {
         return $this->_maxlength;
     }
@@ -104,7 +104,7 @@ class XoopsFormPassword extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): string
     {
         return $encode ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
     }
@@ -115,7 +115,7 @@ class XoopsFormPassword extends XoopsFormElement
      * @patam $value    string
      * @param $value
      */
-    public function setValue($value)
+    public function setValue($value): void
     {
         $this->_value = $value;
     }
@@ -125,7 +125,7 @@ class XoopsFormPassword extends XoopsFormElement
      *
      * @return string HTML
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormPassword($this);
     }

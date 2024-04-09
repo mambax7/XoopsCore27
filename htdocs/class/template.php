@@ -103,10 +103,9 @@ class XoopsTpl extends Smarty
     /**
      * XoopsTpl::touch
      *
-     * @param  mixed $resourceName
      * @return bool
      */
-    public function xoopsTouch($resourceName)
+    public function xoopsTouch(mixed $resourceName)
     {
         //$result = $this->compileAllTemplates($resourceName, true); // May be necessary?
         $this->clearCache($resourceName);
@@ -134,12 +133,9 @@ class XoopsTpl extends Smarty
     /**
      * XoopsTpl::setCompileId()
      *
-     * @param  mixed $module_dirname
-     * @param  mixed $theme_set
-     * @param  mixed $template_set
      * @return void
      */
-    public function setCompileId($module_dirname = null, $theme_set = null, $template_set = null)
+    public function setCompileId(mixed $module_dirname = null, mixed $theme_set = null, mixed $template_set = null)
     {
         global $xoopsConfig;
 
@@ -157,12 +153,9 @@ class XoopsTpl extends Smarty
     /**
      * XoopsTpl::clearCache()
      *
-     * @param  mixed $module_dirname
-     * @param  mixed $theme_set
-     * @param  mixed $template_set
      * @return bool
      */
-    public function xoopsClearCache($module_dirname = null, $theme_set = null, $template_set = null)
+    public function xoopsClearCache(mixed $module_dirname = null, mixed $theme_set = null, mixed $template_set = null)
     {
         $compile_id = $this->compile_id;
         $this->setCompileId($module_dirname, $template_set, $theme_set);
@@ -281,7 +274,7 @@ class XoopsTpl extends Smarty
      * @param string $tpl_var the template variable name
      * @param mixed  &$value  the referenced value to assign
      */
-    public function assign_by_ref($tpl_var, &$value)
+    public function assign_by_ref($tpl_var, mixed &$value)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use assignByRef");
         $this->assignByRef($tpl_var, $value);
@@ -294,7 +287,7 @@ class XoopsTpl extends Smarty
      * @param mixed   &$value  the referenced value to append
      * @param boolean $merge   flag if array elements shall be merged
      */
-    public function append_by_ref($tpl_var, &$value, $merge = false)
+    public function append_by_ref($tpl_var, mixed &$value, $merge = false)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
         $this->appendByRef($tpl_var, $value, $merge);
@@ -317,11 +310,10 @@ class XoopsTpl extends Smarty
      * @param string $function      the name of the template function
      * @param string $function_impl the name of the PHP function to register
      * @param bool   $cacheable
-     * @param mixed  $cache_attrs
      *
      * @throws \SmartyException
      */
-    public function register_function($function, $function_impl, $cacheable = true, $cache_attrs = null)
+    public function register_function($function, $function_impl, $cacheable = true, mixed $cache_attrs = null)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
         $this->registerPlugin('function', $function, $function_impl, $cacheable, $cache_attrs);
@@ -380,11 +372,10 @@ class XoopsTpl extends Smarty
      * @param string $block      name of template block
      * @param string $block_impl PHP function to register
      * @param bool   $cacheable
-     * @param mixed  $cache_attrs
      *
      * @throws \SmartyException
      */
-    public function register_block($block, $block_impl, $cacheable = true, $cache_attrs = null)
+    public function register_block($block, $block_impl, $cacheable = true, mixed $cache_attrs = null)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
         $this->registerPlugin('block', $block, $block_impl, $cacheable, $cache_attrs);

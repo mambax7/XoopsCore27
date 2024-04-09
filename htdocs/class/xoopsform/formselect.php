@@ -16,22 +16,12 @@
  * @since               2.0.0
  * @author              Kazumi Ono (AKA onokazu) http://www.myweb.ne.jp/, http://jp.xoops.org/
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
+ * @author              John Neill <catzwolf@xoops.org>
  */
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 xoops_load('XoopsFormElement');
 
-/**
- * A select field
- *
- * @author              Kazumi Ono <onokazu@xoops.org>
- * @author              Taiwen Jiang <phppp@users.sourceforge.net>
- * @author              John Neill <catzwolf@xoops.org>
- * @copyright       (c) 2000-2016 XOOPS Project (www.xoops.org)
- * @package             kernel
- * @subpackage          form
- * @access              public
- */
 class XoopsFormSelect extends XoopsFormElement
 {
     /**
@@ -40,31 +30,8 @@ class XoopsFormSelect extends XoopsFormElement
      * @var array
      * @access private
      */
-    public $_options = [];
+    public array $options = [];
 
-    /**
-     * Allow multiple selections?
-     *
-     * @var bool
-     * @access private
-     */
-    public $_multiple = false;
-
-    /**
-     * Number of rows. "1" makes a dropdown list.
-     *
-     * @var int
-     * @access private
-     */
-    public $_size;
-
-    /**
-     * Pre-selcted values
-     *
-     * @var array
-     * @access private
-     */
-    public $_value = [];
 
     /**
      * Constructor
@@ -73,14 +40,27 @@ class XoopsFormSelect extends XoopsFormElement
      * @param string $name     "name" attribute
      * @param mixed  $value    Pre-selected value (or array of them).
      * @param int    $size     Number of rows. "1" makes a drop-down-list
-     * @param bool   $multiple Allow multiple selections?
+     * @param bool $multiple Allow multiple selections?
      */
-    public function __construct($caption, $name, $value = null, $size = 1, $multiple = false)
+    public function __construct(string       $caption, string $name, /**
+     * Pre-selcted values
+     *
+     * @access private
+     */
+     public mixed $value = [], /**
+         * Number of rows. "1" makes a dropdown list.
+     *
+     * @access private
+     */
+     public int $size = 1, /**
+     * Allow multiple selections?
+     *
+     * @access private
+     */
+    public $multiple = false)
     {
         $this->setCaption($caption);
         $this->setName($name);
-        $this->_multiple = $multiple;
-        $this->_size     = (int)$size;
         if (isset($value)) {
             $this->setValue($value);
         }
@@ -91,9 +71,9 @@ class XoopsFormSelect extends XoopsFormElement
      *
      * @return bool
      */
-    public function isMultiple()
+    public function isMultiple(): bool
     {
-        return $this->_multiple;
+        return $this->multiple;
     }
 
     /**
@@ -101,9 +81,9 @@ class XoopsFormSelect extends XoopsFormElement
      *
      * @return int
      */
-    public function getSize()
+    public function getSize(): int
     {
-        return $this->_size;
+        return $this->size;
     }
 
     /**
@@ -112,14 +92,14 @@ class XoopsFormSelect extends XoopsFormElement
      * @param  bool $encode To sanitizer the text?
      * @return array
      */
-    public function getValue($encode = false)
+    public function getValue(bool $encode = false): array
     {
         if (!$encode) {
             return $this->_value;
         }
         $value = [];
         foreach ($this->_value as $val) {
-            $value[] = $val ? htmlspecialchars($val, ENT_QUOTES | ENT_HTML5) : $val;
+            $value[] = $val ? htmlspecialchars((string) $val, ENT_QUOTES | ENT_HTML5) : $val;
         }
 
         return $value;
@@ -127,10 +107,8 @@ class XoopsFormSelect extends XoopsFormElement
 
     /**
      * Set pre-selected values
-     *
-     * @param mixed $value
      */
-    public function setValue($value)
+    public function setValue(mixed $value): void
     {
         if (is_array($value)) {
             foreach ($value as $v) {
@@ -147,12 +125,12 @@ class XoopsFormSelect extends XoopsFormElement
      * @param string $value "value" attribute
      * @param string $name  "name" attribute
      */
-    public function addOption($value, $name = '')
+    public function addOption(string $value, string $name = ''): void
     {
         if ($name != '') {
-            $this->_options[$value] = $name;
+            $this->options[$value] = $name;
         } else {
-            $this->_options[$value] = $value;
+            $this->options[$value] = $value;
         }
     }
 
@@ -161,7 +139,7 @@ class XoopsFormSelect extends XoopsFormElement
      *
      * @param array $options Associative array of value->name pairs
      */
-    public function addOptionArray($options)
+    public function addOptionArray(array $options): void
     {
         if (is_array($options)) {
             foreach ($options as $k => $v) {
@@ -179,14 +157,14 @@ class XoopsFormSelect extends XoopsFormElement
      *
      * @return array Associative array of value->name pairs
      */
-    public function getOptions($encode = false)
+    public function getOptions(bool|int $encode = false): array
     {
         if (!$encode) {
-            return $this->_options;
+            return $this->options;
         }
         $value = [];
-        foreach ($this->_options as $val => $name) {
-            $value[$encode ? htmlspecialchars($val, ENT_QUOTES | ENT_HTML5) : $val] = ($encode > 1) ? htmlspecialchars($name, ENT_QUOTES | ENT_HTML5) : $name;
+        foreach ($this->options as $val => $name) {
+            $value[$encode ? htmlspecialchars((string) $val, ENT_QUOTES | ENT_HTML5) : $val] = ($encode > 1) ? htmlspecialchars((string) $name, ENT_QUOTES | ENT_HTML5) : $name;
         }
 
         return $value;
@@ -197,7 +175,7 @@ class XoopsFormSelect extends XoopsFormElement
      *
      * @return string HTML
      */
-    public function render()
+    public function render(): string
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormSelect($this);
     }

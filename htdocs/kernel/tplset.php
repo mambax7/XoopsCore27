@@ -170,7 +170,7 @@ class XoopsTplsetHandler extends XoopsObjectHandler
     public function getByName($tplset_name)
     {
         $tplset      = false;
-        $tplset_name = trim($tplset_name);
+        $tplset_name = trim((string) $tplset_name);
         if ($tplset_name != '') {
             $sql = 'SELECT * FROM ' . $this->db->prefix('tplset') . ' WHERE tplset_name=' . $this->db->quoteString($tplset_name);
             $result = $this->db->query($sql);
@@ -301,7 +301,7 @@ class XoopsTplsetHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }

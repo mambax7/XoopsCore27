@@ -82,7 +82,7 @@ class XoopsAuthAds extends XoopsAuthLdap
                 return false;
             }
             // We bind as user to test the credentials
-            $authenticated = ldap_bind($this->_ds, $userUPN, $this->cp1252_to_utf8(stripslashes($pwd)));
+            $authenticated = ldap_bind($this->_ds, $userUPN, $this->cp1252_to_utf8(stripslashes((string) $pwd)));
             if ($authenticated) {
                 // We load the Xoops User database
                 $dn = $this->getUserDN($uname);

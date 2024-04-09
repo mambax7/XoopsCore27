@@ -82,13 +82,13 @@ class xos_logos_PageBuilder
 
         $startMod = ($xoopsConfig['startpage'] == '--') ? 'system' : $xoopsConfig['startpage'];
         if (isset($GLOBALS['xoopsModule']) && is_object($GLOBALS['xoopsModule'])) {
-            list($mid, $dirname) = [
+            [$mid, $dirname] = [
                 $GLOBALS['xoopsModule']->getVar('mid'),
                 $GLOBALS['xoopsModule']->getVar('dirname')
             ];
-            $isStart = (substr($_SERVER['PHP_SELF'], -9) === 'index.php' && $xoopsConfig['startpage'] == $dirname && empty($_SERVER['QUERY_STRING']));
+            $isStart = (str_ends_with((string) $_SERVER['PHP_SELF'], 'index.php') && $xoopsConfig['startpage'] == $dirname && empty($_SERVER['QUERY_STRING']));
         } else {
-            list($mid, $dirname) = [
+            [$mid, $dirname] = [
                 0,
                 'system'
             ];
@@ -138,17 +138,16 @@ class xos_logos_PageBuilder
             }
         }
         if ($this->theme) {
-            list($template->caching, $template->cache_lifetime) = $backup;
+            [$template->caching, $template->cache_lifetime] = $backup;
         }
     }
 
     /**
      * xos_logos_PageBuilder::generateCacheId()
      *
-     * @param  mixed $cache_id
      * @return mixed
      */
-    public function generateCacheId($cache_id)
+    public function generateCacheId(mixed $cache_id)
     {
         if ($this->theme) {
             $cache_id = $this->theme->generateCacheId($cache_id);
@@ -160,11 +159,9 @@ class xos_logos_PageBuilder
     /**
      * xos_logos_PageBuilder::buildBlock()
      *
-     * @param  mixed $xobject
-     * @param  mixed $template
      * @return array|bool
      */
-    public function buildBlock($xobject, &$template)
+    public function buildBlock(mixed $xobject, mixed &$template)
     {
         // The lame type workaround will change
         // bid is added temporarily as workaround for specific block manipulation
@@ -178,7 +175,7 @@ class xos_logos_PageBuilder
         ];
 
         // title is a comment, don't show it
-        if (0 === strpos($block['title'], '// ')) {
+        if (str_starts_with((string) $block['title'], '// ')) {
             $block['title'] = '';
         }
 

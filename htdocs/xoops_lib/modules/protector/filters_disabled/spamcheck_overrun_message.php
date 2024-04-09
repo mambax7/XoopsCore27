@@ -5,7 +5,7 @@
  */
 class Protector_spamcheck_overrun_message extends ProtectorFilterAbstract
 {
-    public function execute()
+    public function execute(): never
     {
         // header( 'Location: http://google.com/' ) ; // redirect somewhere
         echo 'Your post looks like SPAM'; // write any message as you like

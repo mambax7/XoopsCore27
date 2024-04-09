@@ -34,14 +34,14 @@ class XoopsFormSelectUser extends XoopsFormElementTray
      * @param string $caption          form element caption
      * @param string $name             form element name
      * @param bool   $includeAnonymous Include user "anonymous"?
-     * @param mixed  $value            Pre-selected value (or array of them).
+     * @param mixed|null $value            Pre-selected value (or array of them).
      *                                 For an item with massive members, such as "Registered Users", "$value"
      *                                 should be used to store selected temporary users only instead of all
      *                                 members of that item
      * @param int    $size             Number of rows. "1" makes a drop-down-list.
      * @param bool   $multiple         Allow multiple selections?
      */
-    public function __construct($caption, $name, $includeAnonymous = false, $value = null, $size = 1, $multiple = false)
+    public function __construct(string $caption, $name, $includeAnonymous = false, mixed $value = null, int $size = 1, bool $multiple = false)
     {
         /**
          * @var mixed array|false - cache any result for this session.

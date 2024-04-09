@@ -5,7 +5,7 @@
  */
 class Protector_prepurge_exit_message extends ProtectorFilterAbstract
 {
-    public function execute()
+    public function execute(): never
     {
         // header( 'Location: http://google.com/' ) ; // redirect somewhere
         echo 'Protector detects attacking actions'; // write any message as you like

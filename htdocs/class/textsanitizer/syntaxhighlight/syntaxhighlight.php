@@ -50,9 +50,9 @@ class MytsSyntaxhighlight extends MyTextSanitizerExtension
      */
     public function php($text)
     {
-        $text          = trim($text);
+        $text          = trim((string) $text);
         $addedtag_open = 0;
-        if (!strpos($text, '<?php') && (substr($text, 0, 5) !== '<?php')) {
+        if (!strpos($text, '<?php') && (!str_starts_with($text, '<?php'))) {
             $text          = '<?php ' . $text;
             $addedtag_open = 1;
         }

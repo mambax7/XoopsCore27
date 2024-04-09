@@ -163,7 +163,7 @@ switch ($op) {
             $newuser->setVar('umode', $GLOBALS['xoopsConfig']['com_mode'], true);
             $newuser->setVar('theme', $GLOBALS['xoopsConfig']['theme_set'], true);
             $newuser->setVar('user_mailok', $user_mailok, true);
-            $newuser->setVar('notify_method', (isset($xoopsConfigUser['default_notification']) ? $xoopsConfigUser['default_notification'] : XOOPS_NOTIFICATION_METHOD_PM));
+            $newuser->setVar('notify_method', ($xoopsConfigUser['default_notification'] ?? XOOPS_NOTIFICATION_METHOD_PM));
             if ($xoopsConfigUser['activation_type'] == 1) {
                 $newuser->setVar('level', 1, true);
             } else {
@@ -303,7 +303,7 @@ switch ($op) {
         $xoopsOption['xoops_pagetitle'] = _US_USERREG;
         include $GLOBALS['xoops']->path('header.php');
         $xoTheme->addMeta('meta', 'keywords', _US_USERREG . ', ' . _US_NICKNAME); // FIXME!
-        $xoTheme->addMeta('meta', 'description', strip_tags($xoopsConfigUser['reg_disclaimer']));
+        $xoTheme->addMeta('meta', 'description', strip_tags((string) $xoopsConfigUser['reg_disclaimer']));
         include $GLOBALS['xoops']->path('include/registerform.php');
         $reg_form->display();
         include $GLOBALS['xoops']->path('footer.php');

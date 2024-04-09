@@ -27,7 +27,7 @@ $log_table = $db->prefix($mydirname . '_log');
 // Protector object
 require_once dirname(__DIR__) . '/class/protector.php';
 $db        = XoopsDatabaseFactory::getDatabaseConnection();
-$protector = Protector::getInstance($db->conn);
+$protector = Protector::getInstance();
 $conf      = $protector->getConf();
 
 //
@@ -44,17 +44,17 @@ if (!empty($_POST['action'])) {
     if ($_POST['action'] === 'update_ips') {
         $error_msg = '';
 
-        $lines   = empty($_POST['bad_ips']) ? [] : explode("\n", trim($_POST['bad_ips']));
+        $lines   = empty($_POST['bad_ips']) ? [] : explode("\n", trim((string) $_POST['bad_ips']));
         $bad_ips = [];
         foreach ($lines as $line) {
-            @list($bad_ip, $jailed_time) = explode('|', $line, 2);
+            @[$bad_ip, $jailed_time] = explode('|', $line, 2);
             $bad_ips[trim($bad_ip)] = empty($jailed_time) ? 0x7fffffff : (int)$jailed_time;
         }
         if (!$protector->write_file_badips($bad_ips)) {
             $error_msg .= _AM_MSG_BADIPSCANTOPEN;
         }
 
-        $group1_ips = empty($_POST['group1_ips']) ? [] : explode("\n", trim($_POST['group1_ips']));
+        $group1_ips = empty($_POST['group1_ips']) ? [] : explode("\n", trim((string) $_POST['group1_ips']));
         foreach (array_keys($group1_ips) as $i) {
             $group1_ips[$i] = trim($group1_ips[$i]);
         }
@@ -87,7 +87,7 @@ if (!empty($_POST['action'])) {
             $result = $db->query($sql);
 
             if (!$db->isResultSet($result)) {
-                list($ip) = $db->fetchRow($result);
+                [$ip] = $db->fetchRow($result);
                 $protector->register_bad_ips(0, $ip);
             }
 
@@ -114,7 +114,7 @@ if (!empty($_POST['action'])) {
         }
         $buf    = [];
         $ids    = [];
-        while (false !== (list($lid, $ip, $type) = $db->fetchRow($result))) {
+        while (false !== ([$lid, $ip, $type] = $db->fetchRow($result))) {
             if (isset($buf[$ip . $type])) {
                 $ids[] = $lid;
             } else {
@@ -139,7 +139,7 @@ if (!$db->isResultSet($result)) {
         \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
     );
 }
-list($numrows) = $db->fetchRow($result);
+[$numrows] = $db->fetchRow($result);
 
 $sql = "SELECT l.lid, l.uid, l.ip, l.agent, l.type, l.description, UNIX_TIMESTAMP(l.timestamp), u.uname FROM $log_table l LEFT JOIN " . $db->prefix('users') . " u ON l.uid=u.uid ORDER BY timestamp DESC LIMIT $pos,$num";
 $result = $db->query($sql);
@@ -181,8 +181,8 @@ uksort($bad_ips, 'protector_ip_cmp');
 $bad_ips4disp = '';
 foreach ($bad_ips as $bad_ip => $jailed_time) {
     $line = $jailed_time ? $bad_ip . '|' . $jailed_time : $bad_ip;
-    $line = str_replace('|2147483647', '', $line); // remove :0x7fffffff
-    $bad_ips4disp .= htmlspecialchars($line, ENT_QUOTES | ENT_HTML5) . "\n";
+    $line = str_replace('|2147483647', '', (string) $line); // remove :0x7fffffff
+    $bad_ips4disp .= htmlspecialchars((string) $line, ENT_QUOTES | ENT_HTML5) . "\n";
 }
 
 // group1_ips
@@ -203,7 +203,7 @@ echo "
     <td class='even'>
       <textarea name='bad_ips' id='bad_ips' style='width:360px;height:60px;' spellcheck='false'>$bad_ips4disp</textarea>
       <br>
-      " . htmlspecialchars($protector->get_filepath4badips(), ENT_QUOTES | ENT_HTML5) . "
+      " . htmlspecialchars((string) $protector->get_filepath4badips(), ENT_QUOTES | ENT_HTML5) . "
     </td>
   </tr>
   <tr valign='top' align='left'>
@@ -213,7 +213,7 @@ echo "
     <td class='even'>
       <textarea name='group1_ips' id='group1_ips' style='width:360px;height:60px;' spellcheck='false'>$group1_ips4disp</textarea>
       <br>
-      " . htmlspecialchars($protector->get_filepath4group1ips(), ENT_QUOTES | ENT_HTML5) . "
+      " . htmlspecialchars((string) $protector->get_filepath4group1ips(), ENT_QUOTES | ENT_HTML5) . "
     </td>
   </tr>
   <tr valign='top' align='left'>
@@ -259,34 +259,34 @@ echo "
 
 // body of log listing
 $oddeven = 'odd';
-while (false !== (list($lid, $uid, $ip, $agent, $type, $description, $timestamp, $uname) = $db->fetchRow($result))) {
+while (false !== ([$lid, $uid, $ip, $agent, $type, $description, $timestamp, $uname] = $db->fetchRow($result))) {
     $oddeven = ($oddeven === 'odd' ? 'even' : 'odd');
     $style = '';
 
-    $ip = htmlspecialchars($ip, ENT_QUOTES | ENT_HTML5);
-    $type = htmlspecialchars($type, ENT_QUOTES | ENT_HTML5);
-    if ('{"' == substr($description, 0, 2) && defined('JSON_PRETTY_PRINT')) {
-        $temp = json_decode($description);
+    $ip = htmlspecialchars((string) $ip, ENT_QUOTES | ENT_HTML5);
+    $type = htmlspecialchars((string) $type, ENT_QUOTES | ENT_HTML5);
+    if (str_starts_with((string) $description, '{"') && defined('JSON_PRETTY_PRINT')) {
+        $temp = json_decode((string) $description);
         if (is_object($temp)) {
             $description = json_encode($temp, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
             $style = ' log_description';
         }
     }
-    $description = htmlspecialchars($description, ENT_QUOTES | ENT_HTML5);
+    $description = htmlspecialchars((string) $description, ENT_QUOTES | ENT_HTML5);
     $uname = htmlspecialchars(($uid ? $uname : _GUESTS), ENT_QUOTES | ENT_HTML5);
 
     // make agents shorter
-    if (preg_match('/Chrome\/([0-9.]+)/', $agent, $regs)) {
+    if (preg_match('/Chrome\/([0-9.]+)/', (string) $agent, $regs)) {
         $agent_short = 'Chrome ' . $regs[1];
-    } elseif (preg_match('/MSIE\s+([0-9.]+)/', $agent, $regs)) {
+    } elseif (preg_match('/MSIE\s+([0-9.]+)/', (string) $agent, $regs)) {
         $agent_short = 'IE ' . $regs[1];
-    } elseif (false !== stripos($agent, 'Gecko')) {
-        $agent_short = strrchr($agent, ' ');
+    } elseif (false !== stripos((string) $agent, 'Gecko')) {
+        $agent_short = strrchr((string) $agent, ' ');
     } else {
-        $agent_short = substr($agent, 0, strpos($agent, ' '));
+        $agent_short = substr((string) $agent, 0, strpos((string) $agent, ' '));
     }
-    $agent4disp = htmlspecialchars($agent, ENT_QUOTES | ENT_HTML5);
-    $agent_desc = $agent == $agent_short ? $agent4disp : htmlspecialchars($agent_short, ENT_QUOTES | ENT_HTML5) . "<img src='../images/dotdotdot.gif' alt='$agent4disp' title='$agent4disp' />";
+    $agent4disp = htmlspecialchars((string) $agent, ENT_QUOTES | ENT_HTML5);
+    $agent_desc = $agent == $agent_short ? $agent4disp : htmlspecialchars((string) $agent_short, ENT_QUOTES | ENT_HTML5) . "<img src='../images/dotdotdot.gif' alt='$agent4disp' title='$agent4disp' />";
 
     echo "
   <tr>
@@ -332,11 +332,11 @@ xoops_cp_footer();
 function protector_ip_cmp($a, $b)
 {
     // ipv6 below ipv4
-    if ((false === strpos($a, ':')) && false !== strpos($b, ':')) {
+    if ((!str_contains($a, ':')) && str_contains($b, ':')) {
         return -1;
     }
     // ipv4 above ipv6
-    if ((false === strpos($a, '.')) && false !== strpos($b, '.')) {
+    if ((!str_contains($a, '.')) && str_contains($b, '.')) {
         return 1;
     }
     // normalize ipv4 before comparing

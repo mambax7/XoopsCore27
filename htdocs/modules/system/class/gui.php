@@ -63,7 +63,7 @@ class XoopsSystemGui
         require_once XOOPS_ROOT_PATH . '/class/theme.php';
 
         if (isset($GLOBALS['xoopsOption']['template_main'])) {
-            if (false === strpos($GLOBALS['xoopsOption']['template_main'], ':')) {
+            if (!str_contains((string) $GLOBALS['xoopsOption']['template_main'], ':')) {
                 $GLOBALS['xoopsOption']['template_main'] = 'db:' . $GLOBALS['xoopsOption']['template_main'];
             }
         }
@@ -72,7 +72,7 @@ class XoopsSystemGui
         $this->xoTheme     =& $adminThemeFactory->createInstance([
                                                                      'folderName'      => $this->foldername,
                                                                      'themesPath'      => 'modules/system/themes',
-                                                                     'contentTemplate' => isset($GLOBALS['xoopsOption']['template_main'])? $GLOBALS['xoopsOption']['template_main'] :''
+                                                                     'contentTemplate' => $GLOBALS['xoopsOption']['template_main'] ?? ''
                                                                  ]);
         $this->xoTheme->loadLocalization('admin');
         $this->template =& $this->xoTheme->template;
@@ -123,14 +123,14 @@ class XoopsSystemGui
                 $i       = 0;
                 $current = $i;
                 foreach ($xoopsModule->adminmenu as $menu) {
-                    if (stripos($_SERVER['REQUEST_URI'], $menu['link']) !== false) {
+                    if (stripos((string) $_SERVER['REQUEST_URI'], (string) $menu['link']) !== false) {
                         $current = $i;
                     }
                     $menu_handler->addMenuTabs($menu['link'], $menu['title']);
                     ++$i;
                 }
                 if ($xoopsModule->getInfo('help')) {
-                    if (stripos($_SERVER['REQUEST_URI'], 'admin/' . $xoopsModule->getInfo('help')) !== false) {
+                    if (stripos((string) $_SERVER['REQUEST_URI'], 'admin/' . $xoopsModule->getInfo('help')) !== false) {
                         $current = $i;
                     }
                     $menu_handler->addMenuTabs('../system/help.php?mid=' . $xoopsModule->getVar('mid', 's') . '&amp;' . $xoopsModule->getInfo('help'), _AM_SYSTEM_HELP);
@@ -163,7 +163,7 @@ class XoopsSystemGui
 
         if (isset($GLOBALS['xoopsOption']['template_main']) && $GLOBALS['xoopsOption']['template_main'] != $xoTheme->contentTemplate) {
             trigger_error("xoopsOption['template_main'] should be defined before call xoops_cp_header function", E_USER_WARNING);
-            if (false === strpos($GLOBALS['xoopsOption']['template_main'], ':')) {
+            if (!str_contains((string) $GLOBALS['xoopsOption']['template_main'], ':')) {
                 $xoTheme->contentTemplate = 'db:' . $GLOBALS['xoopsOption']['template_main'];
             } else {
                 $xoTheme->contentTemplate = $GLOBALS['xoopsOption']['template_main'];
@@ -187,7 +187,7 @@ class XoopsSystemGui
     {
         static $instance;
         if (!isset($instance)) {
-            $class    = __CLASS__;
+            $class    = self::class;
             $instance = new $class();
         }
 

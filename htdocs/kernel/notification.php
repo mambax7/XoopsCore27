@@ -182,7 +182,7 @@ class XoopsNotification extends XoopsObject
             case XOOPS_NOTIFICATION_METHOD_EMAIL:
                 $xoopsMailer->useMail();
                 foreach ($tags as $k => $v) {
-                    $xoopsMailer->assign($k, preg_replace('/&amp;/i', '&', $v));
+                    $xoopsMailer->assign($k, preg_replace('/&amp;/i', '&', (string) $v));
                 }
                 break;
             default:
@@ -343,9 +343,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     /**
      * Get some {@link XoopsNotification}s
      *
-     * @param CriteriaElement|CriteriaCompo $criteria
      * @param bool            $id_as_key Use IDs as keys into the array?
-     *
      * @return array Array of {@link XoopsNotification} objects
      **/
     public function getObjects(CriteriaElement $criteria = null, $id_as_key = false)
@@ -397,7 +395,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }
@@ -492,7 +490,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      */
-    public function subscribe($category, $item_id, $events, $mode = null, $module_id = null, $user_id = null)
+    public function subscribe($category, $item_id, mixed $events, $mode = null, $module_id = null, $user_id = null)
     {
         if (!isset($user_id)) {
             global $xoopsUser;
@@ -794,7 +792,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      **/
-    public function unsubscribe($category, $item_id, $events, $module_id = null, $user_id = null)
+    public function unsubscribe($category, $item_id, mixed $events, $module_id = null, $user_id = null)
     {
         if (!isset($user_id)) {
             global $xoopsUser;
@@ -890,7 +888,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      **/
-    public function updateByField(XoopsNotification $notification, $field_name, $field_value)
+    public function updateByField(XoopsNotification $notification, $field_name, mixed $field_value)
     {
         $notification->unsetNew();
         $notification->setVar($field_name, $field_value);

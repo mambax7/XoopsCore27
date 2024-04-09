@@ -301,7 +301,6 @@ class XoopsImagecategoryHandler extends XoopsObjectHandler
     /**
      * Enter description here...
      *
-     * @param  CriteriaElement $criteria
      * @param  bool            $id_as_key if true, use id as array key
      * @return array of XoopsImagecategory objects
      */
@@ -353,7 +352,7 @@ class XoopsImagecategoryHandler extends XoopsObjectHandler
         if (!$this->db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $this->db->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (int)$count;
     }

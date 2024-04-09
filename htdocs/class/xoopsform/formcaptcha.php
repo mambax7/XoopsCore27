@@ -46,16 +46,16 @@ xoops_load('XoopsFormElement');
  */
 class XoopsFormCaptcha extends XoopsFormElement
 {
-    public $captchaHandler;
+    public XoopsCaptcha $captchaHandler;
 
     /**
      * Constructor
      * @param string  $caption    Caption of the form element, default value is defined in captcha/language/
      * @param string  $name       Name for the input box
-     * @param boolean $skipmember Skip CAPTCHA check for members deprecated
+     * @param boolean|string $skipmember Skip CAPTCHA check for members deprecated
      * @param array   $configs									 deprecated
      */
-    public function __construct($caption = '', $name = 'xoopscaptcha', $skipmember = '', $configs = [])
+    public function __construct(string $caption = '', string $name = 'xoopscaptcha', bool|string $skipmember = '', array $configs = [])
     {
         xoops_load('XoopsCaptcha');
         $this->captchaHandler  = XoopsCaptcha::getInstance();
@@ -80,7 +80,7 @@ class XoopsFormCaptcha extends XoopsFormElement
      *
      * @return mixed
      */
-    public function setConfig($name, $val)
+    public function setConfig($name, $val): mixed
     {
         return $this->captchaHandler->setConfig($name, $val);
     }
@@ -88,7 +88,7 @@ class XoopsFormCaptcha extends XoopsFormElement
     /**
      * @return mixed
      */
-    public function render()
+    public function render(): mixed
     {
         // if (!$this->isHidden()) {
         return $this->captchaHandler->render();
@@ -98,7 +98,7 @@ class XoopsFormCaptcha extends XoopsFormElement
     /**
      * @return mixed
      */
-    public function renderValidationJS()
+    public function renderValidationJS(): mixed
     {
         return $this->captchaHandler->renderValidationJS();
     }

@@ -23,7 +23,7 @@ $indexAdmin->addItemButton(_PROFILE_AM_ADDUSER, 'user.php?op=new', 'add', '');
 echo $indexAdmin->addNavigation(basename(__FILE__));
 echo $indexAdmin->renderButton('right', '');
 
-$op = isset($_REQUEST['op']) ? $_REQUEST['op'] : 'list';
+$op = $_REQUEST['op'] ?? 'list';
 if ($op === 'editordelete') {
     $op = isset($_REQUEST['delete']) ? 'delete' : 'edit';
 }
@@ -112,14 +112,14 @@ switch ($op) {
         }
         $myts = \MyTextSanitizer::getInstance();
         $user->setVar('uname', $_POST['uname']);
-        $user->setVar('email', trim($_POST['email']));
+        $user->setVar('email', trim((string) $_POST['email']));
         if (isset($_POST['level']) && $user->getVar('level') != (int)$_POST['level']) {
             $user->setVar('level', (int)$_POST['level']);
         }
         $password = $vpass = null;
         if (!empty($_POST['password'])) {
-            $password = $myts->stripSlashesGPC(trim($_POST['password']));
-            $vpass = isset($_POST['vpass']) ? $myts->stripSlashesGPC(trim($_POST['vpass'])) : '';
+            $password = $myts->stripSlashesGPC(trim((string) $_POST['password']));
+            $vpass = isset($_POST['vpass']) ? $myts->stripSlashesGPC(trim((string) $_POST['vpass'])) : '';
             $user->setVar('pass', password_hash($password, PASSWORD_DEFAULT));
         } elseif ($user->isNew()) {
             $password = $vpass = '';
@@ -139,13 +139,13 @@ switch ($op) {
                     $value = $fields[$i]->getValueForSave($_REQUEST[$fieldname], $user->getVar($fieldname, 'n'));
                     $user->setVar($fieldname, $value);
                 } else {
-                    $value = $fields[$i]->getValueForSave((isset($_REQUEST[$fieldname]) ? $_REQUEST[$fieldname] : ''), $profile->getVar($fieldname, 'n'));
+                    $value = $fields[$i]->getValueForSave(($_REQUEST[$fieldname] ?? ''), $profile->getVar($fieldname, 'n'));
                     $profile->setVar($fieldname, $value);
                 }
             }
         }
 
-        $new_groups = isset($_POST['groups']) ? $_POST['groups'] : [];
+        $new_groups = $_POST['groups'] ?? [];
 
         if (count($errors) == 0) {
             if ($handler->insertUser($user)) {

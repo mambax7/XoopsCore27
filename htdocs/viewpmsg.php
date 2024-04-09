@@ -40,7 +40,7 @@ if (!is_object($xoopsUser)) {
             include $GLOBALS['xoops']->path('footer.php');
             exit();
         }
-        $clean_msg_id = json_decode($_POST['msg_ids'], true, 2);
+        $clean_msg_id = json_decode((string) $_POST['msg_ids'], true, 2);
         if (!empty($clean_msg_id)) {
             $clean_msg_id = array_map('intval', $clean_msg_id);
         }

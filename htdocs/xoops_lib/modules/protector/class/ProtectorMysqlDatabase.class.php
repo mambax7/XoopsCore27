@@ -38,7 +38,7 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
     /**
      * @param $sql
      */
-    public function injectionFound($sql)
+    public function injectionFound($sql): never
     {
         $protector = Protector::getInstance();
 
@@ -55,7 +55,7 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
      */
     public function separateStringsInSQL($sql)
     {
-        $sql            = trim($sql);
+        $sql            = trim((string) $sql);
         $sql_len        = strlen($sql);
         $char           = '';
         $string_start   = '';
@@ -116,16 +116,16 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
      */
     public function checkSql($sql)
     {
-        list($sql_wo_strings, $strings) = $this->separateStringsInSQL($sql);
+        [$sql_wo_strings, $strings] = $this->separateStringsInSQL($sql);
 
         // stage1: addslashes() processed or not
         foreach ($this->doubtful_requests as $request) {
-            if (addslashes($request) != $request) {
-                if (false !== stripos($sql, trim($request))) {
+            if (addslashes((string) $request) != $request) {
+                if (false !== stripos((string) $sql, trim((string) $request))) {
                     // check the request stayed inside of strings as whole
                     $ok_flag = false;
                     foreach ($strings as $string) {
-                        if (false !== strpos($string, $request)) {
+                        if (str_contains((string) $string, (string) $request)) {
                             $ok_flag = true;
                             break;
                         }
@@ -144,15 +144,15 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
         // $_GET['d'] = '(select ... FROM)'
         // NG: select a from b where c=(select ... from)
         foreach ($this->doubtful_requests as $request) {
-            if (false !== strpos($sql_wo_strings, trim($request))) {
+            if (str_contains((string) $sql_wo_strings, trim((string) $request))) {
                 $this->injectionFound($sql);
             }
         }
 
         // stage3: comment exists or not without quoted strings (too sensitive?)
-        if (preg_match('/(\/\*|\-\-|\#)/', $sql_wo_strings, $regs)) {
+        if (preg_match('/(\/\*|\-\-|\#)/', (string) $sql_wo_strings, $regs)) {
             foreach ($this->doubtful_requests as $request) {
-                if (false !== strpos($request, $regs[1])) {
+                if (str_contains((string) $request, $regs[1])) {
                     $this->injectionFound($sql);
                 }
             }
@@ -171,7 +171,7 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
     {
         $sql4check = substr($sql, 7);
         foreach ($this->doubtful_needles as $needle) {
-            if (false !== stripos($sql4check, $needle)) {
+            if (false !== stripos($sql4check, (string) $needle)) {
                 $this->checkSql($sql);
                 break;
             }

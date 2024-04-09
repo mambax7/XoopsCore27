@@ -88,18 +88,13 @@ function xoops_ishexstr($hex, $checklen = 32)
  */
 function xoops_convert_encode($data, $store_method = 'urlcode')
 {
-    switch ($store_method) {
-        default:
-            return urlencode($data);
-        case 'base64':
-            return base64_encode($data);
-        case 'uucode':
-            return convert_uuencode($data);
-        case 'open':
-            return $data;
-        case 'hex':
-            return bin2hex($data);
-    }
+    return match ($store_method) {
+        'base64' => base64_encode($data),
+        'uucode' => convert_uuencode($data),
+        'open' => $data,
+        'hex' => bin2hex($data),
+        default => urlencode($data),
+    };
 }
 
 /**
@@ -111,18 +106,13 @@ function xoops_convert_encode($data, $store_method = 'urlcode')
  */
 function xoops_convert_decode($data, $store_method = 'urlcode')
 {
-    switch ($store_method) {
-        default:
-            return urldecode($data);
-        case 'base64':
-            return base64_decode($data);
-        case 'uucode':
-            return convert_uudecode($data);
-        case 'open':
-            return $data;
-        case 'hex':
-            return xoops_hex2bin($data);
-    }
+    return match ($store_method) {
+        'base64' => base64_decode($data),
+        'uucode' => convert_uudecode($data),
+        'open' => $data,
+        'hex' => xoops_hex2bin($data),
+        default => urldecode($data),
+    };
 }
 
 /**
@@ -133,7 +123,7 @@ function xoops_convert_decode($data, $store_method = 'urlcode')
  * @param string $store_method
  * @return boolean|string
  */
-function xoops_aw_encode($value, $key, $store_method = 'urlcode')
+function xoops_aw_encode(mixed $value, mixed $key, $store_method = 'urlcode')
 {
     $value = xoops_convert_encode($value, $store_method);
 }
@@ -146,7 +136,7 @@ function xoops_aw_encode($value, $key, $store_method = 'urlcode')
  * @param string $store_method
  * @return boolean|string
  */
-function xoops_aw_decode($value, $key, $store_method = 'urlcode')
+function xoops_aw_decode(mixed $value, mixed $key, $store_method = 'urlcode')
 {
     $value = xoops_convert_decode($value, $store_method);
 }

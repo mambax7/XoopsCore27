@@ -30,50 +30,50 @@ class SMTP
      * The PHPMailer SMTP version number.
      * @var string
      */
-    const VERSION = '5.2.28';
+    public const VERSION = '5.2.28';
 
     /**
      * SMTP line break constant.
      * @var string
      */
-    const CRLF = "\r\n";
+    public const CRLF = "\r\n";
 
     /**
      * The SMTP port to use if one is not specified.
      * @var integer
      */
-    const DEFAULT_SMTP_PORT = 25;
+    public const DEFAULT_SMTP_PORT = 25;
 
     /**
      * The maximum line length allowed by RFC 2822 section 2.1.1
      * @var integer
      */
-    const MAX_LINE_LENGTH = 998;
+    public const MAX_LINE_LENGTH = 998;
 
     /**
      * Debug level for no output
      */
-    const DEBUG_OFF = 0;
+    public const DEBUG_OFF = 0;
 
     /**
      * Debug level to show client -> server messages
      */
-    const DEBUG_CLIENT = 1;
+    public const DEBUG_CLIENT = 1;
 
     /**
      * Debug level to show client -> server and server -> client messages
      */
-    const DEBUG_SERVER = 2;
+    public const DEBUG_SERVER = 2;
 
     /**
      * Debug level to show connection status, client -> server and server -> client messages
      */
-    const DEBUG_CONNECTION = 3;
+    public const DEBUG_CONNECTION = 3;
 
     /**
      * Debug level to show all messages
      */
-    const DEBUG_LOWLEVEL = 4;
+    public const DEBUG_LOWLEVEL = 4;
 
     /**
      * The PHPMailer SMTP Version number.
@@ -233,7 +233,7 @@ class SMTP
             case 'html':
                 //Cleans up output a bit for a better looking, HTML-safe output
                 echo gmdate('Y-m-d H:i:s') . ' ' . htmlentities(
-                    preg_replace('/[\r\n]+/', '', $str),
+                    (string) preg_replace('/[\r\n]+/', '', $str),
                     ENT_QUOTES,
                     'UTF-8'
                 ) . "<br>\n";
@@ -245,7 +245,7 @@ class SMTP
                 echo gmdate('Y-m-d H:i:s') . "\t" . str_replace(
                     "\n",
                     "\n                   \t                  ",
-                    trim($str)
+                    trim((string) $str)
                 ) . "\n";
         }
     }
@@ -288,7 +288,7 @@ class SMTP
         $errstr = '';
         if ($streamok) {
             $socket_context = stream_context_create($options);
-            set_error_handler([$this, 'errorHandler']);
+            set_error_handler($this->errorHandler(...));
             $this->smtp_conn = stream_socket_client(
                 $host . ":" . $port,
                 $errno,
@@ -304,7 +304,7 @@ class SMTP
                 "Connection: stream_socket_client not available, falling back to fsockopen",
                 self::DEBUG_CONNECTION
             );
-            set_error_handler([$this, 'errorHandler']);
+            set_error_handler($this->errorHandler(...));
             $this->smtp_conn = fsockopen(
                 $host,
                 $port,
@@ -331,7 +331,7 @@ class SMTP
         $this->edebug('Connection: opened', self::DEBUG_CONNECTION);
         // SMTP server can take longer to respond, give longer timeout for first read
         // Windows does not have support for this timeout function
-        if (substr(PHP_OS, 0, 3) != 'WIN') {
+        if (!str_starts_with(PHP_OS, 'WIN')) {
             $max = ini_get('max_execution_time');
             // Don't bother if unlimited
             if ($max != 0 && $timeout > $max) {
@@ -367,7 +367,7 @@ class SMTP
         }
 
         // Begin encrypted connection
-        set_error_handler([$this, 'errorHandler']);
+        set_error_handler($this->errorHandler(...));
         $crypto_ok = stream_socket_enable_crypto(
             $this->smtp_conn,
             true,
@@ -411,7 +411,7 @@ class SMTP
                 return false;
             }
 
-            self::edebug('Auth method requested: ' . ($authtype ? $authtype : 'UNKNOWN'), self::DEBUG_LOWLEVEL);
+            self::edebug('Auth method requested: ' . ($authtype ?: 'UNKNOWN'), self::DEBUG_LOWLEVEL);
             self::edebug(
                 'Auth methods available on the server: ' . implode(',', $this->server_caps['AUTH']),
                 self::DEBUG_LOWLEVEL
@@ -506,7 +506,7 @@ class SMTP
 
                 if (!$this->sendCommand(
                     'AUTH NTLM',
-                    'AUTH NTLM ' . base64_encode($msg1),
+                    'AUTH NTLM ' . base64_encode((string) $msg1),
                     334
                 )
                 ) {
@@ -528,7 +528,7 @@ class SMTP
                     $workstation
                 );
                 // send encoded username
-                return $this->sendCommand('Username', base64_encode($msg3), 235);
+                return $this->sendCommand('Username', base64_encode((string) $msg3), 235);
             case 'CRAM-MD5':
                 // Start authentication
                 if (!$this->sendCommand('AUTH CRAM-MD5', 'AUTH CRAM-MD5', 334)) {
@@ -665,7 +665,7 @@ class SMTP
 
         $field = substr($lines[0], 0, strpos($lines[0], ':'));
         $in_headers = false;
-        if (!empty($field) && strpos($field, ' ') === false) {
+        if (!empty($field) && !str_contains($field, ' ')) {
             $in_headers = true;
         }
 
@@ -766,7 +766,7 @@ class SMTP
     protected function parseHelloFields($type)
     {
         $this->server_caps = [];
-        $lines = explode("\n", $this->helo_rply);
+        $lines = explode("\n", (string) $this->helo_rply);
 
         foreach ($lines as $n => $s) {
             //First 4 chars contain response code followed by - or space
@@ -884,7 +884,7 @@ class SMTP
             return false;
         }
         //Reject line breaks in all commands
-        if (strpos($commandstring, "\n") !== false or strpos($commandstring, "\r") !== false) {
+        if (str_contains($commandstring, "\n") or str_contains($commandstring, "\r")) {
             $this->setError("Command '$command' contained line breaks");
             return false;
         }
@@ -995,7 +995,7 @@ class SMTP
     public function client_send($data)
     {
         $this->edebug("CLIENT -> SERVER: $data", self::DEBUG_CLIENT);
-        set_error_handler([$this, 'errorHandler']);
+        set_error_handler($this->errorHandler(...));
         $result = fwrite($this->smtp_conn, $data);
         restore_error_handler();
         return $result;

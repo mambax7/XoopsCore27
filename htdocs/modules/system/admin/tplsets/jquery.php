@@ -76,20 +76,20 @@ switch ($op) {
                         $file_no_valid = ['.svn', 'icons', 'img', 'images', 'language'];
 
                         if (!in_array($file, $file_no_valid)) {
-                            echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlentities($_REQUEST['dir'] . $file, ENT_QUOTES | ENT_HTML5) . "/\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                            echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlentities($_REQUEST['dir'] . $file, ENT_QUOTES | ENT_HTML5) . "/\">" . htmlentities((string) $file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
                         }
                     }
                 }
                 // All files
                 foreach ($files as $file) {
                     if (file_exists($root . $_REQUEST['dir'] . $file) && $file !== '.' && $file !== '..' && !is_dir($root . $_REQUEST['dir'] . $file) && $file !== 'index.html') {
-                        $ext = preg_replace('/^.*\./', '', $file);
+                        $ext = preg_replace('/^.*\./', '', (string) $file);
 
                         $extensions      = ['.html', '.htm', '.css', '.tpl'];
-                        $extension_verif = strrchr($file, '.');
+                        $extension_verif = strrchr((string) $file, '.');
 
                         if (in_array($extension_verif, $extensions)) {
-                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"tpls_edit_file('" . htmlentities($_REQUEST['dir'] . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($_REQUEST['dir'], ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\" rel=\"tpls_edit_file('" . htmlentities($_REQUEST['dir'] . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($_REQUEST['dir'], ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"tpls_edit_file('" . htmlentities($_REQUEST['dir'] . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities((string) $_REQUEST['dir'], ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities((string) $file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\" rel=\"tpls_edit_file('" . htmlentities($_REQUEST['dir'] . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities((string) $_REQUEST['dir'], ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities((string) $file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\">" . htmlentities((string) $file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
                         } else {
                             //echo "<li class=\"file ext_$ext\">" . htmlentities($file) . "</li>";
                         }
@@ -152,7 +152,7 @@ switch ($op) {
                 </tr>
                 <tr>
                     <td><textarea id="code_mirror" name="templates" rows=24 cols=110>'
-                        . htmlentities($content, ENT_QUOTES | ENT_HTML5)
+                        . htmlentities((string) $content, ENT_QUOTES | ENT_HTML5)
                     . '</textarea></td>
                 </tr>
               </table>';
@@ -161,7 +161,7 @@ switch ($op) {
         echo $xoopsToken->render();
         echo '<input type="hidden" name="path_file" value="' . htmlentities($clean_path_file, ENT_QUOTES | ENT_HTML5)
             .'"><input type="hidden" name="file" value="' . htmlentities(trim($clean_file), ENT_QUOTES | ENT_HTML5)
-            .'"><input type="hidden" name="ext" value="' . htmlentities($ext, ENT_QUOTES | ENT_HTML5) . '"></form>';
+            .'"><input type="hidden" name="ext" value="' . htmlentities((string) $ext, ENT_QUOTES | ENT_HTML5) . '"></form>';
         break;
 
     // Restore backup file
@@ -169,12 +169,12 @@ switch ($op) {
         $extensions = ['.html', '.htm', '.css', '.tpl'];
 
         //check if the file is inside themes directory
-        $valid_dir = stristr(realpath($_REQUEST['path_file']), realpath(XOOPS_ROOT_PATH . '/themes'));
+        $valid_dir = stristr(realpath($_REQUEST['path_file']), (string) realpath(XOOPS_ROOT_PATH . '/themes'));
 
         $old_file = $_REQUEST['path_file'] . '.back';
         $new_file = $_REQUEST['path_file'];
 
-        $extension_verif = strrchr($new_file, '.');
+        $extension_verif = strrchr((string) $new_file, '.');
         if ($valid_dir && in_array($extension_verif, $extensions) && file_exists($old_file) && file_exists($new_file)) {
             if (unlink($new_file)) {
                 if (rename($old_file, $new_file)) {

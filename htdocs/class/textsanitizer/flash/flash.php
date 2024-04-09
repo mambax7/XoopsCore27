@@ -77,14 +77,12 @@ EOF;
     }
 
     /**
-     * @param MyTextSanitizer $myts
-     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)
     {
         $myts->callbackPatterns[] = "/\[(swf|flash)=(['\"]?)([^\"']*),([^\"']*)\\2]([^\"]*)\[\/\\1\]/sU";
-        $myts->callbacks[]        = __CLASS__ . '::myCallback';
+        $myts->callbacks[]        = self::class . '::myCallback';
 
         return true;
     }
@@ -109,7 +107,7 @@ EOF;
             } elseif (!empty($height)) {
                 $width = $dimension[0] * $height / $dimension[1];
             } else {
-                list($width, $height) = [
+                [$width, $height] = [
                     $dimension[0],
                     $dimension[1]
                 ];

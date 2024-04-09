@@ -26,7 +26,7 @@ xoops_load('XoopsFormTextArea');
  */
 class XoopsFormEditor extends XoopsFormTextArea
 {
-    public $editor;
+    public null $editor;
 
     /**
      * Constructor
@@ -38,7 +38,7 @@ class XoopsFormEditor extends XoopsFormTextArea
      * @param string $OnFailure editor to be used if current one failed
      *
      */
-    public function __construct($caption, $name, $configs = null, $nohtml = false, $OnFailure = '')
+    public function __construct(string $caption, string $name, $configs = null, $nohtml = false, $OnFailure = '')
     {
         // Backward compatibility: $name -> editor name; $configs['name'] -> textarea field name
         if (!isset($configs['editor'])) {
@@ -65,7 +65,7 @@ class XoopsFormEditor extends XoopsFormTextArea
             if (method_exists($this->editor, 'renderValidationJS')) {
                 $this->editor->setName($this->getName());
                 $this->editor->setCaption($this->getCaption());
-                $this->editor->_required = $this->isRequired();
+                $this->editor->required = $this->isRequired();
                 $ret                     = $this->editor->renderValidationJS();
 
                 return $ret;
@@ -80,13 +80,13 @@ class XoopsFormEditor extends XoopsFormTextArea
     /**
      * XoopsFormEditor::render()
      *
-     * @return string|null
+     * @return string
      */
-    public function render()
+    public function render(): string
     {
         if (is_object($this->editor)) {
             return $this->editor->render();
         }
-        return null;
+        return '';
     }
 }

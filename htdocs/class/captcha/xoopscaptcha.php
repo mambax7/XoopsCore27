@@ -131,14 +131,13 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::loadHandler()
      *
-     * @param mixed $name
      * @return
      */
-    public function loadHandler($name = null)
+    public function loadHandler(mixed $name = null)
     {
         $name  = !empty($name) ? $name : (empty($this->config['mode']) ? 'text' : $this->config['mode']);
-        $class = 'XoopsCaptcha' . ucfirst($name);
-        if (!empty($this->handler) && get_class($this->handler) == $class) {
+        $class = 'XoopsCaptcha' . ucfirst((string) $name);
+        if (!empty($this->handler) && $this->handler::class == $class) {
             return $this->handler;
         }
         $this->handler = null;
@@ -166,10 +165,9 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::setConfigs()
      *
-     * @param  mixed $configs
      * @return bool
      */
-    public function setConfigs($configs)
+    public function setConfigs(mixed $configs)
     {
         foreach ($configs as $key => $val) {
             $this->setConfig($key, $val);
@@ -181,11 +179,9 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::setConfig()
      *
-     * @param  mixed $name
-     * @param  mixed $val
      * @return bool
      */
-    public function setConfig($name, $val)
+    public function setConfig(mixed $name, mixed $val)
     {
         if (isset($this->$name)) {
             $this->$name = $val;
@@ -202,16 +198,14 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::verify()
      *
-     * @param  mixed $skipMember
-     * @param  mixed $name
      * @return bool
      */
-    public function verify($skipMember = null, $name = null)
+    public function verify(mixed $skipMember = null, mixed $name = null)
     {
         $sessionName = empty($name) ? $this->name : $name;
         $skipMember  = ($skipMember === null) && isset($_SESSION["{$sessionName}_skipmember"]) ? $_SESSION["{$sessionName}_skipmember"] : $skipMember;
-        $maxAttempts = isset($_SESSION["{$sessionName}_maxattempts"]) ? $_SESSION["{$sessionName}_maxattempts"] : $this->config['maxattempts'];
-        $attempt     = isset($_SESSION["{$sessionName}_attempt"]) ? $_SESSION["{$sessionName}_attempt"] : 0;
+        $maxAttempts = $_SESSION["{$sessionName}_maxattempts"] ?? $this->config['maxattempts'];
+        $attempt     = $_SESSION["{$sessionName}_attempt"] ?? 0;
         $is_valid    = false;
         // Skip CAPTCHA verification if disabled
         if (!$this->isActive()) {
@@ -300,7 +294,7 @@ class XoopsCaptcha
 
         $maxAttempts                            = $this->config['maxattempts'];
         $_SESSION[$this->name . '_maxattempts'] = $maxAttempts;
-        $attempt                                = isset($_SESSION[$this->name . '_attempt']) ? $_SESSION[$this->name . '_attempt'] : 0;
+        $attempt                                = $_SESSION[$this->name . '_attempt'] ?? 0;
         $_SESSION[$this->name . '_attempt']     = $attempt;
 
         // Failure on too many attempts
@@ -331,12 +325,11 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::setCode()
      *
-     * @param  mixed $code
      * @return bool
      */
-    public function setCode($code = null)
+    public function setCode(mixed $code = null)
     {
-        $code = ($code === null) ? $this->handler->getCode() : $code;
+        $code ??= $this->handler->getCode();
         if (!empty($code)) {
             $_SESSION[$this->name . '_code'] = $code;
 
@@ -371,18 +364,14 @@ class XoopsCaptcha
  */
 class XoopsCaptchaMethod
 {
-    public $handler;
     public $config;
     public $code;
 
     /**
      * XoopsCaptchaMethod::__construct()
-     *
-     * @param mixed $handler
      */
-    public function __construct($handler = null)
+    public function __construct(public mixed $handler = null)
     {
-        $this->handler = $handler;
     }
 
     /**
@@ -436,10 +425,9 @@ class XoopsCaptchaMethod
     /**
      * XoopsCaptchaMethod::verify()
      *
-     * @param  mixed $sessionName
      * @return bool
      */
-    public function verify($sessionName = null)
+    public function verify(mixed $sessionName = null)
     {
         $is_valid = false;
         if (!empty($_SESSION["{$sessionName}_code"])) {

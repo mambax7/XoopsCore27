@@ -30,7 +30,7 @@ class XoopsFormHiddenToken extends XoopsFormHidden
      * @param string $name "name" attribute
      * @param int    $timeout
      */
-    public function __construct($name = 'XOOPS_TOKEN', $timeout = 0)
+    public function __construct(string $name = 'XOOPS_TOKEN', $timeout = 0)
     {
         parent::__construct($name . '_REQUEST', $GLOBALS['xoopsSecurity']->createToken($timeout, $name));
     }

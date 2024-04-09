@@ -115,7 +115,7 @@ if ($op === 'submit') {
 
     if ($reply == 1) {
         $subject = $pm->getVar('subject', 'E');
-        if (!preg_match('/^' . _RE . '/i', $subject)) {
+        if (!preg_match('/^' . _RE . '/i', (string) $subject)) {
             $subject = _RE . ' ' . $subject;
         }
         $pmform->addElement(new XoopsFormLabel(_PM_TO, $pm_uname));

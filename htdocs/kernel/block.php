@@ -336,7 +336,7 @@ class XoopsBlock extends XoopsObject
         switch ($format) {
             case 's':
                 if ($c_type === 'H') {
-                    return str_replace('{X_SITEURL}', XOOPS_URL . '/', $this->getVar('content', 'n'));
+                    return str_replace('{X_SITEURL}', XOOPS_URL . '/', (string) $this->getVar('content', 'n'));
                 } elseif ($c_type === 'P') {
                     ob_start();
                     echo eval($this->getVar('content', 'n'));
@@ -346,12 +346,12 @@ class XoopsBlock extends XoopsObject
                     return str_replace('{X_SITEURL}', XOOPS_URL . '/', $content);
                 } elseif ($c_type === 'S') {
                     $myts    = \MyTextSanitizer::getInstance();
-                    $content = str_replace('{X_SITEURL}', XOOPS_URL . '/', $this->getVar('content', 'n'));
+                    $content = str_replace('{X_SITEURL}', XOOPS_URL . '/', (string) $this->getVar('content', 'n'));
 
                     return $myts->displayTarea($content, 0, 1);
                 } else {
                     $myts    = \MyTextSanitizer::getInstance();
-                    $content = str_replace('{X_SITEURL}', XOOPS_URL . '/', $this->getVar('content', 'n'));
+                    $content = str_replace('{X_SITEURL}', XOOPS_URL . '/', (string) $this->getVar('content', 'n'));
 
                     return $myts->displayTarea($content, 0, 0);
                 }
@@ -381,7 +381,7 @@ class XoopsBlock extends XoopsObject
                     include_once XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/language/english/blocks.php';
                 }
                 include_once XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file');
-                $options   = explode('|', $this->getVar('options'));
+                $options   = explode('|', (string) $this->getVar('options'));
                 $edit_form = $edit_func($options);
                 if (!$edit_form) {
                     return false;
@@ -497,7 +497,7 @@ class XoopsBlock extends XoopsObject
 
             if (function_exists($show_func)) {
                 // execute the function
-                $options = explode('|', $this->getVar('options'));
+                $options = explode('|', (string) $this->getVar('options'));
                 $block   = $show_func($options);
                 if (!$block) {
                     return false;
@@ -645,15 +645,13 @@ class XoopsBlock extends XoopsObject
      * XoopsBlock::getAllBlocks()
      *
      * @param  string  $rettype
-     * @param  mixed   $side
-     * @param  mixed   $visible
      * @param  string  $orderby
      * @param  integer $isactive
      * @return array
      *
      * @deprecated
      */
-    public function getAllBlocks($rettype = 'object', $side = null, $visible = null, $orderby = 'side,weight,bid', $isactive = 1)
+    public function getAllBlocks($rettype = 'object', mixed $side = null, mixed $visible = null, $orderby = 'side,weight,bid', $isactive = 1)
     {
         $db          = XoopsDatabaseFactory::getDatabaseConnection();
         $ret         = [];
@@ -723,11 +721,9 @@ class XoopsBlock extends XoopsObject
     /**
      * XoopsBlock::getByModule()
      *
-     * @param  mixed $moduleid
-     * @param  mixed $asobject
      * @return array
      */
-    public static function getByModule($moduleid, $asobject = true)
+    public static function getByModule(mixed $moduleid, mixed $asobject = true)
     {
         $moduleid = (int)$moduleid;
         $db       = XoopsDatabaseFactory::getDatabaseConnection();
@@ -757,17 +753,14 @@ class XoopsBlock extends XoopsObject
     /**
      * XoopsBlock::getAllByGroupModule()
      *
-     * @param  mixed   $groupid
      * @param  integer $module_id
-     * @param  mixed   $toponlyblock
-     * @param  mixed   $visible
      * @param  string  $orderby
      * @param  integer $isactive
      * @return array
      *
      * @deprecated (This also appears, dead, in XoopsBlockHandler)
      */
-    public function getAllByGroupModule($groupid, $module_id = 0, $toponlyblock = false, $visible = null, $orderby = 'b.weight, m.block_id', $isactive = 1)
+    public function getAllByGroupModule(mixed $groupid, $module_id = 0, mixed $toponlyblock = false, mixed $visible = null, $orderby = 'b.weight, m.block_id', $isactive = 1)
     {
         $isactive = (int)$isactive;
         $db       = XoopsDatabaseFactory::getDatabaseConnection();
@@ -837,15 +830,13 @@ class XoopsBlock extends XoopsObject
      * XoopsBlock::getNonGroupedBlocks()
      *
      * @param  integer $module_id
-     * @param  mixed   $toponlyblock
-     * @param  mixed   $visible
      * @param  string  $orderby
      * @param  integer $isactive
      * @return array
      *
      * @deprecated
      */
-    public function getNonGroupedBlocks($module_id = 0, $toponlyblock = false, $visible = null, $orderby = 'b.weight, m.block_id', $isactive = 1)
+    public function getNonGroupedBlocks($module_id = 0, mixed $toponlyblock = false, mixed $visible = null, $orderby = 'b.weight, m.block_id', $isactive = 1)
     {
         $db   = XoopsDatabaseFactory::getDatabaseConnection();
         $ret  = [];
@@ -910,14 +901,11 @@ class XoopsBlock extends XoopsObject
     /**
      * XoopsBlock::countSimilarBlocks()
      *
-     * @param  mixed $moduleId
-     * @param  mixed $funcNum
-     * @param  mixed $showFunc
      * @return int
      *
      * @deprecated
      */
-    public function countSimilarBlocks($moduleId, $funcNum, $showFunc = null)
+    public function countSimilarBlocks(mixed $moduleId, mixed $funcNum, mixed $showFunc = null)
     {
         $funcNum  = (int)$funcNum;
         $moduleId = (int)$moduleId;
@@ -928,7 +916,7 @@ class XoopsBlock extends XoopsObject
         $db = XoopsDatabaseFactory::getDatabaseConnection();
         if (isset($showFunc)) {
             // showFunc is set for more strict comparison
-            $sql = sprintf('SELECT COUNT(*) FROM %s WHERE mid = %d AND func_num = %d AND show_func = %s', $db->prefix('newblocks'), $moduleId, $funcNum, $db->quoteString(trim($showFunc)));
+            $sql = sprintf('SELECT COUNT(*) FROM %s WHERE mid = %d AND func_num = %d AND show_func = %s', $db->prefix('newblocks'), $moduleId, $funcNum, $db->quoteString(trim((string) $showFunc)));
         } else {
             $sql = sprintf('SELECT COUNT(*) FROM %s WHERE mid = %d AND func_num = %d', $db->prefix('newblocks'), $moduleId, $funcNum);
         }
@@ -936,7 +924,7 @@ class XoopsBlock extends XoopsObject
         if (!$db->isResultSet($result)) {
             return 0;
         }
-        list($count) = $db->fetchRow($result);
+        [$count] = $db->fetchRow($result);
 
         return (int)$count;
     }

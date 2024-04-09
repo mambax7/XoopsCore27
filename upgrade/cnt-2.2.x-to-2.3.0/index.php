@@ -324,7 +324,7 @@ class Upgrade_220 extends XoopsUpgrade
             );
         }
 
-        list($MaxInstanceId) = $xoopsDB->fetchRow($result);
+        [$MaxInstanceId] = $xoopsDB->fetchRow($result);
 
         // Change custom block mid from 1 to 0
         $sql    = 'UPDATE `' . $xoopsDB->prefix('newblocks_bak') . "` SET mid = 0 WHERE show_func = 'b_system_custom_show'";
@@ -421,7 +421,7 @@ class Upgrade_220 extends XoopsUpgrade
                 \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
             );
         }
-        while (false !== (list($bid, $options) = $xoopsDB->fetchRow($result))) {
+        while (false !== ([$bid, $options] = $xoopsDB->fetchRow($result))) {
             $_options = unserialize($options);
             $content  = $_options[0];
             $type     = $_options[1];
@@ -438,7 +438,7 @@ class Upgrade_220 extends XoopsUpgrade
                 \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
             );
         }
-        while (false !== (list($bid, $_options) = $xoopsDB->fetchRow($result))) {
+        while (false !== ([$bid, $_options] = $xoopsDB->fetchRow($result))) {
             $options = unserialize($_options);
             if (empty($options) || !is_array($options)) {
                 $options = [];

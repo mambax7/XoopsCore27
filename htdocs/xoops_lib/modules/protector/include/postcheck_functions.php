@@ -120,7 +120,7 @@ function protector_postcommon()
 
     // DOS/CRAWLER skipping based on 'dirname' or getcwd()
     $dos_skipping  = false;
-    $skip_dirnames = isset($conf['dos_skipmodules']) ? explode('|', $conf['dos_skipmodules']) : [];
+    $skip_dirnames = isset($conf['dos_skipmodules']) ? explode('|', (string) $conf['dos_skipmodules']) : [];
     if (!is_array($skip_dirnames)) {
         $skip_dirnames = [];
     }
@@ -130,7 +130,7 @@ function protector_postcommon()
         }
     } else {
         foreach ($skip_dirnames as $skip_dirname) {
-            if ($skip_dirname && false !== strpos(getcwd(), $skip_dirname)) {
+            if ($skip_dirname && str_contains(getcwd(), $skip_dirname)) {
                 $dos_skipping = true;
                 break;
             }
@@ -148,7 +148,7 @@ function protector_postcommon()
     }
 
     // check session hi-jacking
-    $masks = isset($conf['session_fixed_topbit']) ? $conf['session_fixed_topbit'] : null;
+    $masks = $conf['session_fixed_topbit'] ?? null;
     if (is_string($masks)) {
         $maskArray = explode('/', $masks);
     } else {

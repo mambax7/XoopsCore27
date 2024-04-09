@@ -42,17 +42,8 @@ class Smarty3TemplateRepair extends ScannerProcess
      */
     protected $replacements = [];
 
-    /**
-     * @var ScannerOutput
-     */
-    private $output;
-
-    /**
-     * @param ScannerOutput $output
-     */
-    public function __construct(ScannerOutput $output)
+    public function __construct(private ScannerOutput $output)
     {
-        $this->output = $output;
         $this->loadPatterns();
     }
 

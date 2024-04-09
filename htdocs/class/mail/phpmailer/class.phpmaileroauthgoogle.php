@@ -26,27 +26,14 @@
  */
 class PHPMailerOAuthGoogle
 {
-    private $oauthUserEmail = '';
-    private $oauthRefreshToken = '';
-    private $oauthClientId = '';
-    private $oauthClientSecret = '';
-
     /**
-     * @param string $UserEmail
-     * @param string $ClientSecret
-     * @param string $ClientId
-     * @param string $RefreshToken
+     * @param string $oauthUserEmail
+     * @param string $oauthClientSecret
+     * @param string $oauthClientId
+     * @param string $oauthRefreshToken
      */
-    public function __construct(
-        $UserEmail,
-        $ClientSecret,
-        $ClientId,
-        $RefreshToken
-    ) {
-        $this->oauthClientId = $ClientId;
-        $this->oauthClientSecret = $ClientSecret;
-        $this->oauthRefreshToken = $RefreshToken;
-        $this->oauthUserEmail = $UserEmail;
+    public function __construct(private $oauthUserEmail, private $oauthClientSecret, private $oauthClientId, private $oauthRefreshToken)
+    {
     }
 
     private function getProvider()

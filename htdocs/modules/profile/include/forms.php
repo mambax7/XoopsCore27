@@ -27,7 +27,7 @@
  *
  * @return object
  */
-function profile_getFieldForm(ProfileField $field, $action = false)
+function profile_getFieldForm(ProfileField $field, mixed $action = false)
 {
     if ($action === false) {
         $action = $_SERVER['REQUEST_URI'];
@@ -200,7 +200,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 break;
 
             case 'longdate':
-                $form->addElement(new XoopsFormTextDateSelect(_PROFILE_AM_DEFAULT, 'field_default', 15, strtotime($field->getVar('field_default', 'e'))));
+                $form->addElement(new XoopsFormTextDateSelect(_PROFILE_AM_DEFAULT, 'field_default', 15, strtotime((string) $field->getVar('field_default', 'e'))));
                 break;
 
             case 'datetime':
@@ -305,7 +305,6 @@ function profile_getFieldOptionForm(ProfileField $field, $action = false)
 /**
  * Get {@link XoopsThemeForm} for registering new users
  *
- * @param XoopsUser $user
  * @param           $profile
  * @param XoopsUser $user {@link XoopsUser} to register
  * @param int       $step Which step we are at
@@ -534,7 +533,7 @@ function profile_getUserForm(XoopsUser $user, ProfileProfile $profile = null, $a
             $key              = isset($all_categories[$fields[$i]->getVar('cat_id')]['cat_weight']) ? (int)($all_categories[$fields[$i]->getVar('cat_id')]['cat_weight'] * $count_fields) + $fields[$i]->getVar('cat_id') : 0;
             $elements[$key][] = $fieldinfo;
             $weights[$key][]  = $fields[$i]->getVar('field_weight');
-            $categories[$key] = isset($all_categories[$fields[$i]->getVar('cat_id')]) ? $all_categories[$fields[$i]->getVar('cat_id')] : null;
+            $categories[$key] = $all_categories[$fields[$i]->getVar('cat_id')] ?? null;
         }
     }
 

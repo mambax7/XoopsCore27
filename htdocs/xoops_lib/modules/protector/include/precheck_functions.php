@@ -51,20 +51,20 @@ function protector_prepare()
 
         // for the environment of (buggy core version && magic_quotes_gpc)
     if (!is_array($reliable_ips) && isset($conf['reliable_ips'])) {
-        $reliable_ips = unserialize(stripslashes($conf['reliable_ips']), ['allowed_classes' => false]);
+        $reliable_ips = unserialize(stripslashes((string) $conf['reliable_ips']), ['allowed_classes' => false]);
         if (!is_array($reliable_ips)) {
             $reliable_ips = [];
         }
     }
     $is_reliable = false;
     foreach ($reliable_ips as $reliable_ip) {
-        if (!empty($reliable_ip) && preg_match('/' . $reliable_ip . '/', $_SERVER['REMOTE_ADDR'])) {
+        if (!empty($reliable_ip) && preg_match('/' . $reliable_ip . '/', (string) $_SERVER['REMOTE_ADDR'])) {
             $is_reliable = true;
         }
     }
 
     // "DB Layer Trapper"
-    $force_override = (strstr($_SERVER['REQUEST_URI'], 'protector/admin/index.php?page=advisory') !== false) ? true : false;
+    $force_override = (str_contains((string) $_SERVER['REQUEST_URI'], 'protector/admin/index.php?page=advisory')) ? true : false;
 
     // $force_override = true ;
     if ($force_override || !empty($conf['enable_dblayertrap'])) {
@@ -125,14 +125,12 @@ function protector_prepare()
 /**
  * Callback for array_walk_recursive to check for phar wrapper
  *
- * @param mixed $item
- * @param mixed $key
  *
  * @return void
  */
-function protector_phar_check($item, $key)
+function protector_phar_check(mixed $item, mixed $key)
 {
-    $check = preg_match('#^\s*phar://#', $item);
+    $check = preg_match('#^\s*phar://#', (string) $item);
     if(1===$check) {
         $protector = Protector::getInstance();
         $protector->message = 'Protector detects attacking actions';

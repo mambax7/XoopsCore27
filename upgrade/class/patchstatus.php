@@ -16,11 +16,10 @@ class PatchStatus
 
     /**
      * PatchStatus constructor.
-     * @param XoopsUpgrade $patch
      */
     public function __construct(XoopsUpgrade $patch)
     {
-        $this->patchClass = get_class($patch);
+        $this->patchClass = $patch::class;
         foreach ($patch->tasks as $task) {
             if (!$patch->{"check_{$task}"}()) {
                 $this->addTask($task);

@@ -35,8 +35,8 @@ $xoops->pathTranslation();
 // Fetch path from query string if path is not set, i.e. through a direct request
 if (!isset($path) && !empty($_SERVER['QUERY_STRING'])) {
     $path      = $_SERVER['QUERY_STRING'];
-    $path      = (substr($path, 0, 1) === '/') ? substr($path, 1) : $path;
-    $path_type = substr($path, 0, strpos($path, '/'));
+    $path      = (str_starts_with((string) $path, '/')) ? substr((string) $path, 1) : $path;
+    $path_type = substr((string) $path, 0, strpos((string) $path, '/'));
     if (!isset($xoops->paths[$path_type])) {
         $path      = 'XOOPS/' . $path;
         $path_type = 'XOOPS';
@@ -53,13 +53,13 @@ $file = realpath($xoops->path($path));
 $dir  = realpath($xoops->paths[$path_type][0]);
 
 //We are not allowing directory travessal either
-if (false === strpos($file, $dir)) {
+if (!str_contains($file, $dir)) {
     header('HTTP/1.0 404 Not Found');
     exit();
 }
 
 //We can't output empty files and php files do not output
-if (empty($file) || strpos($file, '.php') !== false) {
+if (empty($file) || str_contains($file, '.php')) {
     header('HTTP/1.0 404 Not Found');
     exit();
 }
@@ -71,7 +71,7 @@ if (!file_exists($file)) {
     exit();
 }
 
-$ext   = substr($file, strrpos($file, '.') + 1);
+$ext   = substr((string) $file, strrpos((string) $file, '.') + 1);
 $types = include $xoops->path('include/mimetypes.inc.php');
 //$content_type = isset($types[$ext]) ? $types[$ext] : 'text/plain';
 //Do not output garbage
