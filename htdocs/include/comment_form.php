@@ -30,11 +30,18 @@ xoops_load('XoopsFormLoader');
 $cform = new XoopsThemeForm(_CM_POSTCOMMENT, 'commentform', 'comment_post.php', 'post', true);
 if (isset($xoopsModuleConfig['com_rule'])) {
     include_once $GLOBALS['xoops']->path('include/comment_constants.php');
-    $rule_text = match ($xoopsModuleConfig['com_rule']) {
-        XOOPS_COMMENT_APPROVEALL => _CM_COMAPPROVEALL,
-        XOOPS_COMMENT_APPROVEUSER => _CM_COMAPPROVEUSER,
-        default => _CM_COMAPPROVEADMIN,
-    };
+    switch ($xoopsModuleConfig['com_rule']) {
+        case XOOPS_COMMENT_APPROVEALL:
+            $rule_text = _CM_COMAPPROVEALL;
+            break;
+        case XOOPS_COMMENT_APPROVEUSER:
+            $rule_text = _CM_COMAPPROVEUSER;
+            break;
+        case XOOPS_COMMENT_APPROVEADMIN:
+        default:
+            $rule_text = _CM_COMAPPROVEADMIN;
+            break;
+    }
     $cform->addElement(new XoopsFormLabel(_CM_COMRULES, $rule_text));
 }
 
@@ -62,7 +69,7 @@ if (class_exists('XoopsFormEditor')) {
         'cols'   => 90,
         'width'  => '100%',
         'height' => '400px',
-        'editor' => $editor
+        'editor' => $editor,
     ];
     $cform->addElement(new XoopsFormEditor(_CM_MESSAGE, 'com_text', $configs, false, $onfailure = 'textarea'), true);
 } else {
@@ -86,11 +93,13 @@ if (is_object($xoopsUser)) {
         if (!empty($com_id)) {
             include_once $GLOBALS['xoops']->path('include/comment_constants.php');
             $status_select = new XoopsFormSelect(_CM_STATUS, 'com_status', $com_status);
-            $status_select->addOptionArray([
-                                               XOOPS_COMMENT_PENDING => _CM_PENDING,
-                                               XOOPS_COMMENT_ACTIVE  => _CM_ACTIVE,
-                                               XOOPS_COMMENT_HIDDEN  => _CM_HIDDEN
-                                           ]);
+            $status_select->addOptionArray(
+                [
+                    XOOPS_COMMENT_PENDING => _CM_PENDING,
+                    XOOPS_COMMENT_ACTIVE  => _CM_ACTIVE,
+                    XOOPS_COMMENT_HIDDEN  => _CM_HIDDEN,
+                ],
+            );
             $cform->addElement($status_select);
             $button_tray->addElement(new XoopsFormButton('', 'com_dodelete', _DELETE, 'submit'));
         }
@@ -121,8 +130,8 @@ $cform->addElement($option_tray);
 if (!$xoopsUser) {
     $cform->addElement(new XoopsFormCaptcha());
 }
-$cform->addElement(new XoopsFormHidden('com_pid', (int)$com_pid));
-$cform->addElement(new XoopsFormHidden('com_rootid', (int)$com_rootid));
+$cform->addElement(new XoopsFormHidden('com_pid', (int) $com_pid));
+$cform->addElement(new XoopsFormHidden('com_rootid', (int) $com_rootid));
 $cform->addElement(new XoopsFormHidden('com_id', $com_id));
 $cform->addElement(new XoopsFormHidden('com_itemid', $com_itemid));
 $cform->addElement(new XoopsFormHidden('com_order', $com_order));
@@ -137,9 +146,9 @@ if ('system' !== $xoopsModule->getVar('dirname')) {
             // This routine is included from forms accessed via both GET and POST
             $hidden_value = '';
             if (isset($_POST[$extra_param])) {
-                $hidden_value = $myts->stripSlashesGPC(Request::getString($extra_param, '', 'POST'));
+                $hidden_value = Request::getString($extra_param, '', 'POST');
             } elseif (isset($_GET[$extra_param])) {
-                $hidden_value = $myts->stripSlashesGPC(Request::getString($extra_param, '', 'GET'));
+                $hidden_value = Request::getString($extra_param, '', 'GET');
             }
             $cform->addElement(new XoopsFormHidden($extra_param, $hidden_value));
         }

@@ -34,7 +34,7 @@ class XoopsSimpleForm extends XoopsForm
      *
      * @return string
      */
-    public function render(): string
+    public function render()
     {
         $ret = $this->getTitle() . "\n<form name='" . $this->getName() . "' id='" . $this->getName() . "' action='" . $this->getAction() . "' method='" . $this->getMethod() . "'" . $this->getExtra() . ">\n";
         foreach ($this->getElements() as $ele) {

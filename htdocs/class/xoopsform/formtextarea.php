@@ -32,7 +32,7 @@ class XoopsFormTextArea extends XoopsFormElement
      * @var int
      * @access private
      */
-    public int $_cols;
+    public $_cols;
 
     /**
      * number of rows
@@ -40,7 +40,7 @@ class XoopsFormTextArea extends XoopsFormElement
      * @var int
      * @access private
      */
-    public int $_rows;
+    public $_rows;
 
     /**
      * initial content
@@ -48,7 +48,7 @@ class XoopsFormTextArea extends XoopsFormElement
      * @var string
      * @access private
      */
-    public string $_value;
+    public $_value;
 
     /**
      * Constuctor
@@ -59,12 +59,12 @@ class XoopsFormTextArea extends XoopsFormElement
      * @param int    $rows    number of rows
      * @param int    $cols    number of columns
      */
-    public function __construct(string $caption, string $name, string $value = '', int $rows = 5, int $cols = 50)
+    public function __construct($caption, $name, $value = '', $rows = 5, $cols = 50)
     {
         $this->setCaption($caption);
         $this->setName($name);
-        $this->_rows = $rows;
-        $this->_cols = $cols;
+        $this->_rows = (int)$rows;
+        $this->_cols = (int)$cols;
         $this->setValue($value);
     }
 
@@ -73,7 +73,7 @@ class XoopsFormTextArea extends XoopsFormElement
      *
      * @return int
      */
-    public function getRows(): int
+    public function getRows()
     {
         return $this->_rows;
     }
@@ -83,7 +83,7 @@ class XoopsFormTextArea extends XoopsFormElement
      *
      * @return int
      */
-    public function getCols(): int
+    public function getCols()
     {
         return $this->_cols;
     }
@@ -94,15 +94,17 @@ class XoopsFormTextArea extends XoopsFormElement
      * @param  bool $encode To sanitizer the text? Default value should be "true"; however we have to set "false" for backward compatibility
      * @return string
      */
-    public function getValue(bool $encode = false): string
+    public function getValue($encode = false)
     {
         return $encode ? htmlspecialchars($this->_value, ENT_QUOTES | ENT_HTML5) : $this->_value;
     }
 
     /**
      * Set initial content
+     *
+     * @param  string $value
      */
-    public function setValue(string $value): void
+    public function setValue($value)
     {
         $this->_value = $value;
     }
@@ -112,7 +114,7 @@ class XoopsFormTextArea extends XoopsFormElement
      *
      * @return string HTML
      */
-    public function render(): string
+    public function render()
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormTextArea($this);
     }

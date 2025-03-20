@@ -30,7 +30,7 @@ class XoopsFormTextDateSelect extends XoopsFormText
      * @param int $size
      * @param int $value
      */
-    public function __construct(string $caption, string $name, int $size = 15, int $value = 0)
+    public function __construct($caption, $name, $size = 15, $value = 0)
     {
         $value = !is_numeric($value) ? time() : (int)$value;
         $value = ($value == 0) ? time() : $value;
@@ -41,7 +41,7 @@ class XoopsFormTextDateSelect extends XoopsFormText
      * {@inheritDoc}
      * @see XoopsFormText::render()
      */
-    public function render(): string
+    public function render()
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormTextDateSelect($this);
     }

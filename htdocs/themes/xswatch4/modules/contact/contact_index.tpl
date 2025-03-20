@@ -28,6 +28,7 @@
 		<div id="contact-form" class="col">
 
 	<form name="save" id="save" action="<{xoAppUrl 'modules/contact/send.php'}>" onsubmit="return xoopsFormValidate_save();" method="post" enctype="multipart/form-data">
+        <{!empty(securityToken)}><{*//mb*}>
 		<div class="form-group">
 	    	<label for="contact_name"><{$lng_username|default:''}></label>
 	    	<input type="text" class="form-control" id="contact_name" name="contact_name" placeholder="<{$lng_username_info|default:''}>">
@@ -100,7 +101,6 @@
 		<input type="hidden" name="op" id="op" value="save">
 	  	<input type="hidden" name="contact_id" id="contact_id" value="">
 	  	<input type="hidden" name="contact_uid" id="contact_uid" value="<{$contact_uid}>">
-		<{securityToken}>
 
 	  	<{if !empty($recaptcha)}>
 	  	<div class="g-recaptcha" data-sitekey="<{$recaptchakey}>"></div>

@@ -48,7 +48,7 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
     public function connect($selectdb = true)
     {
         if (!extension_loaded('mysqli')) {
-            trigger_error('notrace:mysqli extension not loaded', E_USER_ERROR);
+            throw new \Exception('notrace:mysqli extension not loaded');
 
             return false;
         }
@@ -319,7 +319,7 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
             foreach ($pieces as $query) {
                 // [0] contains the prefixed query
                 // [4] contains unprefixed table name
-                $prefixed_query = SqlUtility::prefixQuery(trim((string) $query), $this->prefix());
+                $prefixed_query = SqlUtility::prefixQuery(trim($query), $this->prefix());
                 if ($prefixed_query != false) {
                     $this->query($prefixed_query[0]);
                 }
@@ -355,34 +355,89 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
     public function getFieldType($result, $offset)
     {
         $typecode = $result->fetch_field_direct($offset)->type;
-        $type = match ($typecode) {
-            MYSQLI_TYPE_DECIMAL, MYSQLI_TYPE_NEWDECIMAL => 'decimal',
-            MYSQLI_TYPE_BIT => 'bit',
-            MYSQLI_TYPE_TINY, MYSQLI_TYPE_CHAR => 'tinyint',
-            MYSQLI_TYPE_SHORT => 'smallint',
-            MYSQLI_TYPE_LONG => 'int',
-            MYSQLI_TYPE_FLOAT => 'float',
-            MYSQLI_TYPE_DOUBLE => 'double',
-            MYSQLI_TYPE_NULL => 'NULL',
-            MYSQLI_TYPE_TIMESTAMP => 'timestamp',
-            MYSQLI_TYPE_LONGLONG => 'bigint',
-            MYSQLI_TYPE_INT24 => 'mediumint',
-            MYSQLI_TYPE_NEWDATE, MYSQLI_TYPE_DATE => 'date',
-            MYSQLI_TYPE_TIME => 'time',
-            MYSQLI_TYPE_DATETIME => 'datetime',
-            MYSQLI_TYPE_YEAR => 'year',
-            MYSQLI_TYPE_INTERVAL => 'interval',
-            MYSQLI_TYPE_ENUM => 'enum',
-            MYSQLI_TYPE_SET => 'set',
-            MYSQLI_TYPE_TINY_BLOB => 'tinyblob',
-            MYSQLI_TYPE_MEDIUM_BLOB => 'mediumblob',
-            MYSQLI_TYPE_LONG_BLOB => 'longblob',
-            MYSQLI_TYPE_BLOB => 'blob',
-            MYSQLI_TYPE_VAR_STRING => 'varchar',
-            MYSQLI_TYPE_STRING => 'char',
-            MYSQLI_TYPE_GEOMETRY => 'geometry',
-            default => 'unknown',
-        };
+        switch ($typecode) {
+            case MYSQLI_TYPE_DECIMAL:
+            case MYSQLI_TYPE_NEWDECIMAL:
+                $type = 'decimal';
+                break;
+            case MYSQLI_TYPE_BIT:
+                $type = 'bit';
+                break;
+            case MYSQLI_TYPE_TINY:
+            case MYSQLI_TYPE_CHAR:
+                $type = 'tinyint';
+                break;
+            case MYSQLI_TYPE_SHORT:
+                $type = 'smallint';
+                break;
+            case MYSQLI_TYPE_LONG:
+                $type = 'int';
+                break;
+            case MYSQLI_TYPE_FLOAT:
+                $type = 'float';
+                break;
+            case MYSQLI_TYPE_DOUBLE:
+                $type = 'double';
+                break;
+            case MYSQLI_TYPE_NULL:
+                $type = 'NULL';
+                break;
+            case MYSQLI_TYPE_TIMESTAMP:
+                $type = 'timestamp';
+                break;
+            case MYSQLI_TYPE_LONGLONG:
+                $type = 'bigint';
+                break;
+            case MYSQLI_TYPE_INT24:
+                $type = 'mediumint';
+                break;
+            case MYSQLI_TYPE_NEWDATE:
+            case MYSQLI_TYPE_DATE:
+                $type = 'date';
+                break;
+            case MYSQLI_TYPE_TIME:
+                $type = 'time';
+                break;
+            case MYSQLI_TYPE_DATETIME:
+                $type = 'datetime';
+                break;
+            case MYSQLI_TYPE_YEAR:
+                $type = 'year';
+                break;
+            case MYSQLI_TYPE_INTERVAL:
+                $type = 'interval';
+                break;
+            case MYSQLI_TYPE_ENUM:
+                $type = 'enum';
+                break;
+            case MYSQLI_TYPE_SET:
+                $type = 'set';
+                break;
+            case MYSQLI_TYPE_TINY_BLOB:
+                $type = 'tinyblob';
+                break;
+            case MYSQLI_TYPE_MEDIUM_BLOB:
+                $type = 'mediumblob';
+                break;
+            case MYSQLI_TYPE_LONG_BLOB:
+                $type = 'longblob';
+                break;
+            case MYSQLI_TYPE_BLOB:
+                $type = 'blob';
+                break;
+            case MYSQLI_TYPE_VAR_STRING:
+                $type = 'varchar';
+                break;
+            case MYSQLI_TYPE_STRING:
+                $type = 'char';
+                break;
+            case MYSQLI_TYPE_GEOMETRY:
+                $type = 'geometry';
+                break;
+            default:
+                $type = 'unknown';
+                break;
+        }
 
         return $type;
     }

@@ -56,7 +56,7 @@ class XoopsDownloader
             mb_http_output('pass');
         }
         header('Content-Type: ' . $this->mimetype);
-        if (preg_match("/MSIE (\d\.\d{1,2})/", (string) $_SERVER['HTTP_USER_AGENT'])) {
+        if (preg_match("/MSIE (\d\.\d{1,2})/", $_SERVER['HTTP_USER_AGENT'])) {
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Expires: 0');
             header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
@@ -93,10 +93,11 @@ class XoopsDownloader
     /**
      * XoopsDownloader::addFileData()
      *
+     * @param mixed   $data
      * @param string  $filename
      * @param integer $time
      */
-    public function addFileData(mixed &$data, $filename, $time = 0)
+    public function addFileData(&$data, $filename, $time = 0)
     {
         // EMPTY
     }
@@ -104,10 +105,11 @@ class XoopsDownloader
     /**
      * XoopsDownloader::addBinaryFileData()
      *
+     * @param mixed   $data
      * @param string  $filename
      * @param integer $time
      */
-    public function addBinaryFileData(mixed &$data, $filename, $time = 0)
+    public function addBinaryFileData(&$data, $filename, $time = 0)
     {
         // EMPTY
     }

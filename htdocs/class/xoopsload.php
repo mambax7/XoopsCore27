@@ -46,10 +46,10 @@ class XoopsLoad
                 'file'        => 'xoopsfile',
                 'model'       => 'xoopsmodelfactory',
                 'calendar'    => 'xoopscalendar',
-                'userutility' => 'xoopsuserutility'
+                'userutility' => 'xoopsuserutility',
             ];
         }
-        $name = strtolower((string) $name);
+        $name = strtolower($name);
         if (in_array($type, ['core', 'class']) && array_key_exists($name, $deprecated)) {
             if (isset($GLOBALS['xoopsLogger'])) {
                 $GLOBALS['xoopsLogger']->addDeprecated("xoops_load('{$name}') is deprecated, use xoops_load('{$deprecated[$name]}')");
@@ -111,7 +111,7 @@ class XoopsLoad
             return true;
         } elseif (file_exists($file = XOOPS_ROOT_PATH . '/class/' . $name . '.php')) {
             include_once $file;
-            $class = 'Xoops' . ucfirst((string) $name);
+            $class = 'Xoops' . ucfirst($name);
             if (class_exists($class)) {
                 return $class;
             } else {
@@ -137,7 +137,7 @@ class XoopsLoad
             return false;
         }
         include_once $file;
-        $class = 'Xoops' . ucfirst((string) $name);
+        $class = 'Xoops' . ucfirst($name);
         if (class_exists($class)) {
             return $class;
         }
@@ -230,9 +230,9 @@ class XoopsLoad
             'xoopsformrenderer'          => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRenderer.php',
             'xoopsformrendererinterface' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererInterface.php',
             'xoopsformrendererlegacy'    => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererLegacy.php',
-            'xoopsformrendererbootstrap3'=> XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap3.php',
-            'xoopsformrendererbootstrap4'=> XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap4.php',
-            'xoopsformrendererbootstrap5'=> XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap5.php',
+            'xoopsformrendererbootstrap3' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap3.php',
+            'xoopsformrendererbootstrap4' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap4.php',
+            'xoopsformrendererbootstrap5' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap5.php',
             'xoopsfilterinput'           => XOOPS_ROOT_PATH . '/class/xoopsfilterinput.php',
             'xoopsrequest'               => XOOPS_ROOT_PATH . '/class/xoopsrequest.php',
             'xoopshttpget'               => XOOPS_ROOT_PATH . '/class/xoopshttpget.php',
@@ -242,10 +242,11 @@ class XoopsLoad
     /**
      * XoopsLoad::loadConfig()
      *
+     * @param mixed $data
      *
      * @return array|bool
      */
-    public function loadConfig(mixed $data = null)
+    public function loadConfig($data = null)
     {
         if (is_array($data)) {
             $configs = $data;
@@ -273,4 +274,4 @@ class XoopsLoad
 /**
  * XMF libraries
  */
-include_once XOOPS_ROOT_PATH . '/class/libraries/vendor/autoload.php';
+include_once XOOPS_TRUST_PATH . '/vendor/autoload.php';

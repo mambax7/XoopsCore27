@@ -35,8 +35,9 @@ class XoopsAuth
 
     /**
      * Authentication Service constructor
+     * @param XoopsDatabase $dao
      */
-    public function __construct(XoopsDatabase $dao = null)
+    public function __construct(?XoopsDatabase $dao = null)
     {
         $this->_dao = $dao;
     }

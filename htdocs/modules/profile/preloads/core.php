@@ -49,7 +49,7 @@ class ProfileCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCoreEdituserStart($args): never
+    public static function eventCoreEdituserStart($args)
     {
         header('location: ./modules/profile/edituser.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
         exit();
@@ -58,7 +58,7 @@ class ProfileCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCoreLostpassStart($args): never
+    public static function eventCoreLostpassStart($args)
     {
         $email = Request::getEmail('email', '', 'GET');
         $email = Request::getEmail('email', $email, 'POST');
@@ -69,7 +69,7 @@ class ProfileCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCoreRegisterStart($args): never
+    public static function eventCoreRegisterStart($args)
     {
         header('location: ./modules/profile/register.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
         exit();
@@ -78,7 +78,7 @@ class ProfileCorePreload extends XoopsPreloadItem
     /**
      * @param $args
      */
-    public static function eventCoreUserinfoStart($args): never
+    public static function eventCoreUserinfoStart($args)
     {
         header('location: ./modules/profile/userinfo.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
         exit();

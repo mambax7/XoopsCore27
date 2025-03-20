@@ -17,6 +17,8 @@
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  */
 
+use Xmf\Request;
+
 $xoopsOption['pagetype'] = 'user';
 include __DIR__ . '/header.php';
 if (!$GLOBALS['xoopsUser']) {
@@ -41,11 +43,11 @@ if (!isset($_POST['submit'])) {
     $config_handler             = xoops_getHandler('config');
     $GLOBALS['xoopsConfigUser'] = $config_handler->getConfigsByCat(XOOPS_CONF_USER);
     $myts                       = \MyTextSanitizer::getInstance();
-    $oldpass                    = isset($_POST['oldpass']) ? $myts->stripSlashesGPC(trim((string) $_POST['oldpass'])) : '';
-    $password                   = isset($_POST['newpass']) ? $myts->stripSlashesGPC(trim((string) $_POST['newpass'])) : '';
-    $vpass                      = isset($_POST['vpass']) ? $myts->stripSlashesGPC(trim((string) $_POST['vpass'])) : '';
+    $oldpass                    = trim(Request::getString('oldpass', '', 'POST'));
+    $password                   = trim(Request::getString('newpass', '', 'POST'));
+    $vpass                      = trim(Request::getString('vpass', '', 'POST'));
     $errors                     = [];
-    if (!password_verify($oldpass, (string) $GLOBALS['xoopsUser']->getVar('pass', 'n'))) {
+    if (!password_verify($oldpass, $GLOBALS['xoopsUser']->getVar('pass', 'n'))) {
         $errors[] = _PROFILE_MA_WRONGPASSWORD;
     }
     if (strlen($password) < $GLOBALS['xoopsConfigUser']['minpass']) {

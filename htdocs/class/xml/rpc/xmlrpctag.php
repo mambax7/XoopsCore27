@@ -27,21 +27,17 @@ class XoopsXmlRpcDocument
     /**
      * XoopsXmlRpcDocument constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @param $tagobj
      */
-    public function add(&$tagobj)
+    public function add($tagobj)
     {
-        $this->_tags[] =& $tagobj;
+        $this->_tags[] = & $tagobj;
     }
 
-    public function render()
-    {
-    }
+    public function render() {}
 }
 
 /**
@@ -80,7 +76,7 @@ class XoopsXmlRpcRequest extends XoopsXmlRpcDocument
      */
     public function __construct($methodName)
     {
-        $this->methodName = trim((string) $methodName);
+        $this->methodName = trim($methodName);
     }
 
     /**
@@ -108,9 +104,7 @@ class XoopsXmlRpcTag
     /**
      * XoopsXmlRpcTag constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @param $text
@@ -119,17 +113,7 @@ class XoopsXmlRpcTag
      */
     public function &encode(&$text)
     {
-        $text = preg_replace(["/\&([a-z\d\#]+)\;/i", "/\&/", "/\#\|\|([a-z\d\#]+)\|\|\#/i"], [
-            "#||\\1||#",
-            '&amp;',
-            "&\\1;"
-        ],                   str_replace([
-                                      '<',
-                                      '>'
-                                         ], [
-                                      '&lt;',
-                                      '&gt;'
-                                         ], (string) $text));
+        $text = preg_replace(["/\&([a-z\d\#]+)\;/i", "/\&/", "/\#\|\|([a-z\d\#]+)\|\|\#/i"], ["#||\\1||#", '&amp;', "&\\1;"], str_replace(['<', '>'], ['&lt;', '&gt;'], $text));
 
         return $text;
     }
@@ -139,7 +123,7 @@ class XoopsXmlRpcTag
      */
     public function setFault($fault = true)
     {
-        $this->_fault = ((int)$fault > 0);// ? true : false;
+        $this->_fault = ((int) $fault > 0);// ? true : false;
     }
 
     /**
@@ -150,9 +134,7 @@ class XoopsXmlRpcTag
         return $this->_fault;
     }
 
-    public function render()
-    {
-    }
+    public function render() {}
 }
 
 /**
@@ -170,7 +152,7 @@ class XoopsXmlRpcFault extends XoopsXmlRpcTag
     public function __construct($code, $extra = null)
     {
         $this->setFault(true);
-        $this->_code  = (int)$code;
+        $this->_code  = (int) $code;
         $this->_extra = isset($extra) ? trim($extra) : '';
     }
 
@@ -179,20 +161,44 @@ class XoopsXmlRpcFault extends XoopsXmlRpcTag
      */
     public function render()
     {
-        $string = match ($this->_code) {
-            101 => 'Invalid server URI',
-            102 => 'Parser parse error',
-            103 => 'Module not found',
-            104 => 'User authentication failed',
-            105 => 'Module API not found',
-            106 => 'Method response error',
-            107 => 'Method not supported',
-            108 => 'Invalid parameter',
-            109 => 'Missing parameters',
-            110 => 'Selected blog application does not exist',
-            111 => 'Method permission denied',
-            default => 'Method response error',
-        };
+        switch ($this->_code) {
+            case 101:
+                $string = 'Invalid server URI';
+                break;
+            case 102:
+                $string = 'Parser parse error';
+                break;
+            case 103:
+                $string = 'Module not found';
+                break;
+            case 104:
+                $string = 'User authentication failed';
+                break;
+            case 105:
+                $string = 'Module API not found';
+                break;
+            case 106:
+                $string = 'Method response error';
+                break;
+            case 107:
+                $string = 'Method not supported';
+                break;
+            case 108:
+                $string = 'Invalid parameter';
+                break;
+            case 109:
+                $string = 'Missing parameters';
+                break;
+            case 110:
+                $string = 'Selected blog application does not exist';
+                break;
+            case 111:
+                $string = 'Method permission denied';
+                break;
+            default:
+                $string = 'Method response error';
+                break;
+        }
         $string .= "\n" . $this->_extra;
 
         return '<fault><value><struct><member><name>faultCode</name><value>' . $this->_code . '</value></member><member><name>faultString</name><value>' . $this->encode($string) . '</value></member></struct></value></fault>';
@@ -211,7 +217,7 @@ class XoopsXmlRpcInt extends XoopsXmlRpcTag
      */
     public function __construct($value)
     {
-        $this->_value = (int)$value;
+        $this->_value = (int) $value;
     }
 
     /**
@@ -235,7 +241,7 @@ class XoopsXmlRpcDouble extends XoopsXmlRpcTag
      */
     public function __construct($value)
     {
-        $this->_value = (float)$value;
+        $this->_value = (float) $value;
     }
 
     /**
@@ -259,7 +265,7 @@ class XoopsXmlRpcBoolean extends XoopsXmlRpcTag
      */
     public function __construct($value)
     {
-        $this->_value = (!empty($value) && $value != false) ? 1 : 0;
+        $this->_value = (!empty($value) && false != $value) ? 1 : 0;
     }
 
     /**
@@ -283,7 +289,7 @@ class XoopsXmlRpcString extends XoopsXmlRpcTag
      */
     public function __construct($value)
     {
-        $this->_value = (string)$value;
+        $this->_value = (string) $value;
     }
 
     /**
@@ -308,9 +314,9 @@ class XoopsXmlRpcDatetime extends XoopsXmlRpcTag
     public function __construct($value)
     {
         if (!is_numeric($value)) {
-            $this->_value = strtotime((string) $value);
+            $this->_value = strtotime($value);
         } else {
-            $this->_value = (int)$value;
+            $this->_value = (int) $value;
         }
     }
 
@@ -335,7 +341,7 @@ class XoopsXmlRpcBase64 extends XoopsXmlRpcTag
      */
     public function __construct($value)
     {
-        $this->_value = base64_encode((string) $value);
+        $this->_value = base64_encode($value);
     }
 
     /**
@@ -357,16 +363,14 @@ class XoopsXmlRpcArray extends XoopsXmlRpcTag
     /**
      * XoopsXmlRpcArray constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @param $tagobj
      */
     public function add(&$tagobj)
     {
-        $this->_tags[] =& $tagobj;
+        $this->_tags[] = & $tagobj;
     }
 
     /**
@@ -395,15 +399,13 @@ class XoopsXmlRpcStruct extends XoopsXmlRpcTag
     /**
      * XoopsXmlRpcStruct constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @param $name
      * @param $tagobj
      */
-    public function add($name, &$tagobj)
+    public function add($name, $tagobj)
     {
         $this->_tags[] = ['name' => $name, 'value' => $tagobj];
     }

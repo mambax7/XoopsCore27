@@ -66,11 +66,13 @@ EOH;
 
         return [
             $code,
-            $javascript
+            $javascript,
         ];
     }
 
     /**
+     * @param MyTextSanitizer $myts
+     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)

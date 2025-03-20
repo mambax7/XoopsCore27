@@ -30,8 +30,7 @@ function smarty_modifier_truncateHtml($string, $count = 80, $etc = '…')
 }
 
 if (!class_exists('\HTMLPurifier_Bootstrap', false)) {
-    require_once XOOPS_PATH . '/modules/protector/library/HTMLPurifier/Bootstrap.php';
-    HTMLPurifier_Bootstrap::registerAutoload();
+    require_once XOOPS_TRUST_PATH . '/vendor/ezyang/htmlpurifier/library/HTMLPurifier.auto.php';
 }
 
 if (!class_exists('\BaseStringHelper', false)) {
@@ -219,8 +218,8 @@ if (!class_exists('\BaseStringHelper', false)) {
                     ++$depth;
                 } elseif ($token instanceof \HTMLPurifier_Token_Text && $totalCount <= $count) { //Text
                     if (false === $encoding) {
-                        preg_match('/^(\s*)/um', (string) $token->data, $prefixSpace) ?: $prefixSpace = ['', ''];
-                        $token->data = $prefixSpace[1] . self::truncateWords(ltrim((string) $token->data), $count - $totalCount, '');
+                        preg_match('/^(\s*)/um', $token->data, $prefixSpace) ?: $prefixSpace = ['', ''];
+                        $token->data = $prefixSpace[1] . self::truncateWords(ltrim($token->data), $count - $totalCount, '');
                         $currentCount = self::countWords($token->data);
                     } else {
                         $token->data = self::truncate($token->data, $count - $totalCount, '', $encoding);
@@ -316,14 +315,14 @@ if (!class_exists('\BaseStringHelper', false)) {
          * @return array
          * @since 2.0.4
          */
-        public static function explode($string, $delimiter = ',', mixed $trim = true, $skipEmpty = false)
+        public static function explode($string, $delimiter = ',', $trim = true, $skipEmpty = false)
         {
             $result = explode($delimiter, $string);
             if ($trim) {
                 if ($trim === true) {
                     $trim = 'trim';
                 } elseif (!is_callable($trim)) {
-                    $trim = fn($v) => trim((string) $v, $trim);
+                    $trim = fn($v) => trim($v, $trim);
                 }
                 $result = array_map($trim, $result);
             }

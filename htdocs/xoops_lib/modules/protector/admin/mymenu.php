@@ -1,4 +1,5 @@
 <?php
+
 // Skip for ORETEKI XOOPS
 if (defined('XOOPS_ORETEKI')) {
     return null;
@@ -50,13 +51,13 @@ if (count($config_handler->getConfigs(new Criteria('conf_modid', $xoopsModule->m
         // system->preferences
         $adminmenu[] = [
             'title' => _PREFERENCES,
-            'link'  => XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $xoopsModule->mid()
+            'link'  => XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $xoopsModule->mid(),
         ];
     }
 }
 
 $mymenu_uri  = empty($mymenu_fake_uri) ? $_SERVER['REQUEST_URI'] : $mymenu_fake_uri;
-$mymenu_link = substr(strstr((string) $mymenu_uri, '/admin/'), 1);
+$mymenu_link = substr(strstr($mymenu_uri, '/admin/'), 1);
 
 // highlight (you can customize the colors)
 foreach (array_keys($adminmenu) as $i) {
@@ -70,7 +71,7 @@ foreach (array_keys($adminmenu) as $i) {
 }
 if (empty($adminmenu_hilighted)) {
     foreach (array_keys($adminmenu) as $i) {
-        if (false !== stripos((string) $mymenu_uri, (string) $adminmenu[$i]['link'])) {
+        if (false !== stripos($mymenu_uri, (string) $adminmenu[$i]['link'])) {
             $adminmenu[$i]['color']          = '#FFCCCC';
             $GLOBALS['altsysAdminPageTitle'] = $adminmenu[$i]['title'];
             break;
@@ -80,7 +81,7 @@ if (empty($adminmenu_hilighted)) {
 
 // link conversion from relative to absolute
 foreach (array_keys($adminmenu) as $i) {
-    if (false === stripos((string) $adminmenu[$i]['link'], XOOPS_URL)) {
+    if (false === stripos($adminmenu[$i]['link'], XOOPS_URL)) {
         $adminmenu[$i]['link'] = XOOPS_URL . "/modules/$mydirname/" . $adminmenu[$i]['link'];
     }
 }
@@ -89,9 +90,8 @@ foreach (array_keys($adminmenu) as $i) {
 // display (you can customize htmls)
 echo "<div style='text-align:left;width:98%;'>" ;
 foreach( $adminmenu as $menuitem ) {
-    echo "<div style='float:left;height:1.5em;'><nobr><a href='".htmlspecialchars((string) $menuitem['link'],ENT_QUOTES | ENT_HTML5)."' style='background-color:{$menuitem['color']};font:normal normal bold 9pt/12pt;'>".htmlspecialchars((string) $menuitem['title'],ENT_QUOTES | ENT_HTML5)."</a> | </nobr></div>\n" ;
+    echo "<div style='float:left;height:1.5em;'><nobr><a href='".htmlspecialchars($menuitem['link'],ENT_QUOTES | ENT_HTML5)."' style='background-color:{$menuitem['color']};font:normal normal bold 9pt/12pt;'>".htmlspecialchars($menuitem['title'],ENT_QUOTES | ENT_HTML5)."</a> | </nobr></div>\n" ;
 }
 echo "</div>\n<hr style='clear:left;display:block;' />\n" ;
 */
 // end hack by Mage
-

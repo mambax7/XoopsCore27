@@ -25,7 +25,7 @@ include_once $GLOBALS['xoops']->path('class/xoopslists.php');
 include $GLOBALS['xoops']->path('class/xoopsformloader.php');
 
 $cform = new XoopsThemeForm(_CM_POSTCOMMENT, 'commentform', 'postcomment.php', 'post', true);
-if (!preg_match('/^' . _RE . '/i', (string) $subject)) {
+if (!preg_match('/^' . _RE . '/i', $subject)) {
     $subject = _RE . ' ' . xoops_substr($subject, 0, 56);
 }
 

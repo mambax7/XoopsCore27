@@ -43,7 +43,7 @@ class XoopsFormDateTime extends XoopsFormElementTray
      *                           SHOW_DATE, false - only show date selector
      *                           SHOW_TIME        - only show time selector
      */
-    public function __construct($caption, $name, $size = 15, int $value = 0, mixed $showtime = true)
+    public function __construct($caption, $name, $size = 15, $value = 0, $showtime = true)
     {
         parent::__construct($caption, '&nbsp;');
         switch ((int) $showtime) {
@@ -60,13 +60,13 @@ class XoopsFormDateTime extends XoopsFormElementTray
                 $displayTime = true;
                 break;
         }
-        $value    = $value;
+        $value    = (int) $value;
         $value    = ($value > 0) ? $value : time();
         $datetime = getdate($value);
         if ($displayDate) {
             $this->addElement(new XoopsFormTextDateSelect('', $name . '[date]', $size, $value));
         } else {
-            $value = !is_numeric($value) ? time() : (int)$value;
+            $value = !is_numeric($value) ? time() : (int) $value;
             $value = ($value == 0) ? time() : $value;
             $displayValue = date(_SHORTDATESTRING, $value);
             $this->addElement(new XoopsFormHidden($name . '[date]', $displayValue));

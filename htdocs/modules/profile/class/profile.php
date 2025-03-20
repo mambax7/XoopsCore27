@@ -164,7 +164,9 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
     /**
      * Insert a field in the database
      *
+     * @param ProfileField $field
      * @param bool         $force
+     *
      * @return bool
      */
     public function insertField(ProfileField $field, $force = false)
@@ -175,7 +177,9 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
     /**
      * Delete a field from the database
      *
+     * @param ProfileField $field
      * @param bool         $force
+     *
      * @return bool
      */
     public function deleteField(ProfileField $field, $force = false)
@@ -351,12 +355,13 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
             $result    = $this->db->query($sql_count);
             if (!$this->db->isResultSet($result)) {
                 throw new \RuntimeException(
-                    \sprintf(_DB_QUERY_ERROR, $sql_count) . $this->db->error(), E_USER_ERROR
+                    \sprintf(_DB_QUERY_ERROR, $sql_count) . $this->db->error(),
+                    E_USER_ERROR,
                 );
             }
             [$count] = $this->db->fetchRow($result);
         }
 
-        return [$users, $profiles, (int)$count];
+        return [$users, $profiles, (int) $count];
     }
 }

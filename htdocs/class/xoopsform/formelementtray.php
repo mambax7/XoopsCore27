@@ -33,16 +33,24 @@ class XoopsFormElementTray extends XoopsFormElement
      * @var array
      * @access private
      */
-    private array $_elements = [];
+    private $_elements = [];
 
     /**
      * required elements
      *
      * @var array
      */
-    public mixed $required = [];
+    public $_required = [];
 
-    protected string $orientation;
+    protected $orientation;
+
+    /**
+     * HTML to seperate the elements
+     *
+     * @var string
+     * @access private
+     */
+    private $_delimeter;
 
     /**
      * constructor
@@ -50,16 +58,13 @@ class XoopsFormElementTray extends XoopsFormElement
      * @param string $caption   Caption for the group.
      * @param string $delimeter HTML to separate the elements
      * @param string $name
-     */
-    public function __construct(string  $caption, /**
-     * HTML to seperate the elements
      *
-     * @access private
      */
-                                            private $delimeter = '&nbsp;', string $name = '')
+    public function __construct($caption, $delimeter = '&nbsp;', $name = '')
     {
         $this->setName($name);
         $this->setCaption($caption);
+        $this->_delimeter = $delimeter;
     }
 
     /**
@@ -67,7 +72,7 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return bool true
      */
-    public function isContainer(): bool
+    public function isContainer()
     {
         return true;
     }
@@ -77,30 +82,31 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return bool
      */
-    public function isRequired(): bool
+    public function isRequired()
     {
-        return !empty($this->required);
+        return !empty($this->_required);
     }
 
     /**
      * Add an element to the group
      *
      * @param XoopsFormElement $formElement {@link XoopsFormElement} to add
+     * @param bool             $required
      *
      */
-    public function addElement(XoopsFormElement $formElement, bool $required = false): void
+    public function addElement(XoopsFormElement $formElement, $required = false)
     {
         $this->_elements[] = $formElement;
         if (!$formElement->isContainer()) {
             if ($required) {
-                $formElement->required = true;
-                $this->required[]      = $formElement;
+                $formElement->_required = true;
+                $this->_required[]      = $formElement;
             }
         } else {
             $required_elements = $formElement->getRequired();
             $count             = count($required_elements);
             for ($i = 0; $i < $count; ++$i) {
-                $this->required[] = &$required_elements[$i];
+                $this->_required[] = &$required_elements[$i];
             }
         }
     }
@@ -110,18 +116,18 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return array array of {@link XoopsFormElement}s
      */
-    public function &getRequired(): array
+    public function &getRequired()
     {
-        return $this->required;
+        return $this->_required;
     }
 
     /**
      * Get an array of the elements in this group
      *
-     * @param bool $recurse get elements recursively?
+     * @param  bool $recurse get elements recursively?
      * @return XoopsFormElement[]  Array of {@link XoopsFormElement} objects.
      */
-    public function &getElements(bool $recurse = false): array
+    public function &getElements($recurse = false)
     {
         if (!$recurse) {
             return $this->_elements;
@@ -148,12 +154,12 @@ class XoopsFormElementTray extends XoopsFormElement
     /**
      * Get the delimiter of this group
      *
-     * @param bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitizer the text?
      * @return string The delimiter
      */
-    public function getDelimeter(bool $encode = false): string
+    public function getDelimeter($encode = false)
     {
-        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->delimeter), ENT_QUOTES | ENT_HTML5) : $this->delimeter;
+        return $encode ? htmlspecialchars(str_replace('&nbsp;', ' ', $this->_delimeter), ENT_QUOTES | ENT_HTML5) : $this->_delimeter;
     }
 
     /**
@@ -165,7 +171,7 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @param string $direction ORIENTATION constant
      */
-    public function setOrientation(string $direction): void
+    public function setOrientation($direction)
     {
         if ($direction !== self::ORIENTATION_VERTICAL) {
             $direction = self::ORIENTATION_HORIZONTAL;
@@ -178,23 +184,23 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * The value will be assigned a default value if not previously set.
      *
-     * The default logic considers the presence of an HTML br tag in delimeter
+     * The default logic considers the presence of an HTML br tag in _delimeter
      * as implying ORIENTATION_VERTICAL for bc
      *
      * @return string either \XoopsFormElementTray::ORIENTATION_HORIZONTAL
      *                    or \XoopsFormElementTray::ORIENTATION_VERTICAL\
     */
-    public function getOrientation(): string
+    public function getOrientation()
     {
         if (!isset($this->orientation)) {
-            if(false !== stripos($this->delimeter, '<br')) {
+            if(false !== stripos($this->_delimeter, '<br')) {
                 $this->orientation = self::ORIENTATION_VERTICAL;
                 // strip tag as renderer should supply the relevant html
             } else {
                 $this->orientation = self::ORIENTATION_HORIZONTAL;
             }
         }
-        $this->delimeter = preg_replace('#<br ?\/?>#i', '', $this->delimeter);
+        $this->_delimeter = preg_replace('#<br ?\/?>#i', '', $this->_delimeter);
         return $this->orientation;
     }
 
@@ -203,7 +209,7 @@ class XoopsFormElementTray extends XoopsFormElement
      *
      * @return string HTML output
      */
-    public function render(): string
+    public function render()
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormElementTray($this);
     }

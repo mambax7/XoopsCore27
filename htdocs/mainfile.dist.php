@@ -39,7 +39,7 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
     // XOOPS Virtual Path (URL)
     // Virtual path to your main XOOPS directory WITHOUT trailing slash
     // Example: define("XOOPS_URL", "http://url_to_xoops_directory");
-    define('XOOPS_URL', 'http://');
+    define('XOOPS_URL', 'https://');
 
     // XOOPS Cookie Domain to specify when creating cookies. May be blank (i.e. for IP address host),
     // full host from XOOPS_URL (i.e. www.example.com) or just the registered domain (i.e. example.com)
@@ -61,9 +61,9 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
         }
         if (DIRECTORY_SEPARATOR !== '/') {
             // IIS6 may double the \ chars
-            $xoopsScriptPath = str_replace(strpos((string) $xoopsScriptPath, "\\\\", 2) ? "\\\\" : DIRECTORY_SEPARATOR, '/', (string) $xoopsScriptPath);
+            $xoopsScriptPath = str_replace(strpos($xoopsScriptPath, "\\\\", 2) ? "\\\\" : DIRECTORY_SEPARATOR, '/', $xoopsScriptPath);
         }
-        if (strcasecmp(substr((string) $xoopsScriptPath, 0, strlen(XOOPS_ROOT_PATH)), str_replace(DIRECTORY_SEPARATOR, '/', XOOPS_ROOT_PATH))) {
+        if (strcasecmp(substr($xoopsScriptPath, 0, strlen(XOOPS_ROOT_PATH)), str_replace(DIRECTORY_SEPARATOR, '/', XOOPS_ROOT_PATH))) {
             exit('XOOPS path check: Script is not inside XOOPS_ROOT_PATH and cannot run.');
         }
     }

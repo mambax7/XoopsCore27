@@ -49,7 +49,7 @@ class xos_kernel_Xoops2
     public function path($url, $virtual = false)
     {
         $path = '';
-        $parts = explode('/', (string) $url, 2);
+        $parts = explode('/', $url, 2);
 
         if (count($parts) < 2) {
             $root = 'www'; // Default root
@@ -79,7 +79,7 @@ class xos_kernel_Xoops2
      */
     public function url($url)
     {
-        return (str_contains((string) $url, '://') ? $url : $this->path($url, true));
+        return (false !== strpos($url, '://') ? $url : $this->path($url, true));
     }
 
     /**
@@ -93,7 +93,7 @@ class xos_kernel_Xoops2
         if ($url === '.') {
             $url = $_SERVER['REQUEST_URI'];
         }
-        $split = explode('?', (string) $url);
+        $split = explode('?', $url);
         if (count($split) > 1) {
             [$url, $query] = $split;
             parse_str($query, $query);
@@ -138,7 +138,7 @@ class xos_kernel_Xoops2
         /**
          * Disable gzip compression if PHP is run under CLI mode and needs to be refactored to work correctly
          */
-        if (empty($_SERVER['SERVER_NAME']) || str_starts_with(PHP_SAPI, 'cli')) {
+        if (empty($_SERVER['SERVER_NAME']) || substr(PHP_SAPI, 0, 3) === 'cli') {
             xoops_setConfigOption('gzip_compression', 0);
         }
 

@@ -54,9 +54,7 @@ class XoopsCache
     /**
      * XoopsCache::__construct()
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Returns a singleton instance
@@ -125,7 +123,7 @@ class XoopsCache
                 $settings = $_this->configs['default'];
             } else {
                 $settings = [
-                    'engine' => 'file'
+                    'engine' => 'file',
                 ];
             }
         }
@@ -212,7 +210,7 @@ class XoopsCache
      * @return boolean True if the data was successfully cached, false on failure
      * @access public
      */
-    public static function write($key, mixed $value, mixed $duration = null)
+    public static function write($key, $value, $duration = null)
     {
         $key    = substr(md5(XOOPS_URL), 0, 8) . '_' . $key;
         $_this  = XoopsCache::getInstance();
@@ -247,7 +245,7 @@ class XoopsCache
         if (!$duration) {
             $duration = $settings['duration'];
         }
-        $duration = is_numeric($duration) ? (int)$duration : strtotime((string) $duration) - time();
+        $duration = is_numeric($duration) ? (int) $duration : strtotime($duration) - time();
 
         if ($duration < 1) {
             return false;
@@ -393,7 +391,7 @@ class XoopsCache
         if (empty($key)) {
             return false;
         }
-        $key = str_replace(['/', '.'], '_', (string)$key);
+        $key = str_replace(['/', '.'], '_', (string) $key);
 
         return $key;
     }
@@ -426,10 +424,13 @@ class XoopsCacheEngine
      */
     public function init($settings = [])
     {
-        $this->settings = array_merge([
-                                          'duration'    => 31556926,
-                                          'probability' => 100
-                                      ], $settings);
+        $this->settings = array_merge(
+            [
+                'duration'    => 31556926,
+                'probability' => 100,
+            ],
+            $settings,
+        );
 
         return true;
     }
@@ -441,9 +442,7 @@ class XoopsCacheEngine
      *
      * @access public
      */
-    public function gc()
-    {
-    }
+    public function gc() {}
 
     /**
      * Write value for a key into cache
@@ -454,9 +453,9 @@ class XoopsCacheEngine
      * @return boolean True if the data was successfully cached, false on failure
      * @access public
      */
-    public function write($key, mixed $value, mixed $duration = null)
+    public function write($key, $value, $duration = null)
     {
-        trigger_error(sprintf(__('Method write() not implemented in %s', true), static::class), E_USER_ERROR);
+        trigger_error(sprintf(__('Method write() not implemented in %s', true), get_class($this)), E_USER_ERROR);
     }
 
     /**
@@ -468,7 +467,7 @@ class XoopsCacheEngine
      */
     public function read($key)
     {
-        trigger_error(sprintf(__('Method read() not implemented in %s', true), static::class), E_USER_ERROR);
+        trigger_error(sprintf(__('Method read() not implemented in %s', true), get_class($this)), E_USER_ERROR);
     }
 
     /**
@@ -478,9 +477,7 @@ class XoopsCacheEngine
      * @return boolean True if the value was successfully deleted, false if it didn't exist or couldn't be removed
      * @access public
      */
-    public function delete($key)
-    {
-    }
+    public function delete($key) {}
 
     /**
      * Delete all keys from the cache
@@ -489,9 +486,7 @@ class XoopsCacheEngine
      * @return boolean True if the cache was successfully cleared, false otherwise
      * @access public
      */
-    public function clear($check)
-    {
-    }
+    public function clear($check) {}
 
     /**
      * Cache Engine settings

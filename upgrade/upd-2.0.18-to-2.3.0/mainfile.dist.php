@@ -56,9 +56,9 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
         }
         if (DIRECTORY_SEPARATOR !== '/') {
             // IIS6 may double the \ chars
-            $xoopsScriptPath = str_replace(strpos((string) $xoopsScriptPath, "\\\\", 2) ? "\\\\" : DIRECTORY_SEPARATOR, '/', (string) $xoopsScriptPath);
+            $xoopsScriptPath = str_replace(strpos($xoopsScriptPath, "\\\\", 2) ? "\\\\" : DIRECTORY_SEPARATOR, '/', $xoopsScriptPath);
         }
-        if (strcasecmp(substr((string) $xoopsScriptPath, 0, strlen(XOOPS_ROOT_PATH)), str_replace(DIRECTORY_SEPARATOR, '/', XOOPS_ROOT_PATH))) {
+        if (strcasecmp(substr($xoopsScriptPath, 0, strlen(XOOPS_ROOT_PATH)), str_replace(DIRECTORY_SEPARATOR, '/', XOOPS_ROOT_PATH))) {
             exit('XOOPS path check: Script is not inside XOOPS_ROOT_PATH and cannot run.');
         }
     }

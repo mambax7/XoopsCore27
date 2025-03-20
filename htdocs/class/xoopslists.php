@@ -68,7 +68,7 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
                 '9.5'  => _TZ_GMTP95,
                 '10'   => _TZ_GMTP10,
                 '11'   => _TZ_GMTP11,
-                '12'   => _TZ_GMTP12
+                '12'   => _TZ_GMTP12,
             ];
 
             return $time_zone_list;
@@ -107,15 +107,15 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
         {
             $ignored = [
                 'cvs',
-                '_darcs'
+                '_darcs',
             ];
             $list    = [];
-            if (!str_ends_with((string) $dirname, '/')) {
+            if (substr($dirname, -1) !== '/') {
                 $dirname .= '/';
             }
             if ($handle = opendir($dirname)) {
                 while ($file = readdir($handle)) {
-                    if (str_starts_with($file, '.') || in_array(strtolower($file), $ignored)) {
+                    if (substr($file, 0, 1) === '.' || in_array(strtolower($file), $ignored)) {
                         continue;
                     }
                     if (is_dir($dirname . $file)) {
@@ -139,8 +139,8 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
         public static function getFileListAsArray($dirname, $prefix = '')
         {
             $filelist = [];
-            if (str_ends_with((string) $dirname, '/')) {
-                $dirname = substr((string) $dirname, 0, -1);
+            if (substr($dirname, -1) === '/') {
+                $dirname = substr($dirname, 0, -1);
             }
             if (is_dir($dirname) && $handle = opendir($dirname)) {
                 while (false !== ($file = readdir($handle))) {
@@ -170,7 +170,7 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
         {
             $filelist = [];
 
-            $extToLower = fn($ext) => strtolower((string) $ext);
+            $extToLower = fn($ext) => strtolower($ext);
 
             $extensionList = array_map($extToLower, $extensions);
 
@@ -558,7 +558,7 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
                 'ZA' => _COUNTRY_ZA,
                 'ZM' => _COUNTRY_ZM,
                 'ZR' => _COUNTRY_ZR,    //  Not listed in ISO 3166
-                'ZW' => _COUNTRY_ZW
+                'ZW' => _COUNTRY_ZW,
             ];
             asort($country_list);
             reset($country_list);
@@ -633,7 +633,7 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
                 'tt'         => '&lt;tt&gt;',
                 'u'          => '&lt;u&gt;',
                 'ul'         => '&lt;ul&gt;',
-                'var'        => '&lt;var&gt;'
+                'var'        => '&lt;var&gt;',
             ];
             asort($html_list);
             reset($html_list);
@@ -656,7 +656,8 @@ if (!defined('XOOPS_LISTS_INCLUDED')) {
             $result = $db->query($sql);
             if (!$db->isResultSet($result)) {
                 throw new \RuntimeException(
-                    \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+                    \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+                    E_USER_ERROR,
                 );
             }
             while (false !== ($myrow = $db->fetchArray($result))) {

@@ -79,7 +79,7 @@ class Protector_postcommon_post_language_match extends ProtectorFilterAbstract
         'german'       => 'A-Za-zÄäÉéÖöÜüß',
         'greek'        => '\p{Greek}',
         'hebrew'       => '\p{Hebrew}',
-        'hungarian'    => '\p{Latin}',
+        'hungarian'    => 'A-Za-zÁáÉéÍíÓóÖöŐőÚúÜüŰű',
         'italian'      => 'A-IL-VZa-il-vzÀÈÉÌÒÙàèéìòù',
         'japanese'     => '\p{Han}\p{Hiragana}\p{Katakana}',
         'korean'       => '\p{Hangul}',
@@ -140,7 +140,7 @@ class Protector_postcommon_post_language_match extends ProtectorFilterAbstract
         $uid = is_object($xoopsUser) ? $xoopsUser->uid() : 0;
 
         // skip register.php and edituser.php updates (your name is your name)
-        if (in_array(basename((string) $_SERVER['SCRIPT_FILENAME']), $this->skipThese)) {
+        if (in_array(basename($_SERVER['SCRIPT_FILENAME']), $this->skipThese)) {
             return true;
         }
 
@@ -168,7 +168,7 @@ class Protector_postcommon_post_language_match extends ProtectorFilterAbstract
 
         $reduced = preg_replace('/[\p{Common}' . $range . ']+/u', '', $testString);
 
-        $remainingLength = (float) mb_strlen((string) $reduced, 'UTF-8');
+        $remainingLength = (float) mb_strlen($reduced, 'UTF-8');
         $fullLength = (float) mb_strlen($testString, 'UTF-8');
         $percent = ($fullLength > 0) ? $remainingLength / $fullLength : 0.0;
 

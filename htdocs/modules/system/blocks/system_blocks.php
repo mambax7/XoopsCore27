@@ -139,7 +139,7 @@ function b_system_main_show()
                 foreach ($sublinks as $sublink) {
                     $block['modules'][$i]['sublinks'][] = [
                         'name' => $sublink['name'],
-                        'url'  => XOOPS_URL . '/modules/' . $modules[$i]->getVar('dirname') . '/' . $sublink['url']
+                        'url'  => XOOPS_URL . '/modules/' . $modules[$i]->getVar('dirname') . '/' . $sublink['url'],
                     ];
                 }
             } else {
@@ -282,11 +282,11 @@ function b_system_waiting_show()
     }
 
     // waiting content for TDMDownloads
-    if (xoops_isActiveModule('TDMdownloads') && $module_handler->getCount(new Criteria('dirname', 'TDMDownloads'))) {
+    if (xoops_isActiveModule('tdmdownloads') && $module_handler->getCount(new Criteria('dirname', 'tdmdownloads'))) {
         $sql = 'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('tdmdownloads_downloads') . ' WHERE status=0';
         $result = $xoopsDB->query($sql);
         if ($xoopsDB->isResultSet($result)) {
-            $block['modules'][8]['adminlink'] = XOOPS_URL . '/modules/TDMDownloads/admin/downloads.php?op=list&statut_display=0';
+            $block['modules'][8]['adminlink'] = XOOPS_URL . '/modules/tdmdownloads/admin/downloads.php?op=list&statut_display=0';
             [$block['modules'][8]['pendingnum']] = $xoopsDB->fetchRow($result);
             $block['modules'][8]['lang_linkname'] = _MB_SYSTEM_TDMDOWNLOADS;
         }
@@ -313,7 +313,9 @@ function b_system_waiting_show()
             $block['modules'][10]['lang_linkname'] = _MB_SYSTEM_SMARTSECTION;
         }
     }
-	$GLOBALS['xoopsLogger']->addDeprecated("Block 'Waiting Contents' is deprecated since XOOPS 2.5.11, please use waiting module");
+    if (count($block) > 0) {
+        $GLOBALS['xoopsLogger']->addDeprecated("Block 'Waiting Contents' is deprecated since XOOPS 2.5.11, please use Waiting module");
+    }
     return $block;
 }
 
@@ -345,7 +347,7 @@ function b_system_info_show($options)
                         'id'      => $userinfo['uid'],
                         'name'    => $myts->htmlSpecialChars($userinfo['uname']),
                         'msglink' => "<a href=\"javascript:openWithSelfMain('" . XOOPS_URL . '/pmlite.php?send2=1&amp;to_userid=' . $userinfo['uid'] . "','pmlite',565,500);\"><img src=\"" . XOOPS_URL . "/images/icons/pm_small.gif\" border=\"0\" width=\"27\" height=\"17\" alt=\"\" /></a>",
-                        'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar']
+                        'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar'],
                     ];
                 } else {
                     if ($userinfo['user_viewemail']) {
@@ -353,14 +355,14 @@ function b_system_info_show($options)
                             'id'      => $userinfo['uid'],
                             'name'    => $myts->htmlSpecialChars($userinfo['uname']),
                             'msglink' => '<a href="mailto:' . $userinfo['email'] . '"><img src="' . XOOPS_URL . '/images/icons/em_small.gif" border="0" width="16" height="14" alt="" /></a>',
-                            'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar']
+                            'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar'],
                         ];
                     } else {
                         $block['groups'][$i]['users'][] = [
                             'id'      => $userinfo['uid'],
                             'name'    => $myts->htmlSpecialChars($userinfo['uname']),
                             'msglink' => '&nbsp;',
-                            'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar']
+                            'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar'],
                         ];
                     }
                 }
@@ -549,7 +551,7 @@ function b_system_notification_show()
                 'title'       => $event['title'],
                 'caption'     => $event['caption'],
                 'description' => $event['description'],
-                'subscribed'  => $subscribed
+                'subscribed'  => $subscribed,
             ];
         }
         $block['categories'][$category['name']] = $section;

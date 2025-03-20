@@ -70,7 +70,7 @@ class Upgrade_2511 extends XoopsUpgrade
     public function check_cleancache()
     {
         if (!array_key_exists($this->cleanCacheKey, $_SESSION)
-            || $_SESSION[$this->cleanCacheKey]===false) {
+            || false === $_SESSION[$this->cleanCacheKey]) {
             return false;
         }
         return true;
@@ -86,7 +86,7 @@ class Upgrade_2511 extends XoopsUpgrade
         require_once XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
         $maintenance = new SystemMaintenance();
         $result  = $maintenance->CleanCache([1, 2, 3]);
-        if ($result===true) {
+        if (true === $result) {
             $_SESSION[$this->cleanCacheKey] = true;
         }
         return $result;
@@ -96,8 +96,10 @@ class Upgrade_2511 extends XoopsUpgrade
      * Determine if columns are declared mediumint, and if
      * so, queue ddl to alter to int.
      *
+     * @param Tables   $migrate
      * @param string   $bannerTableName
      * @param string[] $bannerColumnNames array of columns to check
+     *
      * @return integer count of queue items added
      */
     protected function fromMediumToInt(Tables $migrate, $bannerTableName, $bannerColumnNames)
@@ -106,7 +108,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $count = 0;
         foreach ($bannerColumnNames as $column) {
             $attributes = $migrate->getColumnAttributes($bannerTableName, $column);
-            if (str_starts_with(trim($attributes), 'mediumint')) {
+            if (0 === strpos(trim($attributes), 'mediumint')) {
                 $count++;
                 $migrate->alterColumn($bannerTableName, $column, 'int(10) UNSIGNED NOT NULL DEFAULT \'0\'');
             }
@@ -127,7 +129,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $migrate = new Tables();
         $count = $this->fromMediumToInt($migrate, $this->bannerTableName, $this->bannerColumnNames);
 
-        return $count==0;
+        return 0 == $count;
     }
 
     /**
@@ -147,12 +149,12 @@ class Upgrade_2511 extends XoopsUpgrade
                 'Migration of %s table failed. Error: %s - %s' .
                 $this->bannerTableName,
                 $migrate->getLastErrNo(),
-                $migrate->getLastError()
+                $migrate->getLastError(),
             );
             return false;
         }
 
-        return $count!==0;
+        return 0 !== $count;
     }
 
     /**
@@ -170,7 +172,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $sql = sprintf(
             'SELECT count(*) FROM `%s` '
             . "WHERE `conf_id` = 64 AND `confop_name` = 'qmail'",
-            $db->escape($table)
+            $db->escape($table),
         );
 
         /** @var mysqli_result $result */
@@ -199,7 +201,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $migrate->useTable('configoption');
         $migrate->insert(
             'configoption',
-            ['confop_name' => 'qmail', 'confop_value' => 'qmail', 'conf_id' => 64]
+            ['confop_name' => 'qmail', 'confop_value' => 'qmail', 'conf_id' => 64],
         );
         return $migrate->executeQueue(true);
     }
@@ -275,8 +277,9 @@ class Upgrade_2511 extends XoopsUpgrade
             return false;
         }
         while (false !== ($entry = $directory->read())) {
-            if (!str_contains($entry, '.dist.')
-                && str_starts_with($entry, 'config.') && str_ends_with($entry, '.php')) {
+            if (false === strpos($entry, '.dist.')
+                && 0 === strpos($entry, 'config.')
+                && '.php' === substr($entry, -4)) {
                 $src = $sourcePath . $entry;
                 $dest = $destinationPath . $entry;
                 $status = $this->copyFile($src, $dest);
@@ -305,12 +308,12 @@ class Upgrade_2511 extends XoopsUpgrade
         $migrate->useTable($tableName);
         $count = 0;
         $attributes = $migrate->getColumnAttributes($tableName, $columnName);
-        if (str_starts_with(trim($attributes), 'smallint')) {
+        if (0 === strpos(trim($attributes), 'smallint')) {
             $count++;
             $migrate->alterColumn($tableName, $columnName, 'int(10) UNSIGNED NOT NULL');
         }
 
-        return $count==0;
+        return 0 == $count;
     }
 
     /**
@@ -327,7 +330,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $migrate->useTable($tableName);
         $count = 0;
         $attributes = $migrate->getColumnAttributes($tableName, $columnName);
-        if (str_starts_with(trim($attributes), 'smallint')) {
+        if (0 === strpos(trim($attributes), 'smallint')) {
             $count++;
             $migrate->alterColumn($tableName, $columnName, 'int(10) UNSIGNED NOT NULL AUTO_INCREMENT');
         }
@@ -338,12 +341,12 @@ class Upgrade_2511 extends XoopsUpgrade
                 'Migration of %s table failed. Error: %s - %s' .
                 $tableName,
                 $migrate->getLastErrNo(),
-                $migrate->getLastError()
+                $migrate->getLastError(),
             );
             return false;
         }
 
-        return $count!==0;
+        return 0 !== $count;
     }
     //configend
 
@@ -531,6 +534,7 @@ class Upgrade_2511 extends XoopsUpgrade
     /**
      * Walk list of directories in $pathsToCheck
      *
+     * @param \Closure $onFound
      *
      * @return bool
      */
@@ -554,6 +558,7 @@ class Upgrade_2511 extends XoopsUpgrade
      * in the supplied path.
      *
      * @param string   $startingPath
+     * @param \Closure $onFound
      *
      * @return false|int false if onFound returned false (don't continue) else count of matches
      */
@@ -587,8 +592,10 @@ class Upgrade_2511 extends XoopsUpgrade
      * Determine if columns are declared smallint, and if
      * so, queue ddl to alter to varchar.
      *
+     * @param Tables   $migrate
      * @param string   $modulesTableName
      * @param string[] $modulesColumnNames  array of columns to check
+     *
      * @return integer count of queue items added
      */
     protected function fromSmallintToVarchar(Tables $migrate, $modulesTableName, $modulesColumnNames)
@@ -597,7 +604,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $count = 0;
         foreach ($modulesColumnNames as $column) {
             $attributes = $migrate->getColumnAttributes($modulesTableName, $column);
-            if (is_string($attributes) && str_starts_with(trim($attributes), 'smallint')) {
+            if (is_string($attributes) && 0 === strpos(trim($attributes), 'smallint')) {
                 $count++;
                 $migrate->alterColumn($modulesTableName, $column, 'varchar(32) NOT NULL DEFAULT \'\'');
             }
@@ -617,7 +624,7 @@ class Upgrade_2511 extends XoopsUpgrade
     {
         $migrate = new Tables();
         $count = $this->fromSmallintToVarchar($migrate, $this->modulesTableName, $this->modulesColumnNames);
-        return $count==0;
+        return 0 == $count;
     }
 
     /**
@@ -637,7 +644,7 @@ class Upgrade_2511 extends XoopsUpgrade
                 'Migration of %s table failed. Error: %s - %s' .
                 $this->modulesTableName,
                 $migrate->getLastErrNo(),
-                $migrate->getLastError()
+                $migrate->getLastError(),
             );
             return false;
         }
@@ -657,7 +664,7 @@ class Upgrade_2511 extends XoopsUpgrade
         }
         [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
 
-        return ($count != 0);
+        return (0 != $count);
     }
 
 
@@ -672,11 +679,11 @@ class Upgrade_2511 extends XoopsUpgrade
         $dbm = new Db_manager();
         $time = time();
         foreach ($modversion['templates'] as $tplfile) {
-            if ((isset($tplfile['type']) && $tplfile['type'] === 'module') || !isset($tplfile['type'])) {
+            if ((isset($tplfile['type']) && 'module' === $tplfile['type']) || !isset($tplfile['type'])) {
 
                 $filePath = XOOPS_ROOT_PATH . '/modules/system/templates/' . $tplfile['file'];
                 if ($fp = fopen($filePath, 'r')) {
-                    $newtplid = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes((string) $tplfile['file']) . "', '" . addslashes((string) $tplfile['description']) . "', " . $time . ', ' . $time . ", 'module')");
+                    $newtplid = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", 'module')");
                     $tplsource = fread($fp, filesize($filePath));
                     fclose($fp);
                     $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");
@@ -699,7 +706,7 @@ class Upgrade_2511 extends XoopsUpgrade
         }
         [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
 
-        return ($count != 0);
+        return (0 != $count);
     }
 
     /**
@@ -712,8 +719,8 @@ class Upgrade_2511 extends XoopsUpgrade
         $time = time();
         foreach ($modversion['templates'] as $tplfile) {
             // Admin templates
-            if (isset($tplfile['type']) && $tplfile['type'] === 'admin' && $fp = fopen('../modules/system/templates/admin/' . $tplfile['file'], 'r')) {
-                $newtplid  = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes((string) $tplfile['file']) . "', '" . addslashes((string) $tplfile['description']) . "', " . $time . ', ' . $time . ", 'admin')");
+            if (isset($tplfile['type']) && 'admin' === $tplfile['type'] && $fp = fopen('../modules/system/templates/admin/' . $tplfile['file'], 'r')) {
+                $newtplid  = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", 'admin')");
                 $tplsource = fread($fp, filesize('../modules/system/templates/admin/' . $tplfile['file']));
                 fclose($fp);
                 $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");
@@ -752,7 +759,7 @@ class Upgrade_2511 extends XoopsUpgrade
             'Config_File.class.php',
             'debug.tpl',
             'Smarty.class.php',
-            'Smarty_Compiler.class.php'
+            'Smarty_Compiler.class.php',
         ];
 
         // Loop through each item and delete it
@@ -798,7 +805,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $sql                   = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
         if ($result = $GLOBALS['xoopsDB']->queryF($sql)) {
             [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
-            if ($count == 1) {
+            if (1 == $count) {
                 $notification_method = true;
             }
         }
@@ -811,7 +818,7 @@ class Upgrade_2511 extends XoopsUpgrade
             }
             $config_id = $GLOBALS['xoopsDB']->getInsertId();
 
-            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)'. ' VALUES'
+            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES'
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE', '0', {$config_id}),"
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_PM', '1', {$config_id}),"
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL', '2', {$config_id})";

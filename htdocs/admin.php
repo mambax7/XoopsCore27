@@ -32,7 +32,7 @@ xoops_cp_header();
 /**
  * Error warning messages
  */
- // Define Stylesheet
+// Define Stylesheet
 $xoTheme->addStylesheet(XOOPS_URL . '/modules/system/css/admin.css');
 if (!isset($xoopsConfig['admin_warnings_enable']) || $xoopsConfig['admin_warnings_enable']) {
     // recommend the lowest security supported version at time of XOOPS release
@@ -43,12 +43,12 @@ if (!isset($xoopsConfig['admin_warnings_enable']) || $xoopsConfig['admin_warning
         echo '<br>';
     }
 
-	$installDirs = glob(XOOPS_ROOT_PATH . '/install*', GLOB_ONLYDIR);
+    $installDirs = glob(XOOPS_ROOT_PATH . '/install*', GLOB_ONLYDIR);
     if (!empty($installDirs)) {
         foreach ($installDirs as $installDir) {
             xoops_error(sprintf(_AD_WARNINGINSTALL, $installDir));
-        echo '<br>';
-    }
+            echo '<br>';
+        }
     }
 
     if (is_writable(XOOPS_ROOT_PATH . '/mainfile.php')) {
@@ -70,12 +70,12 @@ if (!isset($xoopsConfig['admin_warnings_enable']) || $xoopsConfig['admin_warning
     }
 
     //www fits inside www_private, lets add a trailing slash to make sure it doesn't
-    if (str_contains(XOOPS_PATH . '/', XOOPS_ROOT_PATH . '/') || str_contains(XOOPS_PATH . '/', $_SERVER['DOCUMENT_ROOT'] . '/')) {
+    if (strpos(XOOPS_PATH . '/', XOOPS_ROOT_PATH . '/') !== false || strpos(XOOPS_PATH . '/', $_SERVER['DOCUMENT_ROOT'] . '/') !== false) {
         xoops_error(sprintf(_AD_WARNINGXOOPSLIBINSIDE, XOOPS_PATH));
         echo '<br>';
     }
 
-    if (str_contains(XOOPS_VAR_PATH . '/', XOOPS_ROOT_PATH . '/') || str_contains(XOOPS_VAR_PATH . '/', $_SERVER['DOCUMENT_ROOT'] . '/')) {
+    if (strpos(XOOPS_VAR_PATH . '/', XOOPS_ROOT_PATH . '/') !== false || strpos(XOOPS_VAR_PATH . '/', $_SERVER['DOCUMENT_ROOT'] . '/') !== false) {
         xoops_error(sprintf(_AD_WARNINGXOOPSLIBINSIDE, XOOPS_VAR_PATH));
         echo '<br>';
     }
@@ -117,12 +117,12 @@ if (!empty($_GET['xoopsorgnews'])) {
             } else {
                 $rss2parser = new XoopsXmlRss2Parser($rssdata);
                 if (false !== $rss2parser->parse()) {
-                    $_items =& $rss2parser->getItems();
+                    $_items = & $rss2parser->getItems();
                     $count = count($_items);
                     for ($i = 0; $i < $count; ++$i) {
                         $_items[$i]['title'] = XoopsLocal::convert_encoding($_items[$i]['title'], _CHARSET, 'UTF-8');
                         $_items[$i]['description'] = XoopsLocal::convert_encoding($_items[$i]['description'], _CHARSET, 'UTF-8');
-                        $items[(string)strtotime((string) $_items[$i]['pubdate']) . '-' . (string)($cnt++)] = $_items[$i];
+                        $items[(string) strtotime($_items[$i]['pubdate']) . '-' . (string) ($cnt++)] = $_items[$i];
                     }
                 } else {
                     echo $rss2parser->getErrors();
@@ -135,16 +135,16 @@ if (!empty($_GET['xoopsorgnews'])) {
     if ($items != '') {
         $ret = '<table id="xoopsorgnews" class="outer width100">';
         foreach (array_keys($items) as $i) {
-            $ret .= '<tr class="head"><td><a href="' . htmlspecialchars(trim((string) $items[$i]['link']), ENT_QUOTES | ENT_HTML5) . '" rel="external">';
-            $ret .= htmlspecialchars((string) $items[$i]['title'], ENT_QUOTES | ENT_HTML5) . '</a> (' . htmlspecialchars((string) $items[$i]['pubdate'], ENT_QUOTES | ENT_HTML5) . ')</td></tr>';
+            $ret .= '<tr class="head"><td><a href="' . htmlspecialchars(trim($items[$i]['link']), ENT_QUOTES | ENT_HTML5) . '" rel="external">';
+            $ret .= htmlspecialchars($items[$i]['title'], ENT_QUOTES | ENT_HTML5) . '</a> (' . htmlspecialchars($items[$i]['pubdate'], ENT_QUOTES | ENT_HTML5) . ')</td></tr>';
             if ($items[$i]['description'] != '') {
                 $ret .= '<tr><td class="odd">' . $items[$i]['description'];
                 if (!empty($items[$i]['guid'])) {
-                    $ret .= '&nbsp;&nbsp;<a href="' . htmlspecialchars((string) $items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external" title="">' . _MORE . '</a>';
+                    $ret .= '&nbsp;&nbsp;<a href="' . htmlspecialchars($items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external" title="">' . _MORE . '</a>';
                 }
                 $ret .= '</td></tr>';
             } elseif ($items[$i]['guid'] != '') {
-                $ret .= '<tr><td class="even aligntop"></td><td colspan="2" class="odd"><a href="' . htmlspecialchars((string) $items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external">' . _MORE . '</a></td></tr>';
+                $ret .= '<tr><td class="even aligntop"></td><td colspan="2" class="odd"><a href="' . htmlspecialchars($items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external">' . _MORE . '</a></td></tr>';
             }
         }
         $ret .= '</table>';

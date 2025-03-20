@@ -144,14 +144,14 @@ class Upgrade_250 extends XoopsUpgrade
      */
     public function apply_templates()
     {
-        include_once __DIR__ . '/../modules/system/xoops_version.php';
+        include_once XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
 
         $dbm  = new Db_manager();
         $time = time();
         foreach ($modversion['templates'] as $tplfile) {
             // Admin templates
             if (isset($tplfile['type']) && $tplfile['type'] === 'admin' && $fp = fopen('../modules/system/templates/admin/' . $tplfile['file'], 'r')) {
-                $newtplid  = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes((string) $tplfile['file']) . "', '" . addslashes((string) $tplfile['description']) . "', " . $time . ', ' . $time . ", 'admin')");
+                $newtplid  = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", 'admin')");
                 $tplsource = fread($fp, filesize('../modules/system/templates/admin/' . $tplfile['file']));
                 fclose($fp);
                 $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");

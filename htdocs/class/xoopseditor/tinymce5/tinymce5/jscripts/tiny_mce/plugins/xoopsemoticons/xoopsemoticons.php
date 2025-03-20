@@ -44,9 +44,9 @@ $admin         = $gperm_handler->checkRight('system_admin', XOOPS_SYSTEM_SMILE, 
 
 $op = '';
 if (!empty($_GET['op'])) {
-    $op = trim((string) $_GET['op']);
+    $op = trim($_GET['op']);
 } elseif (!empty($_POST['op'])) {
-    $op = trim((string) $_POST['op']);
+    $op = trim($_POST['op']);
 }
 
 $myts = \MyTextSanitizer::getInstance();
@@ -89,7 +89,7 @@ if ($smiles = $_SESSION['XoopsEmotions']) {
     }
 } else {
     echo 'error';
-    
+
 }
 echo '</div>';
 echo '</body>';
@@ -127,5 +127,5 @@ echo '</body>';
         }, origin);*/
     //});
 </script>
-<?
+<?php
 xoops_footer();

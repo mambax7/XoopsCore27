@@ -34,7 +34,7 @@ class XoopsThemeSetParser extends SaxParser
     /**
      * @param $input
      */
-    public function __construct(&$input)
+    public function __construct($input)
     {
         parent::__construct($input);
         $this->addTagHandler(new ThemeSetThemeNameHandler());
@@ -66,7 +66,7 @@ class XoopsThemeSetParser extends SaxParser
      *
      * @return array|bool
      */
-    public function &getThemeSetData($name = null)
+    public function getThemeSetData($name = null)
     {
         if (isset($name)) {
             return $this->themeSetData[$name] ?? false;
@@ -144,9 +144,7 @@ class ThemeSetDateCreatedHandler extends XmlTagHandler
     /**
      * ThemeSetDateCreatedHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -180,9 +178,7 @@ class ThemeSetAuthorHandler extends XmlTagHandler
     /**
      * ThemeSetAuthorHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -218,9 +214,7 @@ class ThemeSetDescriptionHandler extends XmlTagHandler
     /**
      * ThemeSetDescriptionHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -257,9 +251,7 @@ class ThemeSetGeneratorHandler extends XmlTagHandler
     /**
      * ThemeSetGeneratorHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -293,9 +285,7 @@ class ThemeSetNameHandler extends XmlTagHandler
     /**
      * ThemeSetNameHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -332,9 +322,7 @@ class ThemeSetEmailHandler extends XmlTagHandler
     /**
      * ThemeSetEmailHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -368,9 +356,7 @@ class ThemeSetLinkHandler extends XmlTagHandler
     /**
      * ThemeSetLinkHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -404,9 +390,7 @@ class ThemeSetTemplateHandler extends XmlTagHandler
     /**
      * ThemeSetTemplateHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -443,9 +427,7 @@ class ThemeSetImageHandler extends XmlTagHandler
     /**
      * ThemeSetImageHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -482,9 +464,7 @@ class ThemeSetModuleHandler extends XmlTagHandler
     /**
      * ThemeSetModuleHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -519,9 +499,7 @@ class ThemeSetFileTypeHandler extends XmlTagHandler
     /**
      * ThemeSetFileTypeHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string
@@ -555,9 +533,7 @@ class ThemeSetTagHandler extends XmlTagHandler
     /**
      * ThemeSetTagHandler constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return string

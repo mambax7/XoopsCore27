@@ -114,7 +114,7 @@ class XoopsFolderHandler
      * @param boolean     $create Create folder if not found
      * @param mixed       $mode   Mode (CHMOD) to apply to created folder, false to ignore
      */
-    public function __construct($path = false, $create = true, mixed $mode = false)
+    public function __construct($path = false, $create = true, $mode = false)
     {
         if (empty($path)) {
             $path = XOOPS_VAR_PATH . '/caches/xoops_cache';
@@ -170,7 +170,7 @@ class XoopsFolderHandler
      * @return mixed Contents of current directory as an array, false on failure
      * @access public
      */
-    public function read($sort = true, mixed $exceptions = false)
+    public function read($sort = true, $exceptions = false)
     {
         $dirs = $files = [];
         $dir  = opendir($this->path);
@@ -203,7 +203,7 @@ class XoopsFolderHandler
 
         return [
             $dirs,
-            $files
+            $files,
         ];
     }
 
@@ -225,7 +225,7 @@ class XoopsFolderHandler
         [$dirs, $files] = $data;
         $found = [];
         foreach ($files as $file) {
-            if (preg_match("/^{$regexp_pattern}$/i", (string) $file)) {
+            if (preg_match("/^{$regexp_pattern}$/i", $file)) {
                 $found[] = $file;
             }
         }
@@ -265,7 +265,7 @@ class XoopsFolderHandler
         [$dirs, $files] = $this->read($sort);
         $found = [];
         foreach ($files as $file) {
-            if (preg_match("/^{$pattern}$/i", (string) $file)) {
+            if (preg_match("/^{$pattern}$/i", $file)) {
                 $found[] = $this->addPathElement($this->path, $file);
             }
         }
@@ -293,7 +293,7 @@ class XoopsFolderHandler
      */
     public function isWindowsPath($path)
     {
-        if (preg_match('/^[A-Z]:\\\\/i', (string)$path)) {
+        if (preg_match('/^[A-Z]:\\\\/i', (string) $path)) {
             return true;
         }
 
@@ -456,7 +456,7 @@ class XoopsFolderHandler
         if (is_dir($path)) {
             [$paths] = $this->tree($path);
             foreach ($paths as $key => $fullpath) {
-                $check = explode('/', (string) $fullpath);
+                $check = explode('/', $fullpath);
                 $count = count($check);
 
                 if (in_array($check[$count - 1], $exceptions)) {
@@ -492,7 +492,7 @@ class XoopsFolderHandler
         $path              = rtrim($path, '/');
         $this->files       = [];
         $this->directories = [
-            $path
+            $path,
         ];
         $directories       = [];
         while (count($this->directories)) {
@@ -503,7 +503,7 @@ class XoopsFolderHandler
         if ($type === null) {
             return [
                 $directories,
-                $this->files
+                $this->files,
             ];
         }
         if ($type === 'dir') {
@@ -640,7 +640,7 @@ class XoopsFolderHandler
             $files        = array_merge($normal_files, $hidden_files);
             if (is_array($files)) {
                 foreach ($files as $file) {
-                    if (preg_match("/(\.|\.\.)$/", (string) $file)) {
+                    if (preg_match("/(\.|\.\.)$/", $file)) {
                         continue;
                     }
                     if (is_file($file) === true) {
@@ -685,12 +685,15 @@ class XoopsFolderHandler
             $to      = $options;
             $options = [];
         }
-        $options = array_merge([
-                                   'to'   => $to,
-                                   'from' => $this->path,
-                                   'mode' => $this->mode,
-                                   'skip' => []
-                               ], $options);
+        $options = array_merge(
+            [
+                'to'   => $to,
+                'from' => $this->path,
+                'mode' => $this->mode,
+                'skip' => [],
+            ],
+            $options,
+        );
 
         $fromDir = $options['from'];
         $toDir   = $options['to'];
@@ -708,11 +711,14 @@ class XoopsFolderHandler
 
             return false;
         }
-        $exceptions = array_merge([
-                                      '.',
-                                      '..',
-                                      '.svn'
-                                  ], $options['skip']);
+        $exceptions = array_merge(
+            [
+                '.',
+                '..',
+                '.svn',
+            ],
+            $options['skip'],
+        );
         $handle     = opendir($fromDir);
         if ($handle) {
             while (false !== ($item = readdir($handle))) {
@@ -773,14 +779,17 @@ class XoopsFolderHandler
         $to = null;
         if (is_string($options)) {
             $to      = $options;
-            $options = (array)$options;
+            $options = (array) $options;
         }
-        $options = array_merge([
-                                   'to'   => $to,
-                                   'from' => $this->path,
-                                   'mode' => $this->mode,
-                                   'skip' => []
-                               ], $options);
+        $options = array_merge(
+            [
+                'to'   => $to,
+                'from' => $this->path,
+                'mode' => $this->mode,
+                'skip' => [],
+            ],
+            $options,
+        );
         if ($this->copy($options)) {
             if ($this->delete($options['from'])) {
                 return $this->cd($options['to']);
@@ -822,7 +831,7 @@ class XoopsFolderHandler
     public function realpath($path)
     {
         $path = trim($path);
-        if (!str_contains($path, '..')) {
+        if (strpos($path, '..') === false) {
             if (!$this->isAbsolute($path)) {
                 $path = $this->addPathElement($this->path, $path);
             }
@@ -865,7 +874,7 @@ class XoopsFolderHandler
      */
     public function isSlashTerm($path)
     {
-        if (preg_match('/[\/\\\]$/', (string)$path)) {
+        if (preg_match('/[\/\\\]$/', (string) $path)) {
             return true;
         }
 

@@ -50,14 +50,26 @@ class ScannerWalker
     protected $extList = [];
 
     /**
+     * @var ScannerProcess
+     */
+    private $process;
+
+    /**
+     * @var ScannerOutput
+     */
+    private $output;
+
+    /**
      * ScannerWalker
      *
      * @param ScannerProcess $process used to examine or manipulate matching files
      * @param ScannerOutput  $output  handle output from the scanning process
      */
-    public function __construct(private readonly ScannerProcess $process, private readonly ScannerOutput $output)
+    public function __construct(ScannerProcess $process, ScannerOutput $output)
     {
+        $this->output = $output;
         $this->output->outputStart();
+        $this->process = $process;
     }
 
     /**

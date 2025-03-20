@@ -83,7 +83,8 @@ class XoopsOnlineHandler
         $result = $this->db->queryF($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
+                E_USER_ERROR,
             );
         }
 
@@ -109,7 +110,7 @@ class XoopsOnlineHandler
                 $uname,
                 $time,
                 $ip,
-                $module
+                $module,
             );
         }
         if (!$this->db->queryF($sql)) {
@@ -148,7 +149,7 @@ class XoopsOnlineHandler
         $sql = sprintf(
             'DELETE FROM %s WHERE online_updated < %u',
             $this->db->prefix('online'),
-            time() - (int)$expire
+            time() - (int) $expire,
         );
         $this->db->queryF($sql);
     }
@@ -159,7 +160,7 @@ class XoopsOnlineHandler
      * @param  CriteriaElement|CriteriaCompo|null $criteria {@link CriteriaElement}
      * @return array|false  Array of associative arrays of online information
      */
-    public function getAll(CriteriaElement $criteria = null)
+    public function getAll(?CriteriaElement $criteria = null)
     {
         $ret   = [];
         $limit = $start = 0;
@@ -188,7 +189,7 @@ class XoopsOnlineHandler
      *
      * @return int
      */
-    public function getCount(CriteriaElement $criteria = null)
+    public function getCount(?CriteriaElement $criteria = null)
     {
         $sql = 'SELECT COUNT(*) FROM ' . $this->db->prefix('online');
         if (is_object($criteria) && is_subclass_of($criteria, 'CriteriaElement')) {
@@ -200,6 +201,6 @@ class XoopsOnlineHandler
         }
         [$ret] = $this->db->fetchRow($result);
 
-        return (int)$ret;
+        return (int) $ret;
     }
 }

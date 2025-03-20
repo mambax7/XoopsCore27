@@ -41,7 +41,7 @@ if (empty($getuser)) {
     redirect_header('user.php', 2, $msg);
 } else {
     $code   = Request::getString('code', '', 'GET');
-    $areyou = substr(md5((string) $getuser[0]->getVar('pass')), 0, 5);
+    $areyou = substr(md5($getuser[0]->getVar('pass')), 0, 5);
     if ($code != '' && $areyou == $code) {
         $newpass     = xoops_makepass();
         $xoopsMailer = xoops_getMailer();
@@ -64,7 +64,7 @@ if (empty($getuser)) {
             "UPDATE %s SET pass = '%s' WHERE uid = %u",
             $xoopsDB->prefix('users'),
             password_hash($newpass, PASSWORD_DEFAULT),
-            $getuser[0]->getVar('uid')
+            $getuser[0]->getVar('uid'),
         );
         if (!$xoopsDB->queryF($sql)) {
             include $GLOBALS['xoops']->path('header.php');

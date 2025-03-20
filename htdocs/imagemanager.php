@@ -39,8 +39,8 @@ switch ($op) {
         require_once $GLOBALS['xoops']->path('class/template.php');
         $xoopsTpl = new XoopsTpl();
         $xoopsTpl->assign('lang_imgmanager', _IMGMANAGER);
-        $xoopsTpl->assign('sitename', htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5));
-        $target = htmlspecialchars((string) $target, ENT_QUOTES | ENT_HTML5);
+        $xoopsTpl->assign('sitename', htmlspecialchars($xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5));
+        $target = htmlspecialchars($target, ENT_QUOTES | ENT_HTML5);
         $xoopsTpl->assign('target', $target);
         /** @var XoopsImageCategoryHandler $imgcat_handler */
         $imgcat_handler = xoops_getHandler('imagecategory');
@@ -109,15 +109,18 @@ switch ($op) {
                             $rcode = '[img align=right]' . XOOPS_UPLOAD_URL . '/' . $images[$i]->getVar('image_name') . '[/img]';
                             $src   = XOOPS_UPLOAD_URL . '/' . $images[$i]->getVar('image_name');
                         }
-                        $xoopsTpl->append('images', [
-                            'id'       => $images[$i]->getVar('image_id'),
-                            'nicename' => $images[$i]->getVar('image_nicename'),
-                            'mimetype' => $images[$i]->getVar('image_mimetype'),
-                            'src'      => $src,
-                            'lxcode'   => $lcode,
-                            'xcode'    => $code,
-                            'rxcode'   => $rcode
-                        ]);
+                        $xoopsTpl->append(
+                            'images',
+                            [
+                                'id'       => $images[$i]->getVar('image_id'),
+                                'nicename' => $images[$i]->getVar('image_nicename'),
+                                'mimetype' => $images[$i]->getVar('image_mimetype'),
+                                'src'      => $src,
+                                'lxcode'   => $lcode,
+                                'xcode'    => $code,
+                                'rxcode'   => $rcode,
+                            ],
+                        );
                     }
                     if ($total > 10) {
                         include_once $GLOBALS['xoops']->path('class/pagenav.php');
@@ -136,7 +139,6 @@ switch ($op) {
         }
         $xoopsTpl->display('db:system_imagemanager.tpl');
         exit();
-        break;
 
     case 'upload':
         if (isset($_REQUEST['target'])) {
@@ -157,10 +159,8 @@ switch ($op) {
                 if (!$imgcatperm_handler->checkRight('imgcat_write', $imgcat_id, $xoopsUser->getGroups())) {
                     $error = true;
                 }
-            } else {
-                if (!$imgcatperm_handler->checkRight('imgcat_write', $imgcat_id, XOOPS_GROUP_ANONYMOUS)) {
-                    $error = true;
-                }
+            } elseif (!$imgcatperm_handler->checkRight('imgcat_write', $imgcat_id, XOOPS_GROUP_ANONYMOUS)) {
+                $error = true;
             }
         }
         if ($error != false) {
@@ -173,8 +173,8 @@ switch ($op) {
         $xoopsTpl = new XoopsTpl();
         $xoopsTpl->assign('show_cat', $imgcat_id);
         $xoopsTpl->assign('lang_imgmanager', _IMGMANAGER);
-        $xoopsTpl->assign('sitename', htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5));
-        $xoopsTpl->assign('target', htmlspecialchars((string) $target, ENT_QUOTES | ENT_HTML5));
+        $xoopsTpl->assign('sitename', htmlspecialchars($xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5));
+        $xoopsTpl->assign('target', htmlspecialchars($target, ENT_QUOTES | ENT_HTML5));
         $xoopsTpl->assign('imgcat_maxsize', $imgcat->getVar('imgcat_maxsize'));
         $xoopsTpl->assign('imgcat_maxwidth', $imgcat->getVar('imgcat_maxwidth'));
         $xoopsTpl->assign('imgcat_maxheight', $imgcat->getVar('imgcat_maxheight'));
@@ -190,17 +190,15 @@ switch ($op) {
             'handler' => 'fineimuploadhandler',
             'moddir' => 'system',
         ];
-        $jwt = \Xmf\Jwt\TokenFactory::build('fineuploader', $payload, 60*30); // token good for 30 minutes
+        $jwt = \Xmf\Jwt\TokenFactory::build('fineuploader', $payload, 60 * 30); // token good for 30 minutes
         $xoopsTpl->assign('jwt', $jwt);
         $fineup_debug = 'false';
         if (($xoopsUser instanceof \XoopsUser ? $xoopsUser->isAdmin() : false)
-            && isset($_REQUEST['FINEUPLOADER_DEBUG']))
-        {
+            && isset($_REQUEST['FINEUPLOADER_DEBUG'])) {
             $fineup_debug = 'true';
         }
         $xoopsTpl->assign('fineup_debug', $fineup_debug);
 
         $xoopsTpl->display('db:system_imagemanager2.tpl');
         exit();
-        break;
 }

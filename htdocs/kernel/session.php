@@ -27,7 +27,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  * @copyright       (c) 2000-2016 XOOPS Project (www.xoops.org)
  */
-class XoopsSessionHandler
+class XoopsSessionHandler implements SessionHandlerInterface
 {
     /**
      * Database connection
@@ -89,7 +89,7 @@ class XoopsSessionHandler
                 'domain'   => XOOPS_COOKIE_DOMAIN,
                 'secure'   => $secure,
                 'httponly' => true,
-                'samesite' => 'strict',
+                'samesite' => 'Lax',
             ];
             session_set_cookie_params($options);
         } else {
@@ -105,7 +105,7 @@ class XoopsSessionHandler
      *
      * @return bool
      */
-    public function open($savePath, $sessionName)
+    public function open($savePath, $sessionName): bool
     {
         return true;
     }
@@ -115,10 +115,9 @@ class XoopsSessionHandler
      *
      * @return bool
      */
-    public function close()
+    public function close(): bool
     {
         $this->gc_force();
-
         return true;
     }
 
@@ -127,9 +126,9 @@ class XoopsSessionHandler
      *
      * @param string $sessionId ID of the session
      *
-     * @return string Session data
+     * @return string Session data (empty string if no data or failure)
      */
-    public function read($sessionId)
+    public function read($sessionId): string
     {
         $ip = \Xmf\IPAddress::fromRequest();
         $sql = sprintf(
@@ -138,23 +137,21 @@ class XoopsSessionHandler
             $this->db->quoteString($sessionId)
         );
 
-        $result = $this->db->query($sql);
+        $result = $this->db->queryF($sql);
         if ($this->db->isResultSet($result)) {
             if ([$sess_data, $sess_ip] = $this->db->fetchRow($result)) {
                 if ($this->securityLevel > 1) {
                     if (false === $ip->sameSubnet(
-                        $sess_ip,
-                        $this->bitMasks[$this->securityLevel]['v4'],
-                        $this->bitMasks[$this->securityLevel]['v6']
-                    )) {
+                            $sess_ip,
+                            $this->bitMasks[$this->securityLevel]['v4'],
+                            $this->bitMasks[$this->securityLevel]['v6']
+                        )) {
                         $sess_data = '';
                     }
                 }
-
                 return $sess_data;
             }
         }
-
         return '';
     }
 
@@ -165,32 +162,28 @@ class XoopsSessionHandler
      * @param string $data
      *
      * @return bool
-     **/
-    public function write($sessionId, $data)
+     */
+    public function write($sessionId, $data): bool
     {
         $myReturn = true;
         $remoteAddress = \Xmf\IPAddress::fromRequest()->asReadable();
         $sessionId = $this->db->quoteString($sessionId);
-        $sql = sprintf(
-            'UPDATE %s SET sess_updated = %u, sess_data = %s WHERE sess_id = %s',
-            $this->db->prefix('session'),
-            time(),
-            $this->db->quoteString($data),
-            $sessionId
+        
+        $sql= sprintf('INSERT INTO %s (sess_id, sess_updated, sess_ip, sess_data)
+        VALUES (%s, %u, %s, %s)
+        ON DUPLICATE KEY UPDATE
+        sess_updated = %u, 
+        sess_data = %s
+        ',
+              $this->db->prefix('session'),
+              $sessionId,
+              time(),
+              $this->db->quote($remoteAddress),
+              $this->db->quote($data),
+              time(),
+              $this->db->quote($data),
         );
-        $this->db->queryF($sql);
-        if (!$this->db->getAffectedRows()) {
-            $sql = sprintf(
-                'INSERT INTO %s (sess_id, sess_updated, sess_ip, sess_data) VALUES (%s, %u, %s, %s)',
-                $this->db->prefix('session'),
-                $sessionId,
-                time(),
-                $this->db->quote($remoteAddress),
-                $this->db->quote($data)
-            );
-
-            $myReturn = $this->db->queryF($sql);
-        }
+        $myReturn = $this->db->queryF($sql);
         $this->update_cookie();
         return $myReturn;
     }
@@ -201,8 +194,8 @@ class XoopsSessionHandler
      * @param string $sessionId
      *
      * @return bool
-     **/
-    public function destroy($sessionId)
+     */
+    public function destroy($sessionId): bool
     {
         $sql = sprintf(
             'DELETE FROM %s WHERE sess_id = %s',
@@ -212,26 +205,29 @@ class XoopsSessionHandler
         if (!$result = $this->db->queryF($sql)) {
             return false;
         }
-
         return true;
     }
 
     /**
      * Garbage Collector
      *
-     * @param  int $expire Time in seconds until a session expires
-     * @return bool
-     **/
+     * @param int $expire Time in seconds until a session expires
+     * @return int|bool The number of deleted sessions on success, or false on failure
+     */
+    #[\ReturnTypeWillChange]
     public function gc($expire)
     {
         if (empty($expire)) {
-            return true;
+            return 0;
         }
 
         $mintime = time() - (int)$expire;
-        $sql     = sprintf('DELETE FROM %s WHERE sess_updated < %u', $this->db->prefix('session'), $mintime);
+        $sql = sprintf('DELETE FROM %s WHERE sess_updated < %u', $this->db->prefix('session'), $mintime);
 
-        return $this->db->queryF($sql);
+        if ($this->db->queryF($sql)) {
+            return $this->db->getAffectedRows();
+        }
+        return false;
     }
 
     /**
@@ -287,7 +283,8 @@ class XoopsSessionHandler
             $session_name = session_name();
             $session_expire = null !== $expire
                 ? (int)$expire
-                : (($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '')
+                : (
+                    ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '')
                     ? $xoopsConfig['session_expire'] * 60
                     : ini_get('session.cookie_lifetime')
                 );
@@ -304,7 +301,7 @@ class XoopsSessionHandler
                 '/',
                 $cookieDomain,
                 (XOOPS_PROT === 'https://'),
-                true
+                true,
             );
         }
     }

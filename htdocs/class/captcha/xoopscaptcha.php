@@ -83,7 +83,7 @@ class XoopsCaptcha
             $basic_config = include $file;
         } elseif (file_exists($distfile = $this->path_basic . '/' . $distfilename)) {
             $basic_config = include $distfile;
-            if (false===copy($distfile, $file)) {
+            if (false === copy($distfile, $file)) {
                 trigger_error('Could not create captcha config file ' . $filename);
             }
         }
@@ -131,13 +131,14 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::loadHandler()
      *
+     * @param mixed $name
      * @return
      */
-    public function loadHandler(mixed $name = null)
+    public function loadHandler($name = null)
     {
         $name  = !empty($name) ? $name : (empty($this->config['mode']) ? 'text' : $this->config['mode']);
-        $class = 'XoopsCaptcha' . ucfirst((string) $name);
-        if (!empty($this->handler) && $this->handler::class == $class) {
+        $class = 'XoopsCaptcha' . ucfirst($name);
+        if (!empty($this->handler) && get_class($this->handler) == $class) {
             return $this->handler;
         }
         $this->handler = null;
@@ -165,9 +166,10 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::setConfigs()
      *
+     * @param  mixed $configs
      * @return bool
      */
-    public function setConfigs(mixed $configs)
+    public function setConfigs($configs)
     {
         foreach ($configs as $key => $val) {
             $this->setConfig($key, $val);
@@ -179,9 +181,11 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::setConfig()
      *
+     * @param  mixed $name
+     * @param  mixed $val
      * @return bool
      */
-    public function setConfig(mixed $name, mixed $val)
+    public function setConfig($name, $val)
     {
         if (isset($this->$name)) {
             $this->$name = $val;
@@ -198,9 +202,11 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::verify()
      *
+     * @param  mixed $skipMember
+     * @param  mixed $name
      * @return bool
      */
-    public function verify(mixed $skipMember = null, mixed $name = null)
+    public function verify($skipMember = null, $name = null)
     {
         $sessionName = empty($name) ? $this->name : $name;
         $skipMember  = ($skipMember === null) && isset($_SESSION["{$sessionName}_skipmember"]) ? $_SESSION["{$sessionName}_skipmember"] : $skipMember;
@@ -325,9 +331,10 @@ class XoopsCaptcha
     /**
      * XoopsCaptcha::setCode()
      *
+     * @param  mixed $code
      * @return bool
      */
-    public function setCode(mixed $code = null)
+    public function setCode($code = null)
     {
         $code ??= $this->handler->getCode();
         if (!empty($code)) {
@@ -364,14 +371,18 @@ class XoopsCaptcha
  */
 class XoopsCaptchaMethod
 {
+    public $handler;
     public $config;
     public $code;
 
     /**
      * XoopsCaptchaMethod::__construct()
+     *
+     * @param mixed $handler
      */
-    public function __construct(public mixed $handler = null)
+    public function __construct($handler = null)
     {
+        $this->handler = $handler;
     }
 
     /**
@@ -402,7 +413,7 @@ class XoopsCaptchaMethod
      */
     public function getCode()
     {
-        return (string)$this->code;
+        return (string) $this->code;
     }
 
     /**
@@ -410,9 +421,7 @@ class XoopsCaptchaMethod
      *
      * @return void
      */
-    public function render()
-    {
-    }
+    public function render() {}
 
     /**
      * @return string
@@ -425,9 +434,10 @@ class XoopsCaptchaMethod
     /**
      * XoopsCaptchaMethod::verify()
      *
+     * @param  mixed $sessionName
      * @return bool
      */
-    public function verify(mixed $sessionName = null)
+    public function verify($sessionName = null)
     {
         $is_valid = false;
         if (!empty($_SESSION["{$sessionName}_code"])) {

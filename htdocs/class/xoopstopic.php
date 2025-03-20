@@ -32,6 +32,7 @@ class XoopsTopic
      * @var \XoopsMySQLDatabase
      */
     public $db;
+    public $table;
     public $topic_id;
     public $topic_pid;
     public $topic_title;
@@ -44,13 +45,14 @@ class XoopsTopic
      * @param     $table
      * @param int|array $topicid
      */
-    public function __construct(public $table, $topicid = 0)
+    public function __construct($table, $topicid = 0)
     {
         $this->db    = XoopsDatabaseFactory::getDatabaseConnection();
+        $this->table = $table;
         if (is_array($topicid)) {
             $this->makeTopic($topicid);
         } elseif ($topicid != 0) {
-            $this->getTopic((int)$topicid);
+            $this->getTopic((int) $topicid);
         } else {
             $this->topic_id = $topicid;
         }
@@ -85,12 +87,13 @@ class XoopsTopic
      */
     public function getTopic($topicid)
     {
-        $topicid = (int)$topicid;
+        $topicid = (int) $topicid;
         $sql     = 'SELECT * FROM ' . $this->table . ' WHERE topic_id=' . $topicid . '';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
+                E_USER_ERROR,
             );
         }
         $array   = $this->db->fetchArray($result);
@@ -241,11 +244,16 @@ class XoopsTopic
     public function topic_title($format = 'S')
     {
         $myts = \MyTextSanitizer::getInstance();
-        $title = match ($format) {
-            'S', 'E' => $myts->htmlSpecialChars($this->topic_title),
-            'P', 'F' => $myts->htmlSpecialChars($myts->stripSlashesGPC($this->topic_title)),
-            default => $title,
-        };
+        switch ($format) {
+            case 'S':
+            case 'E':
+                $title = $myts->htmlSpecialChars($this->topic_title);
+                break;
+            case 'P':
+            case 'F':
+                $title = $myts->htmlSpecialChars($this->topic_title);
+                break;
+        }
 
         return $title;
     }
@@ -258,11 +266,16 @@ class XoopsTopic
     public function topic_imgurl($format = 'S')
     {
         $myts = \MyTextSanitizer::getInstance();
-        $imgurl = match ($format) {
-            'S', 'E' => $myts->htmlSpecialChars($this->topic_imgurl),
-            'P', 'F' => $myts->htmlSpecialChars($myts->stripSlashesGPC($this->topic_imgurl)),
-            default => $imgurl,
-        };
+        switch ($format) {
+            case 'S':
+            case 'E':
+                $imgurl = $myts->htmlSpecialChars($this->topic_imgurl);
+                break;
+            case 'P':
+            case 'F':
+                $imgurl = $myts->htmlSpecialChars($this->topic_imgurl);
+                break;
+        }
 
         return $imgurl;
     }
@@ -375,7 +388,8 @@ class XoopsTopic
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
+                E_USER_ERROR,
             );
         }
         $ret    = [];
@@ -395,12 +409,13 @@ class XoopsTopic
      */
     public function topicExists($pid, $title)
     {
-        $sql = 'SELECT COUNT(*) from ' . $this->table . ' WHERE topic_pid = ' . (int)$pid . " AND topic_title = '" . trim((string) $title) . "'";
+        $sql = 'SELECT COUNT(*) from ' . $this->table . ' WHERE topic_pid = ' . (int) $pid . " AND topic_title = '" . trim($title) . "'";
         $result  = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
-               throw new \RuntimeException(
-       \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(), E_USER_ERROR
-   );
+            throw new \RuntimeException(
+                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
+                E_USER_ERROR,
+            );
         }
         [$count] = $this->db->fetchRow($result);
         if ($count > 0) {

@@ -16,6 +16,8 @@
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  */
 
+use Xmf\Request;
+
 $xoopsOption['pagetype'] = 'user';
 include __DIR__ . '/header.php';
 /** @var XoopsConfigHandler $config_handler */
@@ -38,11 +40,12 @@ if (!isset($_POST['submit']) || !isset($_POST['passwd'])) {
     $form->addElement(new XoopsFormButton('', 'submit', _SUBMIT, 'submit'));
     $form->assign($GLOBALS['xoopsTpl']);
 } else {
-    $myts   = \MyTextSanitizer::getInstance();
-    $pass   = isset($_POST['passwd']) ? $myts->stripSlashesGPC(trim((string) $_POST['passwd'])) : '';
-    $email  = isset($_POST['newmail']) ? $myts->stripSlashesGPC(trim((string) $_POST['newmail'])) : '';
+    $myts  = \MyTextSanitizer::getInstance();
+    $pass  = trim(Request::getString('passwd', '', 'POST'));
+    $email = trim(Request::getString('newmail', '', 'POST'));
+
     $errors = [];
-    if (!password_verify((string) $pass, (string) $GLOBALS['xoopsUser']->getVar('pass', 'n'))) {
+    if (!password_verify($pass, $GLOBALS['xoopsUser']->getVar('pass', 'n'))) {
         $errors[] = _PROFILE_MA_WRONGPASSWORD;
     }
     if (!checkEmail($email)) {
@@ -53,7 +56,7 @@ if (!isset($_POST['submit']) || !isset($_POST['passwd'])) {
         $msg = implode('<br>', $errors);
     } else {
         //update password
-        $GLOBALS['xoopsUser']->setVar('email', trim((string) $_POST['newmail']));
+        $GLOBALS['xoopsUser']->setVar('email', trim($_POST['newmail']));
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
         if ($member_handler->insertUser($GLOBALS['xoopsUser'])) {

@@ -23,7 +23,7 @@ $relative_path = str_repeat('../', count($root_paths) - $i) . implode('/', array
 
 // the path of XOOPS_TRUST_PATH accessible check
 echo "<dl><dt>'XOOPS_TRUST_PATH' : ";
-echo "<img src='" . XOOPS_URL . '/' . htmlspecialchars((string) $relative_path, ENT_QUOTES | ENT_HTML5) . "/modules/protector/public_check.png' width='40' height='20' alt='' style='border:1px solid black;' /><br><a href='" . XOOPS_URL . '/' . htmlspecialchars((string) $relative_path, ENT_QUOTES | ENT_HTML5) . "/modules/protector/public_check.php'>" . _AM_ADV_TRUSTPATHPUBLICLINK . "</a></dt>\n";
+echo "<img src='" . XOOPS_URL . '/' . htmlspecialchars($relative_path, ENT_QUOTES | ENT_HTML5) . "/modules/protector/public_check.png' width='40' height='20' alt='' style='border:1px solid black;' /><br><a href='" . XOOPS_URL . '/' . htmlspecialchars($relative_path, ENT_QUOTES | ENT_HTML5) . "/modules/protector/public_check.php'>" . _AM_ADV_TRUSTPATHPUBLICLINK . "</a></dt>\n";
 echo '<dd>' . _AM_ADV_TRUSTPATHPUBLIC . '</b><br><br></dd></dl>';
 
 // register_globals
@@ -107,11 +107,17 @@ echo "</b><br><br></dl>\n";
 // patch to databasefactory.php
 echo "<dl><dt>'databasefactory.php' : ";
 $db = XoopsDatabaseFactory::getDatabaseConnection();
-if (substr(@XOOPS_VERSION, 6, 3) < 2.4 && strtolower($db::class) !== 'protectormysqldatabase') {
+// Check if XOOPS_VERSION is defined and has a valid value
+$xoopsVersion = defined('XOOPS_VERSION') ? XOOPS_VERSION : '';
+$versionSubstring = is_string($xoopsVersion) ? substr($xoopsVersion, 6, 3) : '';
+$dbClass = strtolower(get_class($db));
+// Check if the version is valid and the database class is not 'protectormysqldatabase'
+if ($versionSubstring && version_compare($versionSubstring, '2.4', '<') && $dbClass !== 'protectormysqldatabase') {
     echo "<span style='color:red;font-weight:bold;'>" . _AM_ADV_DBFACTORYUNPATCHED . "</span></dt>\n";
 } else {
     echo _AM_ADV_DBFACTORYPATCHED . "<span style='color:green;font-weight:bold;'> OK</span></dt>\n";
 }
+
 echo "</dl>\n";
 
 // close table for ADVISORY

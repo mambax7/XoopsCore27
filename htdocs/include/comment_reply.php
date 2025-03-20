@@ -64,7 +64,7 @@ if ($comment->getVar('com_uid') == 0 && $comment->getVar('com_user') != '') {
 
 $r_text    = _CM_POSTER . ': <strong>' . $r_name . '</strong>&nbsp;&nbsp;' . _CM_POSTED . ': <strong>' . formatTimestamp($comment->getVar('com_created')) . '</strong><br><br>' . $comment->getVar('com_text');
 $com_title = $comment->getVar('com_title', 'E');
-if (!preg_match('/^' . _RE . '/i', (string) $com_title)) {
+if (!preg_match('/^' . _RE . '/i', $com_title)) {
     $com_title = _RE . ' ' . xoops_substr($com_title, 0, 56);
 }
 $com_pid    = $com_id;

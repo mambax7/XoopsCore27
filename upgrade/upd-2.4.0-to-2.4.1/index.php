@@ -207,17 +207,17 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_stripeKey($xoops_key, $num = 6, $length = 30, $uu = 0)
     {
-        $strip = floor(strlen((string) $xoops_key) / 6);
+        $strip = floor(strlen($xoops_key) / 6);
         $ret   = 0;
-        for ($i = 0; $i < strlen((string) $xoops_key); ++$i) {
+        for ($i = 0; $i < strlen($xoops_key); ++$i) {
             if ($i < $length) {
                 ++$uu;
                 if ($uu == $strip) {
-                    $ret .= substr((string) $xoops_key, $i, 1) . '-';
+                    $ret .= substr($xoops_key, $i, 1) . '-';
                     $uu = 0;
                 } else {
-                    if (substr((string) $xoops_key, $i, 1) != '-') {
-                        $ret .= substr((string) $xoops_key, $i, 1);
+                    if (substr($xoops_key, $i, 1) != '-') {
+                        $ret .= substr($xoops_key, $i, 1);
                     } else {
                         $uu--;
                     }
@@ -225,7 +225,7 @@ class Upgrade_241 extends XoopsUpgrade
             }
         }
         $ret = str_replace('--', '-', $ret);
-        if (str_starts_with($ret, '-')) {
+        if (substr($ret, 0, 1) == '-') {
             $ret = substr($ret, 2, strlen($ret));
         }
         if (substr($ret, strlen($ret) - 1, 1) == '-') {

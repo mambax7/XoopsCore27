@@ -108,7 +108,7 @@ class XoopsCacheFile extends XoopsCacheEngine
             'prefix'    => 'xoops_',
             'lock'      => false,
             'serialize' => false,
-            'duration'  => 31556926
+            'duration'  => 31556926,
         ];
         $this->settings = array_merge($defaults, $this->settings);
         if (!isset($this->file)) {
@@ -159,7 +159,7 @@ class XoopsCacheFile extends XoopsCacheEngine
         $windows   = false;
         $lineBreak = "\n";
 
-        if (str_starts_with(PHP_OS, 'WIN')) {
+        if (substr(PHP_OS, 0, 3) === 'WIN') {
             $lineBreak = "\r\n";
             $windows   = true;
         }
@@ -201,7 +201,7 @@ class XoopsCacheFile extends XoopsCacheEngine
         }
         $cachetime = $this->file->read(11);
 
-        if ($cachetime !== false && (int)$cachetime < time()) {
+        if ($cachetime !== false && (int) $cachetime < time()) {
             $this->file->close();
             $this->file->delete();
 
@@ -210,9 +210,9 @@ class XoopsCacheFile extends XoopsCacheEngine
 
         $data = $this->file->read(true);
         if (!empty($data) && !empty($this->settings['serialize'])) {
-            $data = stripslashes((string) $data);
+            $data = stripslashes($data);
             // $data = preg_replace('!s:(\d+):"(.*?)";!se', "'s:'.strlen('$2').':\"$2\";'", $data);
-            $data = preg_replace_callback('!s:(\d+):"(.*?)";!s', fn($m) => 's:' . strlen((string) $m[2]) . ':"' . $m[2] . '";', $data);
+            $data = preg_replace_callback('!s:(\d+):"(.*?)";!s', function ($m) { return 's:' . strlen($m[2]) . ':"' . $m[2] . '";'; }, $data);
             $data = unserialize($data, ['allowed_classes' => false]);
             if (is_array($data)) {
                 XoopsLoad::load('XoopsUtility');

@@ -39,7 +39,7 @@ class UpgradeControl
         $dirlist = [];
         if (is_dir($dirname) && $handle = opendir($dirname)) {
             while (false !== ($file = readdir($handle))) {
-                if (!str_starts_with($file, '.') && strtolower($file) !== 'cvs') {
+                if (substr($file, 0, 1) !== '.' && strtolower($file) !== 'cvs') {
                     if (is_dir("{$dirname}/{$file}")) {
                         $dirlist[] = $file;
                     }
@@ -67,7 +67,7 @@ class UpgradeControl
     {
         $supports = null;
 
-        $language ??= $this->upgradeLanguage;
+        $language = $language ?? $this->upgradeLanguage;
 
         if (file_exists(__DIR__ . "/../language/{$language}/{$domain}.php")) {
             include_once __DIR__ . "/../language/{$language}/{$domain}.php";
@@ -94,10 +94,7 @@ class UpgradeControl
     {
         global $xoopsConfig;
 
-        $upgrade_language = null;
-        if (isset($xoopsConfig['language'])) {
-            $upgrade_language = $xoopsConfig['language'];
-        }
+        $upgrade_language = $xoopsConfig['language'] ?? null;
         $upgrade_language = !empty($_COOKIE['xo_upgrade_lang']) ? $_COOKIE['xo_upgrade_lang'] : $upgrade_language;
         $upgrade_language = Xmf\Request::getString('lang', $upgrade_language);
         $upgrade_language = (null === $xoopsConfig['language']) ? 'english' : $upgrade_language;
@@ -142,7 +139,7 @@ class UpgradeControl
 
         if ($this->needUpgrade && !empty($files)) {
             foreach ($files as $k => $file) {
-                $testFile = preg_match('/^([.\/\\\\:])|([a-z]:)/i', (string) $file) ? $file : "../{$file}";
+                $testFile = preg_match('/^([.\/\\\\:])|([a-z]:)/i', $file) ? $file : "../{$file}";
                 if (is_writable($testFile) || !file_exists($testFile)) {
                     unset($files[$k]);
                 }

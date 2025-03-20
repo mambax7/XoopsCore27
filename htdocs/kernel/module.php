@@ -135,9 +135,10 @@ class XoopsModule extends XoopsObject
      * Set module info
      *
      * @param  string $name
+     * @param  mixed  $value
      * @return bool
      **/
-    public function setInfo($name, mixed $value)
+    public function setInfo($name, $value)
     {
         if (empty($name)) {
             $this->modinfo = $value;
@@ -179,7 +180,7 @@ class XoopsModule extends XoopsObject
      */
     public function getStatus()
     {
-        return substr(strrchr((string) $this->getVar('version'), '-'), 1);
+        return substr(strrchr($this->getVar('version'), '-'), 1);
     }
 
     /**
@@ -190,14 +191,14 @@ class XoopsModule extends XoopsObject
      * @param  string $operator
      * @return boolean The function will return true if the relationship is the one specified by the operator, false otherwise.
      */
-    public function versionCompare($version1 = '',$version2 = '', $operator = '<')
+    public function versionCompare($version1 = '', $version2 = '', $operator = '<')
     {
         $version1 = strtolower($version1);
         $version2 = strtolower($version2);
-        if (str_contains($version2, '-stable')){
+        if (false !== strpos($version2, '-stable')) {
             $version2 = substr($version2, 0, strpos($version2, '-stable'));
         }
-        if (str_contains($version1, '-stable')){
+        if (false !== strpos($version1, '-stable')) {
             $version1 = substr($version1, 0, strpos($version1, '-stable'));
         }
         return version_compare($version1, $version2, $operator);
@@ -231,7 +232,7 @@ class XoopsModule extends XoopsObject
             foreach ($this->getInfo('sub') as $submenu) {
                 $ret[] = [
                     'name' => $submenu['name'],
-                    'url'  => $submenu['url']
+                    'url'  => $submenu['url'],
                 ];
             }
         }
@@ -248,7 +249,7 @@ class XoopsModule extends XoopsObject
         if ($this->getInfo('adminmenu') && $this->getInfo('adminmenu') != '' && file_exists(XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/' . $this->getInfo('adminmenu'))) {
             include XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/' . $this->getInfo('adminmenu');
         }
-        $this->adminmenu =& $adminmenu;
+        $this->adminmenu = & $adminmenu;
     }
 
     /**
@@ -290,7 +291,7 @@ class XoopsModule extends XoopsObject
         }
 
         if (!file_exists($file = $GLOBALS['xoops']->path('modules/' . $dirname . '/xoops_version.php'))) {
-            if (false !== (bool)$verbose) {
+            if (false !== (bool) $verbose) {
                 echo "Module File for $dirname Not Found!";
             }
 
@@ -318,7 +319,7 @@ class XoopsModule extends XoopsObject
         if ($this->getVar('hassearch') != 1) {
             return false;
         }
-        $search =& $this->getInfo('search');
+        $search = & $this->getInfo('search');
         if ($this->getVar('hassearch') != 1 || !isset($search['file']) || !isset($search['func']) || $search['func'] == '' || $search['file'] == '') {
             return false;
         }
@@ -724,7 +725,7 @@ class XoopsModuleHandler extends XoopsObjectHandler
     {
         static $_cachedModule_dirname;
         static $_cachedModule_mid;
-        $id     = (int)$id;
+        $id     = (int) $id;
         $module = false;
         if ($id > 0) {
             if (!empty($_cachedModule_mid[$id])) {
@@ -764,7 +765,7 @@ class XoopsModuleHandler extends XoopsObjectHandler
         $dirname = $this->db->escape(trim($dirname));
 
         //could not we check for spaces instead??
-        if (strpos(strtolower((string) $dirname), ' union ')) {
+        if (strpos(strtolower($dirname), ' union ')) {
             return false;
         }
         static $_cachedModule_mid;
@@ -775,7 +776,7 @@ class XoopsModuleHandler extends XoopsObjectHandler
             $module = false;
             $sql    = 'SELECT * FROM ' . $this->db->prefix('modules') . ' WHERE dirname = ?';
             $stmt   = $this->db->conn->prepare($sql);
-            $stmt->bind_param('s',  $dirname);
+            $stmt->bind_param('s', $dirname);
             $success = $stmt->execute();
             if (!$success) {
                 return $module;
@@ -790,8 +791,8 @@ class XoopsModuleHandler extends XoopsObjectHandler
                 $module = new XoopsModule();
                 $myrow  = $this->db->fetchArray($result);
                 $module->assignVars($myrow);
-                $_cachedModule_dirname[$dirname]           =& $module;
-                $_cachedModule_mid[$module->getVar('mid')] =& $module;
+                $_cachedModule_dirname[$dirname]           = & $module;
+                $_cachedModule_mid[$module->getVar('mid')] = & $module;
             }
 
             return $module;
@@ -917,8 +918,24 @@ class XoopsModuleHandler extends XoopsObjectHandler
      * @param  boolean         $id_as_key Use the ID as key into the array
      * @return array
      */
-    public function getObjects(CriteriaElement $criteria = null, $id_as_key = false)
+    public function getObjects(?CriteriaElement $criteria = null, $id_as_key = false)
     {
+        if (func_num_args() > 0) {
+            $criteria = func_get_arg(0);
+        }
+
+        if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
+            $criteria = $criteria ?? null;
+        }
+
+        if (func_num_args() > 0) {
+            $criteria = func_get_arg(0);
+        }
+
+        if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
+            $criteria = $criteria ?? null; // Explicitly set to null if not provided
+        }
+
         $ret   = [];
         $limit = $start = 0;
         $sql   = 'SELECT * FROM ' . $this->db->prefix('modules');
@@ -937,9 +954,9 @@ class XoopsModuleHandler extends XoopsObjectHandler
             $module = new XoopsModule();
             $module->assignVars($myrow);
             if (!$id_as_key) {
-                $ret[] =& $module;
+                $ret[] = & $module;
             } else {
-                $ret[$myrow['mid']] =& $module;
+                $ret[$myrow['mid']] = & $module;
             }
             unset($module);
         }
@@ -953,8 +970,16 @@ class XoopsModuleHandler extends XoopsObjectHandler
      * @param  CriteriaElement|CriteriaCompo $criteria {@link CriteriaElement}
      * @return int
      */
-    public function getCount(CriteriaElement $criteria = null)
+    public function getCount(?CriteriaElement $criteria = null)
     {
+        if (func_num_args() > 0) {
+            $criteria = func_get_arg(0);
+        }
+
+        if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
+            $criteria = $criteria ?? null;
+        }
+
         $sql = 'SELECT COUNT(*) FROM ' . $this->db->prefix('modules');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
@@ -965,18 +990,29 @@ class XoopsModuleHandler extends XoopsObjectHandler
         }
         [$count] = $this->db->fetchRow($result);
 
-        return (int)$count;
+        return (int) $count;
     }
 
     /**
      * returns an array of module names
      *
+     * @param  CriteriaElement $criteria
      * @param  boolean         $dirname_as_key if true, array keys will be module directory names
      *                                         if false, array keys will be module id
      * @return array
      */
-    public function getList(CriteriaElement $criteria = null, $dirname_as_key = false)
+    public function getList(?CriteriaElement $criteria = null, $dirname_as_key = false)
     {
+
+        if (func_num_args() > 0) {
+            $criteria = func_get_arg(0);
+        }
+
+        if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
+            $criteria = $criteria ?? null; // Explicitly set to null if not provided
+        }
+
+
         $ret     = [];
         $modules = $this->getObjects($criteria, true);
         foreach (array_keys($modules) as $i) {

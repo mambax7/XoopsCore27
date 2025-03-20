@@ -30,9 +30,7 @@ class XoopsFile
     /**
      * XoopsFile::__construct()
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * XoopsFile::getInstance()
@@ -92,9 +90,12 @@ class XoopsFile
      * XoopsFile::getHandler()
      *
      * @param string $name
+     * @param mixed  $path
+     * @param mixed  $create
+     * @param mixed  $mode
      * @return
      */
-    public static function getHandler($name = 'file', mixed $path = false, mixed $create = false, mixed $mode = null)
+    public static function getHandler($name = 'file', $path = false, $create = false, $mode = null)
     {
         $handler = null;
         XoopsFile::load($name);

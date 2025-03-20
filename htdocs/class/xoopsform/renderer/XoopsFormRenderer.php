@@ -25,19 +25,19 @@ final class XoopsFormRenderer
     /**
      * @var XoopsFormRenderer The reference to *Singleton* instance of this class
      */
-    private static XoopsFormRenderer $instance;
+    private static $instance;
 
     /**
      * @var XoopsFormRendererInterface The reference to *Singleton* instance of this class
      */
-    protected XoopsFormRendererInterface $renderer;
+    protected $renderer;
 
     /**
      * Returns the *Singleton* instance of this class.
      *
      * @return XoopsFormRenderer the singleton instance.
      */
-    public static function getInstance(): XoopsFormRenderer
+    public static function getInstance()
     {
         if (null === static::$instance) {
             static::$instance = new static();
@@ -50,9 +50,7 @@ final class XoopsFormRenderer
      * Protected constructor to prevent creating a new instance of the
      * *Singleton* via the `new` operator from outside of this class.
      */
-    protected function __construct()
-    {
-    }
+    protected function __construct() {}
 
     /**
      * Private clone method to prevent cloning of the instance of the
@@ -87,7 +85,7 @@ final class XoopsFormRenderer
      *
      * @return void
      */
-    public function set(XoopsFormRendererInterface $renderer): void
+    public function set(XoopsFormRendererInterface $renderer)
     {
         $this->renderer = $renderer;
     }
@@ -97,7 +95,7 @@ final class XoopsFormRenderer
      *
      * @return XoopsFormRendererInterface
      */
-    public function get(): XoopsFormRendererLegacy|XoopsFormRendererInterface
+    public function get()
     {
         // return a default if not set
         if (null === $this->renderer) {

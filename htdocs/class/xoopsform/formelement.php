@@ -33,7 +33,7 @@ class XoopsFormElement
      *
      * @var array ()
      */
-    public array $customValidationCode = [];
+    public $customValidationCode = [];
 
     /**
      * *#@+
@@ -45,56 +45,56 @@ class XoopsFormElement
      *
      * @var string
      */
-    public string $_name;
+    public $_name;
 
     /**
      * caption of the element
      *
      * @var string
      */
-    public string $_caption;
+    public $_caption;
 
     /**
      * Accesskey for this element
      *
      * @var string
      */
-    public string $_accesskey = '';
+    public $_accesskey = '';
 
     /**
      * HTML classes for this element
      *
      * @var array
      */
-    public array $_class = [];
+    public $_class = [];
 
     /**
      * hidden?
      *
      * @var bool
      */
-    public bool $_hidden = false;
+    public $_hidden = false;
 
     /**
      * extra attributes to go in the tag
      *
      * @var array
      */
-    public array $_extra = [];
+    public $_extra = [];
 
     /**
      * required field?
      *
      * @var bool
      */
-    public mixed $required = false;
+    public $_required = false;
 
     /**
      * description of the field
      *
      * @var string
      */
-    public string $description = '';
+    public $_description = '';
 
     /**
      * *#@-
@@ -110,14 +110,14 @@ class XoopsFormElement
      *
      * @var bool
      */
-    public bool $_nocolspan = false;
+    public $_nocolspan = false;
 
     /**
      * Get form type
      *
      * @deprecated  PLEASE AVOID USING THIS METHOD
      */
-    public string $_formtype = '';
+    public $_formtype = '';
 
     /**
      * constructor
@@ -132,7 +132,7 @@ class XoopsFormElement
      *
      * @return bool false
      */
-    public function isContainer(): bool
+    public function isContainer()
     {
         return false;
     }
@@ -142,7 +142,7 @@ class XoopsFormElement
      *
      * @param string $name "name" attribute for the element
      */
-    public function setName(string $name): void
+    public function setName($name)
     {
         $this->_name = trim($name);
     }
@@ -150,13 +150,14 @@ class XoopsFormElement
     /**
      * get the "name" attribute for the element
      *
+     * @param bool $encode
      *
      * @return string "name" attribute
      */
-    public function getName(bool $encode = true): string
+    public function getName($encode = true)
     {
-        if (false !== $encode) {
-            return str_replace('&amp;', '&', htmlspecialchars($this->_name, ENT_QUOTES | ENT_HTML5));
+        if (false !== (bool) $encode) {
+            return str_replace('&amp;', '&', htmlspecialchars((string) $this->_name, ENT_QUOTES | ENT_HTML5));
         }
 
         return $this->_name;
@@ -167,7 +168,7 @@ class XoopsFormElement
      *
      * @param string $key "accesskey" attribute for the element
      */
-    public function setAccessKey(string $key): void
+    public function setAccessKey($key)
     {
         $this->_accesskey = trim($key);
     }
@@ -177,7 +178,7 @@ class XoopsFormElement
      *
      * @return string "accesskey" attribute value
      */
-    public function getAccessKey(): string
+    public function getAccessKey()
     {
         return $this->_accesskey;
     }
@@ -185,10 +186,10 @@ class XoopsFormElement
     /**
      * If the accesskey is found in the specified string, underlines it
      *
-     * @param string $str String where to search the accesskey occurence
+     * @param  string $str String where to search the accesskey occurence
      * @return string Enhanced string with the 1st occurence of accesskey underlined
      */
-    public function getAccessString(string $str): string
+    public function getAccessString($str)
     {
         $access = $this->getAccessKey();
         if (!empty($access) && (false !== ($pos = strpos($str, $access)))) {
@@ -200,8 +201,10 @@ class XoopsFormElement
 
     /**
      * set the "class" attribute for the element
+     *
+     * @param string $class
      */
-    public function setClass(string $class): void
+    public function setClass($class)
     {
         $class = trim($class);
         if (!empty($class)) {
@@ -214,14 +217,14 @@ class XoopsFormElement
      *
      * @return string|false "class" attribute value
      */
-    public function getClass(): false|string
+    public function getClass()
     {
         if (empty($this->_class)) {
             return false;
         }
         $classes = [];
         foreach ($this->_class as $class) {
-            $classes[] = htmlspecialchars((string) $class, ENT_QUOTES | ENT_HTML5);
+            $classes[] = htmlspecialchars($class, ENT_QUOTES | ENT_HTML5);
         }
 
         return implode(' ', $classes);
@@ -229,8 +232,10 @@ class XoopsFormElement
 
     /**
      * set the caption for the element
+     *
+     * @param string $caption
      */
-    public function setCaption(string $caption): void
+    public function setCaption($caption)
     {
         $this->_caption = trim($caption);
     }
@@ -238,10 +243,10 @@ class XoopsFormElement
     /**
      * get the caption for the element
      *
-     * @param bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getCaption(bool $encode = false): string
+    public function getCaption($encode = false)
     {
         return $encode ? htmlspecialchars($this->_caption, ENT_QUOTES | ENT_HTML5) : $this->_caption;
     }
@@ -249,16 +254,16 @@ class XoopsFormElement
     /**
      * get the caption for the element
      *
-     * @param bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getTitle(bool $encode = true): string
+    public function getTitle($encode = true)
     {
-        if(!isset($this->_caption)) { 
+        if(!isset($this->_caption)) {
             $this->_caption = '';
         }
-        if (strlen($this->description) > 0) {
-            return $encode ? htmlspecialchars(strip_tags($this->_caption . ' - ' . $this->description), ENT_QUOTES | ENT_HTML5) : strip_tags($this->_caption . ' - ' . $this->description);
+        if (strlen((string)$this->_description) > 0) {
+            return $encode ? htmlspecialchars(strip_tags($this->_caption . ' - ' . $this->_description), ENT_QUOTES | ENT_HTML5) : strip_tags($this->_caption . ' - ' . $this->_description);
         } else {
             return $encode ? htmlspecialchars(strip_tags($this->_caption), ENT_QUOTES | ENT_HTML5) : strip_tags($this->_caption);
         }
@@ -266,27 +271,29 @@ class XoopsFormElement
 
     /**
      * set the element's description
+     *
+     * @param string $description
      */
-    public function setDescription(string $description): void
+    public function setDescription($description)
     {
-        $this->description = (isset($description) && !empty($description)) ? trim($description) : $description;
+        $this->_description = (isset($description) && !empty($description)) ? trim($description) : $description;
     }
 
     /**
      * get the element's description
      *
-     * @param bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getDescription(bool $encode = false): string
+    public function getDescription($encode = false)
     {
-        return $encode ? htmlspecialchars($this->description, ENT_QUOTES | ENT_HTML5) : $this->description;
+        return $encode ? htmlspecialchars($this->_description, ENT_QUOTES | ENT_HTML5) : $this->_description;
     }
 
     /**
      * flag the element as "hidden"
      */
-    public function setHidden(): void
+    public function setHidden()
     {
         $this->_hidden = true;
     }
@@ -296,7 +303,7 @@ class XoopsFormElement
      *
      * @return bool
      */
-    public function isHidden(): bool
+    public function isHidden()
     {
         return $this->_hidden;
     }
@@ -306,9 +313,9 @@ class XoopsFormElement
      *
      * @return bool
      */
-    public function isRequired(): bool
+    public function isRequired()
     {
-        return $this->required;
+        return $this->_required;
     }
 
     /**
@@ -317,10 +324,11 @@ class XoopsFormElement
      * This string will be inserted verbatim and unvalidated in the
      * element's tag. Know what you are doing!
      *
-     * @param bool   $replace If true, passed string will replace current content otherwise it will be appended to it
+     * @param  string $extra
+     * @param  bool   $replace If true, passed string will replace current content otherwise it will be appended to it
      * @return array  New content of the extra string
      */
-    public function setExtra(string $extra, bool $replace = false): array
+    public function setExtra($extra, $replace = false)
     {
         if ($replace) {
             $this->_extra = [trim($extra)];
@@ -334,17 +342,17 @@ class XoopsFormElement
     /**
      * Get the extra attributes for the element
      *
-     * @param bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitizer the text?
      * @return string
      */
-    public function getExtra(bool $encode = false): string
+    public function getExtra($encode = false)
     {
         if (!$encode) {
             return ' ' . implode(' ', $this->_extra);
         }
         $value = [];
         foreach ($this->_extra as $val) {
-            $value[] = str_replace('>', '&gt;', str_replace('<', '&lt;', (string) $val));
+            $value[] = str_replace('>', '&gt;', str_replace('<', '&lt;', $val));
         }
 
         return empty($value) ? '' : ' ' . implode(' ', $value);
@@ -354,10 +362,11 @@ class XoopsFormElement
      * Set the element's nocolspan
      * Modified by Catzwolf
      *
+     * @param bool $nocolspan
      *
      * @deprecated  PLEASE AVOID USING THIS METHOD
      */
-    public function setNocolspan(bool $nocolspan = true): void
+    public function setNocolspan($nocolspan = true)
     {
         $this->_nocolspan = $nocolspan;
     }
@@ -370,7 +379,7 @@ class XoopsFormElement
      *
      * @deprecated  PLEASE AVOID USING THIS METHOD
      */
-    public function getNocolspan(): bool|string
+    public function getNocolspan()
     {
         return $this->_nocolspan;
     }
@@ -383,7 +392,7 @@ class XoopsFormElement
      *
      * @deprecated  PLEASE AVOID USING THIS METHOD
      */
-    public function getFormType(): string
+    public function getFormType()
     {
         return $this->_formtype;
     }
@@ -392,10 +401,11 @@ class XoopsFormElement
      * set the element's nocolspan
      * Modified by Catzwolf
      *
+     * @param string $value
      *
      * @deprecated  PLEASE AVOID USING THIS METHOD
      */
-    public function setFormType(string $value = ''): void
+    public function setFormType($value = '')
     {
         $this->_formtype = $value;
     }
@@ -419,10 +429,12 @@ class XoopsFormElement
             $eltmsg     = str_replace('"', '\"', stripslashes($eltmsg));
             $eltmsg     = strip_tags($eltmsg);
             echo $this->getFormType();
-            return match ($this->getFormType()) {
-                'checkbox' => NWLINE . "if (!myform.{$eltname}.checked) { window.alert(\"{$eltmsg}\"); myform.{$eltname}.focus(); return false; }\n",
-                default => NWLINE . "if (myform.{$eltname}.value == \"\") { window.alert(\"{$eltmsg}\"); myform.{$eltname}.focus(); return false; }\n",
-            }; // switch
+            switch ($this->getFormType()) {
+                case 'checkbox':
+                    return NWLINE . "if (!myform.{$eltname}.checked) { window.alert(\"{$eltmsg}\"); myform.{$eltname}.focus(); return false; }\n";
+                default:
+                    return NWLINE . "if (myform.{$eltname}.value == \"\") { window.alert(\"{$eltmsg}\"); myform.{$eltname}.focus(); return false; }\n";
+            } // switch
         }
 
         return false;
@@ -435,7 +447,5 @@ class XoopsFormElement
      *
      * @abstract
      */
-    public function render()
-    {
-    }
+    public function render() {}
 }

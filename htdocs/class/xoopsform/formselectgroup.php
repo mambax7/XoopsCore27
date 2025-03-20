@@ -39,7 +39,7 @@ class XoopsFormSelectGroup extends XoopsFormSelect
      * @param int    $size         Number of rows. "1" makes a drop-down-list.
      * @param bool   $multiple     Allow multiple selections?
      */
-    public function __construct(string $caption, string $name, $include_anon = false, $value = null, $size = 1, bool $multiple = false)
+    public function __construct($caption, $name, $include_anon = false, $value = null, $size = 1, $multiple = false)
     {
         parent::__construct($caption, $name, $value, $size, $multiple);
         /** @var XoopsMemberHandler $member_handler */

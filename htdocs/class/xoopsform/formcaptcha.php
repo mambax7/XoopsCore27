@@ -46,25 +46,25 @@ xoops_load('XoopsFormElement');
  */
 class XoopsFormCaptcha extends XoopsFormElement
 {
-    public XoopsCaptcha $captchaHandler;
+    public $captchaHandler;
 
     /**
      * Constructor
      * @param string  $caption    Caption of the form element, default value is defined in captcha/language/
      * @param string  $name       Name for the input box
-     * @param boolean|string $skipmember Skip CAPTCHA check for members deprecated
+     * @param boolean $skipmember Skip CAPTCHA check for members deprecated
      * @param array   $configs									 deprecated
      */
-    public function __construct(string $caption = '', string $name = 'xoopscaptcha', bool|string $skipmember = '', array $configs = [])
+    public function __construct($caption = '', $name = 'xoopscaptcha', $skipmember = '', $configs = [])
     {
         xoops_load('XoopsCaptcha');
         $this->captchaHandler  = XoopsCaptcha::getInstance();
-		if($skipmember !== '' || !empty($configs)){
-			$GLOBALS['xoopsLogger']->addDeprecated("In the class 'XoopsFormCaptcha' The settings 'skipmember' and 'configs' are deprecated since XOOPS 2.5.11");
-		}
-		$config['name'] = $name;
-		$this->captchaHandler->setConfigs($config);
-        
+        if($skipmember !== '' || !empty($configs)) {
+            $GLOBALS['xoopsLogger']->addDeprecated("In the class 'XoopsFormCaptcha' The settings 'skipmember' and 'configs' are deprecated since XOOPS 2.5.11");
+        }
+        $config['name'] = $name;
+        $this->captchaHandler->setConfigs($config);
+
         if (!$this->captchaHandler->isActive()) {
             $this->setHidden();
         } else {
@@ -80,7 +80,7 @@ class XoopsFormCaptcha extends XoopsFormElement
      *
      * @return mixed
      */
-    public function setConfig($name, $val): mixed
+    public function setConfig($name, $val)
     {
         return $this->captchaHandler->setConfig($name, $val);
     }
@@ -88,7 +88,7 @@ class XoopsFormCaptcha extends XoopsFormElement
     /**
      * @return mixed
      */
-    public function render(): mixed
+    public function render()
     {
         // if (!$this->isHidden()) {
         return $this->captchaHandler->render();
@@ -98,7 +98,7 @@ class XoopsFormCaptcha extends XoopsFormElement
     /**
      * @return mixed
      */
-    public function renderValidationJS(): mixed
+    public function renderValidationJS()
     {
         return $this->captchaHandler->renderValidationJS();
     }

@@ -1,4 +1,5 @@
 <?php
+
 include XOOPS_ROOT_PATH . '/include/cp_header.php';
 include __DIR__ . '/admin_header.php';
 require_once dirname(__DIR__) . '/class/gtickets.php';
@@ -6,7 +7,7 @@ $db = XoopsDatabaseFactory::getDatabaseConnection();
 
 // COPY TABLES
 if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
-    if (preg_match('/[^0-9A-Za-z_-]/', (string) $_POST['new_prefix'])) {
+    if (preg_match('/[^0-9A-Za-z_-]/', $_POST['new_prefix'])) {
         die('wrong prefix');
     }
 
@@ -22,7 +23,8 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
     $srs = $db->queryF($sql);
     if (!$db->isResultSet($srs)) {
         throw new \RuntimeException(
-            \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+            \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+            E_USER_ERROR,
         );
     }
 
@@ -34,17 +36,18 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
     while (false !== ($row_table = $db->fetchArray($srs))) {
         ++$count;
         $old_table = $row_table['Name'];
-        if (substr((string) $old_table, 0, strlen((string) $old_prefix) + 1) !== $old_prefix . '_') {
+        if (substr($old_table, 0, strlen($old_prefix) + 1) !== $old_prefix . '_') {
             continue;
         }
 
-        $new_table = $new_prefix . substr((string) $old_table, strlen((string) $old_prefix));
+        $new_table = $new_prefix . substr($old_table, strlen($old_prefix));
 
         $sql = 'SHOW CREATE TABLE ' . $old_table;
         $crs = $db->queryF($sql);
         if (!$db->isResultSet($crs)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+                E_USER_ERROR,
             );
         }
 
@@ -53,7 +56,7 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
             continue;
         }
         $row_create = $db->fetchArray($crs);
-        $create_sql = preg_replace("/^CREATE TABLE `$old_table`/", "CREATE TABLE `$new_table`", (string) $row_create['Create Table'], 1);
+        $create_sql = preg_replace("/^CREATE TABLE `$old_table`/", "CREATE TABLE `$new_table`", $row_create['Create Table'], 1);
 
         $crs = $db->queryF($create_sql);
         if (!$crs) {
@@ -75,7 +78,7 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
 
     // DUMP INTO A LOCAL FILE
 } elseif (!empty($_POST['backup']) && !empty($_POST['prefix'])) {
-    if (preg_match('/[^0-9A-Za-z_-]/', (string) $_POST['prefix'])) {
+    if (preg_match('/[^0-9A-Za-z_-]/', $_POST['prefix'])) {
         die('wrong prefix');
     }
 
@@ -91,7 +94,8 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
     $srs = $db->queryF($sql);
     if (!$db->isResultSet($srs)) {
         throw new \RuntimeException(
-            \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+            \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+            E_USER_ERROR,
         );
     }
     if (!$db->getRowsNum($srs)) {
@@ -103,14 +107,15 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
 
     while (false !== ($row_table = $db->fetchArray($srs))) {
         $table = $row_table['Name'];
-        if (substr((string) $table, 0, strlen((string) $prefix) + 1) !== $prefix . '_') {
+        if (substr($table, 0, strlen($prefix) + 1) !== $prefix . '_') {
             continue;
         }
         $sql = "SHOW CREATE TABLE `$table`";
         $drawCreate = $db->queryF($sql);
         if (!$db->isResultSet($drawCreate)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+                E_USER_ERROR,
             );
         }
 
@@ -122,14 +127,15 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
         $result = $db->query($sql);
         if (!$db->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+                E_USER_ERROR,
             );
         }
         $fieldCount  = $db->getFieldsNum($result);
 
         $insertValues = '';
 
-        if ($db->getRowsNum($result)>0) {
+        if ($db->getRowsNum($result) > 0) {
             $fieldInfo = [];
             $insertNames = "INSERT INTO `$table` (";
             for ($j = 0; $j < $fieldCount; ++$j) {
@@ -152,11 +158,26 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
                     if (null === $row[$name]) {
                         $value = 'null';
                     } else {
-                        $value = match ($field->type) {
-                            MYSQLI_TYPE_NULL => 'NULL',
-                            MYSQLI_TYPE_DECIMAL, MYSQLI_TYPE_NEWDECIMAL, MYSQLI_TYPE_BIT, MYSQLI_TYPE_TINY, MYSQLI_TYPE_SHORT, MYSQLI_TYPE_LONG, MYSQLI_TYPE_FLOAT, MYSQLI_TYPE_DOUBLE, MYSQLI_TYPE_LONGLONG, MYSQLI_TYPE_INT24 => $row[$name],
-                            default => $db->quote($row[$name]),
-                        };
+                        switch ($field->type) {
+                            case MYSQLI_TYPE_NULL:
+                                $value = 'NULL';
+                                break;
+                            case MYSQLI_TYPE_DECIMAL:
+                            case MYSQLI_TYPE_NEWDECIMAL:
+                            case MYSQLI_TYPE_BIT:
+                            case MYSQLI_TYPE_TINY:
+                            case MYSQLI_TYPE_SHORT:
+                            case MYSQLI_TYPE_LONG:
+                            case MYSQLI_TYPE_FLOAT:
+                            case MYSQLI_TYPE_DOUBLE:
+                            case MYSQLI_TYPE_LONGLONG:
+                            case MYSQLI_TYPE_INT24:
+                                $value = $row[$name];
+                                break;
+                            default:
+                                $value = $db->quote($row[$name]);
+                                break;
+                        }
                     }
                     $insertValues .= ($firstField ? '' : ', ') . $value;
                     $firstField = false;
@@ -180,7 +201,7 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
 
     // DROP TABLES
 } elseif (!empty($_POST['delete']) && !empty($_POST['prefix'])) {
-    if (preg_match('/[^0-9A-Za-z_-]/', (string) $_POST['prefix'])) {
+    if (preg_match('/[^0-9A-Za-z_-]/', $_POST['prefix'])) {
         die('wrong prefix');
     }
 
@@ -207,7 +228,8 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
     $srs = $db->queryF($sql);
     if (!$db->isResultSet($srs)) {
         throw new \RuntimeException(
-            \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+            \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+            E_USER_ERROR,
         );
     }
     if (!$db->getRowsNum($srs)) {
@@ -216,7 +238,7 @@ if (!empty($_POST['copy']) && !empty($_POST['old_prefix'])) {
 
     while (false !== ($row_table = $db->fetchArray($srs))) {
         $table = $row_table['Name'];
-        if (substr((string) $table, 0, strlen((string) $prefix) + 1) !== $prefix . '_') {
+        if (substr($table, 0, strlen($prefix) + 1) !== $prefix . '_') {
             continue;
         }
         $drs = $db->queryF("DROP TABLE `$table`");
@@ -237,7 +259,8 @@ $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
 $srs = $db->queryF($sql);
 if (!$db->isResultSet($srs)) {
     throw new \RuntimeException(
-        \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+        \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+        E_USER_ERROR,
     );
 }
 if (!$db->getRowsNum($srs)) {
@@ -250,10 +273,10 @@ if (!$db->getRowsNum($srs)) {
 $tables   = [];
 $prefixes = [];
 while (false !== ($row_table = $db->fetchArray($srs))) {
-    if (str_ends_with((string) $row_table['Name'], '_users')) {
+    if (substr($row_table['Name'], -6) === '_users') {
         $prefixes[] = [
-            'name'    => substr((string) $row_table['Name'], 0, -6),
-            'updated' => $row_table['Update_time']
+            'name'    => substr($row_table['Name'], 0, -6),
+            'updated' => $row_table['Update_time'],
         ];
     }
     $tables[] = $row_table['Name'];
@@ -281,7 +304,7 @@ foreach ($prefixes as $prefix) {
         if ($table == $prefix['name'] . '_xoopscomments') {
             $has_xoopscomments = true;
         }
-        if (substr((string) $table, 0, strlen($prefix['name']) + 1) === $prefix['name'] . '_') {
+        if (substr($table, 0, strlen($prefix['name']) + 1) === $prefix['name'] . '_') {
             ++$table_count;
         }
     }
@@ -291,7 +314,7 @@ foreach ($prefixes as $prefix) {
         continue;
     }
 
-    $prefix4disp  = htmlspecialchars((string) $prefix['name'], ENT_QUOTES | ENT_HTML5);
+    $prefix4disp  = htmlspecialchars($prefix['name'], ENT_QUOTES | ENT_HTML5);
     $ticket_input = $xoopsGTicket->getTicketHtml(__LINE__, 1800, 'protector_admin');
 
     if ($prefix['name'] == XOOPS_DB_PREFIX) {

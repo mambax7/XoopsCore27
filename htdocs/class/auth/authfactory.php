@@ -66,7 +66,7 @@ class XoopsAuthFactory
                 return false;
             }
 
-            $class = 'XoopsAuth' . ucfirst((string) $xoops_auth_method);
+            $class = 'XoopsAuth' . ucfirst($xoops_auth_method);
             if (!class_exists($class)) {
                 $GLOBALS['xoopsLogger']->triggerError($class, _XO_ER_CLASSNOTFOUND, __FILE__, __LINE__, E_USER_ERROR);
 

@@ -77,7 +77,7 @@ class XoopsXmlRpcApi
         }
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
-        $this->user     = $member_handler->loginUser(addslashes((string) $username), addslashes((string) $password));
+        $this->user     = $member_handler->loginUser(addslashes($username), addslashes($password));
         if (!is_object($this->user)) {
             unset($this->user);
 
@@ -150,7 +150,7 @@ class XoopsXmlRpcApi
      */
     public function _setXoopsTagMap($xoopstag, $blogtag)
     {
-        if (trim((string) $blogtag) != '') {
+        if (trim($blogtag) != '') {
             $this->xoopsTagMap[$xoopstag] = $blogtag;
         }
     }
@@ -176,9 +176,9 @@ class XoopsXmlRpcApi
     {
         $ret   = '';
         $match = [];
-        if (preg_match("/\<" . $tag . "\>(.*)\<\/" . $tag . "\>/is", (string) $text, $match)) {
+        if (preg_match("/\<" . $tag . "\>(.*)\<\/" . $tag . "\>/is", $text, $match)) {
             if ($remove) {
-                $text = str_replace($match[0], '', (string) $text);
+                $text = str_replace($match[0], '', $text);
             }
             $ret = $match[1];
         }
@@ -193,12 +193,14 @@ class XoopsXmlRpcApi
      *
      * @return $this|XoopsApi
      */
-    public function &_getXoopsApi(&$params)
+    public function _getXoopsApi(&$params)
     {
-        if (strtolower(static::class) !== 'xoopsapi') {
+        if (strtolower(get_class($this)) !== 'xoopsapi') {
             require_once(XOOPS_ROOT_PATH . '/class/xml/rpc/xoopsapi.php');
 
-            return new XoopsApi($params, $this->response, $this->module);
+            $xoopsApi = new XoopsApi($params, $this->response, $this->module);
+
+            return $xoopsApi;
         } else {
             return $this;
         }

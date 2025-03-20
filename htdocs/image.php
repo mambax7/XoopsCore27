@@ -69,9 +69,6 @@ define('ONLY_LOCAL_IMAGES', true);
 define('ENABLE_IMAGEFILTER', true); // Set to false to avoid excessive server load
 define('ENABLE_ROUNDCORNER', true); // Set to false to avoid excessive server load
 define('ENABLE_IMAGEROTATE', true); // Set to false to avoid excessive server load
-if (PHP_VERSION_ID < 50400) {
-    set_magic_quotes_runtime(false); // will never get called on PHP 5.4+
-}
 if (function_exists('mb_http_output')) {
     mb_http_output('pass');
 }
@@ -102,9 +99,9 @@ function doConditionalGet($etag, $lastModified)
 {
     header("Last-Modified: $lastModified");
     header("ETag: \"{$etag}\"");
-    $ifNoneMatch = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? stripslashes((string) $_SERVER['HTTP_IF_NONE_MATCH']) : false;
+    $ifNoneMatch = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? stripslashes($_SERVER['HTTP_IF_NONE_MATCH']) : false;
     $ifModifiedSince = isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])
-        ? stripslashes((string) $_SERVER['HTTP_IF_MODIFIED_SINCE']) : false;
+        ? stripslashes($_SERVER['HTTP_IF_MODIFIED_SINCE']) : false;
     if (!$ifModifiedSince && !$ifNoneMatch) {
         return null;
     }
@@ -152,7 +149,7 @@ function imageCreateCorners($sourceImage, $radii)
     $workingWidth = $imageWidth * $q;
     $workingHeight = $imageHeight * $q;
 
-    $workingImage= imagecreatetruecolor($workingWidth, $workingHeight);
+    $workingImage = imagecreatetruecolor($workingWidth, $workingHeight);
     $alphaColor = imagecolorallocatealpha($workingImage, $r, $g, $b, 127);
     imagealphablending($workingImage, false);
     imagesavealpha($workingImage, true);
@@ -215,7 +212,7 @@ function findSharp($orig, $final)
  *
  * Many different issues end up here, so message is generic 404. This keeps us from leaking info by probing
  */
-function exit404BadReq(): never
+function exit404BadReq()
 {
     header('HTTP/1.1 404 Not Found');
     exit();
@@ -243,10 +240,10 @@ function imageFilenameCheck($imageUrl)
     }
 
     $fullPath = XOOPS_ROOT_PATH . $imageUrl;
-    if (str_starts_with($fullPath, XOOPS_VAR_PATH)) { // no access to data (shouldn't be in root, but...)
+    if (strpos($fullPath, XOOPS_VAR_PATH) === 0) { // no access to data (shouldn't be in root, but...)
         exit404BadReq();
     }
-    if (str_starts_with($fullPath, XOOPS_PATH)) { // no access to lib (shouldn't be in root, but...)
+    if (strpos($fullPath, XOOPS_PATH) === 0) { // no access to lib (shouldn't be in root, but...)
         exit404BadReq();
     }
 
@@ -354,12 +351,12 @@ if (!empty($imageId)) {
 // Get image_data from the Xoops cache only if the edited image has been cached after the latest modification
 // of the original image
 xoops_load('XoopsCache');
-$edited_image_filename = 'editedimage_' . md5((string) $_SERVER['REQUEST_URI']) . '_' . $imageFilename;
+$edited_image_filename = 'editedimage_' . md5($_SERVER['REQUEST_URI']) . '_' . $imageFilename;
 $cached_image = XoopsCache::read($edited_image_filename);
 if (!isset($_GET['nocache']) && !isset($_GET['noservercache']) && !empty($cached_image)
     && ($cached_image['cached_time'] >= $imageCreatedTime)) {
     header("Content-type: {$imageMimetype}");
-    header('Content-Length: ' . strlen((string) $cached_image['image_data']));
+    header('Content-Length: ' . strlen($cached_image['image_data']));
     echo $cached_image['image_data'];
     exit();
 }
@@ -386,7 +383,7 @@ if (!$max_width && $max_height) {
 }
 
 // color
-$color = isset($_GET['color']) ? preg_replace('/[^0-9a-fA-F]/', '', (string)$_GET['color']) : false;
+$color = isset($_GET['color']) ? preg_replace('/[^0-9a-fA-F]/', '', (string) $_GET['color']) : false;
 
 // filter, radius, angle
 $filter = Request::getArray('filter', [], 'GET'); //isset($_GET['filter']) ? $_GET['filter'] : false;
@@ -402,10 +399,10 @@ if (empty($width)
     && empty($radius)
     && empty($angle)) {
     $last_modified_string = gmdate('D, d M Y H:i:s', $imageCreatedTime) . ' GMT';
-    $etag = md5((string) $imageData);
+    $etag = md5($imageData);
     doConditionalGet($etag, $last_modified_string);
     header("Content-type: {$imageMimetype}");
-    header('Content-Length: ' . strlen((string) $imageData));
+    header('Content-Length: ' . strlen($imageData));
     echo $imageData;
     exit();
 }
@@ -417,7 +414,7 @@ if (isset($_GET['cropratio'])) {
     $crop_ratio = explode(':', Request::getString('cropratio', '', 'GET'));
     if (count($crop_ratio) == 2) {
         $ratio_computed = $imageWidth / $imageHeight;
-        $crop_radio_computed = (float)$crop_ratio[0] / (float)$crop_ratio[1];
+        $crop_radio_computed = (float) $crop_ratio[0] / (float) $crop_ratio[1];
         if ($ratio_computed < $crop_radio_computed) {
             // Image is too tall, so we will crop the top and bottom
             $orig_height = $imageHeight;
@@ -471,7 +468,7 @@ switch ($imageMimetype) {
         $imageMimetype = 'image/png'; // We need to convert GIFs to PNGs
         $do_sharpen = false;
         $quality = round(10 - ($quality / 10)); // We are converting the GIF to a PNG and PNG needs a compression
-                                                // level of 0 (no compression) through 9 (max)
+        // level of 0 (no compression) through 9 (max)
         break;
     case 'image/png':
     case 'image/x-png':
@@ -515,14 +512,14 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
                 $destination_image,
                 intval($color[0] . $color[1], 16),
                 intval($color[2] . $color[3], 16),
-                intval($color[4] . $color[5], 16)
+                intval($color[4] . $color[5], 16),
             );
         } elseif (strlen($color) == 3) {
             $background = imagecolorallocate(
                 $destination_image,
                 intval($color[0] . $color[0], 16),
                 intval($color[1] . $color[1], 16),
-                intval($color[2] . $color[2], 16)
+                intval($color[2] . $color[2], 16),
             );
         }
         if ($background) {
@@ -543,14 +540,14 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
             $destination_image,
             intval($color[0] . $color[1], 16),
             intval($color[2] . $color[3], 16),
-            intval($color[4] . $color[5], 16)
+            intval($color[4] . $color[5], 16),
         );
     } elseif (strlen($color) == 3) {
         $background = imagecolorallocate(
             $destination_image,
             intval($color[0] . $color[0], 16),
             intval($color[1] . $color[1], 16),
-            intval($color[2] . $color[2], 16)
+            intval($color[2] . $color[2], 16),
         );
     }
     if ($background) {
@@ -562,7 +559,7 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
 if (ENABLE_IMAGEFILTER && !empty($filter)) {
     $filterSet = (array) $filter;
     foreach ($filterSet as $currentFilter) {
-        $rawFilterArgs = explode(',', (string) $currentFilter);
+        $rawFilterArgs = explode(',', $currentFilter);
         $filterConst = constant(array_shift($rawFilterArgs));
         if (null !== $filterConst) { // skip if unknown constant
             $filterArgs = [];
@@ -618,7 +615,7 @@ if ($do_sharpen) {
     $sharpen_matrix = [
         [-1, -2, -1],
         [-2, $sharpness + 12, -2],
-        [-1, -2, -1]
+        [-1, -2, -1],
     ];
     $divisor = $sharpness;
     $offset = 0;

@@ -59,20 +59,21 @@ class MytsCensor extends MyTextSanitizerExtension
 
         $replacement = $censorConf['censor_replace'];
         foreach ($censorConf['censor_words'] as $bad) {
-            $bad = trim((string) $bad);
+            $bad = trim($bad);
             if (!empty($bad)) {
-                if (!str_contains((string) $text, $bad)) {
+                if (false === strpos($text, $bad)) {
                     continue;
                 }
                 if (!empty($censorConf['censor_terminate'])) {
-                    trigger_error('Censor words found', E_USER_ERROR);
+                    throw new \Exception('Censor words found');
+                    // The below lines are now redundant and won't be executed.
                     $text = '';
 
                     return $text;
                 }
                 $patterns[]     = "/(^|[^0-9a-z_]){$bad}([^0-9a-z_]|$)/siU";
                 $replacements[] = "\\1{$replacement}\\2";
-                $text           = preg_replace($patterns, $replacements, (string) $text);
+                $text           = preg_replace($patterns, $replacements, $text);
             }
         }
 

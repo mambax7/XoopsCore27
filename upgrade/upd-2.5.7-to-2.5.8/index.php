@@ -55,7 +55,7 @@ class Upgrade_258 extends XoopsUpgrade
             . "WHERE TABLE_SCHEMA = '%s'AND TABLE_NAME = '%s' AND COLUMN_NAME = '%s'",
             $db->escape($dbname),
             $db->escape($table),
-            $db->escape($column)
+            $db->escape($column),
         );
 
         /** @var mysqli_result $result */
@@ -90,7 +90,7 @@ class Upgrade_258 extends XoopsUpgrade
         // kill any indexes based on pass column
         $indexes = $migrate->getTableIndexes('users');
         foreach ($indexes as $name => $def) {
-            if (preg_match('/\b(pass)\b/', (string) $def['columns'])) {
+            if (preg_match('/\b(pass)\b/', $def['columns'])) {
                 $migrate->dropIndex($name, 'users');
             }
         }

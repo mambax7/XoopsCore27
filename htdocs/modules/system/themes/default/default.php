@@ -34,9 +34,7 @@ class XoopsGuiDefault extends XoopsSystemGui
     /**
      *
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * @return bool
@@ -52,6 +50,8 @@ class XoopsGuiDefault extends XoopsSystemGui
 
         global $xoopsConfig, $xoopsUser, $xoopsModule, $xoTheme, $xoopsTpl, $xoopsDB;
         $tpl =& $this->template;
+
+        include_once dirname(__DIR__) . '/ComposerInfo.php';
 
         $xoTheme->addScript('browse.php?Frameworks/jquery/jquery.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/default/js/styleswitch.js');
@@ -89,6 +89,10 @@ class XoopsGuiDefault extends XoopsSystemGui
         $tpl->assign('file_uploads', ini_get('file_uploads') ? 'On' : 'Off');
         $tpl->assign('upload_max_filesize', ini_get('upload_max_filesize'));
         $tpl->assign('xoops_sitename', $xoopsConfig['sitename']);
+
+        // COMPOSER PACKAGES VERSION INFO *******************
+
+        ComposerInfo::getComposerInfo($tpl);
 
         // ADD MENU *****************************************
 
@@ -181,8 +185,7 @@ class XoopsGuiDefault extends XoopsSystemGui
             'link' => XOOPS_URL . '/modules/system/admin.php?fct=modulesadmin',
             'text' => _AM_SYSTEM_MODULES,
             'dir'  => $mod->getVar('dirname', 'n'),
-            'menu' => $menu
-        ]);
+            'menu' => $menu]);
 
         // add preferences menu
         $menu = [];
@@ -192,58 +195,49 @@ class XoopsGuiDefault extends XoopsSystemGui
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=1',
             'title'    => _OXYGEN_GENERAL,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=2',
             'title'    => _OXYGEN_USERSETTINGS,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=3',
             'title'    => _OXYGEN_METAFOOTER,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=4',
             'title'    => _OXYGEN_CENSOR,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=5',
             'title'    => _OXYGEN_SEARCH,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=6',
             'title'    => _OXYGEN_MAILER,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=7',
             'title'    => _OXYGEN_AUTHENTICATION,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=showmod&amp;mod=1',
             'title'    => _OXYGEN_MODULESETTINGS,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
 
         $menu[] = [
             'link'     => XOOPS_URL . '/modules/system/admin.php?fct=preferences',
             'title'    => _OXYGEN_SYSOPTIONS,
             'absolute' => 1,
             'url'      => XOOPS_URL . '/modules/system/',
-            'options'  => $OPT
-        ];
+            'options'  => $OPT];
 
         foreach ($mods as $mod) {
             $rtn    = [];
@@ -260,34 +254,29 @@ class XoopsGuiDefault extends XoopsSystemGui
             'link' => XOOPS_URL . '/modules/system/admin.php?fct=preferences',
             'text' => _OXYGEN_SITEPREF,
             'dir'  => $mod->getVar('dirname', 'n'),
-            'menu' => $menu
-        ]);
+            'menu' => $menu]);
 
         //add OPTIONS/Links Menu Items
         $menu   = [];
         $menu[] = [
             'link'     => 'https://xoops.org',
             'title'    => _OXYGEN_XOOPSPROJECT,
-            'absolute' => 1
-        ];
+            'absolute' => 1];
         $menu[] = [
             'link'     => 'https://xoops.org',
             'title'    => _OXYGEN_WEBSITE,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/images/xoops.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/images/xoops.png'];
         $menu[] = [
             'link'     => 'https://xoops.org/modules/repository/',
             'title'    => _OXYGEN_XOOPSMODULES,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/images/xoops.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/images/xoops.png'];
         $menu[] = [
             'link'     => 'https://xoops.org/modules/extgallery/',
             'title'    => _OXYGEN_XOOPSTHEMES,
             'absolute' => 1,
-            'icon'     => XOOPS_ADMINTHEME_URL . '/default/images/tweb.png'
-        ];
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/images/tweb.png'];
 
         $tpl->append('navitems', ['link' => XOOPS_URL . '/admin.php', 'text' => _OXYGEN_INTERESTSITES, 'menu' => $menu]);
 
@@ -330,4 +319,5 @@ class XoopsGuiDefault extends XoopsSystemGui
             }
         }
     }
+
 }

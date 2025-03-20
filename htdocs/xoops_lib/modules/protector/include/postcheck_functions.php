@@ -120,7 +120,7 @@ function protector_postcommon()
 
     // DOS/CRAWLER skipping based on 'dirname' or getcwd()
     $dos_skipping  = false;
-    $skip_dirnames = isset($conf['dos_skipmodules']) ? explode('|', (string) $conf['dos_skipmodules']) : [];
+    $skip_dirnames = isset($conf['dos_skipmodules']) ? explode('|', $conf['dos_skipmodules']) : [];
     if (!is_array($skip_dirnames)) {
         $skip_dirnames = [];
     }
@@ -130,7 +130,7 @@ function protector_postcommon()
         }
     } else {
         foreach ($skip_dirnames as $skip_dirname) {
-            if ($skip_dirname && str_contains(getcwd(), $skip_dirname)) {
+            if ($skip_dirname && false !== strpos(getcwd(), $skip_dirname)) {
                 $dos_skipping = true;
                 break;
             }
@@ -155,7 +155,7 @@ function protector_postcommon()
         $maskArray = []; // Or some default value that makes sense for your application
     }
     $ipv4Mask = empty($maskArray[0]) ? 24 : $maskArray[0];
-    $ipv6Mask = (!isset($maskArray[1])) ? 56 : $maskArray[1];
+    $ipv6Mask = $maskArray[1] ?? 56;
     $ip = \Xmf\IPAddress::fromRequest();
     $maskCheck = true;
     if (isset($_SESSION['protector_last_ip'])) {

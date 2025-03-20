@@ -26,7 +26,7 @@ $sample_form->setExtra('enctype="multipart/form-data"');
 // Not required but for user-friendly concern
 $editor = !empty($_REQUEST['editor']) ? $_REQUEST['editor'] : '';
 if (!empty($editor)) {
-    setcookie('editor', (string) $editor); // save to cookie
+    setcookie('editor', $editor); // save to cookie
 } else {
     // Or use user pre-selected editor through profile
     if (is_object($xoopsUser)) {

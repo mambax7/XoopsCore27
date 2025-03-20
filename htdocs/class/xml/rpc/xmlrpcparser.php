@@ -89,7 +89,7 @@ class XoopsXmlRpcParser extends SaxParser
      * @see
      * @param $input
      */
-    public function __construct(&$input)
+    public function __construct($input)
     {
         parent::__construct($input);
         $this->addTagHandler(new RpcMethodNameHandler());
@@ -132,7 +132,7 @@ class XoopsXmlRpcParser extends SaxParser
     public function setTempValue($value)
     {
         if (is_array($value)) {
-            settype($this->_tempValue, 'array');
+            $this->_tempValue = (array)$this->_tempValue;
             foreach ($value as $k => $v) {
                 $this->_tempValue[$k] = $v;
             }
@@ -318,9 +318,9 @@ class RpcIntHandler extends XmlTagHandler
      * @param $parser
      * @param $data
      */
-    public function handleCharacterData($parser, &$data)
+    public function handleCharacterData($parser, $data)
     {
-        $parser->setTempValue((int)$data);
+        $parser->setTempValue((int) $data);
     }
 }
 
@@ -343,7 +343,7 @@ class RpcDoubleHandler extends XmlTagHandler
      */
     public function handleCharacterData($parser, &$data)
     {
-        $data = (float)$data;
+        $data = (float) $data;
         $parser->setTempValue($data);
     }
 }
@@ -367,7 +367,7 @@ class RpcBooleanHandler extends XmlTagHandler
      */
     public function handleCharacterData($parser, &$data)
     {
-        $data = (boolean)$data;
+        $data = (bool) $data;
         $parser->setTempValue($data);
     }
 }
@@ -389,9 +389,9 @@ class RpcStringHandler extends XmlTagHandler
      * @param $parser
      * @param $data
      */
-    public function handleCharacterData($parser, &$data)
+    public function handleCharacterData($parser, $data)
     {
-        $parser->setTempValue((string)$data);
+        $parser->setTempValue((string) $data);
     }
 }
 
@@ -412,10 +412,10 @@ class RpcDateTimeHandler extends XmlTagHandler
      * @param $parser
      * @param $data
      */
-    public function handleCharacterData($parser, &$data)
+    public function handleCharacterData($parser, $data)
     {
         $matches = [];
-        if (!preg_match("/^(\d{4})(\d{2})(\d{2})T(\d{2}):(\d{2}):(\d{2})$/", (string) $data, $matches)) {
+        if (!preg_match("/^(\d{4})(\d{2})(\d{2})T(\d{2}):(\d{2}):(\d{2})$/", $data, $matches)) {
             $parser->setTempValue(time());
         } else {
             $parser->setTempValue(gmmktime($matches[4], $matches[5], $matches[6], $matches[2], $matches[3], $matches[1]));
@@ -440,9 +440,9 @@ class RpcBase64Handler extends XmlTagHandler
      * @param $parser
      * @param $data
      */
-    public function handleCharacterData($parser, &$data)
+    public function handleCharacterData($parser, $data)
     {
-        $parser->setTempValue(base64_decode((string) $data));
+        $parser->setTempValue(base64_decode($data));
     }
 }
 
@@ -521,11 +521,18 @@ class RpcValueHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
-        match ($parser->getCurrentTag()) {
-            'member' => $parser->setTempMember($parser->getTempName(), $parser->getTempValue()),
-            'array', 'data' => $parser->setTempArray($parser->getTempValue()),
-            default => $parser->setParam($parser->getTempValue()),
-        };
+        switch ($parser->getCurrentTag()) {
+            case 'member':
+                $parser->setTempMember($parser->getTempName(), $parser->getTempValue());
+                break;
+            case 'array':
+            case 'data':
+                $parser->setTempArray($parser->getTempValue());
+                break;
+            default:
+                $parser->setParam($parser->getTempValue());
+                break;
+        }
         $parser->resetTempValue();
     }
 }
@@ -558,7 +565,7 @@ class RpcMemberHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
-        $member =& $parser->getTempMember();
+        $member = & $parser->getTempMember();
         $parser->releaseWorkingLevel();
         $parser->setTempStruct($member);
     }

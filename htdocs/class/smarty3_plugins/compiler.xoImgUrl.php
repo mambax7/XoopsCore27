@@ -12,6 +12,7 @@
  * @subpackage  xos_opal_Smarty
  * @since       2.0.14
  */
+
 /**
  * Inserts the URL of a file resource customizable by themes
  *
@@ -29,14 +30,16 @@
  * is not possible right now.
  *
  * @param string[] $params
+ * @param Smarty   $smarty
  * @return string
  */
+
 function smarty_compiler_xoImgUrl($params, Smarty $smarty)
 {
     global $xoops, $xoTheme;
     $arg = reset($params);
     $arg = trim($arg, " '\"\t\n\r\0\x0B");
     $path = (isset($xoTheme) && is_object($xoTheme)) ? $xoTheme->resourcePath($arg) : $arg;
-//$xoops->events()->triggerEvent('debug.log', $path);
-    return "<?php echo '" . addslashes((string) $xoops->url($path)) . "'; ?>";
+    //$xoops->events()->triggerEvent('debug.log', $path);
+    return "<?php echo '" . addslashes($xoops->url($path)) . "'; ?>";
 }

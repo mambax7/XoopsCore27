@@ -62,7 +62,7 @@ EOH;
 
         return [
             $code,
-            $javascript
+            $javascript,
         ];
     }
 
@@ -73,9 +73,12 @@ EOH;
      */
     public static function myCallback($match)
     {
-        return self::decode($match[1],0 ,0);
+        return self::decode($match[1], 0, 0);
     }
 
+    /**
+     * @param MyTextSanitizer $myts
+     */
     public function load(MyTextSanitizer $myts)
     {
         $myts->callbackPatterns[] = "/\[\[([^\]]*)\]\]/sU";
@@ -95,7 +98,7 @@ EOH;
         }
         $charset = !empty($config['charset']) ? $config['charset'] : 'UTF-8';
         xoops_load('XoopsLocal');
-        $ret = "<a href='" . sprintf($config['link'], urlencode((string) XoopsLocal::convert_encoding($text, $charset))) . "' rel='external' title=''>{$text}</a>";
+        $ret = "<a href='" . sprintf($config['link'], urlencode(XoopsLocal::convert_encoding($text, $charset))) . "' rel='external' title=''>{$text}</a>";
 
         return $ret;
     }

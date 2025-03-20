@@ -73,9 +73,11 @@ function themecenterposts($title, $content)
 /**
  * Text Form : DO NOT USE
  *
+ * @param mixed $url
+ * @param mixed $value
  * @return mixed
  */
-function myTextForm(mixed $url, mixed $value)
+function myTextForm($url, $value)
 {
     return '<form action="' . $url . '" method="post"><input type="submit" value="' . $value . '" /></form>';
 }
@@ -133,7 +135,7 @@ function xoops_module_get_admin_menu()
     foreach ($mods as $mod) {
         $mid         = $mod->getVar('mid');
         $module_name = $mod->getVar('name');
-        $module_url  = "\".XOOPS_URL.\"/modules/" . $mod->getVar('dirname') . '/' . trim((string) $mod->getInfo('adminindex'));
+        $module_url  = "\".XOOPS_URL.\"/modules/" . $mod->getVar('dirname') . '/' . trim($mod->getInfo('adminindex'));
         $module_img  = "<img class='admin_layer_img' src='\".XOOPS_URL.\"/modules/" . $mod->getVar('dirname') . '/' . $mod->getInfo('image') . "' alt='' />";
         $module_desc = "<strong>\"._VERSION.\":</strong> " . round($mod->getVar('version') / 100, 2) . "<br><strong>\"._DESCRIPTION.\":</strong> " . $mod->getInfo('description');
 
@@ -150,15 +152,15 @@ function xoops_module_get_admin_menu()
             $adminmenu[] = [
                 'link'     => '".XOOPS_URL."/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mid,
                 'title'    => _PREFERENCES,
-                'absolute' => true
+                'absolute' => true,
             ];
         }
         if (count($adminmenu) != 0) {
             $currenttarget = '';
             foreach ($adminmenu as $menuitem) {
-                $menu_link   = trim((string) $menuitem['link']);
-                $menu_title  = trim((string) $menuitem['title']);
-                $menu_target = isset($menuitem['target']) ? " target='" . trim((string) $menuitem['target']) . "'" : '';
+                $menu_link   = trim($menuitem['link']);
+                $menu_title  = trim($menuitem['title']);
+                $menu_target = isset($menuitem['target']) ? " target='" . trim($menuitem['target']) . "'" : '';
                 if (isset($menuitem['absolute']) && $menuitem['absolute']) {
                     $menu_link = empty($menu_link) ? '#' : $menu_link;
                 } else {
@@ -230,7 +232,7 @@ function xoops_write_index_file($path = '')
         return false;
     }
 
-    $path     = str_ends_with($path, '/') ? substr($path, 0, -1) : $path;
+    $path     = substr($path, -1) === '/' ? substr($path, 0, -1) : $path;
     $filename = $path . '/index.php';
     if (file_exists($filename)) {
         return true;

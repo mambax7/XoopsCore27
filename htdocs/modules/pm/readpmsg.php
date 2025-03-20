@@ -93,7 +93,7 @@ if (is_object($pm) && !empty($_POST['action'])) {
         }
     }
     $res_message ??= $res ? _PM_ACTION_DONE : _PM_ACTION_ERROR;
-    redirect_header('viewpmsg.php?op=' . htmlspecialchars((string) $_REQUEST['op'], ENT_QUOTES | ENT_HTML5), 2, $res_message);
+    redirect_header('viewpmsg.php?op=' . htmlspecialchars($_REQUEST['op'], ENT_QUOTES | ENT_HTML5), 2, $res_message);
 }
 $start                        = Request::getInt('start', 0, 'GET');
 $total_messages               = Request::getInt('total_messages', 0, 'GET');

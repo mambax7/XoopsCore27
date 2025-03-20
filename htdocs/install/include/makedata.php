@@ -106,13 +106,13 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('modules', " VALUES (1, '" . _MI_SYSTEM_NAME . "', '" . $modversion['version'] . "', " . $time . ", 0, 1, 'system', 0, 1, 0, 0, 0, 0)");
 
     foreach ($modversion['templates'] as $tplfile) {
-        $templateType = isset($tplfile['type']) && $tplfile['type'] === 'admin' ? 'admin' : 'module';
-        $templatePath = $templateType === 'admin'
+        $templateType = isset($tplfile['type']) && 'admin' === $tplfile['type'] ? 'admin' : 'module';
+        $templatePath = 'admin' === $templateType
             ? XOOPS_ROOT_PATH . '/modules/system/templates/admin/' . $tplfile['file']
             : XOOPS_ROOT_PATH . '/modules/system/templates/' . $tplfile['file'];
 
         if ($fp = fopen($templatePath, 'r')) {
-            $newtplid = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes((string) $tplfile['file']) . "', '" . addslashes((string) $tplfile['description']) . "', " . $time . ', ' . $time . ", '$templateType')");
+            $newtplid = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", '$templateType')");
             $tplsource = fread($fp, filesize($templatePath));
             fclose($fp);
             $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");
@@ -125,11 +125,11 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
             if (in_array($newblock['template'], ['system_block_user.tpl', 'system_block_login.tpl', 'system_block_mainmenu.tpl'])) {
                 $visible = 1;
             }
-            $options   = !isset($newblock['options']) ? '' : trim((string) $newblock['options']);
-            $edit_func = !isset($newblock['edit_func']) ? '' : trim((string) $newblock['edit_func']);
-            $newbid    = $dbm->insert('newblocks', ' VALUES (0, 1, ' . $func_num . ", '" . addslashes($options) . "', '" . addslashes((string) $newblock['name']) . "', '" . addslashes((string) $newblock['name']) . "', '', 0, 0, " . $visible . ", 'S', 'H', 1, 'system', '" . addslashes((string) $newblock['file']) . "', '" . addslashes((string) $newblock['show_func']) . "', '" . addslashes($edit_func) . "', '" . addslashes((string) $newblock['template']) . "', 0, " . $time . ')');
+            $options   = !isset($newblock['options']) ? '' : trim($newblock['options']);
+            $edit_func = !isset($newblock['edit_func']) ? '' : trim($newblock['edit_func']);
+            $newbid    = $dbm->insert('newblocks', ' VALUES (0, 1, ' . $func_num . ", '" . addslashes($options) . "', '" . addslashes($newblock['name']) . "', '" . addslashes($newblock['name']) . "', '', 0, 0, " . $visible . ", 'S', 'H', 1, 'system', '" . addslashes($newblock['file']) . "', '" . addslashes($newblock['show_func']) . "', '" . addslashes($edit_func) . "', '" . addslashes($newblock['template']) . "', 0, " . $time . ')');
             // $newbid = $xoopsDB->getInsertId();
-            $newtplid = $dbm->insert('tplfile', ' VALUES (0, ' . $newbid . ", 'system', 'default', '" . addslashes((string) $newblock['template']) . "', '" . addslashes((string) $newblock['description']) . "', " . $time . ', ' . $time . ", 'block')");
+            $newtplid = $dbm->insert('tplfile', ' VALUES (0, ' . $newbid . ", 'system', 'default', '" . addslashes($newblock['template']) . "', '" . addslashes($newblock['description']) . "', " . $time . ', ' . $time . ", 'block')");
             // $newtplid = $xoopsDB->getInsertId();
             $tplsource = fread($fp, filesize(XOOPS_ROOT_PATH . '/modules/system/templates/blocks/' . $newblock['template']));
             fclose($fp);
@@ -145,7 +145,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $regdate = time();
     // $dbadminname= addslashes($adminname);
     // RMV-NOTIFY (updated for extra columns in user table)
-    $dbm->insert('users', " VALUES (1,'','" . addslashes((string) $adminname) . "','" . addslashes((string) $adminmail) . "','" . XOOPS_URL . "/','avatars/blank.gif','" . $regdate . "','','','',1,'','','','','" . $temp . "',0,0,7,5,'default','0.0'," . time() . ",'flat',0,1,0,'','','',0)");
+    $dbm->insert('users', " VALUES (1,'','" . addslashes($adminname) . "','" . addslashes($adminmail) . "','" . XOOPS_URL . "/','avatars/blank.gif','" . $regdate . "','','','',1,'','','','','" . $temp . "',0,0,7,5,'default','0.0'," . time() . ",'flat',0,1,0,'','','',0)");
     // data for table 'block_module_link'
     $sql    = 'SELECT bid, side FROM ' . $dbm->prefix('newblocks');
     $result = $dbm->query($sql);
@@ -155,7 +155,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     //    );
     //    }
     while (false !== ($myrow = $dbm->fetchArray($result))) {
-        if ($myrow['side'] == 0) {
+        if (0 == $myrow['side']) {
             $dbm->insert('block_module_link', ' VALUES (' . $myrow['bid'] . ', 0)');
         } else {
             $dbm->insert('block_module_link', ' VALUES (' . $myrow['bid'] . ', -1)');
@@ -164,11 +164,11 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     // data for table 'config'
     $dbm->insert('config', " VALUES (1, 0, 1, 'sitename', '_MD_AM_SITENAME', 'XOOPS Site', '_MD_AM_SITENAMEDSC', 'textbox', 'text', 0)");
     $dbm->insert('config', " VALUES (2, 0, 1, 'slogan', '_MD_AM_SLOGAN', 'Just Use it!', '_MD_AM_SLOGANDSC', 'textbox', 'text', 2)");
-    $dbm->insert('config', " VALUES (3, 0, 1, 'language', '_MD_AM_LANGUAGE', '" . addslashes((string) $language) . "', '_MD_AM_LANGUAGEDSC', 'language', 'other', 4)");
+    $dbm->insert('config', " VALUES (3, 0, 1, 'language', '_MD_AM_LANGUAGE', '" . addslashes($language) . "', '_MD_AM_LANGUAGEDSC', 'language', 'other', 4)");
     $dbm->insert('config', " VALUES (4, 0, 1, 'startpage', '_MD_AM_STARTPAGE', '--', '_MD_AM_STARTPAGEDSC', 'startpage', 'other', 6)");
     $dbm->insert('config', " VALUES (5, 0, 1, 'server_TZ', '_MD_AM_SERVERTZ', '0', '_MD_AM_SERVERTZDSC', 'timezone', 'float', 8)");
     $dbm->insert('config', " VALUES (6, 0, 1, 'default_TZ', '_MD_AM_DEFAULTTZ', '0', '_MD_AM_DEFAULTTZDSC', 'timezone', 'float', 10)");
-    $dbm->insert('config', " VALUES (7, 0, 1, 'theme_set', '_MD_AM_DTHEME', '" . $defaultTheme ."', '_MD_AM_DTHEMEDSC', 'theme', 'other', 12)");
+    $dbm->insert('config', " VALUES (7, 0, 1, 'theme_set', '_MD_AM_DTHEME', '" . $defaultTheme . "', '_MD_AM_DTHEMEDSC', 'theme', 'other', 12)");
     $dbm->insert('config', " VALUES (8, 0, 1, 'anonymous', '_MD_AM_ANONNAME', '" . addslashes(_INSTALL_ANON) . "', '_MD_AM_ANONNAMEDSC', 'textbox', 'text', 15)");
     $dbm->insert('config', " VALUES (9, 0, 1, 'gzip_compression', '_MD_AM_USEGZIP', '0', '_MD_AM_USEGZIPDSC', 'yesno', 'int', 16)");
     $dbm->insert('config', " VALUES (10, 0, 1, 'usercookie', '_MD_AM_USERCOOKIE', 'xoops_user_" . dechex(time()) . "', '_MD_AM_USERCOOKIEDSC', 'textbox', 'text', 18)");
@@ -189,25 +189,29 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', " VALUES (27, 0, 2, 'avatar_width', '_MD_AM_AVATARW', '128', '_MD_AM_AVATARWDSC', 'textbox', 'int', 16)");
     $dbm->insert('config', " VALUES (28, 0, 2, 'avatar_height', '_MD_AM_AVATARH', '128', '_MD_AM_AVATARHDSC', 'textbox', 'int', 18)");
     $dbm->insert('config', " VALUES (29, 0, 2, 'avatar_maxsize', '_MD_AM_AVATARMAX', '35000', '_MD_AM_AVATARMAXDSC', 'textbox', 'int', 20)");
-    $dbm->insert('config', " VALUES (30, 0, 1, 'adminmail', '_MD_AM_ADMINML', '" . addslashes((string) $adminmail) . "', '_MD_AM_ADMINMLDSC', 'textbox', 'text', 3)");
+    $dbm->insert('config', " VALUES (30, 0, 1, 'adminmail', '_MD_AM_ADMINML', '" . addslashes($adminmail) . "', '_MD_AM_ADMINMLDSC', 'textbox', 'text', 3)");
     $dbm->insert('config', " VALUES (31, 0, 2, 'self_delete', '_MD_AM_SELFDELETE', '0', '_MD_AM_SELFDELETEDSC', 'yesno', 'int', 22)");
     $dbm->insert('config', " VALUES (32, 0, 1, 'com_mode', '_MD_AM_COMMODE', 'flat', '_MD_AM_COMMODEDSC', 'select', 'text', 34)");
     $dbm->insert('config', " VALUES (33, 0, 1, 'com_order', '_MD_AM_COMORDER', '0', '_MD_AM_COMORDERDSC', 'select', 'int', 36)");
-    $dbm->insert('config', " VALUES (34, 0, 2, 'bad_unames', '_MD_AM_BADUNAMES', '" . addslashes(serialize([
-                                                                                                               'webmaster',
-                                                                                                               '^xoops',
-                                                                                                               '^admin'
-                                                                                                           ])) . "', '_MD_AM_BADUNAMESDSC', 'textarea', 'array', 24)");
+    $dbm->insert('config', " VALUES (34, 0, 2, 'bad_unames', '_MD_AM_BADUNAMES', '" . addslashes(serialize(
+        [
+            'webmaster',
+            '^xoops',
+            '^admin',
+        ],
+    )) . "', '_MD_AM_BADUNAMESDSC', 'textarea', 'array', 24)");
     $dbm->insert('config', " VALUES (35, 0, 2, 'bad_emails', '_MD_AM_BADEMAILS', '" . addslashes(serialize(['xoops.org$'])) . "', '_MD_AM_BADEMAILSDSC', 'textarea', 'array', 26)");
     $dbm->insert('config', " VALUES (36, 0, 2, 'maxuname', '_MD_AM_MAXUNAME', '10', '_MD_AM_MAXUNAMEDSC', 'textbox', 'int', 3)");
     $dbm->insert('config', " VALUES (37, 0, 1, 'bad_ips', '_MD_AM_BADIPS', '" . addslashes(serialize(['127\.0\.0\.1'])) . "', '_MD_AM_BADIPSDSC', 'textarea', 'array', 42)");
     $dbm->insert('config', " VALUES (38, 0, 3, 'meta_keywords', '_MD_AM_METAKEY', 'xoops, web application framework, cms, content management system', '_MD_AM_METAKEYDSC', 'textarea', 'text', 0)");
     $dbm->insert('config', " VALUES (39, 0, 3, 'footer', '_MD_AM_FOOTER', 'Powered by XOOPS &#169; 2001-{X_YEAR} <a href=\"https://xoops.org\" rel=\"external\" title=\"The XOOPS Project\">The XOOPS Project</a>', '_MD_AM_FOOTERDSC', 'textarea', 'text', 20)");
     $dbm->insert('config', " VALUES (40, 0, 4, 'censor_enable', '_MD_AM_DOCENSOR', '0', '_MD_AM_DOCENSORDSC', 'yesno', 'int', 0)");
-    $dbm->insert('config', " VALUES (41, 0, 4, 'censor_words', '_MD_AM_CENSORWRD', '" . addslashes(serialize([
-                                                                                                                 'fuck',
-                                                                                                                 'shit'
-                                                                                                             ])) . "', '_MD_AM_CENSORWRDDSC', 'textarea', 'array', 1)");
+    $dbm->insert('config', " VALUES (41, 0, 4, 'censor_words', '_MD_AM_CENSORWRD', '" . addslashes(serialize(
+        [
+            'fuck',
+            'shit',
+        ],
+    )) . "', '_MD_AM_CENSORWRDDSC', 'textarea', 'array', 1)");
     $dbm->insert('config', " VALUES (42, 0, 4, 'censor_replace', '_MD_AM_CENSORRPLC', '#OOPS#', '_MD_AM_CENSORRPLCDSC', 'textbox', 'text', 2)");
     $dbm->insert('config', " VALUES (43, 0, 3, 'meta_robots', '_MD_AM_METAROBOTS', 'index,follow', '_MD_AM_METAROBOTSDSC', 'textbox', 'text', 2)");
     $dbm->insert('config', " VALUES (44, 0, 5, 'enable_search', '_MD_AM_DOSEARCH', '1', '_MD_AM_DOSEARCHDSC', 'yesno', 'int', 0)");

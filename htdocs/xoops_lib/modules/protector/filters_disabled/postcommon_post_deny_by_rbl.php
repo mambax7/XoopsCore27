@@ -28,7 +28,7 @@ class Protector_postcommon_post_deny_by_rbl extends ProtectorFilterAbstract
         $rev_ip = '';
 
         if (isset($_SERVER['REMOTE_ADDR'])) {
-            $rev_ip = implode('.', array_reverse(explode('.', (string) $_SERVER['REMOTE_ADDR'])));
+            $rev_ip = implode('.', array_reverse(explode('.', $_SERVER['REMOTE_ADDR'])));
         }
 
         foreach ($rbls as $rbl) {

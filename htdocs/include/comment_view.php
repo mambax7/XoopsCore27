@@ -39,7 +39,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
     xoops_loadLanguage('comment');
 
     $comment_config = $xoopsModule->getInfo('comments');
-    $com_itemid = (trim((string) $comment_config['itemName']) != '') ? Request::getInt($comment_config['itemName'], 0, 'GET') : 0;
+    $com_itemid = (trim($comment_config['itemName']) != '') ? Request::getInt($comment_config['itemName'], 0, 'GET') : 0;
 
     if ($com_itemid > 0) {
         $com_mode = htmlspecialchars(Request::getString('com_mode', '', 'GET'), ENT_QUOTES | ENT_HTML5);
@@ -61,16 +61,20 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             $com_order = Request::getInt('com_order', 0, 'GET');
         }
         if ($com_order != XOOPS_COMMENT_OLD1ST) {
-            $xoopsTpl->assign([
-                                  'comment_order' => XOOPS_COMMENT_NEW1ST,
-                                  'order_other'   => XOOPS_COMMENT_OLD1ST
-                              ]);
+            $xoopsTpl->assign(
+                [
+                    'comment_order' => XOOPS_COMMENT_NEW1ST,
+                    'order_other'   => XOOPS_COMMENT_OLD1ST,
+                ],
+            );
             $com_dborder = 'DESC';
         } else {
-            $xoopsTpl->assign([
-                                  'comment_order' => XOOPS_COMMENT_OLD1ST,
-                                  'order_other'   => XOOPS_COMMENT_NEW1ST
-                              ]);
+            $xoopsTpl->assign(
+                [
+                    'comment_order' => XOOPS_COMMENT_OLD1ST,
+                    'order_other'   => XOOPS_COMMENT_NEW1ST,
+                ],
+            );
             $com_dborder = 'ASC';
         }
         // admins can view all comments and IPs, others can only view approved(active) comments
@@ -113,7 +117,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             if (!empty($com_id) && !empty($com_rootid) && ($com_id != $com_rootid)) {
                 // Show specific thread tree
                 $comments = $comment_handler->getThread($com_rootid, $com_id);
-//                if (false != $comments) {
+                //                if (false != $comments) {
                 if (!empty($comments)) {  // getThread always returns array - changed in 2.5.9
                     include_once $GLOBALS['xoops']->path('class/commentrenderer.php');
                     $renderer = XoopsCommentRenderer::instance($xoopsTpl);
@@ -127,7 +131,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
                 if ($c_count > 0) {
                     for ($i = 0; $i < $c_count; ++$i) {
                         $comments = $comment_handler->getThread($top_comments[$i]->getVar('com_rootid'), $top_comments[$i]->getVar('com_id'));
-//                        if (false != $comments) {
+                        //                        if (false != $comments) {
                         if (!empty($comments)) {  // $getThread always returns array - changed in 2.5.9
                             include_once $GLOBALS['xoops']->path('class/commentrenderer.php');
                             $renderer = XoopsCommentRenderer::instance($xoopsTpl);
@@ -187,7 +191,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             foreach ($comment_config['extraParams'] as $extra_param) {
                 if (isset(${$extra_param})) {
                     $link_extra .= '&amp;' . $extra_param . '=' . ${$extra_param};
-                    $hidden_value    = htmlspecialchars((string) ${$extra_param}, ENT_QUOTES | ENT_HTML5);
+                    $hidden_value    = htmlspecialchars(${$extra_param}, ENT_QUOTES | ENT_HTML5);
                     $extra_param_val = ${$extra_param};
                 } elseif (isset($_POST[$extra_param])) {
                     $extra_param_val = Request::getString($extra_param, '', 'POST');
@@ -196,7 +200,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
                 }
                 if (isset($extra_param_val)) {
                     $link_extra .= '&amp;' . $extra_param . '=' . $extra_param_val;
-                    $hidden_value = htmlspecialchars((string) $extra_param_val, ENT_QUOTES | ENT_HTML5);
+                    $hidden_value = htmlspecialchars($extra_param_val, ENT_QUOTES | ENT_HTML5);
                     $commentBarHidden .= '<input type="hidden" name="' . $extra_param . '" value="' . $hidden_value . '" />';
                 }
             }
@@ -231,11 +235,18 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             $cform->addElement(new XoopsFormElementTray(''));
             if (isset($xoopsModuleConfig['com_rule'])) {
                 include_once $GLOBALS['xoops']->path('include/comment_constants.php');
-                $rule_text = match ($xoopsModuleConfig['com_rule']) {
-                    XOOPS_COMMENT_APPROVEALL => _CM_COMAPPROVEALL,
-                    XOOPS_COMMENT_APPROVEUSER => _CM_COMAPPROVEUSER,
-                    default => _CM_COMAPPROVEADMIN,
-                };
+                switch ($xoopsModuleConfig['com_rule']) {
+                    case XOOPS_COMMENT_APPROVEALL:
+                        $rule_text = _CM_COMAPPROVEALL;
+                        break;
+                    case XOOPS_COMMENT_APPROVEUSER:
+                        $rule_text = _CM_COMAPPROVEUSER;
+                        break;
+                    case XOOPS_COMMENT_APPROVEADMIN:
+                    default:
+                        $rule_text = _CM_COMAPPROVEADMIN;
+                        break;
+                }
                 $cform->addElement(new XoopsFormLabel(_CM_COMRULES, $rule_text));
             }
             $cform->addElement(new XoopsFormText(_CM_TITLE, 'com_title', 50, 255, $com_title), true);
@@ -269,9 +280,9 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
                         // This routine is included from forms accessed via both GET and POST
                         $hidden_value = '';
                         if (isset($_POST[$extra_param])) {
-                            $hidden_value = $myts->stripSlashesGPC(Request::getString($extra_param, '', 'POST'));
+                            $hidden_value = Request::getString($extra_param, '', 'POST');
                         } elseif (isset($_GET[$extra_param])) {
-                            $hidden_value = $myts->stripSlashesGPC(Request::getString($extra_param, '', 'GET'));
+                            $hidden_value = Request::getString($extra_param, '', 'GET');
                         }
                         $cform->addElement(new XoopsFormHidden($extra_param, $hidden_value));
                     }
@@ -287,27 +298,31 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
         }
         // End added by voltan
 
-        $xoopsTpl->assign([
-                              'commentsnav'        => $navbar,
-                              'editcomment_link'   => 'comment_edit.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '' . $link_extra,
-                              'deletecomment_link' => 'comment_delete.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '' . $link_extra,
-                              'replycomment_link'  => 'comment_reply.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '' . $link_extra
-                          ]);
+        $xoopsTpl->assign(
+            [
+                'commentsnav'        => $navbar,
+                'editcomment_link'   => 'comment_edit.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '' . $link_extra,
+                'deletecomment_link' => 'comment_delete.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '' . $link_extra,
+                'replycomment_link'  => 'comment_reply.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '' . $link_extra,
+            ],
+        );
 
         // assign some lang variables
-        $xoopsTpl->assign([
-                              'lang_from'    => _CM_FROM,
-                              'lang_joined'  => _CM_JOINED,
-                              'lang_posts'   => _CM_POSTS,
-                              'lang_poster'  => _CM_POSTER,
-                              'lang_thread'  => _CM_THREAD,
-                              'lang_edit'    => _EDIT,
-                              'lang_delete'  => _DELETE,
-                              'lang_reply'   => _REPLY,
-                              'lang_subject' => _CM_REPLIES,
-                              'lang_posted'  => _CM_POSTED,
-                              'lang_updated' => _CM_UPDATED,
-                              'lang_notice'  => _CM_NOTICE
-                          ]);
+        $xoopsTpl->assign(
+            [
+                'lang_from'    => _CM_FROM,
+                'lang_joined'  => _CM_JOINED,
+                'lang_posts'   => _CM_POSTS,
+                'lang_poster'  => _CM_POSTER,
+                'lang_thread'  => _CM_THREAD,
+                'lang_edit'    => _EDIT,
+                'lang_delete'  => _DELETE,
+                'lang_reply'   => _REPLY,
+                'lang_subject' => _CM_REPLIES,
+                'lang_posted'  => _CM_POSTED,
+                'lang_updated' => _CM_UPDATED,
+                'lang_notice'  => _CM_NOTICE,
+            ],
+        );
     }
 }

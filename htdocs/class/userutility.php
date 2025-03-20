@@ -29,10 +29,11 @@ class XoopsUserUtility
     /**
      * XoopsUserUtility::sendWelcome
      *
+     * @param mixed $user
      *
      * @return bool
      */
-    public static function sendWelcome(mixed $user)
+    public static function sendWelcome($user)
     {
         global $xoopsConfigUser, $xoopsConfig;
 
@@ -127,13 +128,13 @@ class XoopsUserUtility
         if (!checkEmail($email)) {
             $stop .= _US_INVALIDMAIL . '<br>';
         }
-        if (strrpos((string) $email, ' ') > 0) {
+        if (strrpos($email, ' ') > 0) {
             $stop .= _US_EMAILNOSPACES . '<br>';
         }
         // Check forbidden email address if current operator is not an administrator
         if (!$xoopsUser_isAdmin) {
             foreach ($xoopsConfigUser['bad_emails'] as $be) {
-                if (!empty($be) && preg_match('/' . $be . '/i', (string) $email)) {
+                if (!empty($be) && preg_match('/' . $be . '/i', $email)) {
                     $stop .= _US_INVALIDMAIL . '<br>';
                     break;
                 }
@@ -185,22 +186,24 @@ class XoopsUserUtility
         $result = $xoopsDB->query($sql);
         if (!$xoopsDB->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
+                E_USER_ERROR,
             );
         }
         [$count] = $xoopsDB->fetchRow($result);
-        if ((int)$count > 0) {
+        if ((int) $count > 0) {
             $stop .= _US_NICKNAMETAKEN . '<br>';
         }
-        $sql    = 'SELECT COUNT(*) FROM `' . $xoopsDB->prefix('users') . '` WHERE `email` = ' . $xoopsDB->quote(addslashes((string) $email)) . (($uid > 0) ? " AND `uid` <> {$uid}" : '');
+        $sql    = 'SELECT COUNT(*) FROM `' . $xoopsDB->prefix('users') . '` WHERE `email` = ' . $xoopsDB->quote(addslashes($email)) . (($uid > 0) ? " AND `uid` <> {$uid}" : '');
         $result = $xoopsDB->query($sql);
         if (!$xoopsDB->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
+                E_USER_ERROR,
             );
         }
         [$count] = $xoopsDB->fetchRow($result);
-        if ((int)$count > 0) {
+        if ((int) $count > 0) {
             $stop .= _US_EMAILTAKEN . '<br>';
         }
         // If password is not set, skip password validation
@@ -213,7 +216,7 @@ class XoopsUserUtility
         }
         if (isset($pass) && ($pass != $vpass)) {
             $stop .= _US_PASSNOTSAME . '<br>';
-        } elseif (($pass != '') && (strlen((string) $pass) < $xoopsConfigUser['minpass'])) {
+        } elseif (($pass != '') && (strlen($pass) < $xoopsConfigUser['minpass'])) {
             $stop .= sprintf(_US_PWDTOOSHORT, $xoopsConfigUser['minpass']) . '<br>';
         }
 
@@ -266,9 +269,12 @@ class XoopsUserUtility
     /**
      * XoopsUserUtility::getUnameFromIds()
      *
+     * @param  mixed $uid
+     * @param  mixed $usereal
+     * @param  mixed $linked
      * @return array
      */
-    public static function getUnameFromIds(mixed $uid, mixed $usereal = false, mixed $linked = false)
+    public static function getUnameFromIds($uid, $usereal = false, $linked = false)
     {
         if (!is_array($uid)) {
             $uid = [$uid];
@@ -308,12 +314,15 @@ class XoopsUserUtility
     /**
      * XoopsUserUtility::getUnameFromId()
      *
+     * @param  mixed $userid
+     * @param  mixed $usereal
+     * @param  mixed $linked
      * @return string
      */
-    public static function getUnameFromId(mixed $userid, mixed $usereal = false, mixed $linked = false)
+    public static function getUnameFromId($userid, $usereal = false, $linked = false)
     {
         $myts     = \MyTextSanitizer::getInstance();
-        $userid   = (int)$userid;
+        $userid   = (int) $userid;
         $username = '';
         if ($userid > 0) {
             /** @var XoopsMemberHandler $member_handler */

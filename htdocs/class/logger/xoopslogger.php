@@ -59,9 +59,7 @@ class XoopsLogger
     /**
      * XoopsLogger::__construct()
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Deprecated, use getInstance() instead
@@ -84,7 +82,7 @@ class XoopsLogger
             // Always catch errors, for security reasons
             set_error_handler('XoopsErrorHandler_HandleError');
             // grab any uncaught exception
-            set_exception_handler($instance->handleException(...));
+            set_exception_handler([$instance, 'handleException']);
         }
 
         return $instance;
@@ -99,7 +97,7 @@ class XoopsLogger
     public function enableRendering()
     {
         if (!$this->renderingEnabled) {
-            ob_start($this->render(...));
+            ob_start([&$this, 'render']);
             $this->renderingEnabled = true;
         }
     }
@@ -114,7 +112,7 @@ class XoopsLogger
         /** @var array $now */
         $now = explode(' ', microtime());
 
-        return (float)$now[0] + (float)$now[1];
+        return (float) $now[0] + (float) $now[1];
     }
 
     /**
@@ -195,32 +193,18 @@ class XoopsLogger
     {
         if ($this->activated) {
             $backTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $miniTrace = ' trace: ';
+            $miniTrace = "<br> trace: ";
             foreach ($backTrace as $i => $trace) {
-                $miniTrace .= $trace['file'] . ':' . $trace['line'] . ' ';
+                // Check if 'file' and 'line' exist in the current trace step
+                $file = $trace['file'] ?? '(unknown file)';
+                $line = $trace['line'] ?? '(unknown line)';
+                $miniTrace .= $file . ':' . $line . "<br>";
             }
-            $miniTrace = str_replace(XOOPS_VAR_PATH, '', $miniTrace);
-            $miniTrace = str_replace(XOOPS_PATH, '', $miniTrace);
-            $miniTrace = str_replace(XOOPS_ROOT_PATH, '', $miniTrace);
+            // Replace paths to keep the output clean
+            $miniTrace = str_replace([XOOPS_VAR_PATH, XOOPS_PATH, XOOPS_ROOT_PATH], '', $miniTrace);
 
             $this->deprecated[] = $msg . $miniTrace;
         }
-    }
-
-    public static function writeLog($errorMsg)
-    {
-        $logDir  = XOOPS_ROOT_PATH . '/log/';
-        $logFile = XOOPS_ROOT_PATH . '/log/' . 'log.txt';
-
-        // Checking whether file exists or not
-        if (!file_exists($logDir)) {
-            // Create a new file or directory
-            if (!mkdir($logDir, 0777, true) && !is_dir($logDir)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $logDir));
-            }
-        }
-
-        \file_put_contents($logFile, $errorMsg, FILE_APPEND);
     }
 
     /**
@@ -230,28 +214,10 @@ class XoopsLogger
      * @param string  $errstr
      * @param string  $errfile
      * @param string  $errline
+     * @param array|null $trace
      */
-    public function handleError($errno, $errstr, $errfile, $errline)
+    public function handleError($errno, $errstr, $errfile, $errline, $trace = null)
     {
-        //---------------- START --------------------
-        $errorMsgDate = date('Y-m-d H-i-s') . ' ' . $errstr . "\r";
-        self::writeLog($errorMsgDate);
-
-        $errorMsg = '';
-        self::writeLog(print_r(compact('errno', 'errstr', 'errfile', 'errline'), true));
-        $trace    = \debug_backtrace();
-        array_shift($trace);
-        foreach ($trace as $step) {
-            if (isset($step['file'])) {
-                $errorMsg .= $this->sanitizePath($step['file']);
-                $errorMsg .= ' (' . $step['line'] . ")\n";
-            }
-        }
-        $errorMsg .= "\r" . ' ======================================================' . "\n";
-        self::writeLog($errorMsg);
-        //---------------- END --------------------
-
-
         if ($this->activated && ($errno & error_reporting())) {
             // NOTE: we only store relative pathnames
             $this->errors[] = compact('errno', 'errstr', 'errfile', 'errline');
@@ -291,8 +257,8 @@ class XoopsLogger
     public function handleException($e)
     {
         if ($this->isThrowable($e)) {
-            $msg = $e::class . ': ' . $this->sanitizePath($this->sanitizeDbMessage($e->getMessage()));
-            $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine());
+            $msg = get_class($e) . ': ' . $this->sanitizePath($this->sanitizeDbMessage($e->getMessage()));
+            $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine(), $e->getTrace());
         }
     }
 
@@ -303,7 +269,7 @@ class XoopsLogger
      *
      * @return bool true if related to Throwable or Exception, otherwise false
      */
-    protected function isThrowable(mixed $e)
+    protected function isThrowable($e)
     {
         $type = interface_exists('\Throwable', false) ? '\Throwable' : '\Exception';
         return $e instanceof $type;
@@ -335,8 +301,8 @@ class XoopsLogger
     protected function sanitizeDbMessage($message)
     {
         // XOOPS_DB_PREFIX  XOOPS_DB_NAME
-        $message = str_replace(XOOPS_DB_PREFIX.'_', '', $message);
-        $message = str_replace(XOOPS_DB_NAME.'.', '', $message);
+        $message = str_replace(XOOPS_DB_PREFIX . '_', '', $message);
+        $message = str_replace(XOOPS_DB_NAME . '.', '', $message);
 
         return $message;
     }
@@ -356,9 +322,9 @@ class XoopsLogger
         $log                    = $this->dump($this->usePopup ? 'popup' : '');
         $this->renderingEnabled = $this->activated = false;
         $pattern                = '<!--{xo-logger-output}-->';
-        $pos                    = strpos((string) $output, $pattern);
+        $pos                    = strpos($output, $pattern);
         if ($pos !== false) {
-            return substr((string) $output, 0, $pos) . $log . substr((string) $output, $pos + strlen($pattern));
+            return substr($output, 0, $pos) . $log . substr($output, $pos + strlen($pattern));
         } else {
             return $output . $log;
         }

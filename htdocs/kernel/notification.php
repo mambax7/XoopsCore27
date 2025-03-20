@@ -182,12 +182,12 @@ class XoopsNotification extends XoopsObject
             case XOOPS_NOTIFICATION_METHOD_EMAIL:
                 $xoopsMailer->useMail();
                 foreach ($tags as $k => $v) {
-                    $xoopsMailer->assign($k, preg_replace('/&amp;/i', '&', (string) $v));
+                    $xoopsMailer->assign($k, preg_replace('/&amp;/i', '&', $v));
                 }
                 break;
             default:
                 return true; // report error in user's profile??
-//                break;
+                //                break;
         }
 
         // Set up the mailer
@@ -262,7 +262,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     public function get($id)
     {
         $notification = false;
-        $id           = (int)$id;
+        $id           = (int) $id;
         if ($id > 0) {
             $sql = 'SELECT * FROM ' . $this->db->prefix('xoopsnotifications') . ' WHERE not_id=' . $id;
             $result = $this->db->query($sql);
@@ -343,10 +343,12 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     /**
      * Get some {@link XoopsNotification}s
      *
+     * @param CriteriaElement|CriteriaCompo $criteria
      * @param bool            $id_as_key Use IDs as keys into the array?
+     *
      * @return array Array of {@link XoopsNotification} objects
      **/
-    public function getObjects(CriteriaElement $criteria = null, $id_as_key = false)
+    public function getObjects(?CriteriaElement $criteria = null, $id_as_key = false)
     {
         $ret   = [];
         $limit = $start = 0;
@@ -385,7 +387,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return int Count
      **/
-    public function getCount(CriteriaElement $criteria = null)
+    public function getCount(?CriteriaElement $criteria = null)
     {
         $sql = 'SELECT COUNT(*) FROM ' . $this->db->prefix('xoopsnotifications');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
@@ -397,7 +399,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
         }
         [$count] = $this->db->fetchRow($result);
 
-        return (int)$count;
+        return (int) $count;
     }
 
     /**
@@ -407,7 +409,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      **/
-    public function deleteAll(CriteriaElement $criteria = null)
+    public function deleteAll(?CriteriaElement $criteria = null)
     {
         $sql = 'DELETE FROM ' . $this->db->prefix('xoopsnotifications');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
@@ -434,11 +436,11 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     public function &getNotification($module_id, $category, $item_id, $event, $user_id)
     {
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_modid', (int)$module_id));
+        $criteria->add(new Criteria('not_modid', (int) $module_id));
         $criteria->add(new Criteria('not_category', $this->db->escape($category)));
-        $criteria->add(new Criteria('not_itemid', (int)$item_id));
+        $criteria->add(new Criteria('not_itemid', (int) $item_id));
         $criteria->add(new Criteria('not_event', $this->db->escape($event)));
-        $criteria->add(new Criteria('not_uid', (int)$user_id));
+        $criteria->add(new Criteria('not_uid', (int) $user_id));
         $objects = $this->getObjects($criteria);
         if (count($objects) == 1) {
             return $objects[0];
@@ -464,11 +466,11 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     public function isSubscribed($category, $item_id, $event, $module_id, $user_id)
     {
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_modid', (int)$module_id));
+        $criteria->add(new Criteria('not_modid', (int) $module_id));
         $criteria->add(new Criteria('not_category', $this->db->escape($category)));
-        $criteria->add(new Criteria('not_itemid', (int)$item_id));
+        $criteria->add(new Criteria('not_itemid', (int) $item_id));
         $criteria->add(new Criteria('not_event', $this->db->escape($event)));
-        $criteria->add(new Criteria('not_uid', (int)$user_id));
+        $criteria->add(new Criteria('not_uid', (int) $user_id));
 
         return $this->getCount($criteria);
     }
@@ -490,7 +492,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      */
-    public function subscribe($category, $item_id, mixed $events, $mode = null, $module_id = null, $user_id = null)
+    public function subscribe($category, $item_id, $events, $mode = null, $module_id = null, $user_id = null)
     {
         if (!isset($user_id)) {
             global $xoopsUser;
@@ -565,12 +567,12 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     public function getSubscribedEvents($category, $item_id, $module_id, $user_id)
     {
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_modid', (int)$module_id));
+        $criteria->add(new Criteria('not_modid', (int) $module_id));
         $criteria->add(new Criteria('not_category', $this->db->escape($category)));
         if ($item_id) {
-            $criteria->add(new Criteria('not_itemid', (int)$item_id));
+            $criteria->add(new Criteria('not_itemid', (int) $item_id));
         }
-        $criteria->add(new Criteria('not_uid', (int)$user_id));
+        $criteria->add(new Criteria('not_uid', (int) $user_id));
         $results = $this->getObjects($criteria, true);
         $ret     = [];
         foreach (array_keys($results) as $i) {
@@ -595,10 +597,10 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      */
     public function getByItemId($module_id, $item_id, $order = null, $mode = null)
     {
-        $criteria = new CriteriaCompo(new Criteria('not_modid', (int)$module_id));
-        $criteria->add(new Criteria('not_itemid', (int)$item_id));
+        $criteria = new CriteriaCompo(new Criteria('not_modid', (int) $module_id));
+        $criteria->add(new Criteria('not_itemid', (int) $item_id));
         if (isset($mode)) {
-            $criteria->add(new Criteria('not_mode', (int)$mode));
+            $criteria->add(new Criteria('not_mode', (int) $mode));
         }
         if (isset($order)) {
             $criteria->setOrder($order);
@@ -667,8 +669,8 @@ class XoopsNotificationHandler extends XoopsObjectHandler
         if (empty($mod_config['notification_enabled'])) {
             return false;
         }
-        $category_info =& notificationCategoryInfo($category, $module_id);
-        $event_info    =& notificationEventInfo($category, $event, $module_id);
+        $category_info = & notificationCategoryInfo($category, $module_id);
+        $event_info    = & notificationEventInfo($category, $event, $module_id);
         if (!in_array(notificationGenerateConfig($category_info, $event_info, 'option_name'), $mod_config['notification_events']) && empty($event_info['invisible'])) {
             return false;
         }
@@ -681,9 +683,9 @@ class XoopsNotificationHandler extends XoopsObjectHandler
             }
         }
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_modid', (int)$module_id));
+        $criteria->add(new Criteria('not_modid', (int) $module_id));
         $criteria->add(new Criteria('not_category', $this->db->escape($category)));
-        $criteria->add(new Criteria('not_itemid', (int)$item_id));
+        $criteria->add(new Criteria('not_itemid', (int) $item_id));
         $criteria->add(new Criteria('not_event', $this->db->escape($event)));
         $mode_criteria = new CriteriaCompo();
         $mode_criteria->add(new Criteria('not_mode', XOOPS_NOTIFICATION_MODE_SENDALWAYS), 'OR');
@@ -693,7 +695,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
         if (!empty($user_list)) {
             $user_criteria = new CriteriaCompo();
             foreach ($user_list as $user) {
-                $user_criteria->add(new Criteria('not_uid', (int)$user), 'OR');
+                $user_criteria->add(new Criteria('not_uid', (int) $user), 'OR');
             }
             $criteria->add($user_criteria);
         }
@@ -714,7 +716,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
                     if (!empty($not_config['tags_func'])) {
                         $tags_func = $not_config['tags_func'];
                         if (function_exists($tags_func)) {
-                            $tags = $tags_func($category, (int)$item_id, $event);
+                            $tags = $tags_func($category, (int) $item_id, $event);
                         }
                     }
                 }
@@ -727,7 +729,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
                     if (!empty($not_config['lookup_func'])) {
                         $lookup_func = $not_config['lookup_func'];
                         if (function_exists($lookup_func)) {
-                            $item_info = $lookup_func($category, (int)$item_id);
+                            $item_info = $lookup_func($category, (int) $item_id);
                         }
                     }
                 }
@@ -775,7 +777,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      **/
     public function unsubscribeByUser($user_id)
     {
-        $criteria = new Criteria('not_uid', (int)$user_id);
+        $criteria = new Criteria('not_uid', (int) $user_id);
 
         return $this->deleteAll($criteria);
     }
@@ -792,7 +794,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      **/
-    public function unsubscribe($category, $item_id, mixed $events, $module_id = null, $user_id = null)
+    public function unsubscribe($category, $item_id, $events, $module_id = null, $user_id = null)
     {
         if (!isset($user_id)) {
             global $xoopsUser;
@@ -807,10 +809,10 @@ class XoopsNotificationHandler extends XoopsObjectHandler
             $module_id = $xoopsModule->getVar('mid');
         }
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_modid', (int)$module_id));
+        $criteria->add(new Criteria('not_modid', (int) $module_id));
         $criteria->add(new Criteria('not_category', $this->db->escape($category)));
-        $criteria->add(new Criteria('not_itemid', (int)$item_id));
-        $criteria->add(new Criteria('not_uid', (int)$user_id));
+        $criteria->add(new Criteria('not_itemid', (int) $item_id));
+        $criteria->add(new Criteria('not_uid', (int) $user_id));
         if (!is_array($events)) {
             $events = [$events];
         }
@@ -834,7 +836,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      **/
     public function unsubscribeByModule($module_id)
     {
-        $criteria = new Criteria('not_modid', (int)$module_id);
+        $criteria = new Criteria('not_modid', (int) $module_id);
 
         return $this->deleteAll($criteria);
     }
@@ -851,9 +853,9 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     public function unsubscribeByItem($module_id, $category, $item_id)
     {
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_modid', (int)$module_id));
+        $criteria->add(new Criteria('not_modid', (int) $module_id));
         $criteria->add(new Criteria('not_category', $this->db->escape($category)));
-        $criteria->add(new Criteria('not_itemid', (int)$item_id));
+        $criteria->add(new Criteria('not_itemid', (int) $item_id));
 
         return $this->deleteAll($criteria);
     }
@@ -869,7 +871,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
     public function doLoginMaintenance($user_id)
     {
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('not_uid', (int)$user_id));
+        $criteria->add(new Criteria('not_uid', (int) $user_id));
         $criteria->add(new Criteria('not_mode', XOOPS_NOTIFICATION_MODE_WAITFORLOGIN));
 
         $notifications = $this->getObjects($criteria, true);
@@ -888,7 +890,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
      *
      * @return bool
      **/
-    public function updateByField(XoopsNotification $notification, $field_name, mixed $field_value)
+    public function updateByField(XoopsNotification $notification, $field_name, $field_value)
     {
         $notification->unsetNew();
         $notification->setVar($field_name, $field_value);

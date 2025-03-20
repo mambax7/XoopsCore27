@@ -15,7 +15,8 @@
  * @package
  * @since
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
- */ 
+ */
+
 use Xmf\Request;
 
 // Check users rights
@@ -52,7 +53,7 @@ $status_array    = [XOOPS_COMMENT_PENDING => _CM_PENDING, XOOPS_COMMENT_ACTIVE =
 $status_array2   = [
     XOOPS_COMMENT_PENDING => '<span style="text-decoration: none; font-weight: bold; color: #008000;">' . _CM_PENDING . '</span>',
     XOOPS_COMMENT_ACTIVE  => '<span style="text-decoration: none; font-weight: bold; color: #ff0000;">' . _CM_ACTIVE . '</span>',
-    XOOPS_COMMENT_HIDDEN  => '<span style="text-decoration: none; font-weight: bold; color: #0000ff;">' . _CM_HIDDEN . '</span>'
+    XOOPS_COMMENT_HIDDEN  => '<span style="text-decoration: none; font-weight: bold; color: #0000ff;">' . _CM_HIDDEN . '</span>',
 ];
 $start           = 0;
 $status_array[0] = _AM_SYSTEM_COMMENTS_FORM_ALL_STATUS;

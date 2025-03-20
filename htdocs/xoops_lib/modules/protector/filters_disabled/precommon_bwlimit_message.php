@@ -5,7 +5,7 @@
  */
 class Protector_precommon_bwlimit_message extends ProtectorFilterAbstract
 {
-    public function execute(): never
+    public function execute()
     {
         header('HTTP/1.0 503 Service unavailable');
         header('Retry-After: 600');

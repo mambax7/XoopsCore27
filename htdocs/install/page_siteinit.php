@@ -37,10 +37,10 @@ $vars =& $_SESSION['siteconfig'];
 $error =& $_SESSION['error'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $vars['adminname']  = trim((string) $_POST['adminname']);
-    $vars['adminmail']  = trim((string) $_POST['adminmail']);
-    $vars['adminpass']  = trim((string) $_POST['adminpass']);
-    $vars['adminpass2'] = trim((string) $_POST['adminpass2']);
+    $vars['adminname']  = trim($_POST['adminname']);
+    $vars['adminmail']  = trim($_POST['adminmail']);
+    $vars['adminpass']  = trim($_POST['adminpass']);
+    $vars['adminpass2'] = trim($_POST['adminpass2']);
     $error              = [];
 
     if (empty($vars['adminname'])) {

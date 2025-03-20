@@ -40,9 +40,9 @@ class XoopsFormSelectCheckGroup extends XoopsFormCheckBox
      *
      * @param string $caption
      * @param string $name
-     * @param mixed|null $value Pre-selected value (or array of them).
+     * @param mixed  $value    Pre-selected value (or array of them).
      */
-    public function __construct(string $caption, string $name, mixed $value = null)
+    public function __construct($caption, $name, $value = null)
     {
         /** @var XoopsMemberHandler $member_handler */
         $member_handler   = xoops_getHandler('member');

@@ -26,16 +26,18 @@
  */
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception as PHPMailerException;
+
+
+// bridge class for PhpMailer 6.x PHPMailer\PHPMailer\Exception
+require_once __DIR__ . '/phpmailerException.php';
+
 /**
  * load the base class
  */
-if (!file_exists($file = XOOPS_ROOT_PATH . '/class/mail/phpmailer/class.phpmailer.php')) {
-    trigger_error('Required File  ' . str_replace(XOOPS_ROOT_PATH, '', $file) . ' was not found in file ' . __FILE__ . ' at line ' . __LINE__, E_USER_WARNING);
 
-    return false;
-}
-require_once XOOPS_ROOT_PATH . '/class/mail/phpmailer/PHPMailerAutoload.php';
-//include_once XOOPS_ROOT_PATH . '/class/mail/phpmailer/class.phpmailer.php';
 
 /**
  * Mailer Class.
@@ -142,16 +144,17 @@ class XoopsMultiMailer extends PHPMailer
      */
     public function __construct()
     {
-        parent::__construct();
+        parent::__construct(true); // Enable exceptions in PHPMailer
+
         /** @var XoopsConfigHandler $config_handler */
         $config_handler    = xoops_getHandler('config');
         $xoopsMailerConfig = $config_handler->getConfigsByCat(XOOPS_CONF_MAILER);
         $this->From        = $xoopsMailerConfig['from'];
-        if ($this->From == '') {
+        if ('' == $this->From) {
             $this->From = $GLOBALS['xoopsConfig']['adminmail'];
         }
         $this->Sender = $this->From;
-        if ($xoopsMailerConfig['mailmethod'] === 'smtpauth') {
+        if ('smtpauth' === $xoopsMailerConfig['mailmethod']) {
             $this->Mailer   = 'smtp';
             $this->SMTPAuth = true;
             // TODO: change value type of xoopsConfig 'smtphost' from array to text
@@ -165,7 +168,7 @@ class XoopsMultiMailer extends PHPMailer
             $this->Host     = implode(';', $xoopsMailerConfig['smtphost']);
         }
         $this->CharSet = strtolower(_CHARSET);
-        $xoopsLanguage = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $GLOBALS['xoopsConfig']['language']);
+        $xoopsLanguage = preg_replace('/[^a-zA-Z0-9_-]/', '', $GLOBALS['xoopsConfig']['language']);
         if (file_exists(XOOPS_ROOT_PATH . '/language/' . $xoopsLanguage . '/phpmailer.php')) {
             include XOOPS_ROOT_PATH . '/language/' . $xoopsLanguage . '/phpmailer.php';
             $this->language = $PHPMAILER_LANG;

@@ -42,21 +42,21 @@ function xoops_module_install_profile(XoopsModule $module)
     $umode_options         = [
         'nest'   => _NESTED,
         'flat'   => _FLAT,
-        'thread' => _THREADED
+        'thread' => _THREADED,
     ];
     $uorder_options        = [
         0 => _OLDESTFIRST,
-        1 => _NEWESTFIRST
+        1 => _NEWESTFIRST,
     ];
     $notify_mode_options   = [
         XOOPS_NOTIFICATION_MODE_SENDALWAYS         => _NOT_MODE_SENDALWAYS,
         XOOPS_NOTIFICATION_MODE_SENDONCETHENDELETE => _NOT_MODE_SENDONCE,
-        XOOPS_NOTIFICATION_MODE_SENDONCETHENWAIT   => _NOT_MODE_SENDONCEPERLOGIN
+        XOOPS_NOTIFICATION_MODE_SENDONCETHENWAIT   => _NOT_MODE_SENDONCEPERLOGIN,
     ];
     $notify_method_options = [
         XOOPS_NOTIFICATION_METHOD_DISABLE => _NOT_METHOD_DISABLE,
         XOOPS_NOTIFICATION_METHOD_PM      => _NOT_METHOD_PM,
-        XOOPS_NOTIFICATION_METHOD_EMAIL   => _NOT_METHOD_EMAIL
+        XOOPS_NOTIFICATION_METHOD_EMAIL   => _NOT_METHOD_EMAIL,
     ];
 
     profile_install_addField('name', _US_REALNAME, '', 1, 'textbox', 1, 1, 1, [], 2, 255);
@@ -130,8 +130,8 @@ function profile_install_addField($name, $title, $description, $category, $type,
     $obj->setVar('field_show', 1);
     $obj->setVar('field_edit', $canedit ? 1 : 0);
     $obj->setVar('field_config', 0);
-    $obj->setVar('field_title', strip_tags((string) $title), true);
-    $obj->setVar('field_description', strip_tags((string) $description), true);
+    $obj->setVar('field_title', strip_tags($title), true);
+    $obj->setVar('field_description', strip_tags($description), true);
     $obj->setVar('field_type', $type, true);
     $obj->setVar('field_valuetype', $valuetype, true);
     $obj->setVar('field_options', $options, true);

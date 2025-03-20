@@ -28,9 +28,7 @@ class XoopsDatabaseFactory
     /**
      * XoopsDatabaseFactory constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Get a reference to the only instance of database class and connects to DB
@@ -62,7 +60,7 @@ class XoopsDatabaseFactory
                 $instance->setLogger(XoopsLogger::getInstance());
                 $instance->setPrefix(XOOPS_DB_PREFIX);
                 if (!$instance->connect()) {
-                    trigger_error('notrace:Unable to connect to database', E_USER_ERROR);
+                    throw new \Exception('notrace:Unable to connect to database');
                 }
             } else {
                 trigger_error('notrace:Failed to load database of type: ' . XOOPS_DB_TYPE . ' in file: ' . __FILE__ . ' at line ' . __LINE__, E_USER_WARNING);

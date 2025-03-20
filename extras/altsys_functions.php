@@ -29,7 +29,7 @@ function altsys_include_mymenu()
         $mydirpath . '/admin/mymenu.php',
         $mydirpath . '/mymenu.php',
         $mytrustdirpath . '/admin/mymenu.php',
-        $mytrustdirpath . '/mymenu.php'
+        $mytrustdirpath . '/mymenu.php',
     ];
 
     foreach ($mymenu_find_paths as $mymenu_find_path) {
@@ -79,7 +79,7 @@ function altsys_get_core_type()
     } elseif (strstr(XOOPS_VERSION, 'JP')) {
         return ALTSYS_CORE_TYPE_X20;
     } else {
-        $versions = array_map('intval', explode('.', (string) preg_replace('/[^0-9.]/', '', XOOPS_VERSION)));
+        $versions = array_map('intval', explode('.', preg_replace('/[^0-9.]/', '', XOOPS_VERSION)));
         if ($versions[0] == 2 && $versions[1] == 2) {
             return ALTSYS_CORE_TYPE_X22;
         } elseif ($versions[0] == 2 && ($versions[1] > 2 || $versions[2] > 13)) {
@@ -97,11 +97,17 @@ function altsys_get_core_type()
  */
 function altsys_get_link2modpreferences($mid, $coretype)
 {
-    return match ($coretype) {
-        ALTSYS_CORE_TYPE_X20, ALTSYS_CORE_TYPE_X20S, ALTSYS_CORE_TYPE_ORE, ALTSYS_CORE_TYPE_X22 => XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mid,
-        ALTSYS_CORE_TYPE_XC21L => XOOPS_URL . '/modules/legacy/admin/index.php?action=PreferenceEdit&confmod_id=' . $mid,
-        default => null,
-    };
+    switch ($coretype) {
+        case ALTSYS_CORE_TYPE_X20:
+        case ALTSYS_CORE_TYPE_X20S:
+        case ALTSYS_CORE_TYPE_ORE:
+        case ALTSYS_CORE_TYPE_X22:
+            return XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mid;
+        case ALTSYS_CORE_TYPE_XC21L:
+            return XOOPS_URL . '/modules/legacy/admin/index.php?action=PreferenceEdit&confmod_id=' . $mid;
+    }
+
+    return null;
 }
 
 /**
@@ -122,13 +128,25 @@ function altsys_clear_templates_c()
 {
     $dh = opendir(XOOPS_COMPILE_PATH);
     while ($file = readdir($dh)) {
-        if (str_starts_with($file, '.')) {
+        // Skip hidden files (those starting with a dot)
+        if (substr($file, 0, 1) === '.') {
             continue;
         }
-        if (!str_ends_with($file, '.php')) {
+
+        // Skip files that do not end with '.php'
+        if ('php' !== pathinfo($file, PATHINFO_EXTENSION) ) {
             continue;
         }
-        @unlink(XOOPS_COMPILE_PATH . '/' . $file);
+
+        // Construct the full path to the file
+        $filePath = XOOPS_COMPILE_PATH . '/' . $file;
+
+        // Attempt to delete the file and handle any errors
+        if (file_exists($filePath) && !unlink($filePath)) {
+            // Optionally log an error or handle the failure
+            error_log("Failed to delete file: $filePath");
+        }
     }
+
     closedir($dh);
 }

@@ -40,7 +40,6 @@ use Xmf\Request;
 
 abstract class SystemFineUploadHandler
 {
-
     public $allowedExtensions = [];
     public $allowedMimeTypes = ['(none)']; // must specify!
     public $sizeLimit = null;
@@ -50,7 +49,7 @@ abstract class SystemFineUploadHandler
     public $chunksCleanupProbability = 0.001; // Once in 1000 requests on avg
     public $chunksExpireIn = 604800; // One week
 
-    protected $uploadName;
+    public $uploadName;
     public $claims;
 
     /**
@@ -147,7 +146,7 @@ abstract class SystemFineUploadHandler
     public function handleUpload($uploadDirectory, $name = null)
     {
         if (is_writable($this->chunksFolder) &&
-            1 == mt_rand(1, 1/$this->chunksCleanupProbability)) {
+            1 == mt_rand(1, 1 / $this->chunksCleanupProbability)) {
             // Run garbage collection
             $this->cleanupChunks();
         }
@@ -158,7 +157,7 @@ abstract class SystemFineUploadHandler
             $this->toBytes(ini_get('upload_max_filesize')) < $this->sizeLimit) {
             $neededRequestSize = max(1, $this->sizeLimit / 1024 / 1024) . 'M';
             return [
-                'error'=> 'Server error. Increase post_max_size and upload_max_filesize to ' . $neededRequestSize
+                'error' => 'Server error. Increase post_max_size and upload_max_filesize to ' . $neededRequestSize,
             ];
         }
 
@@ -166,18 +165,15 @@ abstract class SystemFineUploadHandler
             return ['error' => "Server error. Uploads directory isn't writable"];
         }
 
-        $type = $_SERVER['CONTENT_TYPE'];
-        if (isset($_SERVER['HTTP_CONTENT_TYPE'])) {
-            $type = $_SERVER['HTTP_CONTENT_TYPE'];
-        }
+        $type = $_SERVER['HTTP_CONTENT_TYPE'] ?? $_SERVER['CONTENT_TYPE'];
 
         if (!isset($type)) {
             return ['error' => "No files were uploaded."];
         }
 
-        if (!str_starts_with(strtolower((string) $type), 'multipart/')) {
+        if (strpos(strtolower($type), 'multipart/') !== 0) {
             return [
-                'error' => "Server error. Not a multipart request. Please set forceMultipart to default value (true)."
+                'error' => "Server error. Not a multipart request. Please set forceMultipart to default value (true).",
             ];
         }
 
@@ -219,8 +215,8 @@ abstract class SystemFineUploadHandler
             && !in_array(strtolower($ext), array_map('strtolower', $this->allowedExtensions))) {
             $these = implode(', ', $this->allowedExtensions);
             return [
-                'error' => 'File has an invalid extension, it should be one of '. $these . '.',
-                'preventRetry' => true
+                'error' => 'File has an invalid extension, it should be one of ' . $these . '.',
+                'preventRetry' => true,
             ];
         }
 
@@ -237,7 +233,7 @@ abstract class SystemFineUploadHandler
         // Save a chunk
         $totalParts = 1;
         if (Request::hasVar('qqtotalparts')) {
-            $totalParts = (int)Request::getString('qqtotalparts');
+            $totalParts = (int) Request::getString('qqtotalparts');
         }
 
         $uuid = Request::getString('qquuid');
@@ -245,13 +241,13 @@ abstract class SystemFineUploadHandler
             # chunked upload
 
             $chunksFolder = $this->chunksFolder;
-            $partIndex = (int)Request::getString('qqpartindex');
+            $partIndex = (int) Request::getString('qqpartindex');
 
             if (!is_writable($chunksFolder) && !is_executable($uploadDirectory)) {
                 return ['error' => "Server error. Chunks directory isn't writable or executable."];
             }
 
-            $targetFolder = $this->chunksFolder.DIRECTORY_SEPARATOR.$uuid;
+            $targetFolder = $this->chunksFolder . DIRECTORY_SEPARATOR . $uuid;
 
             if (!file_exists($targetFolder)) {
                 if (!mkdir($targetFolder, 0775, true) && !is_dir($targetFolder)) {
@@ -259,7 +255,7 @@ abstract class SystemFineUploadHandler
                 }
             }
 
-            $target = $targetFolder.'/'.$partIndex;
+            $target = $targetFolder . '/' . $partIndex;
 
             $storeResult = $this->storeUploadedFile($target, $mimeType, $uuid);
             if (false !== $storeResult) {
@@ -279,9 +275,8 @@ abstract class SystemFineUploadHandler
                 }
             }
 
-            return [
-                'error' => 'Could not save uploaded file.' .
-                           'The upload was cancelled, or server error encountered'
+            return ['error' => 'Could not save uploaded file.' .
+                               'The upload was cancelled, or server error encountered',
             ];
         }
     }
@@ -311,7 +306,7 @@ abstract class SystemFineUploadHandler
         if ($this->isInaccessible($uploadDirectory)) {
             return [
                 'error' => "Server error. Uploads directory isn't writable"
-                           . ((!$this->isWindows()) ? ' or executable.' : '.')
+                           . ((!$this->isWindows()) ? ' or executable.' : '.'),
             ];
         }
 
@@ -328,9 +323,8 @@ abstract class SystemFineUploadHandler
         } elseif ('POST' === $method) {
             $uuid = Request::getString('qquuid', '', 'REQUEST');
         } else {
-            return [
-                'success' => false,
-                'error'   => 'Invalid request method! ' . $method
+            return ['success' => false,
+                'error'   => 'Invalid request method! ' . $method,
             ];
         }
 
@@ -343,7 +337,7 @@ abstract class SystemFineUploadHandler
             return [
                 'success' => false,
                 'error'   => 'File not found! Unable to delete.' . $url,
-                'path'    => $uuid
+                'path'    => $uuid,
             ];
         }
     }
@@ -379,7 +373,7 @@ abstract class SystemFineUploadHandler
 
         while (file_exists($uploadDirectory . DIRECTORY_SEPARATOR . $unique . $ext)) {
             $suffix += random_int(1, 999);
-            $unique = $base.'-'.$suffix;
+            $unique = $base . '-' . $suffix;
         }
 
         $result =  $uploadDirectory . DIRECTORY_SEPARATOR . $unique . $ext;
@@ -410,7 +404,7 @@ abstract class SystemFineUploadHandler
                 continue;
             }
 
-            $path = $this->chunksFolder.DIRECTORY_SEPARATOR.$item;
+            $path = $this->chunksFolder . DIRECTORY_SEPARATOR . $item;
 
             if (!is_dir($path)) {
                 continue;
@@ -451,7 +445,7 @@ abstract class SystemFineUploadHandler
     protected function toBytes($str)
     {
         $str = trim($str);
-        $last = strtolower($str[strlen($str)-1]);
+        $last = strtolower($str[strlen($str) - 1]);
         if(is_numeric($last)) {
             $val = (int) $str;
         } else {
@@ -460,8 +454,10 @@ abstract class SystemFineUploadHandler
         switch ($last) {
             case 'g':
                 $val *= 1024; // fall thru
+                // no break
             case 'm':
                 $val *= 1024; // fall thru
+                // no break
             case 'k':
                 $val *= 1024; // fall thru
         }

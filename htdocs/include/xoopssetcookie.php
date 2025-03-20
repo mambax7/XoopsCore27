@@ -17,7 +17,7 @@
  * @author          Richard Griffith <richard@geekwright.com>
  *
  * This exists to bring samesite support to php versions before 7.3, and
- * it treats the default as samesite=strict
+ * it treats the default as samesite=Lax
  *
  * It supports both of the two declared signatures:
  * - setcookie ( string $name , string $value = "" , int $expires = 0 , string $path = "" , string $domain = "" , bool $secure = false , bool $httponly = false ) : bool
@@ -51,14 +51,14 @@ function xoops_setcookie()
         }
     }
 
-    // make samesite=strict the default
-    $args['options']['samesite'] ??= 'strict';
+    // make samesite=Lax the default
+    $args['options']['samesite'] ??= 'Lax';
     if (!isset($args['value'])){
         $args['value'] = '';
     }
     // after php 7.3 we just let php do it
     if (PHP_VERSION_ID >= 70300) {
-        return setcookie($args['name'], (string)$args['value'], ['expires' => $args['options']]);
+        return setcookie($args['name'], (string)$args['value'], $args['options']);
     }
     // render and send our own headers below php 7.3
     header(xoops_buildCookieHeader($args), false);
@@ -75,7 +75,7 @@ function xoops_buildCookieHeader($args)
     //$optionsKeys = array('expires', 'path', 'domain', 'secure', 'httponly', 'samesite');
     $options = $args['options'];
 
-    $header = 'Set-Cookie: ' . $args['name'] . '=' . rawurlencode((string) $args['value']) . ' ';
+    $header = 'Set-Cookie: ' . $args['name'] . '=' . rawurlencode($args['value']) . ' ';
 
     if (isset($options['expires']) && 0 !== $options['expires']) {
         $dateTime = new DateTime();

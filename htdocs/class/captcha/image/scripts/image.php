@@ -122,7 +122,7 @@ class XoopsCaptchaImageHandler
         $files     = XoopsLists::getFileListAsArray($file_path);
         $items = [];
         foreach ($files as $item) {
-            if (empty($extension) || preg_match("/(\.{$extension})$/i", (string) $item)) {
+            if (empty($extension) || preg_match("/(\.{$extension})$/i", $item)) {
                 $items[] = $item;
             }
         }
@@ -295,14 +295,14 @@ class XoopsCaptchaImageHandler
             // select random font size
             $FontSize = mt_rand($this->config['fontsize_min'], $this->config['fontsize_max']);
 
-            $CharDetails = imageftbbox($FontSize, $Angle, $this->font, (string) $this->code[$i], []);
+            $CharDetails = imageftbbox($FontSize, $Angle, $this->font, $this->code[$i], []);
             $CharHeight  = abs($CharDetails[1] + $CharDetails[5]);
 
             // calculate character starting coordinates
             $posX = ($this->spacing / 2) + ($i * $this->spacing);
             $posY = 2 + ($this->height / 2) + ($CharHeight / 4);
 
-            imagefttext($this->oImage, $FontSize, $Angle, (int)$posX, (int)$posY, $text_color, $this->font, (string) $this->code[$i], []);
+            imagefttext($this->oImage, $FontSize, $Angle, (int)$posX, (int)$posY, $text_color, $this->font, $this->code[$i], []);
         }
     }
 

@@ -94,7 +94,7 @@ if ($op === 'submit') {
         echo "<br><a href=\"javascript:window.close();\">" . _PM_ORCLOSEWINDOW . '</a>';
     }
 } elseif ($reply == 1 || $send == 1 || $send2 == 1 || $sendmod == 1) {
-	$subject = '';
+    $subject = '';
     $message = '';
     if ($reply == 1) {
         $pm_handler = xoops_getModuleHandler('message', 'pm');
@@ -115,7 +115,7 @@ if ($op === 'submit') {
 
     if ($reply == 1) {
         $subject = $pm->getVar('subject', 'E');
-        if (!preg_match('/^' . _RE . '/i', (string) $subject)) {
+        if (!preg_match('/^' . _RE . '/i', $subject)) {
             $subject = _RE . ' ' . $subject;
         }
         $pmform->addElement(new XoopsFormLabel(_PM_TO, $pm_uname));
@@ -142,7 +142,7 @@ if ($op === 'submit') {
     $icons_radio = new XoopsFormRadio(_MESSAGEICON, 'msg_image', $msg_image);
     $subjectImages = [];
     foreach ($subject_icons as $name => $value) {
-        $subjectImages[$name] = '<img src="' . XOOPS_URL . '/images/subject/' . $value .'">';
+        $subjectImages[$name] = '<img src="' . XOOPS_URL . '/images/subject/' . $value . '">';
     }
     $icons_radio->addOptionArray($subjectImages);
     $pmform->addElement($icons_radio);

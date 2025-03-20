@@ -42,5 +42,5 @@ function smarty_compiler_xoAdminIcons($params, $smarty)
         }
     }
 
-    return "<?php echo '" . addslashes((string) $url) . "'; ?>";
+    return "<?php echo '" . addslashes($url) . "'; ?>";
 }

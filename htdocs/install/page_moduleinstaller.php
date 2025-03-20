@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $style = " style='background-color:#E6EFC2;'";
             }
 
-            $file   = trim((string) $file);
+            $file   = trim($file);
             $module = $module_handler->create();
             if (!$module->loadInfo($file, false)) {
                 continue;

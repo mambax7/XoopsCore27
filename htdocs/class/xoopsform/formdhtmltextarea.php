@@ -51,11 +51,19 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
      *                             </ul></li>
      * </ul>
      */
-    public mixed $htmlEditor = [];
+    public $htmlEditor = [];
 
-    public bool $skipPreview = false;
-    public bool $doHtml      = false;
-    public string $js          = '';
+    /**
+     * Hidden text
+     *
+     * @var string
+     * @access private
+     */
+    public $_hiddenText;
+
+    public $skipPreview = false;
+    public $doHtml      = false;
+    public $js          = '';
 
     /**
      * Constructor
@@ -65,15 +73,10 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
      * @param string $value      Initial text
      * @param int    $rows       Number of rows
      * @param int    $cols       Number of columns
-     * @param string $hiddenText Identifier for hidden Text
+     * @param string $hiddentext Identifier for hidden Text
      * @param array  $options    Extra options
      */
-    public function __construct(string $caption, string $name, string $value = '', int $rows = 5, int $cols = 50, /**
-     * Hidden text
-     *
-     * @access private
-     */
-    public $hiddenText = 'xoopsHiddenText', array $options = [])
+    public function __construct($caption, $name, $value = '', $rows = 5, $cols = 50, $hiddentext = 'xoopsHiddenText', $options = [])
     {
         global $xoopsConfig;
         static $inLoop = 0;
@@ -85,6 +88,7 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
         }
         // Else, initialize
         parent::__construct($caption, $name, $value, $rows, $cols);
+        $this->_hiddenText = $hiddentext;
 
         if ($inLoop > 1) {
             return null;
@@ -129,7 +133,7 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
      *
      * @return string HTML
      */
-    public function render(): string
+    public function render()
     {
         if ($this->htmlEditor && is_object($this->htmlEditor)) {
             if (!isset($this->htmlEditor->isEnabled) || $this->htmlEditor->isEnabled) {
@@ -145,7 +149,7 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
      *
      * @return bool|string
      */
-    public function renderValidationJS(): bool|string
+    public function renderValidationJS()
     {
         if ($this->htmlEditor && is_object($this->htmlEditor) && method_exists($this->htmlEditor, 'renderValidationJS')) {
             if (!isset($this->htmlEditor->isEnabled) || $this->htmlEditor->isEnabled) {

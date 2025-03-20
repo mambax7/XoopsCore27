@@ -66,10 +66,11 @@ class XoopsSecurity
         }
         $token_data = [
             'id'     => $token_id,
-            'expire' => time() + (int)$timeout
+            'expire' => time() + (int) $timeout,
         ];
         $_SESSION[$name . '_SESSION'][] = $token_data;
-
+        // Force update of session in base
+        session_write_close();
         return md5($token_id . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX);
     }
 
@@ -154,7 +155,7 @@ class XoopsSecurity
     {
         $sessionName = $name . '_SESSION';
         if (!empty($_SESSION[$sessionName]) && \is_array($_SESSION[$sessionName])) {
-            $_SESSION[$sessionName] = array_filter($_SESSION[$sessionName], $this->filterToken(...));
+            $_SESSION[$sessionName] = array_filter($_SESSION[$sessionName], [$this, 'filterToken']);
         }
     }
 
@@ -174,7 +175,7 @@ class XoopsSecurity
         if ($ref == '') {
             return false;
         }
-        return !(!str_starts_with($ref, XOOPS_URL));
+        return !(strpos($ref, XOOPS_URL) !== 0);
     }
 
     /**
@@ -186,32 +187,32 @@ class XoopsSecurity
     {
         foreach (
             [
-                     'GLOBALS',
-                     '_SESSION',
-                     'HTTP_SESSION_VARS',
-                     '_GET',
-                     'HTTP_GET_VARS',
-                     '_POST',
-                     'HTTP_POST_VARS',
-                     '_COOKIE',
-                     'HTTP_COOKIE_VARS',
-                     '_REQUEST',
-                     '_SERVER',
-                     'HTTP_SERVER_VARS',
-                     '_ENV',
-                     'HTTP_ENV_VARS',
-                     '_FILES',
-                     'HTTP_POST_FILES',
-                     'xoopsDB',
-                     'xoopsUser',
-                     'xoopsUserId',
-                     'xoopsUserGroups',
-                     'xoopsUserIsAdmin',
-                     'xoopsConfig',
-                     'xoopsOption',
-                     'xoopsModule',
-                     'xoopsModuleConfig',
-                     'xoopsRequestUri'
+                'GLOBALS',
+                '_SESSION',
+                'HTTP_SESSION_VARS',
+                '_GET',
+                'HTTP_GET_VARS',
+                '_POST',
+                'HTTP_POST_VARS',
+                '_COOKIE',
+                'HTTP_COOKIE_VARS',
+                '_REQUEST',
+                '_SERVER',
+                'HTTP_SERVER_VARS',
+                '_ENV',
+                'HTTP_ENV_VARS',
+                '_FILES',
+                'HTTP_POST_FILES',
+                'xoopsDB',
+                'xoopsUser',
+                'xoopsUserId',
+                'xoopsUserGroups',
+                'xoopsUserIsAdmin',
+                'xoopsConfig',
+                'xoopsOption',
+                'xoopsModule',
+                'xoopsModuleConfig',
+                'xoopsRequestUri',
             ] as $bad_global) {
             if (isset($_REQUEST[$bad_global])) {
                 header('Location: ' . XOOPS_URL . '/');

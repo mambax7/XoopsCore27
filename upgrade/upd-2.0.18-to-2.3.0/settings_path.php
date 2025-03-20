@@ -37,23 +37,31 @@ function genPathCheckHtml($path, $valid)
 {
     $myts = \MyTextSanitizer::getInstance();
     if ($valid) {
-        $msg = match ($path) {
-            default => XOOPS_PATH_FOUND,
-        };
+        switch ($path) {
+            case 'lib':
+            case 'data':
+            default:
+                $msg = XOOPS_PATH_FOUND;
+                break;
+        }
         $msg = $myts->htmlSpecialChars($msg, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
         return '<span class="result-y">y</span> ' . $msg;
     } else {
-        $msg = match ($path) {
-            default => ERR_COULD_NOT_ACCESS,
-        };
+        switch ($path) {
+            case 'lib':
+            case 'data':
+            default:
+                $msg = ERR_COULD_NOT_ACCESS;
+                break;
+        }
         $msg = $myts->htmlSpecialChars($msg, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
         return '<span class="result-x">x</span> ' . $msg;
     }
 }
 
-$vars =& $_SESSION['settings'];
+$vars = & $_SESSION['settings'];
 $ctrl = new PathStuffController();
 if ($res = $ctrl->execute()) {
     return $res;
@@ -78,15 +86,15 @@ $myts = \MyTextSanitizer::getInstance();
             <?php echo CHECKING_PERMISSIONS . '<br><p>' . ERR_NEED_WRITE_ACCESS . '</p>'; ?>
             <ul class="diags">
                 <?php foreach ($ctrl->permErrors['data'] as $path => $result) {
-    if ($result) {
-        echo '<li class="success">' . sprintf(IS_WRITABLE, $path) . '</li>';
-    } else {
-        echo '<li class="failure">' . sprintf(IS_NOT_WRITABLE, $path) . '</li>';
-    }
-} ?>
+                    if ($result) {
+                        echo '<li class="success">' . sprintf(IS_WRITABLE, $path) . '</li>';
+                    } else {
+                        echo '<li class="failure">' . sprintf(IS_NOT_WRITABLE, $path) . '</li>';
+                    }
+                } ?>
             </ul>
             <?php
-} else { ?>
+        } else { ?>
                 <div id="dataperms" class="x2-note" style="display: none;"/>
             <?php } ?>
         </div>

@@ -23,7 +23,7 @@
  */
 function installerHtmlSpecialChars($value = '')
 {
-    return htmlspecialchars((string) $value, ENT_QUOTES, _INSTALL_CHARSET, true);
+    return htmlspecialchars($value, ENT_QUOTES, _INSTALL_CHARSET, true);
 }
 
 function install_acceptUser($hash = '')
@@ -247,17 +247,31 @@ function xoPhpVersion()
 function genPathCheckHtml($path, $valid)
 {
     if ($valid) {
-        $msg = match ($path) {
-            'root' => sprintf(XOOPS_FOUND, XOOPS_VERSION),
-            default => XOOPS_PATH_FOUND,
-        };
+        switch ($path) {
+            case 'root':
+                $msg = sprintf(XOOPS_FOUND, XOOPS_VERSION);
+                break;
+
+            case 'lib':
+            case 'data':
+            default:
+                $msg = XOOPS_PATH_FOUND;
+                break;
+        }
 
         return '<span class="pathmessage"><span class="fa fa-fw fa-check text-success"></span> ' . $msg . '</span>';
     } else {
-        $msg = match ($path) {
-            'root' => ERR_NO_XOOPS_FOUND,
-            default => ERR_COULD_NOT_ACCESS,
-        };
+        switch ($path) {
+            case 'root':
+                $msg = ERR_NO_XOOPS_FOUND;
+                break;
+
+            case 'lib':
+            case 'data':
+            default:
+                $msg = ERR_COULD_NOT_ACCESS;
+                break;
+        }
         $GLOBALS['error'] = true;
         return '<div class="alert alert-danger"><span class="fa fa-fw fa-ban text-danger"></span> ' . $msg . '</div>';
     }
@@ -297,7 +311,7 @@ function getDbCollations($link, $charset)
         return $collations[$charset];
     }
 
-    if ($result = mysqli_query($link, "SHOW COLLATION WHERE CHARSET = '" . mysqli_real_escape_string($link, (string) $charset) . "'")) {
+    if ($result = mysqli_query($link, "SHOW COLLATION WHERE CHARSET = '" . mysqli_real_escape_string($link, $charset) . "'")) {
         while ($row = mysqli_fetch_assoc($result)) {
             $collations[$charset][$row['Collation']] = $row['Default'] ? 1 : 0;
         }
@@ -313,7 +327,7 @@ function getDbCollations($link, $charset)
  *
  * @return null|string
  */
-function validateDbCharset($link, &$charset, &$collation)
+function validateDbCharset($link, $charset, &$collation)
 {
     $error = null;
 
@@ -491,18 +505,18 @@ function xoStripeKey($xoops_key)
     $uu     = 0;
     $num    = 6;
     $length = 30;
-    $strip  = floor(strlen((string) $xoops_key) / 6);
-    $strlen = strlen((string) $xoops_key);
+    $strip  = floor(strlen($xoops_key) / 6);
+    $strlen = strlen($xoops_key);
     $ret = '';
     for ($i = 0; $i < $strlen; ++$i) {
         if ($i < $length) {
             ++$uu;
             if ($uu == $strip) {
-                $ret .= substr((string) $xoops_key, $i, 1) . '-';
+                $ret .= substr($xoops_key, $i, 1) . '-';
                 $uu = 0;
             } else {
-                if (substr((string) $xoops_key, $i, 1) != '-') {
-                    $ret .= substr((string) $xoops_key, $i, 1);
+                if (substr($xoops_key, $i, 1) != '-') {
+                    $ret .= substr($xoops_key, $i, 1);
                 } else {
                     $uu--;
                 }
@@ -510,7 +524,7 @@ function xoStripeKey($xoops_key)
         }
     }
     $ret = str_replace('--', '-', $ret);
-    if (str_starts_with($ret, '-')) {
+    if (substr($ret, 0, 1) == '-') {
         $ret = substr($ret, 2, strlen($ret));
     }
     if (substr($ret, strlen($ret) - 1, 1) == '-') {

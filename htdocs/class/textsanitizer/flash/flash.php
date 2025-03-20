@@ -62,7 +62,7 @@ EOF;
 
         return [
             $code,
-            $javascript
+            $javascript,
         ];
     }
 
@@ -77,6 +77,8 @@ EOF;
     }
 
     /**
+     * @param MyTextSanitizer $myts
+     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)
@@ -109,8 +111,7 @@ EOF;
             } else {
                 [$width, $height] = [
                     $dimension[0],
-                    $dimension[1]
-                ];
+                    $dimension[1]];
             }
         }
 

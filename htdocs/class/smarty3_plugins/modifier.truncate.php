@@ -41,8 +41,8 @@ function smarty_modifier_truncate($string, $length = 80, $etc = '…', $break_wo
         $string = preg_replace('/\s+?(\S+)?$/u', '', mb_substr($string, 0, $length + 1, $charset));
     }
     if (!$middle) {
-        return mb_substr((string) $string, 0, $length, $charset) . $etc;
+        return mb_substr($string, 0, $length, $charset) . $etc;
     }
-    return mb_substr((string) $string, 0, $length / 2, $charset) . $etc
-        . mb_substr((string) $string, -$length / 2, (mb_strlen((string) $string) - $length / 2), $charset);
+    return mb_substr($string, 0, $length / 2, $charset) . $etc
+        . mb_substr($string, -$length / 2, (mb_strlen($string) - $length / 2), $charset);
 }

@@ -42,21 +42,25 @@ if (isset($_POST['delete_messages']) && (isset($_POST['msg_id']) || isset($_POST
     if (!$GLOBALS['xoopsSecurity']->check()) {
         $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     } elseif (empty($_REQUEST['ok'])) {
-        xoops_confirm([
-                          'ok'              => 1,
-                          'delete_messages' => 1,
-                          'op'              => $op,
-                          'msg_ids'         => json_encode(array_map('intval', $_POST['msg_id']))
-                      ], $_SERVER['REQUEST_URI'], _PM_SURE_TO_DELETE);
+        xoops_confirm(
+            [
+                'ok'              => 1,
+                'delete_messages' => 1,
+                'op'              => $op,
+                'msg_ids'         => json_encode(array_map('intval', $_POST['msg_id'])),
+            ],
+            $_SERVER['REQUEST_URI'],
+            _PM_SURE_TO_DELETE,
+        );
         include $GLOBALS['xoops']->path('footer.php');
         exit();
     } else {
-        $clean_msg_id = json_decode((string) $_POST['msg_ids'], true, 2);
+        $clean_msg_id = json_decode($_POST['msg_ids'], true, 2);
         if (!empty($clean_msg_id)) {
             $clean_msg_id = array_map('intval', $clean_msg_id);
         }
         $size = count($clean_msg_id);
-        $msg  =& $clean_msg_id;
+        $msg  = & $clean_msg_id;
         for ($i = 0; $i < $size; ++$i) {
             $pm = $pm_handler->get($msg[$i]);
             if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
@@ -194,7 +198,7 @@ $GLOBALS['xoopsTpl']->assign('op', $op);
 
 if ($total_messages > $GLOBALS['xoopsModuleConfig']['perpage']) {
     include_once $GLOBALS['xoops']->path('class/pagenav.php');
-    $nav = new XoopsPageNav($total_messages, $GLOBALS['xoopsModuleConfig']['perpage'], $start, 'start', 'op=' . htmlspecialchars((string) $op, ENT_QUOTES | ENT_HTML5));
+    $nav = new XoopsPageNav($total_messages, $GLOBALS['xoopsModuleConfig']['perpage'], $start, 'start', 'op=' . htmlspecialchars($op, ENT_QUOTES | ENT_HTML5));
     $GLOBALS['xoopsTpl']->assign('pagenav', $nav->renderNav(4));
 }
 
@@ -213,7 +217,7 @@ if (count($pm_arr) > 0) {
     $senders        = $member_handler->getUserList(new Criteria('uid', '(' . implode(', ', array_unique($uids)) . ')', 'IN'));
     foreach (array_keys($pm_arr) as $i) {
         $message              = $pm_arr[$i];
-        $message['msg_image'] = htmlspecialchars((string)$message['msg_image'], ENT_QUOTES | ENT_HTML5);
+        $message['msg_image'] = htmlspecialchars((string) $message['msg_image'], ENT_QUOTES | ENT_HTML5);
         $message['msg_time']  = formatTimestamp($message['msg_time']);
         if ($op === 'out') {
             $message['postername'] = $senders[$pm_arr[$i]['to_userid']];

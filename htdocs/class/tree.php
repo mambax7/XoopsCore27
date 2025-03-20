@@ -27,19 +27,28 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsObjectTree
 {
+    /**
+     * @access private
+     */
+    protected $parentId;
+    protected $myId;
     protected $rootId;
     protected $tree = [];
+    protected $objects;
 
     /**
      * Constructor
      *
-     * @param array $objects Array of {@link XoopsObject}s
+     * @param array  $objectArr Array of {@link XoopsObject}s
      * @param string $myId      field name of object ID
      * @param string $parentId  field name of parent object ID
      * @param string $rootId    field name of root object ID
      */
-    public function __construct(protected $objects, protected $myId, protected $parentId, $rootId = null)
+    public function __construct($objectArr, $myId, $parentId, $rootId = null)
     {
+        $this->objects = $objectArr;
+        $this->myId     = $myId;
+        $this->parentId = $parentId;
         if (isset($rootId)) {
             $this->rootId = $rootId;
         }

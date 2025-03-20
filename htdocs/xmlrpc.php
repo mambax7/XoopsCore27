@@ -65,8 +65,8 @@ if (!$parser->parse()) {
         }
     }
 }
-$payload =& $response->render();
+$payload = $response->render();
 header('Server: XOOPS XML-RPC Server');
 header('Content-type: text/xml');
-header('Content-Length: ' . strlen((string) $payload));
+header('Content-Length: ' . strlen($payload));
 echo $payload;

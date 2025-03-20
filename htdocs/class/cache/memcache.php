@@ -87,8 +87,11 @@ class XoopsCacheMemcache extends XoopsCacheEngine
         }
         parent::init($settings);
         $defaults       = [
-            'servers'  => ['127.0.0.1'],
-            'compress' => false];
+            'servers'  => [
+                '127.0.0.1',
+            ],
+            'compress' => false,
+        ];
         $this->settings = array_merge($defaults, $this->settings);
 
         if (!$this->settings['compress']) {
@@ -100,12 +103,9 @@ class XoopsCacheMemcache extends XoopsCacheEngine
         $this->memcache = null;
         $this->memcache = new Memcache();
         foreach ($this->settings['servers'] as $server) {
-            $parts = explode(':', (string) $server);
+            $parts = explode(':', $server);
             $host  = $parts[0];
-            $port  = 11211;
-            if (isset($parts[1])) {
-                $port = $parts[1];
-            }
+            $port  = $parts[1] ?? 11211;
             if ($this->memcache->addServer($host, $port)) {
                 return true;
             }

@@ -9,6 +9,11 @@ include __DIR__ . '/mymenu.php';
 require_once XOOPS_ROOT_PATH . '/class/pagenav.php';
 require_once dirname(__DIR__) . '/class/gtickets.php';
 
+// Define custom exception classes
+class FileOpenException extends RuntimeException {}
+class FileLockException extends RuntimeException {}
+class FileWriteException extends RuntimeException {}
+
 //dirty trick to get navigation working with system menus
 if (isset($_GET['num'])) {
     $_SERVER['REQUEST_URI'] = 'admin/center.php?page=center';
@@ -44,37 +49,64 @@ if (!empty($_POST['action'])) {
     if ($_POST['action'] === 'update_ips') {
         $error_msg = '';
 
-        $lines   = empty($_POST['bad_ips']) ? [] : explode("\n", trim((string) $_POST['bad_ips']));
+        $lines   = empty($_POST['bad_ips']) ? [] : explode("\n", trim($_POST['bad_ips']));
         $bad_ips = [];
         foreach ($lines as $line) {
-            @[$bad_ip, $jailed_time] = explode('|', $line, 2);
-            $bad_ips[trim($bad_ip)] = empty($jailed_time) ? 0x7fffffff : (int)$jailed_time;
+            [$bad_ip, $jailed_time] = explode('|', $line, 2) + [1 => '']; // Ensure 2 elements
+            $bad_ips[trim($bad_ip)] = empty($jailed_time) ? 0x7fffffff : (int) $jailed_time;
         }
         if (!$protector->write_file_badips($bad_ips)) {
             $error_msg .= _AM_MSG_BADIPSCANTOPEN;
+            error_log("[File Write Error] Failed to write bad IPs to file.");
         }
 
-        $group1_ips = empty($_POST['group1_ips']) ? [] : explode("\n", trim((string) $_POST['group1_ips']));
-        foreach (array_keys($group1_ips) as $i) {
-            $group1_ips[$i] = trim($group1_ips[$i]);
+        $group1_ips = empty($_POST['group1_ips']) ? [] : explode("\n", trim($_POST['group1_ips']));
+        $group1_ips = array_map('trim', $group1_ips); // Use array_map for trimming
+
+        $filePath = $protector->get_filepath4group1ips();
+        try {
+        $fp = fopen($filePath, 'w');
+
+        if ($fp === false) {
+                throw new FileOpenException("Failed to open file for writing: $filePath (mode: 'w')");
         }
-        $fp = @fopen($protector->get_filepath4group1ips(), 'w');
-        if ($fp) {
-            @flock($fp, LOCK_EX);
-            fwrite($fp, serialize(array_unique($group1_ips)) . "\n");
-            @flock($fp, LOCK_UN);
-            fclose($fp);
-        } else {
+
+            if (!flock($fp, LOCK_EX)) {
+                throw new FileLockException("Failed to acquire lock on file: $filePath");
+            }
+
+                $data = serialize(array_unique($group1_ips)) . "\n";
+                $bytesWritten = fwrite($fp, $data);
+
+                if ($bytesWritten === false || $bytesWritten != strlen($data)) {
+                throw new FileWriteException(
+                    "Failed to write data to file: $filePath " .
+                    "(bytes written: $bytesWritten, expected: " . strlen($data) . ")"
+                );
+                }
+        } catch (FileOpenException $e) {
             $error_msg .= _AM_MSG_GROUP1IPSCANTOPEN;
+            error_log("[File Open Error] " . $e->getMessage());
+        } catch (FileLockException $e) {
+            $error_msg .= "Failed to acquire lock on file.";
+            error_log("[File Lock Error] " . $e->getMessage());
+        } catch (FileWriteException $e) {
+            $error_msg .= "Failed to write data to file.";
+            error_log("[File Write Error] " . $e->getMessage());
+        } finally {
+            if (isset($fp) && is_resource($fp)) {
+                flock($fp, LOCK_UN);
+            fclose($fp);
+        }
         }
 
-        $redirect_msg = $error_msg ? : _AM_MSG_IPFILESUPDATED;
+        $redirect_msg = $error_msg ?: _AM_MSG_IPFILESUPDATED;
         redirect_header('center.php?page=center', 2, $redirect_msg);
         exit;
     } elseif ($_POST['action'] === 'delete' && isset($_POST['ids']) && \is_array($_POST['ids'])) {
         // remove selected records
         foreach ($_POST['ids'] as $lid) {
-            $lid = (int)$lid;
+            $lid = (int) $lid;
             $db->query("DELETE FROM $log_table WHERE lid='$lid'");
         }
         redirect_header('center.php?page=center', 2, _AM_MSG_REMOVED);
@@ -82,7 +114,7 @@ if (!empty($_POST['action'])) {
     } elseif ($_POST['action'] === 'banbyip' && isset($_POST['ids']) && \is_array($_POST['ids'])) {
         // remove selected records
         foreach ($_POST['ids'] as $lid) {
-            $lid = (int)$lid;
+            $lid = (int) $lid;
             $sql = "SELECT `ip` FROM $log_table WHERE lid='$lid'";
             $result = $db->query($sql);
 
@@ -109,7 +141,8 @@ if (!empty($_POST['action'])) {
         $result = $db->query($sql);
         if (!$db->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+                \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+                E_USER_ERROR,
             );
         }
         $buf    = [];
@@ -136,7 +169,8 @@ $sql = "SELECT count(lid) FROM $log_table";
 $result = $db->query($sql);
 if (!$db->isResultSet($result)) {
     throw new \RuntimeException(
-        \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+        \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+        E_USER_ERROR,
     );
 }
 [$numrows] = $db->fetchRow($result);
@@ -145,7 +179,8 @@ $sql = "SELECT l.lid, l.uid, l.ip, l.agent, l.type, l.description, UNIX_TIMESTAM
 $result = $db->query($sql);
 if (!$db->isResultSet($result)) {
     throw new \RuntimeException(
-        \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(), E_USER_ERROR
+        \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+        E_USER_ERROR,
     );
 }
 
@@ -181,8 +216,8 @@ uksort($bad_ips, 'protector_ip_cmp');
 $bad_ips4disp = '';
 foreach ($bad_ips as $bad_ip => $jailed_time) {
     $line = $jailed_time ? $bad_ip . '|' . $jailed_time : $bad_ip;
-    $line = str_replace('|2147483647', '', (string) $line); // remove :0x7fffffff
-    $bad_ips4disp .= htmlspecialchars((string) $line, ENT_QUOTES | ENT_HTML5) . "\n";
+    $line = str_replace('|2147483647', '', $line); // remove :0x7fffffff
+    $bad_ips4disp .= htmlspecialchars($line, ENT_QUOTES | ENT_HTML5) . "\n";
 }
 
 // group1_ips
@@ -203,7 +238,7 @@ echo "
     <td class='even'>
       <textarea name='bad_ips' id='bad_ips' style='width:360px;height:60px;' spellcheck='false'>$bad_ips4disp</textarea>
       <br>
-      " . htmlspecialchars((string) $protector->get_filepath4badips(), ENT_QUOTES | ENT_HTML5) . "
+      " . htmlspecialchars($protector->get_filepath4badips(), ENT_QUOTES | ENT_HTML5) . "
     </td>
   </tr>
   <tr valign='top' align='left'>
@@ -213,7 +248,7 @@ echo "
     <td class='even'>
       <textarea name='group1_ips' id='group1_ips' style='width:360px;height:60px;' spellcheck='false'>$group1_ips4disp</textarea>
       <br>
-      " . htmlspecialchars((string) $protector->get_filepath4group1ips(), ENT_QUOTES | ENT_HTML5) . "
+      " . htmlspecialchars($protector->get_filepath4group1ips(), ENT_QUOTES | ENT_HTML5) . "
     </td>
   </tr>
   <tr valign='top' align='left'>
@@ -263,30 +298,30 @@ while (false !== ([$lid, $uid, $ip, $agent, $type, $description, $timestamp, $un
     $oddeven = ($oddeven === 'odd' ? 'even' : 'odd');
     $style = '';
 
-    $ip = htmlspecialchars((string) $ip, ENT_QUOTES | ENT_HTML5);
-    $type = htmlspecialchars((string) $type, ENT_QUOTES | ENT_HTML5);
-    if (str_starts_with((string) $description, '{"') && defined('JSON_PRETTY_PRINT')) {
-        $temp = json_decode((string) $description);
+    $ip = htmlspecialchars($ip, ENT_QUOTES | ENT_HTML5);
+    $type = htmlspecialchars($type, ENT_QUOTES | ENT_HTML5);
+    if ('{"' == substr($description, 0, 2) && defined('JSON_PRETTY_PRINT')) {
+        $temp = json_decode($description);
         if (is_object($temp)) {
-            $description = json_encode($temp, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
+            $description = json_encode($temp, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             $style = ' log_description';
         }
     }
-    $description = htmlspecialchars((string) $description, ENT_QUOTES | ENT_HTML5);
+    $description = htmlspecialchars($description, ENT_QUOTES | ENT_HTML5);
     $uname = htmlspecialchars(($uid ? $uname : _GUESTS), ENT_QUOTES | ENT_HTML5);
 
     // make agents shorter
-    if (preg_match('/Chrome\/([0-9.]+)/', (string) $agent, $regs)) {
+    if (preg_match('/Chrome\/([0-9.]+)/', $agent, $regs)) {
         $agent_short = 'Chrome ' . $regs[1];
-    } elseif (preg_match('/MSIE\s+([0-9.]+)/', (string) $agent, $regs)) {
+    } elseif (preg_match('/MSIE\s+([0-9.]+)/', $agent, $regs)) {
         $agent_short = 'IE ' . $regs[1];
-    } elseif (false !== stripos((string) $agent, 'Gecko')) {
-        $agent_short = strrchr((string) $agent, ' ');
+    } elseif (false !== stripos($agent, 'Gecko')) {
+        $agent_short = strrchr($agent, ' ');
     } else {
-        $agent_short = substr((string) $agent, 0, strpos((string) $agent, ' '));
+        $agent_short = substr($agent, 0, strpos($agent, ' '));
     }
-    $agent4disp = htmlspecialchars((string) $agent, ENT_QUOTES | ENT_HTML5);
-    $agent_desc = $agent == $agent_short ? $agent4disp : htmlspecialchars((string) $agent_short, ENT_QUOTES | ENT_HTML5) . "<img src='../images/dotdotdot.gif' alt='$agent4disp' title='$agent4disp' />";
+    $agent4disp = htmlspecialchars($agent, ENT_QUOTES | ENT_HTML5);
+    $agent_desc = $agent == $agent_short ? $agent4disp : htmlspecialchars($agent_short, ENT_QUOTES | ENT_HTML5) . "<img src='../images/dotdotdot.gif' alt='$agent4disp' title='$agent4disp' />";
 
     echo "
   <tr>
@@ -332,11 +367,11 @@ xoops_cp_footer();
 function protector_ip_cmp($a, $b)
 {
     // ipv6 below ipv4
-    if ((!str_contains($a, ':')) && str_contains($b, ':')) {
+    if ((false === strpos($a, ':')) && false !== strpos($b, ':')) {
         return -1;
     }
     // ipv4 above ipv6
-    if ((!str_contains($a, '.')) && str_contains($b, '.')) {
+    if ((false === strpos($a, '.')) && false !== strpos($b, '.')) {
         return 1;
     }
     // normalize ipv4 before comparing
@@ -358,10 +393,10 @@ function protector_normalize_ipv4($n)
 {
     $temp = explode('.', $n);
     $n = '';
-    foreach($temp as $k=>$v) {
-        $t = '00'. $v;
+    foreach($temp as $k => $v) {
+        $t = '00' . $v;
         $n .= substr($t, -3);
-        if ($k<3) {
+        if ($k < 3) {
             $n .= '.';
         }
     }

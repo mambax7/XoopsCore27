@@ -1,53 +1,52 @@
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
-        <li class="breadcrumb-item active" aria-current="page"><{$intro}></li>
-    </ol>
-</nav>
+<table id="moduleheader">
+    <tr>
+        <td width="100%"><span class="leftheader"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a>
+                &rarr; <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a>
+                &rarr; <{$intro}></span></td>
+        <td width="100"><span class="rightheader"><nobr><{$lang_modulename}></nobr></span>
+    </tr>
+</table>
 
-<div class="text-center mb-4">
-    <h3><{$xoops_pagetitle}></h3>
+<div align="center" style="width: 100%;">
+    <h3 class="cat" align="center"><B><{$xoops_pagetitle}></B></H3>
 </div>
+<br><br>
 
+<!-- Start ranking loop -->
 <{foreach item=ranking from=$rankings|default:null}>
-    <div class="card mb-4">
-        <div class="card-header">
-            <{if isset($multicats) && $multicats == 1}>
-                <{$lang_category}>:
-            <{/if}>
-            <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/category.php?categoryID=<{$ranking.cid}>">
-                <{$ranking.title}>
-            </a>
-                (<{$lang_sortby}>)
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
+    <table>
         <tr>
-                        <th scope="col" width="7%"><{$lang_rank}></th>
-                        <th scope="col" width="53%"><{$lang_term}></th>
-                        <th scope="col" width="5%" class="text-center"><{$lang_hits}></th>
-                        <th scope="col" width="9%" class="text-center"><{$lang_date}></th>
+            <th class="head" colspan="6"><{if isset($multicats) && $multicats == 1}><{$lang_category}>: <{/if}><a style='color:#FFFFFF;'
+                                                                                             href='<{$xoops_url}>/modules/<{$lang_moduledirname}>/category.php?categoryID=<{$ranking.cid}>'><{$ranking.title}></a>
+                (<{$lang_sortby}>)
+            </th>
         </tr>
-                    </thead>
-                    <tbody>
+        <tr>
+            <td class="head" width='7%'><{$lang_rank}></td>
+            <td class="head" width='53%'><{$lang_term}></td>
+            <td class="head" width='5%' align='center'><{$lang_hits}></td>
+            <td class="head" width='9%' align='center'>
+                <nobr><{$lang_date}></nobr>
+            </td>
+            <{*<td class="head" width='8%' align='right'><{$lang_def}></td>*}>
+        </tr>
+        <!-- Start links loop -->
         <{foreach item=terms from=$ranking.terms|default:null}>
+            <{*<tr class="<{cycle values="even,odd"}>">*}>
             <tr>
-                            <td><{$terms.rank}></td>
-                            <td>
-                                <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/entry.php?entryID=<{$terms.id}>" title="<{$terms.definition}>">
-                                    <{$terms.title}>
-                                </a>
+                <td class="even"><{$terms.rank}></td>
+                <td class="odd"><a TITLE='<{$terms.definition}>'
+                                   href='<{$xoops_url}>/modules/<{$lang_moduledirname}>/entry.php?entryID=<{$terms.id}>'><{$terms.title}></a>
                 </td>
-                            <td class="text-center"><{$terms.counter}></td>
-                            <td class="text-center"><{$terms.datesub}></td>
+                <td class="even" align='center'><{$terms.counter}></td>
+                <td class="odd" align='center'>
+                    <nobr><{$terms.datesub}></nobr>
+                </td>
+                <{*<td class="even" align='right'><{$terms.definition}></td>*}>
             </tr>
         <{/foreach}>
-                    </tbody>
+        <!-- End links loop-->
     </table>
-            </div>
-        </div>
-    </div>
+    <br>
 <{/foreach}>
+<!-- End ranking loop -->

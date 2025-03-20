@@ -8,6 +8,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
+
 use Xmf\Request;
 
 /**
@@ -31,7 +32,7 @@ $sel = [
     'selmod' => -2,
     'selgen' => -1,
     'selgrp' => -1,
-    'selvis' => -1
+    'selvis' => -1,
 ];
 
 foreach ($sel as $key => $value) {
@@ -299,12 +300,20 @@ switch ($op) {
             }
         } else {
             $block->setVars($_POST);
-            $name = match ($block->getVar('c_type')) {
-                'H' => _AM_SYSTEM_BLOCKS_CUSTOMHTML,
-                'P' => _AM_SYSTEM_BLOCKS_CUSTOMPHP,
-                'S' => _AM_SYSTEM_BLOCKS_CUSTOMSMILE,
-                default => _AM_SYSTEM_BLOCKS_CUSTOMNOSMILE,
-            };
+            switch ($block->getVar('c_type')) {
+                case 'H':
+                    $name = _AM_SYSTEM_BLOCKS_CUSTOMHTML;
+                    break;
+                case 'P':
+                    $name = _AM_SYSTEM_BLOCKS_CUSTOMPHP;
+                    break;
+                case 'S':
+                    $name = _AM_SYSTEM_BLOCKS_CUSTOMSMILE;
+                    break;
+                default:
+                    $name = _AM_SYSTEM_BLOCKS_CUSTOMNOSMILE;
+                    break;
+            }
         }
         $block->setVar('name', $name);
         $block->setVar('isactive', 1);
@@ -420,11 +429,15 @@ switch ($op) {
             // Call Header
             xoops_cp_header();
             // Display Question
-            xoops_confirm([
+            xoops_confirm(
+                [
                               'op'  => 'delete_ok',
                               'fct' => 'blocksadmin',
-                              'bid' => $block->getVar('bid')
-                          ], 'admin.php', sprintf(_AM_SYSTEM_BLOCKS_RUSUREDEL, $block->getVar('title')));
+                    'bid' => $block->getVar('bid'),
+                ],
+                'admin.php',
+                sprintf(_AM_SYSTEM_BLOCKS_RUSUREDEL, $block->getVar('title')),
+            );
             // Call Footer
             xoops_cp_footer();
         }

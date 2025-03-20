@@ -56,7 +56,7 @@ switch ($op) {
         form_user(false, $uid);
         break;
 
-    // Add user
+        // Add user
     case 'users_add':
         // Assign Breadcrumb menu
         $xoBreadCrumb->addHelp(system_adminVersion('users', 'help') . '#add');
@@ -65,11 +65,11 @@ switch ($op) {
         form_user(true);
         break;
 
-    // Delete user
+        // Delete user
     case 'users_delete':
         $xoBreadCrumb->render();
         $user = $member_handler->getUser($uid);
-        if ((int)Request::getInt('ok', 0) === 1) {
+        if ((int) Request::getInt('ok', 0) === 1) {
             if (!$GLOBALS['xoopsSecurity']->check()) {
                 redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
             }
@@ -92,15 +92,19 @@ switch ($op) {
             $xoBreadCrumb->addHelp(system_adminVersion('users', 'help') . '#delete');
             $xoBreadCrumb->addLink(_AM_SYSTEM_USERS_NAV_DELETE_USER);
             $xoBreadCrumb->render();
-            xoops_confirm([
-                              'ok'  => 1,
-                              'uid' => $uid,
-                              'op'  => 'users_delete'
-                          ], $_SERVER['REQUEST_URI'], sprintf(_AM_SYSTEM_USERS_FORM_SURE_DEL, $user->getVar('uname')));
+            xoops_confirm(
+                [
+                    'ok'  => 1,
+                    'uid' => $uid,
+                    'op'  => 'users_delete',
+                ],
+                $_SERVER['REQUEST_URI'],
+                sprintf(_AM_SYSTEM_USERS_FORM_SURE_DEL, $user->getVar('uname')),
+            );
         }
         break;
 
-    // Delete users
+        // Delete users
     case 'action_group':
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
@@ -110,7 +114,7 @@ switch ($op) {
             $xoBreadCrumb->render();
             $error = '';
             foreach (Request::getArray('memberslist_id', []) as $del) {
-                $del    = (int)$del;
+                $del    = (int) $del;
                 $user   = $member_handler->getUser($del);
                 $groups = $user->getGroups();
                 if (in_array(XOOPS_GROUP_ADMIN, $groups)) {
@@ -133,7 +137,7 @@ switch ($op) {
         }
         break;
 
-    // Save user
+        // Save user
     case 'users_save':
         global $xoopsConfig, $xoopsModule, $xoopsUser;
 
@@ -212,7 +216,7 @@ switch ($op) {
                             $groups[] = XOOPS_GROUP_ADMIN;
                             $_REQUEST['groups'] = $groups;  // Update the global variable
                         }
-                         /** @var XoopsMemberHandler $member_handler */
+                        /** @var XoopsMemberHandler $member_handler */
                         $member_handler = xoops_getHandler('member');
                         foreach ($oldgroups as $groupid) {
                             $member_handler->removeUsersFromGroup($groupid, [$edituser->getVar('uid')]);
@@ -286,11 +290,11 @@ switch ($op) {
                         $groups = Request::getArray('groups', []);
                         if (!empty($groups)) {
                             foreach ($groups as $group) {
-                            $group = (int)$group;
-                            if (!$member_handler->addUserToGroup($group, $newuser->getVar('uid'))) {
-                                $groups_failed[] = $group;
+                                $group = (int) $group;
+                                if (!$member_handler->addUserToGroup($group, $newuser->getVar('uid'))) {
+                                    $groups_failed[] = $group;
+                                }
                             }
-                        }
                         }
                         if (!empty($groups_failed)) {
                             $group_names      = $member_handler->getGroupList(new Criteria('groupid', '(' . implode(', ', $groups_failed) . ')', 'IN'));
@@ -307,7 +311,7 @@ switch ($op) {
         }
         break;
 
-    // Activ member
+        // Activ member
     case 'users_active':
         if (Request::hasVar('uid')) {
             $obj = $member_handler->getUser($uid);
@@ -321,11 +325,11 @@ switch ($op) {
         echo $obj->getHtmlErrors();
         break;
 
-    // Synchronize
+        // Synchronize
     case 'users_synchronize':
         if (Request::hasVar('status') && Request::getString('status') == 1) {
             synchronize($uid, 'user');
-        } elseif (Request::hasVar('status') && Request::getString('status')== 2) {
+        } elseif (Request::hasVar('status') && Request::getString('status') == 2) {
             synchronize('', 'all users');
         }
         redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_DBUPDATED);
@@ -410,25 +414,31 @@ switch ($op) {
             $posts_more   = new XoopsFormText(_AM_SYSTEM_USERS_POSTSMORE, 'user_posts_more', 10, 5);
             $posts_less   = new XoopsFormText(_AM_SYSTEM_USERS_POSTSLESS, 'user_posts_less', 10, 5);
             $mailok_radio = new XoopsFormRadio(_AM_SYSTEM_USERS_SHOWMAILOK, 'user_mailok', 'both');
-            $mailok_radio->addOptionArray([
-                                              'mailok' => _AM_SYSTEM_USERS_MAILOK,
-                                              'mailng' => _AM_SYSTEM_USERS_MAILNG,
-                                              'both' => _AM_SYSTEM_USERS_BOTH
-                                          ]);
+            $mailok_radio->addOptionArray(
+                [
+                    'mailok' => _AM_SYSTEM_USERS_MAILOK,
+                    'mailng' => _AM_SYSTEM_USERS_MAILNG,
+                    'both' => _AM_SYSTEM_USERS_BOTH,
+                ],
+            );
             $type_radio = new XoopsFormRadio(_AM_SYSTEM_USERS_SHOWTYPE, 'user_type', 'actv');
-            $type_radio->addOptionArray([
-                                            'actv' => _AM_SYSTEM_USERS_ACTIVE,
-                                            'inactv' => _AM_SYSTEM_USERS_INACTIVE,
-                                            'both' => _AM_SYSTEM_USERS_BOTH
-                                        ]);
+            $type_radio->addOptionArray(
+                [
+                    'actv' => _AM_SYSTEM_USERS_ACTIVE,
+                    'inactv' => _AM_SYSTEM_USERS_INACTIVE,
+                    'both' => _AM_SYSTEM_USERS_BOTH,
+                ],
+            );
             $sort_select = new XoopsFormSelect(_AM_SYSTEM_USERS_SORT, 'user_sort');
-            $sort_select->addOptionArray([
-                                             'uname' => _AM_SYSTEM_USERS_UNAME,
-                                             'email' => _AM_SYSTEM_USERS_EMAIL,
-                                             'last_login' => _AM_SYSTEM_USERS_LASTLOGIN,
-                                             'user_regdate' => _AM_SYSTEM_USERS_REGDATE,
-                                             'posts' => _AM_SYSTEM_USERS_POSTS
-                                         ]);
+            $sort_select->addOptionArray(
+                [
+                    'uname' => _AM_SYSTEM_USERS_UNAME,
+                    'email' => _AM_SYSTEM_USERS_EMAIL,
+                    'last_login' => _AM_SYSTEM_USERS_LASTLOGIN,
+                    'user_regdate' => _AM_SYSTEM_USERS_REGDATE,
+                    'posts' => _AM_SYSTEM_USERS_POSTS,
+                ],
+            );
             $order_select = new XoopsFormSelect(_AM_SYSTEM_USERS_ORDER, 'user_order');
             $order_select->addOptionArray(['ASC' => _AM_SYSTEM_USERS_ASC, 'DESC' => _AM_SYSTEM_USERS_DESC]);
             $limit_text    = new XoopsFormText(_AM_SYSTEM_USERS_LIMIT, 'user_limit', 6, 2, 20);
@@ -463,7 +473,7 @@ switch ($op) {
 
             // if this is to find users for a specific group
             if (!empty($_GET['group']) && Request::getInt('group', 0, 'GET') > 0) {
-                $group_hidden = new XoopsFormHidden('group', Request::getInt('group', 0, 'GET') );
+                $group_hidden = new XoopsFormHidden('group', Request::getInt('group', 0, 'GET'));
                 $form->addElement($group_hidden);
             }
             $form->addElement($submit_button);
@@ -478,12 +488,12 @@ switch ($op) {
             $requete_search  = '<br><br><strong>See search request: </strong><br><br>';
             $requete_pagenav = '';
 
-            $user_uname = Request::getString('user_uname');
+            $user_uname = Request::getString('useruname');
             $user_uname_match = Request::getInt('user_uname_match', 0);
 
-                       $criteria = new CriteriaCompo();
+            $criteria = new CriteriaCompo();
             if (!empty($user_uname)) {
-                $match = (!empty($user_uname_match)) ? $user_uname_match: XOOPS_MATCH_START;
+                $match = (!empty($user_uname_match)) ? $user_uname_match : XOOPS_MATCH_START;
                 switch ($match) {
                     case XOOPS_MATCH_START:
                         $criteria->add(new Criteria('uname', $myts->addSlashes($user_uname) . '%', 'LIKE'));
@@ -656,8 +666,8 @@ switch ($op) {
                 $requete_search .= 'location : ' . Request::getString('user_occ') . '<br>';
             }
 
-            if (Request::hasVar('user_name_match')) {
-                $f_user_lastlog_more = Request::getString('user_name_match', XOOPS_MATCH_START);
+            if (Request::hasVar('user_lastlog_more','POST')) {
+                $f_user_lastlog_more = Request::getInt('user_lastlog_more', 0, 'POST');
                 $time                = time() - (60 * 60 * 24 * $f_user_lastlog_more);
                 if ($time > 0) {
                     $criteria->add(new Criteria('last_login', $time, '<'));
@@ -666,18 +676,20 @@ switch ($op) {
                 $requete_search .= 'derniere connexion apres : ' . Request::getString('user_lastlog_more') . '<br>';
             }
 
-            if (Request::hasVar('user_name_match')) {
-                $f_user_lastlog_less = Request::getString('user_name_match', XOOPS_MATCH_START);
-                $time                = time() - (60 * 60 * 24 * $f_user_lastlog_less);
-                if ($time > 0) {
-                    $criteria->add(new Criteria('last_login', $time, '>'));
+            if (Request::hasVar('user_lastlog_less','POST')) {
+                $f_user_lastlog_less = Request::getInt('user_lastlog_less', 0, 'POST');
+                if ($f_user_lastlog_less > 0) {
+                    $time                = time() - (60 * 60 * 24 * $f_user_lastlog_less);
+                    if ($time > 0) {
+                        $criteria->add(new Criteria('last_login', $time, '>'));
+                    }
+                    $requete_pagenav .= '&amp;user_lastlog_less=' . htmlspecialchars(Request::getString('user_lastlog_less'), ENT_QUOTES | ENT_HTML5);
+                    $requete_search .= 'derniere connexion avant : ' . Request::getString('user_lastlog_less') . '<br>';
                 }
-                $requete_pagenav .= '&amp;user_lastlog_less=' . htmlspecialchars(Request::getString('user_lastlog_less'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'derniere connexion avant : ' . Request::getString('user_lastlog_less') . '<br>';
             }
 
             if (Request::hasVar('user_reg_more') && is_numeric(Request::getString('user_reg_more'))) {
-                $f_user_reg_more = (int)Request::getString('user_reg_more');
+                $f_user_reg_more = (int) Request::getString('user_reg_more');
                 $time            = time() - (60 * 60 * 24 * $f_user_reg_more);
                 if ($time > 0) {
                     $criteria->add(new Criteria('user_regdate', $time, '<'));
@@ -688,7 +700,7 @@ switch ($op) {
 
 
             if (Request::hasVar('user_reg_less') && is_numeric(Request::getString('user_reg_less'))) {
-                $f_user_reg_less = (int)Request::getString('user_reg_less');
+                $f_user_reg_less = (int) Request::getString('user_reg_less');
                 $time            = time() - (60 * 60 * 24 * $f_user_reg_less);
                 if ($time > 0) {
                     $criteria->add(new Criteria('user_regdate', $time, '>'));
@@ -698,13 +710,13 @@ switch ($op) {
             }
 
             if (Request::hasVar('user_posts_more') && is_numeric(Request::getString('user_posts_more'))) {
-                $criteria->add(new Criteria('posts', (int)Request::getString('user_posts_more'), '>'));
+                $criteria->add(new Criteria('posts', (int) Request::getString('user_posts_more'), '>'));
                 $requete_pagenav .= '&amp;user_posts_more=' . htmlspecialchars(Request::getString('user_posts_more'), ENT_QUOTES | ENT_HTML5);
                 $requete_search .= 'posts plus de : ' . Request::getString('user_posts_more') . '<br>';
             }
 
             if (Request::hasVar('user_posts_less') && is_numeric(Request::getString('user_posts_less'))) {
-                $criteria->add(new Criteria('posts', (int)Request::getString('user_posts_less'), '<'));
+                $criteria->add(new Criteria('posts', (int) Request::getString('user_posts_less'), '<'));
                 $requete_pagenav .= '&amp;user_posts_less=' . htmlspecialchars(Request::getString('user_posts_less'), ENT_QUOTES | ENT_HTML5);
                 $requete_search .= 'post moins de : ' . Request::getString('user_posts_less') . '<br>';
             }
@@ -760,7 +772,7 @@ switch ($op) {
                 $requete_search .= 'tris : ' . $order . '<br>';
             }
 
-            $user_limit = (int)xoops_getModuleOption('users_pager', 'system');
+            $user_limit = (int) xoops_getModuleOption('users_pager', 'system');
             if (Request::hasVar('user_limit')) {
                 $user_limit = Request::getInt('user_limit');
                 $requete_pagenav .= '&amp;user_limit=' . htmlspecialchars(Request::getString('user_limit'), ENT_QUOTES | ENT_HTML5);
@@ -780,8 +792,8 @@ switch ($op) {
                     $selgroupsInt = Request::getInt('selgroups', 0);
                     if ($selgroupsInt != 0) {
                         $groups = [$selgroupsInt];
-                }
-            } else {
+                    }
+                } else {
                     $groups = array_map('intval', $selgroups);
                 }
                 $requete_pagenav .= '&amp;selgroups=' . htmlspecialchars(implode(',', $selgroups), ENT_QUOTES | ENT_HTML5);
@@ -809,7 +821,7 @@ switch ($op) {
             $xoopsTpl->assign('users_display', true);
 
             //User limit
-            $user_limit = Request::getInt('user_limit',  20);
+            $user_limit = Request::getInt('user_limit', 20);
             //User type
             $user_type = Request::getString('user_type');
             //selgroups

@@ -92,7 +92,7 @@ $available_languages = [
     'uk'    => ['uk|ukrainian', 'ukrainian'],
     'ur'    => ['ur|urdu', 'urdu'],
     'zh-tw' => ['zh[-_]tw|chinese traditional', 'tchinese'],
-    'zh-cn' => ['zh[-_]cn|chinese simplified', 'schinese']
+    'zh-cn' => ['zh[-_]cn|chinese simplified', 'schinese'],
 ];
 
 /**
@@ -114,8 +114,8 @@ function xoops_analyzeLanguage($str = '', $envType = '')
         // $envType =  1 for the 'HTTP_ACCEPT_LANGUAGE' environment variable,
         //             2 for the 'HTTP_USER_AGENT' one
         $expr = $value[0];
-        if (!str_contains((string) $expr, '[-_]')) {
-            $expr = str_replace('|', '([-_][[:alpha:]]{2,3})?|', (string) $expr);
+        if (strpos($expr, '[-_]') === false) {
+            $expr = str_replace('|', '([-_][[:alpha:]]{2,3})?|', $expr);
         }
         if (($envType == 1 && preg_match('/^(' . $expr . ')(;q=[0-9]\\.[0-9])?$/i', $str))
             || ($envType == 2 && preg_match('/(\(|\[|;[[:space:]])(' . $expr . ')(;|\]|\))/', $str))) {
@@ -147,7 +147,7 @@ function xoops_detectLanguage()
     // 1. try to findout user's language by checking its HTTP_ACCEPT_LANGUAGE
     // variable
     if (empty($lang) && !empty($HTTP_ACCEPT_LANGUAGE)) {
-        $accepted    = explode(',', (string) $HTTP_ACCEPT_LANGUAGE);
+        $accepted    = explode(',', $HTTP_ACCEPT_LANGUAGE);
         $acceptedCnt = count($accepted);
         reset($accepted);
         for ($i = 0; $i < $acceptedCnt; ++$i) {

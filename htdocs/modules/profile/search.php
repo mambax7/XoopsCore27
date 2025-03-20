@@ -31,7 +31,7 @@ $searchable_types = [
     'date',
     'datetime',
     'timezone',
-    'language'
+    'language',
 ];
 
 switch ($op) {
@@ -164,7 +164,7 @@ switch ($op) {
         $GLOBALS['xoopsTpl']->assign('page_title', _PROFILE_MA_RESULTS);
         $xoBreadcrumbs[] = [
             'link'  => XOOPS_URL . '/modules/' . $GLOBALS['xoopsModule']->getVar('dirname', 'n') . '/search.php',
-            'title' => _SEARCH
+            'title' => _SEARCH,
         ];
         $xoBreadcrumbs[] = ['title' => _PROFILE_MA_RESULTS];
         /** @var XoopsMemberHandler $member_handler */
@@ -183,27 +183,59 @@ switch ($op) {
         $criteria = new CriteriaCompo(new Criteria('level', 0, '>'));
 
         if (isset($_REQUEST['uname']) && $_REQUEST['uname'] !== '') {
-            $string = $myts->addSlashes(trim((string) $_REQUEST['uname']));
+            $uname = trim($_REQUEST['uname']);
+            // Basic input validation - only allow alphanumeric characters and underscores
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', $uname)) {
+                redirect_header(XOOPS_URL . '/', 3, 'Invalid username provided.');
+            }
+
+            // Adjust the search pattern based on the match type
             switch ($_REQUEST['uname_match']) {
                 case XOOPS_MATCH_START:
-                    $string .= '%';
+                    $uname .= '%';
                     break;
-
                 case XOOPS_MATCH_END:
-                    $string = '%' . $string;
+                    $uname = '%' . $uname;
                     break;
-
                 case XOOPS_MATCH_CONTAIN:
-                    $string = '%' . $string . '%';
+                    $uname = '%' . $uname . '%';
                     break;
             }
-            $criteria->add(new Criteria('uname', $string, 'LIKE'));
-            $search_url[] = 'uname=' . $_REQUEST['uname'];
-            $search_url[] = 'uname_match=' . $_REQUEST['uname_match'];
-            $searchvars[] = 'uname';
+
+            // Create criteria for the SQL query
+            $criteria = new Criteria('uname', $uname, 'LIKE');
+            [$clause, $params] = $criteria->render();
+
+            // Prepare and execute the SQL query
+            $sql = "SELECT * FROM " . $xoopsDB->prefix('users') . " WHERE " . $clause;
+            $stmt = $xoopsDB->prepare($sql);
+
+            foreach ($params as $placeholder => $value) {
+                $stmt->bindValue($placeholder, $value);
+            }
+
+            $stmt->execute();
+            $results = $stmt->fetchAll();
+
+            // Process results
+            $search_url = [];
+            $searchvars = [];
+
+            if ($results) {
+                foreach ($results as $row) {
+                    // Populate search URL and search variables based on the results
+                    $search_url[] = 'uname=' . urlencode($row['uname']);
+                    $search_url[] = 'uname_match=' . urlencode($_REQUEST['uname_match']);
+                    $searchvars[] = 'uname';
+                }
+            }
+
+            // Further processing or usage of $search_url, $searchvars
+            // You might render a page or redirect the user based on these results
         }
+
         if (isset($_REQUEST['email']) && $_REQUEST['email'] !== '') {
-            $string = $myts->addSlashes(trim((string) $_REQUEST['email']));
+            $string = $myts->addSlashes(trim($_REQUEST['email']));
             switch ($_REQUEST['email_match']) {
                 case XOOPS_MATCH_START:
                     $string .= '%';
@@ -265,8 +297,8 @@ switch ($op) {
                             case 'date':
                             case 'datetime':
                                 $value = $_REQUEST[$fieldname . '_larger'];
-                                if (!($value = strtotime((string) $_REQUEST[$fieldname . '_larger']))) {
-                                    $value = (int)$_REQUEST[$fieldname . '_larger'];
+                                if (!($value = strtotime($_REQUEST[$fieldname . '_larger']))) {
+                                    $value = (int) $_REQUEST[$fieldname . '_larger'];
                                 }
                                 if ($value > 0) {
                                     $search_url[] = $fieldname . '_larger=' . $value;
@@ -275,8 +307,8 @@ switch ($op) {
                                 }
 
                                 $value = $_REQUEST[$fieldname . '_smaller'];
-                                if (!($value = strtotime((string) $_REQUEST[$fieldname . '_smaller']))) {
-                                    $value = (int)$_REQUEST[$fieldname . '_smaller'];
+                                if (!($value = strtotime($_REQUEST[$fieldname . '_smaller']))) {
+                                    $value = (int) $_REQUEST[$fieldname . '_smaller'];
                                 }
                                 if ($value > 0) {
                                     $search_url[] = $fieldname . '_smaller=' . $value;
@@ -286,15 +318,15 @@ switch ($op) {
                                 break;
 
                             default:
-                                if (isset($_REQUEST[$fieldname . '_larger']) && (int)$_REQUEST[$fieldname . '_larger'] !== 0) {
-                                    $value        = (int)$_REQUEST[$fieldname . '_larger'];
+                                if (isset($_REQUEST[$fieldname . '_larger']) && (int) $_REQUEST[$fieldname . '_larger'] !== 0) {
+                                    $value        = (int) $_REQUEST[$fieldname . '_larger'];
                                     $search_url[] = $fieldname . '_larger=' . $value;
                                     $searchvars[] = $fieldname;
                                     $criteria->add(new Criteria($fieldname, $value, '>='));
                                 }
 
-                                if (isset($_REQUEST[$fieldname . '_smaller']) && (int)$_REQUEST[$fieldname . '_smaller'] !== 0) {
-                                    $value        = (int)$_REQUEST[$fieldname . '_smaller'];
+                                if (isset($_REQUEST[$fieldname . '_smaller']) && (int) $_REQUEST[$fieldname . '_smaller'] !== 0) {
+                                    $value        = (int) $_REQUEST[$fieldname . '_smaller'];
                                     $search_url[] = $fieldname . '_smaller=' . $value;
                                     $searchvars[] = $fieldname;
                                     $criteria->add(new Criteria($fieldname, $value, '<='));
@@ -304,7 +336,7 @@ switch ($op) {
 
                         if (isset($_REQUEST[$fieldname]) && !isset($_REQUEST[$fieldname . '_smaller']) && !isset($_REQUEST[$fieldname . '_larger'])) {
                             if (!is_array($_REQUEST[$fieldname])) {
-                                $value        = (int)$_REQUEST[$fieldname];
+                                $value        = (int) $_REQUEST[$fieldname];
                                 $search_url[] = $fieldname . '=' . $value;
                                 $criteria->add(new Criteria($fieldname, $value, '='));
                             } else {
@@ -323,7 +355,7 @@ switch ($op) {
                     case XOBJ_DTYPE_TXTBOX:
                     case XOBJ_DTYPE_TXTAREA:
                         if (isset($_REQUEST[$fieldname]) && $_REQUEST[$fieldname] !== '') {
-                            $value = $myts->addSlashes(trim((string) $_REQUEST[$fieldname]));
+                            $value = $myts->addSlashes(trim($_REQUEST[$fieldname]));
                             switch ($_REQUEST[$fieldname . '_match']) {
                                 case XOOPS_MATCH_START:
                                     $value .= '%';
@@ -388,10 +420,10 @@ switch ($op) {
         $order = $_REQUEST['order'] == 0 ? 'ASC' : 'DESC';
         $criteria->setOrder($order);
 
-        $limit = empty($_REQUEST['limit']) ? $limit_default : (int)$_REQUEST['limit'];
+        $limit = empty($_REQUEST['limit']) ? $limit_default : (int) $_REQUEST['limit'];
         $criteria->setLimit($limit);
 
-        $start = isset($_REQUEST['start']) ? (int)$_REQUEST['start'] : 0;
+        $start = isset($_REQUEST['start']) ? (int) $_REQUEST['start'] : 0;
         $criteria->setStart($start);
 
         [$users, $profiles, $total_users] = $profile_handler->search($criteria, $searchvars, $searchgroups);
@@ -428,8 +460,8 @@ switch ($op) {
             $search_url[] = 'op=results';
             $search_url[] = 'order=' . $order;
             //TODO remove it for final release
-            //            $search_url[] = "sortby=" . htmlspecialchars((string) $_REQUEST['sortby']);
-            $search_url[] = 'sortby=' . htmlspecialchars((string) $sortby, ENT_QUOTES | ENT_HTML5); // change by zyspec
+            //            $search_url[] = "sortby=" . htmlspecialchars($_REQUEST['sortby']);
+            $search_url[] = 'sortby=' . htmlspecialchars($sortby, ENT_QUOTES | ENT_HTML5); // change by zyspec
             $search_url[] = 'limit=' . $limit;
             if (isset($search_url)) {
                 $args = implode('&amp;', $search_url);

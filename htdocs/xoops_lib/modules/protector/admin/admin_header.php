@@ -16,7 +16,7 @@
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  */
 
-//include_once dirname(__DIR__, 3) . '/mainfile.php';
+//include_once dirname(dirname(dirname(__DIR__))) . '/mainfile.php';
 include_once XOOPS_ROOT_PATH . '/mainfile.php';
 
 include_once XOOPS_ROOT_PATH . '/include/cp_header.php';
@@ -57,12 +57,21 @@ if (!isset($xoopsTpl) || !is_object($xoopsTpl)) {
 $xoopsTpl->assign('pathIcon16', $pathIcon16);
 
 // Load language files
-if (!@include_once(XOOPS_TRUST_PATH . '/modules/' . $xoopsModule->getVar('dirname') . '/language/' . $xoopsConfig['language'] . '/admin.php')) {
-    include_once(XOOPS_TRUST_PATH . '/modules/' . $xoopsModule->getVar('dirname') . '/language/english/admin.php');
-}
-if (!@include_once(XOOPS_TRUST_PATH . '/modules/' . $xoopsModule->getVar('dirname') . '/language/' . $xoopsConfig['language'] . '/modinfo.php')) {
-    include_once(XOOPS_TRUST_PATH . '/modules/' . $xoopsModule->getVar('dirname') . '/language/english/modinfo.php');
-}
-if (!@include_once(XOOPS_TRUST_PATH . '/modules/' . $xoopsModule->getVar('dirname') . '/language/' . $xoopsConfig['language'] . '/main.php')) {
-    include_once(XOOPS_TRUST_PATH . '/modules/' . $xoopsModule->getVar('dirname') . '/language/english/main.php');
+
+$moduleDir = $xoopsModule->getVar('dirname');
+$language = $xoopsConfig['language'];
+
+// List of language files to include
+$languageFiles = ['admin.php', 'modinfo.php', 'main.php'];
+
+foreach ($languageFiles as $file) {
+    $languageFile = XOOPS_TRUST_PATH . "/modules/{$moduleDir}/language/{$language}/{$file}";
+    $englishFile = XOOPS_TRUST_PATH . "/modules/{$moduleDir}/language/english/{$file}";
+
+    // Attempt to include the language-specific file, fallback to English if not found
+    if (file_exists($languageFile)) {
+        include_once $languageFile;
+    } else {
+        include_once $englishFile;
+    }
 }

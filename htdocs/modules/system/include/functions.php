@@ -27,12 +27,21 @@
 function system_CleanVars(&$global, $key, $default = '', $type = 'int')
 {
     $GLOBALS['xoopsLogger']->addDeprecated('Function ' . __FUNCTION__ . " is deprecated since XOOPS 2.5.11, please use 'Xmf\Request' instead");
-    $ret = match ($type) {
-        'array'  => (isset($global[$key]) && \is_array($global[$key])) ? $global[$key] : $default,
-        'date'   => isset($global[$key]) ? strtotime((string)$global[$key]) : $default,
-        'string' => isset($global[$key]) ? Xmf\FilterInput::clean($global[$key], 'STRING') : $default,
-        default  => isset($global[$key]) ? filter_var($global[$key], FILTER_SANITIZE_NUMBER_INT) : $default,
-    };
+    switch ($type) {
+        case 'array':
+            $ret = (isset($global[$key]) && \is_array($global[$key])) ? $global[$key] : $default;
+            break;
+        case 'date':
+            $ret = isset($global[$key]) ? strtotime($global[$key]) : $default;
+            break;
+        case 'string':
+            $ret = isset($global[$key]) ? Xmf\FilterInput::clean($global[$key], 'STRING') : $default;
+            break;
+        case 'int':
+        default:
+            $ret = isset($global[$key]) ? filter_var($global[$key], FILTER_SANITIZE_NUMBER_INT) : $default;
+            break;
+    }
     if ($ret === false) {
         return $default;
     }

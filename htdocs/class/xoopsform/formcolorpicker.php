@@ -46,7 +46,7 @@ class XoopsFormColorPicker extends XoopsFormText
      *
      * @return string
      */
-    public function render(): string
+    public function render()
     {
         return XoopsFormRenderer::getInstance()->get()->renderFormColorPicker($this);
     }
@@ -56,7 +56,7 @@ class XoopsFormColorPicker extends XoopsFormText
      *
      * @return string Element validation Javascript
      */
-    public function renderValidationJS(): string
+    public function renderValidationJS()
     {
         $eltname    = $this->getName();
         $eltcaption = $this->getCaption();

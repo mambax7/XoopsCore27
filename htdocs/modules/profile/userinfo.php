@@ -59,7 +59,7 @@ if (is_object($GLOBALS['xoopsUser']) && $uid == $GLOBALS['xoopsUser']->getVar('u
         $GLOBALS['xoopsTpl']->assign('user_candelete', false);
     }
     $GLOBALS['xoopsTpl']->assign('user_changeemail', $GLOBALS['xoopsConfigUser']['allow_chgmail']);
-    $thisUser =& $GLOBALS['xoopsUser'];
+    $thisUser = & $GLOBALS['xoopsUser'];
 } else {
     /** @var XoopsMemberHandler $member_handler */
     $member_handler = xoops_getHandler('member');
@@ -203,7 +203,7 @@ if ($GLOBALS['xoopsModuleConfig']['profile_search']) {
                         } else {
                             $results[$i]['image'] = XOOPS_URL . '/images/icons/posticon2.gif';
                         }
-                        if (!preg_match("/^http[s]*:\/\//i", (string) $results[$i]['link'])) {
+                        if (!preg_match("/^http[s]*:\/\//i", $results[$i]['link'])) {
                             $results[$i]['link'] = XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname', 'n') . '/' . $results[$i]['link'];
                         }
                         $results[$i]['title'] = $myts->htmlSpecialChars($results[$i]['title']);
@@ -213,11 +213,14 @@ if ($GLOBALS['xoopsModuleConfig']['profile_search']) {
                     if ($count == 5) {
                         $showall_link = '<a href="' . XOOPS_URL . '/search.php?action=showallbyuser&amp;mid=' . $mid . '&amp;uid=' . $thisUser->getVar('uid') . '">' . _US_SHOWALL . '</a>';
                     }
-                    $GLOBALS['xoopsTpl']->append('modules', [
-                        'name'         => $modules[$mid]->getVar('name'),
-                        'results'      => $results,
-                        'showall_link' => $showall_link
-                    ]);
+                    $GLOBALS['xoopsTpl']->append(
+                        'modules',
+                        [
+                            'name'         => $modules[$mid]->getVar('name'),
+                            'results'      => $results,
+                            'showall_link' => $showall_link,
+                        ],
+                    );
                 }
                 unset($modules[$mid]);
             }

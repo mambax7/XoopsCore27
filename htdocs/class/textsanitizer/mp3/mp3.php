@@ -55,7 +55,7 @@ EOF;
 
         return [
             $code,
-            $javascript
+            $javascript,
         ];
     }
 
@@ -70,6 +70,8 @@ EOF;
     }
 
     /**
+     * @param MyTextSanitizer $myts
+     *
      * @return bool
      */
     public function load(MyTextSanitizer $myts)

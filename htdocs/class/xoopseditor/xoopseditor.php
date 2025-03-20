@@ -145,10 +145,11 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::getList()
      *
+     * @param mixed $noHtml
      *
      * @return array
      */
-    public function getList(mixed $noHtml = false)
+    public function getList($noHtml = false)
     {
         /*
             Do NOT use this method statically, please use
@@ -204,9 +205,10 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::render()
      *
+     * @param mixed $editor
      * @return
      */
-    public function render(mixed $editor)
+    public function render($editor)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated');
 
@@ -216,9 +218,11 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::setConfig()
      *
+     * @param  mixed $editor
+     * @param  mixed $options
      * @return void
      */
-    public function setConfig(mixed $editor, mixed $options)
+    public function setConfig($editor, $options)
     {
         if (method_exists($editor, 'setConfig')) {
             $editor->setConfig($options);
@@ -232,9 +236,11 @@ class XoopsEditorHandler
     /**
      * XoopsEditorHandler::_loadEditor()
      *
+     * @param mixed $name
+     * @param mixed $options
      * @return
      */
-    public function _loadEditor(mixed $name, mixed $options = null)
+    public function _loadEditor($name, $options = null)
     {
         $editor = null;
         if (empty($name) || !array_key_exists($name, $this->getList())) {

@@ -43,7 +43,7 @@ class XoopsAuthAds extends XoopsAuthLdap
      * Authentication Service constructor
      * @param XoopsDatabase $dao
      */
-    public function __construct(XoopsDatabase $dao = null)
+    public function __construct(?XoopsDatabase $dao = null)
     {
         parent::__construct($dao);
     }
@@ -82,7 +82,7 @@ class XoopsAuthAds extends XoopsAuthLdap
                 return false;
             }
             // We bind as user to test the credentials
-            $authenticated = ldap_bind($this->_ds, $userUPN, $this->cp1252_to_utf8(stripslashes((string) $pwd)));
+            $authenticated = ldap_bind($this->_ds, $userUPN, $this->cp1252_to_utf8(stripslashes($pwd)));
             if ($authenticated) {
                 // We load the Xoops User database
                 $dn = $this->getUserDN($uname);
@@ -97,7 +97,10 @@ class XoopsAuthAds extends XoopsAuthLdap
         } else {
             $this->setErrors(0, _AUTH_LDAP_SERVER_NOT_FOUND);
         }
-        @ldap_close($this->_ds);
+        if (is_resource($this->_ds)) {
+            ldap_unbind($this->_ds);
+        }
+
 
         return $authenticated;
     }

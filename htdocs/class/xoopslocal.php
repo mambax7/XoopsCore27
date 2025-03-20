@@ -26,19 +26,22 @@ class XoopsLocalAbstract
     /**
      * XoopsLocalAbstract::substr()
      *
+     * @param mixed  $str
+     * @param mixed  $start
+     * @param mixed  $length
      * @param string $trimmarker
      *
      * @return mixed|string
      */
-    public static function substr(mixed $str, mixed $start, mixed $length, $trimmarker = '...')
+    public static function substr($str, $start, $length, $trimmarker = '...')
     {
         if (!XOOPS_USE_MULTIBYTES) {
-            return (strlen((string) $str) - $start <= $length) ? substr((string) $str, $start, $length) : substr((string) $str, $start, $length - strlen($trimmarker)) . $trimmarker;
+            return (strlen($str) - $start <= $length) ? substr($str, $start, $length) : substr($str, $start, $length - strlen($trimmarker)) . $trimmarker;
         }
         if (function_exists('mb_internal_encoding') && @mb_internal_encoding(_CHARSET)) {
-            $str2 = mb_strcut((string) $str, $start, $length - strlen($trimmarker));
+            $str2 = mb_strcut($str, $start, $length - strlen($trimmarker));
 
-            return $str2 . (mb_strlen((string) $str) != mb_strlen($str2) ? $trimmarker : '');
+            return $str2 . (mb_strlen($str) != mb_strlen($str2) ? $trimmarker : '');
         }
 
         return $str;
@@ -48,13 +51,14 @@ class XoopsLocalAbstract
     /**
      * XoopsLocalAbstract::utf8_encode()
      *
+     * @param  mixed $text
      * @return string
      */
-    public static function utf8_encode(mixed $text)
+    public static function utf8_encode($text)
     {
         if (defined('XOOPS_USE_MULTIBYTES') && 1 === (int)XOOPS_USE_MULTIBYTES) {
             if (function_exists('mb_convert_encoding')) {
-                $converted_text = mb_convert_encoding((string) $text, 'UTF-8', 'auto');
+                $converted_text = mb_convert_encoding($text, 'UTF-8', 'auto');
                 if ($converted_text !== false && !is_array($converted_text)) {
                     return $converted_text;
                 } else {
@@ -65,20 +69,21 @@ class XoopsLocalAbstract
             }
         }
 
-        return utf8_encode((string) $text);
+        return utf8_encode($text);
     }
 
     // Each local language should define its own equivalent utf8_decode
     /**
      * XoopsLocalAbstract::utf8_decode()
      *
+     * @param  mixed $text
      * @return string
      */
-    public static function utf8_decode(mixed $text)
+    public static function utf8_decode($text)
     {
         if (defined('XOOPS_USE_MULTIBYTES') && 1 === (int)XOOPS_USE_MULTIBYTES) {
             if (function_exists('mb_convert_encoding')) {
-                $converted_text = mb_convert_encoding((string) $text, 'ISO-8859-1', 'auto');
+                $converted_text = mb_convert_encoding($text, 'ISO-8859-1', 'auto');
                 if ($converted_text !== false && !is_array($converted_text)) {
                     return $converted_text;
                 } else {
@@ -88,17 +93,18 @@ class XoopsLocalAbstract
             }
         }
 
-        return utf8_decode((string) $text);
+        return utf8_decode($text);
     }
 
     /**
      * XoopsLocalAbstract::convert_encoding()
      *
+     * @param  mixed  $text
      * @param  string $to
      * @param  string $from
      * @return mixed|string
      */
-    public static function convert_encoding(mixed $text, $to = 'utf-8', $from = '')
+    public static function convert_encoding($text, $to = 'utf-8', $from = '')
     {
         // Early exit if the text is empty
         if (empty($text)) {
@@ -111,7 +117,7 @@ class XoopsLocalAbstract
         }
 
         // If $to and $from are the same, no conversion is needed
-        if (empty($to) || !strcasecmp($to, (string) $from)) {
+        if (empty($to) || !strcasecmp($to, $from)) {
             return $text;
         }
 
@@ -120,7 +126,7 @@ class XoopsLocalAbstract
 
         // Try to use mb_convert_encoding if available
         if (XOOPS_USE_MULTIBYTES && function_exists('mb_convert_encoding')) {
-            $convertedText = mb_convert_encoding((string) $text, $to, $from);
+            $convertedText = mb_convert_encoding($text, $to, $from);
             if (false !== $convertedText) {
                 return $convertedText;
             }
@@ -128,7 +134,7 @@ class XoopsLocalAbstract
 
         // Try to use iconv if available
         if (function_exists('iconv')) {
-            $convertedText = iconv((string) $from, $to . '//TRANSLIT', (string) $text);
+            $convertedText = iconv($from, $to . '//TRANSLIT', $text);
             if (false !== $convertedText) {
                 return $convertedText;
             }
@@ -136,7 +142,7 @@ class XoopsLocalAbstract
 
         // Try to use utf8_encode if target encoding is 'utf-8'
         if ('utf-8' === $to) {
-            $convertedText = utf8_encode((string) $text);
+            $convertedText = utf8_encode($text);
             if (false !== $convertedText) {
                 return $convertedText;
             }
@@ -150,11 +156,12 @@ class XoopsLocalAbstract
     /**
      * XoopsLocalAbstract::trim()
      *
+     * @param  mixed $text
      * @return string
      */
-    public static function trim(mixed $text)
+    public static function trim($text)
     {
-        $ret = trim((string) $text);
+        $ret = trim($text);
 
         return $ret;
     }
@@ -272,9 +279,10 @@ class XoopsLocalAbstract
     /**
      * XoopsLocalAbstract::number_format()
      *
+     * @param  mixed $number
      * @return mixed
      */
-    public function number_format(mixed $number)
+    public function number_format($number)
     {
         return $number;
     }
@@ -282,9 +290,11 @@ class XoopsLocalAbstract
     /**
      * XoopsLocalAbstract::money_format()
      *
+     * @param  mixed $format
+     * @param  mixed $number
      * @return mixed
      */
-    public function money_format(mixed $format, mixed $number)
+    public function money_format($format, $number)
     {
         return $number;
     }
@@ -292,9 +302,11 @@ class XoopsLocalAbstract
     /**
      * XoopsLocalAbstract::__call()
      *
+     * @param  mixed $name
+     * @param  mixed $args
      * @return mixed
      */
-    public function __call(mixed $name, mixed $args)
+    public function __call($name, $args)
     {
         if (function_exists($name)) {
             return call_user_func_array($name, $args);

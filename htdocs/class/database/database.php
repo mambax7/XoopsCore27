@@ -114,7 +114,7 @@ abstract class XoopsDatabase
      *
      * @return bool true if $result is a database result set, otherwise false
      */
-    abstract public function isResultSet(mixed $result);
+    abstract public function isResultSet($result);
 }
 
 /**

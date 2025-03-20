@@ -50,6 +50,14 @@ class XoopsTpl extends Smarty
         $this->setCompileDir(XOOPS_VAR_PATH . '/caches/smarty_compile');
         $this->compile_check   = \Smarty::COMPILECHECK_ON; // ($xoopsConfig['theme_fromfile'] == 1);
         $this->addPluginsDir(XOOPS_ROOT_PATH . '/class/smarty3_plugins');
+
+        // Register the count function
+        $this->registerPlugin('modifier', 'count', 'count');
+        // Register the strstr function
+        $this->registerPlugin('modifier', 'strstr', 'strstr');
+        // Register the trim function
+        $this->registerPlugin('modifier', 'trim', 'trim');
+
         if ($xoopsConfig['debug_mode']) {
             $this->debugging_ctrl = 'URL';
             // $this->debug_tpl = XOOPS_ROOT_PATH . '/class/smarty/xoops_tpl/debug.tpl';
@@ -58,14 +66,16 @@ class XoopsTpl extends Smarty
             }
         }
         $this->setCompileId();
-        $this->assign([
-                          'xoops_url'        => XOOPS_URL,
-                          'xoops_rootpath'   => XOOPS_ROOT_PATH,
-                          'xoops_langcode'   => _LANGCODE,
-                          'xoops_charset'    => _CHARSET,
-                          'xoops_version'    => XOOPS_VERSION,
-                          'xoops_upload_url' => XOOPS_UPLOAD_URL
-                      ]);
+        $this->assign(
+            [
+                'xoops_url'        => XOOPS_URL,
+                'xoops_rootpath'   => XOOPS_ROOT_PATH,
+                'xoops_langcode'   => _LANGCODE,
+                'xoops_charset'    => _CHARSET,
+                'xoops_version'    => XOOPS_VERSION,
+                'xoops_upload_url' => XOOPS_UPLOAD_URL,
+            ],
+        );
         $xoopsPreload = XoopsPreload::getInstance();
         $xoopsPreload->triggerEvent('core.class.template.new', [$this]);
     }
@@ -87,25 +97,32 @@ class XoopsTpl extends Smarty
         if (isset($vars)) {
             $oldVars = $this->_tpl_vars;
             $this->assign($vars);
-            $out             = smarty_function_eval([
-                                                        'var' => $tplSource
-                                                    ], $this);
+            $out             = smarty_function_eval(
+                [
+                    'var' => $tplSource,
+                ],
+                $this,
+            );
             $this->_tpl_vars = $oldVars;
 
             return $out;
         }
 
-        return smarty_function_eval([
-                                        'var' => $tplSource
-                                    ], $this);
+        return smarty_function_eval(
+            [
+                'var' => $tplSource,
+            ],
+            $this,
+        );
     }
 
     /**
      * XoopsTpl::touch
      *
+     * @param  mixed $resourceName
      * @return bool
      */
-    public function xoopsTouch(mixed $resourceName)
+    public function xoopsTouch($resourceName)
     {
         //$result = $this->compileAllTemplates($resourceName, true); // May be necessary?
         $this->clearCache($resourceName);
@@ -133,9 +150,12 @@ class XoopsTpl extends Smarty
     /**
      * XoopsTpl::setCompileId()
      *
+     * @param  mixed $module_dirname
+     * @param  mixed $theme_set
+     * @param  mixed $template_set
      * @return void
      */
-    public function setCompileId(mixed $module_dirname = null, mixed $theme_set = null, mixed $template_set = null)
+    public function setCompileId($module_dirname = null, $theme_set = null, $template_set = null)
     {
         global $xoopsConfig;
 
@@ -143,7 +163,7 @@ class XoopsTpl extends Smarty
         $theme_set         = empty($theme_set) ? $xoopsConfig['theme_set'] : $theme_set;
         if (class_exists('XoopsSystemCpanel', false)) {
             $cPrefix = 'cp-';
-            $theme_set =  isset($xoopsConfig['cpanel']) ? $cPrefix .$xoopsConfig['cpanel'] : $cPrefix . 'default';
+            $theme_set =  isset($xoopsConfig['cpanel']) ? $cPrefix . $xoopsConfig['cpanel'] : $cPrefix . 'default';
         }
         $module_dirname    = empty($module_dirname) ? (empty($GLOBALS['xoopsModule']) ? 'system' : $GLOBALS['xoopsModule']->getVar('dirname', 'n')) : $module_dirname;
         $this->compile_id  = substr(md5(XOOPS_URL), 0, 8) . '-' . $module_dirname . '-' . $theme_set . '-' . $template_set;
@@ -153,9 +173,12 @@ class XoopsTpl extends Smarty
     /**
      * XoopsTpl::clearCache()
      *
+     * @param  mixed $module_dirname
+     * @param  mixed $theme_set
+     * @param  mixed $template_set
      * @return bool
      */
-    public function xoopsClearCache(mixed $module_dirname = null, mixed $theme_set = null, mixed $template_set = null)
+    public function xoopsClearCache($module_dirname = null, $theme_set = null, $template_set = null)
     {
         $compile_id = $this->compile_id;
         $this->setCompileId($module_dirname, $template_set, $theme_set);
@@ -204,7 +227,7 @@ class XoopsTpl extends Smarty
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . '($value) is deprecated since XOOPS 2.5.4, please use \'$xoopsTpl->caching=$value;\' instead.');
 
-        $this->caching = (int)$num;
+        $this->caching = (int) $num;
     }
 
     /**
@@ -261,7 +284,7 @@ class XoopsTpl extends Smarty
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . '($value) is deprecated since XOOPS 2.5.4, please use \'$xoopsTpl->cache_lifetime=$value;\' instead.');
 
-        if (($num = (int)$num) <= 0) {
+        if (($num = (int) $num) <= 0) {
             $this->caching = 0;
         } else {
             $this->cache_lifetime = $num;
@@ -274,7 +297,7 @@ class XoopsTpl extends Smarty
      * @param string $tpl_var the template variable name
      * @param mixed  &$value  the referenced value to assign
      */
-    public function assign_by_ref($tpl_var, mixed &$value)
+    public function assign_by_ref($tpl_var, &$value)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use assignByRef");
         $this->assignByRef($tpl_var, $value);
@@ -287,7 +310,7 @@ class XoopsTpl extends Smarty
      * @param mixed   &$value  the referenced value to append
      * @param boolean $merge   flag if array elements shall be merged
      */
-    public function append_by_ref($tpl_var, mixed &$value, $merge = false)
+    public function append_by_ref($tpl_var, &$value, $merge = false)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
         $this->appendByRef($tpl_var, $value, $merge);
@@ -310,10 +333,11 @@ class XoopsTpl extends Smarty
      * @param string $function      the name of the template function
      * @param string $function_impl the name of the PHP function to register
      * @param bool   $cacheable
+     * @param mixed  $cache_attrs
      *
      * @throws \SmartyException
      */
-    public function register_function($function, $function_impl, $cacheable = true, mixed $cache_attrs = null)
+    public function register_function($function, $function_impl, $cacheable = true, $cache_attrs = null)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
         $this->registerPlugin('function', $function, $function_impl, $cacheable, $cache_attrs);
@@ -349,8 +373,8 @@ class XoopsTpl extends Smarty
         $smarty_args = true,
         $block_methods = []
     ) {
-        settype($allowed, 'array');
-        settype($smarty_args, 'boolean');
+        $allowed     = (array)$allowed;
+        $smarty_args = (bool)$smarty_args;
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerObject");
         $this->registerObject($object, $object_impl, $allowed, $smarty_args, $block_methods);
     }
@@ -372,10 +396,11 @@ class XoopsTpl extends Smarty
      * @param string $block      name of template block
      * @param string $block_impl PHP function to register
      * @param bool   $cacheable
+     * @param mixed  $cache_attrs
      *
      * @throws \SmartyException
      */
-    public function register_block($block, $block_impl, $cacheable = true, mixed $cache_attrs = null)
+    public function register_block($block, $block_impl, $cacheable = true, $cache_attrs = null)
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
         $this->registerPlugin('block', $block, $block_impl, $cacheable, $cache_attrs);
@@ -710,7 +735,7 @@ class XoopsTpl extends Smarty
 function xoops_template_touch($tpl_id)
 {
     $tplfile_handler = xoops_getHandler('tplfile');
-    $tplfile         = $tplfile_handler->get((int)$tpl_id);
+    $tplfile         = $tplfile_handler->get((int) $tpl_id);
 
     if (is_object($tplfile)) {
         $file = $tplfile->getVar('tpl_file', 'n');
