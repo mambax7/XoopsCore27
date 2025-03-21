@@ -3,7 +3,7 @@ XOOPS 2.7.0 Alpha 1 NOT RELEASED
 The XOOPS Development Team is pleased to announce the start of development on XOOPS 2.7.0 Alpha 1
 
 Some of the minimum requirements:
-- PHP 8.2
+- PHP 8.3
 - MySQL 8.0
 - Smarty 4 (soon Smarty 5)
 
@@ -16,7 +16,7 @@ System requirements
 -----------------------------------
 
 PHP:
-Any PHP version >= 8.2.0 (PHP 8.3 or higher is strongly recommended)
+Any PHP version >= 8.3.0 (PHP 8.4 or higher is strongly recommended)
 
 MySQL:
 MySQL server >= 8.0 (MySQL 8.3 or higher is strongly recommended)
@@ -59,7 +59,7 @@ and logging capabilities to your site.
 Upgrading from previous versions
 --------------------------------
 
-Upgrading from 2.5.x:
+Upgrading from 2.5.12:
 ---------------------
  - Make a full backup of site files and database. (We've done lots of testing, but it is always best to be safe.)
  - It may be helpful to enable debugging in System Options - Preferences - General Settings.
@@ -77,13 +77,9 @@ Upgrading from 2.5.x:
 Now the system should be upgraded and running. You may want to consider updating any modules you have
 installed to their latest versions.
 
-Upgrading from versions older than 2.5.0:
+Upgrading from versions older than 2.5.12:
 ------------------------------------------
-The same basic process as described above applies. The upgrade process for 2.5.9 has been tested using fresh
-installs of XOOPS 2.0.2, 2.3, and 2.4. By 2.3, it becomes difficult to install the distribution on a modern
-system due to the number of changes in both PHP and MySQL. This means there may be issues we may not have
-encountered in testing.
-
+It is not possible to update Xoops with a version older than Xoops 2.5.12. You must first download Xoops 2.5.12 and update before using Xoops 2.7.x.
 If you are upgrading a older system and need help, please visit our support forums at
 https://xoops.org/modules/newbb/
 
@@ -95,4 +91,4 @@ Documentation: https://www.gitbook.com/book/xoops/xoops-documentation-process/de
 Support Forums: https://xoops.org/modules/newbb/
 
 XOOPS Development Team
-December 2023
+March 2025
