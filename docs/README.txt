@@ -1,7 +1,7 @@
 XOOPS 2.7.0 Alpha1
 
 The XOOPS Development Team is pleased to announce the release of XOOPS 2.7.0 Alpha1. This version
-includes Smarty 4, fixes and enhancements, security updates, PHP 8.4 and improved MySQL 8.0 compatibility.
+includes Smarty 5, fixes and enhancements, security updates, PHP 8.4 and improved MySQL 8.0 compatibility.
 
 Download XOOPS 2.7.0 from GitHub: https://github.com/XOOPS/XoopsCore27/releases
 
