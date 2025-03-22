@@ -1,0 +1,17 @@
+{
+    "name": "xoops/base-requires27",
+    "license": "GPL-2.0-or-later",
+    "type": "project",
+    "description": "Primary dependencies for XOOPS/XoopsCore27",
+    "require": {
+        "php": ">=8.2.0",
+        "xoops/regdom": "^2.0.0",
+        "xoops/xmf": "^1.2.30",
+        "symfony/polyfill-iconv": "^1.30.0",
+        "symfony/polyfill-mbstring": "^1.30.0",
+        "smarty/smarty": "^5.4.1",
+        "boenrobot/money_format_polyfill": "^1.0.2",
+        "smottt/wideimage": "^1.1.4",
+        "erusev/parsedown": "^1.7.4"
+    }
+}
