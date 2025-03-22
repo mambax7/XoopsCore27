@@ -7,5 +7,6 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'WideImage' => array($vendorDir . '/smottt/wideimage/lib'),
+    'Parsedown' => array($vendorDir . '/erusev/parsedown'),
     'HTMLPurifier' => array($vendorDir . '/ezyang/htmlpurifier/library'),
 );

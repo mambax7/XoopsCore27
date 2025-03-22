@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "32b4577ead0e85718e65462c456de16c",
+    "content-hash": "07f80bf62bcfb7264b33cac09a73ac8e",
     "packages": [
         {
             "name": "boenrobot/money_format_polyfill",
@@ -55,6 +55,56 @@
                 "source": "https://github.com/boenrobot/money_format_polyfill/tree/1.0.2"
             },
             "time": "2022-09-07T11:23:36+00:00"
+        },
+        {
+            "name": "erusev/parsedown",
+            "version": "1.7.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/erusev/parsedown.git",
+                "reference": "cb17b6477dfff935958ba01325f2e8a2bfa6dab3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/erusev/parsedown/zipball/cb17b6477dfff935958ba01325f2e8a2bfa6dab3",
+                "reference": "cb17b6477dfff935958ba01325f2e8a2bfa6dab3",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": ">=5.3.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.8.35"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Parsedown": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Emanuil Rusev",
+                    "email": "hello@erusev.com",
+                    "homepage": "http://erusev.com"
+                }
+            ],
+            "description": "Parser for Markdown.",
+            "homepage": "http://parsedown.org",
+            "keywords": [
+                "markdown",
+                "parser"
+            ],
+            "support": {
+                "issues": "https://github.com/erusev/parsedown/issues",
+                "source": "https://github.com/erusev/parsedown/tree/1.7.x"
+            },
+            "time": "2019-12-30T22:54:17+00:00"
         },
         {
             "name": "ezyang/htmlpurifier",
@@ -119,26 +169,26 @@
         },
         {
             "name": "firebase/php-jwt",
-            "version": "v6.10.0",
+            "version": "v6.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/firebase/php-jwt.git",
-                "reference": "a49db6f0a5033aef5143295342f1c95521b075ff"
+                "reference": "8f718f4dfc9c5d5f0c994cdfd103921b43592712"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/firebase/php-jwt/zipball/a49db6f0a5033aef5143295342f1c95521b075ff",
-                "reference": "a49db6f0a5033aef5143295342f1c95521b075ff",
+                "url": "https://api.github.com/repos/firebase/php-jwt/zipball/8f718f4dfc9c5d5f0c994cdfd103921b43592712",
+                "reference": "8f718f4dfc9c5d5f0c994cdfd103921b43592712",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.4||^8.0"
+                "php": "^8.0"
             },
             "require-dev": {
-                "guzzlehttp/guzzle": "^6.5||^7.4",
+                "guzzlehttp/guzzle": "^7.4",
                 "phpspec/prophecy-phpunit": "^2.0",
                 "phpunit/phpunit": "^9.5",
-                "psr/cache": "^1.0||^2.0",
+                "psr/cache": "^2.0||^3.0",
                 "psr/http-client": "^1.0",
                 "psr/http-factory": "^1.0"
             },
@@ -176,9 +226,9 @@
             ],
             "support": {
                 "issues": "https://github.com/firebase/php-jwt/issues",
-                "source": "https://github.com/firebase/php-jwt/tree/v6.10.0"
+                "source": "https://github.com/firebase/php-jwt/tree/v6.11.0"
             },
-            "time": "2023-12-01T16:26:39+00:00"
+            "time": "2025-01-23T05:11:06+00:00"
         },
         {
             "name": "kint-php/kint",
@@ -376,35 +426,39 @@
         },
         {
             "name": "smarty/smarty",
-            "version": "v4.5.5",
+            "version": "v5.4.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/smarty-php/smarty.git",
-                "reference": "c4851c12e34ff80073ddeb7d98b059d57dea9de2"
+                "reference": "c6bff5795081ca5e60aabda59fb87daa511acd1e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/smarty-php/smarty/zipball/c4851c12e34ff80073ddeb7d98b059d57dea9de2",
-                "reference": "c4851c12e34ff80073ddeb7d98b059d57dea9de2",
+                "url": "https://api.github.com/repos/smarty-php/smarty/zipball/c6bff5795081ca5e60aabda59fb87daa511acd1e",
+                "reference": "c6bff5795081ca5e60aabda59fb87daa511acd1e",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.1 || ^8.0"
+                "php": "^7.2 || ^8.0",
+                "symfony/polyfill-mbstring": "^1.27"
             },
             "require-dev": {
                 "phpunit/phpunit": "^8.5 || ^7.5",
-                "smarty/smarty-lexer": "^3.1"
+                "smarty/smarty-lexer": "^4.0.2"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "4.0.x-dev"
+                    "dev-master": "5.0.x-dev"
                 }
             },
             "autoload": {
-                "classmap": [
-                    "libs/"
-                ]
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "Smarty\\": "src/"
+                }
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -436,9 +490,9 @@
             "support": {
                 "forum": "https://github.com/smarty-php/smarty/discussions",
                 "issues": "https://github.com/smarty-php/smarty/issues",
-                "source": "https://github.com/smarty-php/smarty/tree/v4.5.5"
+                "source": "https://github.com/smarty-php/smarty/tree/v5.4.3"
             },
-            "time": "2024-11-21T22:06:22+00:00"
+            "time": "2024-12-23T00:38:44+00:00"
         },
         {
             "name": "smottt/wideimage",
@@ -481,20 +535,20 @@
         },
         {
             "name": "symfony/deprecation-contracts",
-            "version": "v2.5.4",
+            "version": "v3.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/deprecation-contracts.git",
-                "reference": "605389f2a7e5625f273b53960dc46aeaf9c62918"
+                "reference": "74c71c939a79f7d5bf3c1ce9f5ea37ba0114c6f6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/605389f2a7e5625f273b53960dc46aeaf9c62918",
-                "reference": "605389f2a7e5625f273b53960dc46aeaf9c62918",
+                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/74c71c939a79f7d5bf3c1ce9f5ea37ba0114c6f6",
+                "reference": "74c71c939a79f7d5bf3c1ce9f5ea37ba0114c6f6",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.1"
+                "php": ">=8.1"
             },
             "type": "library",
             "extra": {
@@ -503,7 +557,7 @@
                     "name": "symfony/contracts"
                 },
                 "branch-alias": {
-                    "dev-main": "2.5-dev"
+                    "dev-main": "3.5-dev"
                 }
             },
             "autoload": {
@@ -528,7 +582,7 @@
             "description": "A generic function and convention to trigger deprecation notices",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/deprecation-contracts/tree/v2.5.4"
+                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.5.1"
             },
             "funding": [
                 {
@@ -544,7 +598,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-09-25T14:11:13+00:00"
+            "time": "2024-09-25T14:20:29+00:00"
         },
         {
             "name": "symfony/polyfill-ctype",
@@ -919,42 +973,41 @@
             "time": "2022-06-03T18:03:27+00:00"
         },
         {
-            "name": "xoops/base-requires25",
-            "version": "v1.1.9",
+            "name": "xoops/base-requires27",
+            "version": "v1.0.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/XOOPS/base-requires25.git",
-                "reference": "8d9d16d3325fc366d64dd56df9c9426113a872f9"
+                "url": "https://github.com/XOOPS/base-requires27.git",
+                "reference": "ca3e0ed6ad11bafa9e2b90392813ce71415a91c2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/base-requires25/zipball/8d9d16d3325fc366d64dd56df9c9426113a872f9",
-                "reference": "8d9d16d3325fc366d64dd56df9c9426113a872f9",
+                "url": "https://api.github.com/repos/XOOPS/base-requires27/zipball/ca3e0ed6ad11bafa9e2b90392813ce71415a91c2",
+                "reference": "ca3e0ed6ad11bafa9e2b90392813ce71415a91c2",
                 "shasum": ""
             },
             "require": {
                 "boenrobot/money_format_polyfill": "^1.0.2",
-                "ezyang/htmlpurifier": "^4.18",
-                "php": ">=7.4.0",
-                "phpmailer/phpmailer": "^6.9",
-                "smarty/smarty": "^4.5.5",
+                "erusev/parsedown": "^1.7.4",
+                "php": ">=8.2.0",
+                "smarty/smarty": "^5.4.1",
                 "smottt/wideimage": "^1.1.4",
-                "symfony/polyfill-iconv": "^1.31.0",
-                "symfony/polyfill-mbstring": "^1.31.0",
-                "xoops/regdom": "^2.0.1",
-                "xoops/xmf": "^1.2.32"
+                "symfony/polyfill-iconv": "^1.30.0",
+                "symfony/polyfill-mbstring": "^1.30.0",
+                "xoops/regdom": "^2.0.0",
+                "xoops/xmf": "^1.2.30"
             },
             "type": "project",
             "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "GPL-2.0-or-later"
             ],
-            "description": "Primary dependencies for XOOPS/XoopsCore25",
+            "description": "Primary dependencies for XOOPS/XoopsCore27",
             "support": {
-                "issues": "https://github.com/XOOPS/base-requires25/issues",
-                "source": "https://github.com/XOOPS/base-requires25/tree/v1.1.9"
+                "issues": "https://github.com/XOOPS/base-requires27/issues",
+                "source": "https://github.com/XOOPS/base-requires27/tree/v1.0.0"
             },
-            "time": "2025-03-10T10:52:04+00:00"
+            "time": "2024-09-01T23:46:07+00:00"
         },
         {
             "name": "xoops/regdom",
@@ -1062,7 +1115,7 @@
     "platform": {},
     "platform-dev": {},
     "platform-overrides": {
-        "php": "7.4.0"
+        "php": "8.2.0"
     },
     "plugin-api-version": "2.6.0"
 }
