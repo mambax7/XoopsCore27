@@ -290,7 +290,7 @@ class xos_opal_Theme
         $this->template               = null;
         $this->template               = new XoopsTpl();
         $this->template->currentTheme = $this;
-        $this->template->assignByRef('xoTheme', $this);
+        $this->template->assign('xoTheme', $this);
         $GLOBALS['xoTheme']  = $this;
         $GLOBALS['xoopsTpl'] = $this->template;
         $tempPath = str_replace('\\', '/', realpath(XOOPS_ROOT_PATH) . '/');
@@ -563,7 +563,7 @@ class xos_opal_Theme
             ob_end_clean();
         }
 
-        $this->template->assignByRef('xoops_contents', $this->content);
+        $this->template->assign('xoops_contents', $this->content);
 
         // Do not cache the main (theme.html) template output
         $this->template->caching = 0;

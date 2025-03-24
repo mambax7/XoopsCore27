@@ -64,11 +64,11 @@ if (defined('XOOPS_STARTPAGE_REDIRECTED')) {
 if (@is_object($xoTheme->plugins['xos_logos_PageBuilder'])) {
     $aggreg = & $xoTheme->plugins['xos_logos_PageBuilder'];
     // Backward compatibility code for pre 2.0.14 themes
-    $xoopsTpl->assignByRef('xoops_lblocks', $aggreg->blocks['canvas_left']);
-    $xoopsTpl->assignByRef('xoops_rblocks', $aggreg->blocks['canvas_right']);
-    $xoopsTpl->assignByRef('xoops_ccblocks', $aggreg->blocks['page_topcenter']);
-    $xoopsTpl->assignByRef('xoops_clblocks', $aggreg->blocks['page_topleft']);
-    $xoopsTpl->assignByRef('xoops_crblocks', $aggreg->blocks['page_topright']);
+    $xoopsTpl->assign('xoops_lblocks', $aggreg->blocks['canvas_left']);
+    $xoopsTpl->assign('xoops_rblocks', $aggreg->blocks['canvas_right']);
+    $xoopsTpl->assign('xoops_ccblocks', $aggreg->blocks['page_topcenter']);
+    $xoopsTpl->assign('xoops_clblocks', $aggreg->blocks['page_topleft']);
+    $xoopsTpl->assign('xoops_crblocks', $aggreg->blocks['page_topright']);
     $xoopsTpl->assign('xoops_showlblock', !empty($aggreg->blocks['canvas_left']));
     $xoopsTpl->assign('xoops_showrblock', !empty($aggreg->blocks['canvas_right']));
     $xoopsTpl->assign('xoops_showcblock', !empty($aggreg->blocks['page_topcenter']) || !empty($aggreg->blocks['page_topleft']) || !empty($aggreg->blocks['page_topright']));

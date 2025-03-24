@@ -48,7 +48,7 @@ class xos_logos_PageBuilder
     {
         $this->retrieveBlocks();
         if ($this->theme) {
-            $this->theme->template->assignByRef('xoBlocks', $this->blocks);
+            $this->theme->template->assign('xoBlocks', $this->blocks);
         }
 
         return true;

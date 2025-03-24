@@ -20,6 +20,8 @@
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+use \Smarty\Smarty;
+
 xoops_loadLanguage('global');
 
 /**
@@ -48,8 +50,8 @@ class XoopsTpl extends Smarty
         $this->setTemplateDir(XOOPS_THEME_PATH);
         $this->setCacheDir(XOOPS_VAR_PATH . '/caches/smarty_cache');
         $this->setCompileDir(XOOPS_VAR_PATH . '/caches/smarty_compile');
-        $this->compile_check   = \Smarty::COMPILECHECK_ON; // ($xoopsConfig['theme_fromfile'] == 1);
-        $this->addPluginsDir(XOOPS_ROOT_PATH . '/class/smarty3_plugins');
+        $this->compile_check   = $this::COMPILECHECK_ON; // ($xoopsConfig['theme_fromfile'] == 1);
+        $this->addPluginsDir(XOOPS_ROOT_PATH . '/class/smarty/plugins/');
 
         // Register the count function
         $this->registerPlugin('modifier', 'count', 'count');
@@ -79,6 +81,51 @@ class XoopsTpl extends Smarty
         $xoopsPreload = XoopsPreload::getInstance();
         $xoopsPreload->triggerEvent('core.class.template.new', [$this]);
     }
+
+    /**
+	 * Adds directory of plugin files
+	 *
+	 * @param null|array|string $path
+	 *
+	 * @return static current Smarty instance for chaining
+	 * @deprecated since 5.0
+	 */
+	public function addPluginsDir($path) {
+
+        foreach([
+			'function',
+			'modifier',
+		    'block',
+		    'compiler',
+		    'prefilter',
+		    'postfilter',
+		    'outputfilter'
+		] as $type) {
+			foreach (glob($path  . $type . '.?*.php') as $filename) {
+				$pluginName = $this->getPluginNameFromFilename($filename);
+				if ($pluginName !== null) {
+					require_once $filename;
+					$functionOrClassName = 'smarty_' . $type . '_' . $pluginName;
+					if (function_exists($functionOrClassName) || class_exists($functionOrClassName)) {
+						$this->registerPlugin($type, $pluginName, $functionOrClassName, true, []);
+					}
+				}
+			}
+		}
+
+        $type = 'resource';
+		foreach (glob($path  . $type . '.?*.php') as $filename) {
+			$pluginName = $this->getPluginNameFromFilename($filename);
+			if ($pluginName !== null) {
+				require_once $filename;
+				if (class_exists($className = 'Smarty_' . ucfirst($type) . '_' . ucfirst($pluginName))) {
+					$this->registerResource($pluginName, new $className());
+				}
+			}
+		}
+
+		return $this;
+	}
 
     /**
      * Renders output from template data
@@ -115,6 +162,18 @@ class XoopsTpl extends Smarty
             $this,
         );
     }
+
+    /**
+	 * @param $filename
+	 *
+	 * @return string|null
+	 */
+	private function getPluginNameFromFilename($filename) {
+		if (!preg_match('/.*\.([a-z_A-Z0-9]+)\.php$/',$filename,$matches)) {
+			return null;
+		}
+		return $matches[1];
+	}
 
     /**
      * XoopsTpl::touch
@@ -304,6 +363,18 @@ class XoopsTpl extends Smarty
     }
 
     /**
+     * deprecated assignByRef
+     *
+     * @param string $tpl_var the template variable name
+     * @param mixed  &$value  the referenced value to assign
+     */
+    public function assignByRef($tpl_var, &$value)
+    {
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use assign");
+        $this->assign($tpl_var, $value);
+    }
+
+    /**
      * deprecated append_by_ref
      *
      * @param string  $tpl_var the template variable name
@@ -314,6 +385,19 @@ class XoopsTpl extends Smarty
     {
         $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
         $this->appendByRef($tpl_var, $value, $merge);
+    }
+
+    /**
+     * deprecated appendByRef
+     *
+     * @param string  $tpl_var the template variable name
+     * @param mixed   &$value  the referenced value to append
+     * @param boolean $merge   flag if array elements shall be merged
+     */
+    public function appendByRef($tpl_var, &$value, $merge = false)
+    {
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
+        $this->append($tpl_var, $value, $merge);
     }
 
     /**
