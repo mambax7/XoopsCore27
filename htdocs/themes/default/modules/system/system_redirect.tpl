@@ -23,7 +23,7 @@
     <{$xoops_module_header}>
 
     <!-- Xoops style sheet -->
-    <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'xoops.css'}>"/>
+    <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl url='xoops.css'}>"/>
 
     <!-- Theme style sheets -->
     <link rel="stylesheet" type="text/css" media="screen" title="Color" href="<{xoImgUrl 'style.css'}>"/>

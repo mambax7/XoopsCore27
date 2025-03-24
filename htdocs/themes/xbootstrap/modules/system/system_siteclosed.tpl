@@ -23,7 +23,7 @@
     <script src="<{$xoops_imageurl}>js/bootstrap.min.js"></script>
     <script src="<{$xoops_imageurl}>js/modernizr.custom.95845.js"></script>
     <script src="<{$xoops_imageurl}>js/js.js"></script>
-    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>">
+    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl url='backend.php'}>">
     <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{else}><{if !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
     <{include file="$theme_name/tpl/shareaholic-script.tpl"}>
     <{$xoops_module_header|default:''}>
@@ -42,7 +42,7 @@
                 <{if !empty($redirect_message)}>
                 <p class="text-warning"><{$redirect_message}></p>
                 <{/if}>
-                <form action="<{xoAppUrl 'user.php'}>" method="post" role="form" class="form-horizontal">
+                <form action="<{xoAppUrl url='user.php'}>" method="post" role="form" class="form-horizontal">
 
                     <label class="control-label"><{$lang_username}></label>
 

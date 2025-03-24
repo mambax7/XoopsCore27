@@ -54,7 +54,7 @@
 <script src="<{xoImgUrl}>js/selectivizr-min.js"></script>
 <![endif]-->
     <script src="<{xoImgUrl}>js/js.js"></script>
-    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>">
+    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl url='backend.php'}>">
 
     <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{else}><{if !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
 

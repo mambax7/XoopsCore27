@@ -1,6 +1,6 @@
 <div id="xo-logo-head">
     <div id="main-logo">
-        <a class="tooltip" href="<{xoAppUrl 'admin.php'}>" title="<{$smarty.const._OXYGEN_ADMINISTRATION}>">
+        <a class="tooltip" href="<{xoAppUrl url='admin.php'}>" title="<{$smarty.const._OXYGEN_ADMINISTRATION}>">
             <img src="<{xoImgUrl 'images/logo-xoops.png'}>" alt="" id="xoops-logo">
         </a>
     </div>
@@ -12,7 +12,7 @@
             </a>
         </li>
         <li>
-            <a class="tooltip" href="<{xoAppUrl 'user.php?op=logout'}>" title="<{$smarty.const._LOGOUT}>">
+            <a class="tooltip" href="<{xoAppUrl url='user.php?op=logout'}>" title="<{$smarty.const._LOGOUT}>">
                 <span class="fa fa-sign-out"></span>
                 <{$smarty.const._LOGOUT}>
             </a>

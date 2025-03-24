@@ -10,7 +10,7 @@
                 title="<{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>">
                 <i class="fas fa-sync ic-w mr-1"></i><{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>
             </a>
-            <a class="btn btn-sm btn-secondary" href="admin.php?fct=users&amp;op=users_add" 
+            <a class="btn btn-sm btn-secondary" href="admin.php?fct=users&amp;op=users_add"
                 title="<{$smarty.const._AM_SYSTEM_USERS_ADDUSER}>">
                 <i class="fa fa-plus-circle ic-w mr-1" ></i><{$smarty.const._AM_SYSTEM_USERS_ADDUSER}>
             </a>
@@ -34,7 +34,7 @@
         </thead>
         <!--Display data-->
         <{if isset($users_count) && $users_count == true}>
-            <form class="form-inline" name="memberslist" id="memberslist" action="<{xoAppUrl 'modules/system/admin.php?fct=users'}>" method="POST">
+            <form class="form-inline" name="memberslist" id="memberslist" action="<{xoAppUrl url='modules/system/admin.php?fct=users'}>" method="POST">
                 <tbody>
                 <{foreach item=user from=$users|default:null}>
                     <tr class="<{cycle values='even,odd'}> alignmiddle">
@@ -74,7 +74,7 @@
                                     <img src="<{xoAdminIcons url='xoops/active_user.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_ACTIVE}>"/>
                                 </a>
                                 <a data-toggle="modal" data-target="#dialog<{$user.uid}>">
-                                <img data-toggle="tooltip" 
+                                <img data-toggle="tooltip"
                                      src="<{xoAdminIcons url='display.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_VIEW}>"
                                      title="<{$smarty.const._AM_SYSTEM_USERS_VIEW}>"/>
                                 </a>

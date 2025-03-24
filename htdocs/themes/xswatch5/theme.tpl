@@ -34,12 +34,12 @@
     <{/if}>
 
     <script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
-    
+
     <{include file="$theme_name/tpl/cookieConsent.tpl"}>
     <{if $xoops_isadmin|default:false}>
     <script src="<{xoImgUrl}>js/js.cookie.min.js"></script>
     <{/if}>
-    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>">
+    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl url='backend.php'}>">
 
     <title><{if $xoops_dirname == "system"}><{$xoops_sitename}><{if $xoops_pagetitle !=''}> - <{$xoops_pagetitle}><{/if}><{else}><{if $xoops_pagetitle !=''}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
     <{$xoops_module_header}>

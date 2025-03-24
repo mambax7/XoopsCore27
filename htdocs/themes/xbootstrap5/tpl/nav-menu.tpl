@@ -15,12 +15,12 @@
                     </a>
                 </div>
 
-                
+
                 <div class="navbar-collapse collapse">
                     <ul class="nav navbar-nav">
                         <li class="nav-item active"><a href="<{$xoops_url}>" class="nav-link"><{$smarty.const.THEME_HOME}></a></li>
-                        
-                        
+
+
                     <{xoInboxCount assign='unread_count'}>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" id="xbootstrap-account-menu"><{$smarty.const.THEME_ACCOUNT}> <span class="caret"></span></a>
@@ -67,7 +67,7 @@
                     </ul>
 
                     <{if $xoops_search|default:false}>
-                        <form class="form-inline ms-auto" role="search" action="<{xoAppUrl 'search.php'}>" method="get">
+                        <form class="form-inline ms-auto" role="search" action="<{xoAppUrl url='search.php'}>" method="get">
                             <div class="input-group">
                                 <input type="text" name="query" class="form-control" placeholder="<{$smarty.const.THEME_SEARCH_TEXT}>">
                                 <input type="hidden" name="action" value="results">

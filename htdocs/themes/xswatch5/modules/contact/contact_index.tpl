@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="<{xoAppUrl 'modules/contact/assets/css/contact.css'}>" type="text/css" />
+<link rel="stylesheet" href="<{xoAppUrl url='modules/contact/assets/css/contact.css'}>" type="text/css" />
 
 <{if !empty($recaptcha)}>
 <script src='https://www.google.com/recaptcha/api.js'></script>
@@ -27,7 +27,7 @@
 	<div class="col">
 		<div id="contact-form" class="col">
 
-	<form name="save" id="save" action="<{xoAppUrl 'modules/contact/send.php'}>" onsubmit="return xoopsFormValidate_save();" method="post" enctype="multipart/form-data">
+	<form name="save" id="save" action="<{xoAppUrl url='modules/contact/send.php'}>" onsubmit="return xoopsFormValidate_save();" method="post" enctype="multipart/form-data">
         <{!empty(securityToken)}><{*//mb*}>
 		<div class="mb-3">
 	    	<label for="contact_name"><{$lng_username|default:''}></label>
