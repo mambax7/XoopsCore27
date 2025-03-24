@@ -1,6 +1,6 @@
 <!-- Header -->
 <{include file="db:system_header.tpl"}>
-<!-- Buttons 
+<!-- Buttons
 <div style="height: 30px;">
     <div class="">
         <div class="xo-buttons">
@@ -76,7 +76,7 @@
                     <td class="xo-actions"><img id="loading_cat<{$cat.id}>" src="./images/spinner.gif" style="display:none;"
                                                 alt="<{$smarty.const._AM_SYSTEM_LOADING}>"/><img class="cursorpointer" id="cat<{$cat.id}>" data-toggle="tooltip"
                                                                                                 onclick="system_setStatus( { fct: 'images', op: 'display_cat', imgcat_id: <{$cat.id}> }, 'cat<{$cat.id}>', 'admin.php' )"
-                                                                                                src="<{if !empty($cat.display)}><{xoAdminIcons 'success.png'}><{else}><{xoAdminIcons 'cancel.png'}><{/if}>"
+                                                                                                src="<{if !empty($cat.display)}><{xoAdminIcons url='success.png'}><{else}><{xoAdminIcons url='cancel.png'}><{/if}>"
                                                                                                 alt=""
                                                                                                 title="<{if !empty($cat.display)}><{$smarty.const._AM_SYSTEM_IMAGES_OFF}><{else}><{$smarty.const._AM_SYSTEM_IMAGES_ON}><{/if}>"/>
                     </td>
@@ -109,7 +109,7 @@
         <div class="floatright"><{$nav_menu}></div>
     </div>
     <{/if}>
-</div>  
+</div>
 <{/if}>
 <{if !empty($images)}>
 <div class="row mb-2">
@@ -144,23 +144,23 @@
                         <img id="loading_img<{$img.image_id}>" src="./images/spinner.gif" style="display:none;"
                              alt="<{$smarty.const._AM_SYSTEM_LOADING}>"/><img class="cursorpointer tooltip" id="img<{$img.image_id}>"
                                                                               onclick="system_setStatus( { fct: 'images', op: 'display_img', image_id: <{$img.image_id}> }, 'img<{$img.image_id}>', 'admin.php' )"
-                                                                              src="<{if !empty($img.image_display)}><{xoAdminIcons 'success.png'}><{else}><{xoAdminIcons 'cancel.png'}><{/if}>"
+                                                                              src="<{if !empty($img.image_display)}><{xoAdminIcons url='success.png'}><{else}><{xoAdminIcons url='cancel.png'}><{/if}>"
                                                                               alt="<{$smarty.const._IMGDISPLAY}>" title="<{$smarty.const._IMGDISPLAY}>"/>
                         <{if empty($db_store)}>
                         <a class="lightbox tooltip" href="<{$xoops_upload_url}>/<{$img.image_name}>" title="<{$smarty.const._PREVIEW}>">
                             <{else}>
                             <a class="lightbox tooltip" href="<{$xoops_url}>/image.php?id=<{$img.image_id}>" title="<{$smarty.const._PREVIEW}>">
                                 <{/if}>
-                                <img src="<{xoAdminIcons 'display.png'}>" alt="<{$smarty.const._AM_SYSTEM_IMAGES_VIEW}>"/>
+                                <img src="<{xoAdminIcons url='display.png'}>" alt="<{$smarty.const._AM_SYSTEM_IMAGES_VIEW}>"/>
                             </a>
                             <a data-toggle="tooltip" href="admin.php?fct=images&amp;op=editimg&amp;image_id=<{$img.image_id}>" title="<{$smarty.const._EDIT}>">
-                                <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._EDIT}>"/>
+                                <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._EDIT}>"/>
                             </a>
                             <a data-toggle="tooltip" href="admin.php?fct=images&amp;op=delfile&amp;image_id=<{$img.image_id}>" title="<{$smarty.const._DELETE}>">
-                                <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._DELETE}>"/>
+                                <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._DELETE}>"/>
                             </a>
                             <img data-toggle="tooltip" onclick="display_dialog(<{$img.image_id}>, true, true, 'slide', 'slide', 120, 350);"
-                                 src="<{xoAdminIcons 'url.png'}>" alt="<{$smarty.const._AM_SYSTEM_IMAGES_URL}>"
+                                 src="<{xoAdminIcons url='url.png'}>" alt="<{$smarty.const._AM_SYSTEM_IMAGES_URL}>"
                                  title="<{$smarty.const._AM_SYSTEM_IMAGES_URL}>"/>
                     </div>
                 </div>
@@ -247,7 +247,7 @@
             <h3 class="card-title"><{$imagecat_form.title}></h3>
         </div>
         <div class="card-body">
-        
+
     <form name="<{$imagecat_form.name}>" id="<{$imagecat_form.name}>" action="<{$imagecat_form.action}>" method="<{$imagecat_form.method}>"
             <{$imagecat_form.extra}> >
         <table class="outer">
@@ -378,8 +378,8 @@
     </div>
 <{/if}>
 <script type="text/javascript">
-    IMG_ON = "<{xoAdminIcons 'success.png'}>";
-    IMG_OFF = "<{xoAdminIcons 'cancel.png'}>";
+    IMG_ON = "<{xoAdminIcons url='success.png'}>";
+    IMG_OFF = "<{xoAdminIcons url='cancel.png'}>";
 
     $('.lightbox').lightBox({
         imageLoading: 'language/<{if isset($xoops_language)}><{$xoops_language}><{else}>english<{/if}>/images/lightbox-ico-loading.gif',

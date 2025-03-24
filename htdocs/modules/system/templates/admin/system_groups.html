@@ -4,7 +4,7 @@
     <div class="floatright">
         <div class="xo-buttons">
             <button class="ui-corner-all" onclick="self.location.href='admin.php?fct=groups&amp;op=groups_add'">
-                <img src="<{xoAdminIcons 'add.png'}>" alt="<{$smarty.const._AM_SYSTEM_GROUPS_ADD}>"/>
+                <img src="<{xoAdminIcons url='add.png'}>" alt="<{$smarty.const._AM_SYSTEM_GROUPS_ADD}>"/>
                 <{$smarty.const._AM_SYSTEM_GROUPS_ADD}>
             </button>
         </div>
@@ -36,11 +36,11 @@
                 <td class="xo-actions txtcenter">
                     <a class="tooltip" href="admin.php?fct=groups&amp;op=groups_edit&amp;groups_id=<{$groupdetail.groups_id}>"
                        title="<{$smarty.const._AM_SYSTEM_GROUPS_EDIT}>">
-                        <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_GROUPS_EDIT}>"/></a>
+                        <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_GROUPS_EDIT}>"/></a>
                     <{if !empty($groupdetail.delete)}>
                         <a class="tooltip" href="admin.php?fct=groups&amp;op=groups_delete&amp;groups_id=<{$groupdetail.groups_id}>"
                            title="<{$smarty.const._AM_SYSTEM_GROUPS_DELETE}>">
-                            <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_GROUPS_DELETE}>"/></a>
+                            <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_GROUPS_DELETE}>"/></a>
                     <{/if}>
                 </td>
             </tr>

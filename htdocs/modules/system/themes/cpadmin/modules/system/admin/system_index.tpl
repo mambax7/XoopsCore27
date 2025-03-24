@@ -1,7 +1,7 @@
 <{include file="db:system_header.tpl"}>
 <script type="text/javascript">
-    IMG_ON = "<{xoAdminIcons 'success.png'}>";
-    IMG_OFF = "<{xoAdminIcons 'cancel.png'}>";
+    IMG_ON = "<{xoAdminIcons url='success.png'}>";
+    IMG_OFF = "<{xoAdminIcons url='cancel.png'}>";
 </script>
 <div class="card">
     <div class="card-body">
@@ -32,7 +32,7 @@
                                 <img id="loading_<{$menuitem.file}>" src="images/spinner.gif" style="display:none;" alt="<{$smarty.const._AM_SYSTEM_LOADING}>"/>
                                 <img data-toggle="tooltip" id="<{$menuitem.file}>"
                                     onclick="system_setStatus( { op: 'system_activate', type: '<{$menuitem.file}>' }, '<{$menuitem.file}>', 'admin.php' )"
-                                    src="<{if !empty($menuitem.status)}><{xoAdminIcons 'success.png'}><{else}><{xoAdminIcons 'cancel.png'}><{/if}>"
+                                    src="<{if !empty($menuitem.status)}><{xoAdminIcons url='success.png'}><{else}><{xoAdminIcons url='cancel.png'}><{/if}>"
                                     alt="<{$smarty.const._AM_SYSTEM_STATUS}>" title="<{$smarty.const._AM_SYSTEM_STATUS}>"/>
                             <{/if}>
                         </td>
