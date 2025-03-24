@@ -358,8 +358,8 @@ class XoopsTpl extends Smarty
      */
     public function assign_by_ref($tpl_var, &$value)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use assignByRef");
-        $this->assignByRef($tpl_var, $value);
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use assign");
+        $this->assign($tpl_var, $value);
     }
 
     /**
@@ -383,8 +383,8 @@ class XoopsTpl extends Smarty
      */
     public function append_by_ref($tpl_var, &$value, $merge = false)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
-        $this->appendByRef($tpl_var, $value, $merge);
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use append");
+        $this->append($tpl_var, $value, $merge);
     }
 
     /**
@@ -396,7 +396,7 @@ class XoopsTpl extends Smarty
      */
     public function appendByRef($tpl_var, &$value, $merge = false)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use append");
         $this->append($tpl_var, $value, $merge);
     }
 
