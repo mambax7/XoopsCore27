@@ -391,7 +391,7 @@ switch ($op) {
                 $banner_finish['name']        = $name_client->getVar('name');
                 $banner_finish['edit_delete'] = '<img class="cursorpointer" onclick="display_dialog(' . $bid . '000, true, true, \'slide\', \'slide\', 200, 520);" src="images/icons/view.png" alt="' . _AM_SYSTEM_BANNERS_VIEW . '" title="' . _AM_SYSTEM_BANNERS_VIEW . '" /><a href="admin.php?fct=banners&amp;op=banner_finish_delete&amp;bid=' . $bid . '"><img src="./images/icons/delete.png" border="0" alt="' . _AM_SYSTEM_BANNERS_DELETE . '" title="' . _AM_SYSTEM_BANNERS_DELETE . '"></a>';
 
-                $xoopsTpl->appendByRef('banner_finish', $banner_finish);
+                $xoopsTpl->append('banner_finish', $banner_finish);
                 unset($banner_finish);
             }
         }
