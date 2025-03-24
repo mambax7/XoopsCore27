@@ -95,7 +95,7 @@ abstract class Base implements CompilerInterface {
 					$_indexed_attr[$this->shorttag_order[$key]] = $mixed;
 				} else {
 					// too many shorthands
-					//$compiler->trigger_template_error('too many shorthand attributes', null, true);
+					$compiler->trigger_template_error('too many shorthand attributes', null, true);
 				}
 				// named attribute
 			} else {
