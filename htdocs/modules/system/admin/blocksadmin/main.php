@@ -158,7 +158,7 @@ switch ($op) {
 		if (!empty($blocks_arr)){
 			foreach (array_keys($blocks_arr) as $i) {
 				$arr[$i] = $blocks_arr[$i]->toArray();
-				$xoopsTpl->appendByRef('blocks', $arr[$i]);
+				$xoopsTpl->append('blocks', $arr[$i]);
 			}
 		} else {
 			$xoopsTpl->assign('blocks', []);

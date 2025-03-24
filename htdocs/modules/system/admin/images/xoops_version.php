@@ -12,22 +12,24 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      System
+ * @since        2.7.0
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_IMAGES;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_IMAGES_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; Andricq Nicolas (AKA MusS)';
-$modversion['help']        = 'page=images';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'images.png';
-$modversion['icon']        = 'fa fa-image';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=images';
-$modversion['category']  = XOOPS_SYSTEM_IMAGE;
+// Module version information
+$modversion = [
+    'name'        => _AM_SYSTEM_IMAGES,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_IMAGES_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; Andricq Nicolas (AKA MusS)',
+    'help'        => 'page=images',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'images.png',
+    'icon'        => 'fa fa-image',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=images',
+    'category'    => XOOPS_SYSTEM_IMAGE,
+];

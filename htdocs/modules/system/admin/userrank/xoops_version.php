@@ -12,22 +12,23 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      system
+ * @subpackage   userrank
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_RANK;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_RANK_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; phpBB Group; Maxime Cointin (AKA Kraven30), Gregory Mage (AKA Mage)';
-$modversion['help']        = 'page=userrank';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'userrank.png';
-$modversion['icon']        = 'fa fa-star';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=userrank';
-$modversion['category']  = XOOPS_SYSTEM_URANK;
+ $modversion = [
+    'name'        => _AM_SYSTEM_RANK,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_RANK_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; phpBB Group; Maxime Cointin (AKA Kraven30), Gregory Mage (AKA Mage)',
+    'help'        => 'page=userrank',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'userrank.png',
+    'icon'        => 'fa fa-star',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=userrank',
+    'category'    => XOOPS_SYSTEM_URANK,
+ ];

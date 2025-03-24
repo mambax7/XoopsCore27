@@ -12,22 +12,23 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      system
+ * @subpackage   tplsets
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_TPLSETS;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_TPLSETS_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; Maxime Cointin (AKA Kraven30)';
-$modversion['help']        = 'page=tplsets';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'tpls.png';
-$modversion['icon']        = 'fa fa-file-code-o';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=tplsets';
-$modversion['category']  = XOOPS_SYSTEM_TPLSET;
+ $modversion = [
+    'name'        => _AM_SYSTEM_TPLSETS,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_TPLSETS_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; Maxime Cointin (AKA Kraven30)',
+    'help'        => 'page=tplsets',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'tpls.png',
+    'icon'        => 'fa fa-file-code',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=tplsets',
+    'category'    => XOOPS_SYSTEM_TPLSET,
+ ];

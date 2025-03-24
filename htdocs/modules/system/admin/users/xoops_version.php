@@ -12,22 +12,23 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      system
+ * @subpackage   user
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_USER;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_USER_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; Francisco Burzi<br>( http://phpnuke.org/ ); Kazumi Ono; Maxime Cointin (AKA Kraven30)';
-$modversion['help']        = 'page=users';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'edituser.png';
-$modversion['icon']        = 'fa fa-user';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=users';
-$modversion['category']  = XOOPS_SYSTEM_USER;
+ $modversion = [
+    'name'        => _AM_SYSTEM_USER,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_USER_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; Francisco Burzi<br>( http://phpnuke.org/ ); Kazumi Ono; Maxime Cointin (AKA Kraven30)',
+    'help'        => 'page=users',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'edituser.png',
+    'icon'        => 'fa fa-user',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=users',
+    'category'    => XOOPS_SYSTEM_USER,
+ ];

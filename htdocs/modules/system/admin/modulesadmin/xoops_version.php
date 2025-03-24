@@ -12,22 +12,24 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      System
+ * @since        2.7.0
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_MODULES;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_MODULES_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; Kazumi Ono; Andricq Nicolas (AKA MusS)';
-$modversion['help']        = 'page=modulesadmin';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'modules.png';
-$modversion['icon']        = 'fa fa-cogs';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=modulesadmin';
-$modversion['category']  = XOOPS_SYSTEM_MODULE;
+// Module version information
+$modversion = [
+    'name'        => _AM_SYSTEM_MODULES,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_MODULES_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; Kazumi Ono; Andricq Nicolas (AKA MusS)',
+    'help'        => 'page=modulesadmin',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'modules.png',
+    'icon'        => 'fa fa-cogs',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=modulesadmin',
+    'category'    => XOOPS_SYSTEM_MODULE,
+];

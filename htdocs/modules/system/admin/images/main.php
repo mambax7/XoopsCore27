@@ -111,7 +111,7 @@ switch ($op) {
                 $cat_images['type']      = $imagecategorys[$i]->getVar('imgcat_type');
                 $cat_images['store']     = $imagecategorys[$i]->getVar('imgcat_storetype');
 
-                $xoopsTpl->appendByRef('cat_img', $cat_images);
+                $xoopsTpl->append('cat_img', $cat_images);
                 unset($cat_images);
             }
         }

@@ -66,27 +66,27 @@ switch ($op) {
         }
         if (!empty($display_criteria)) {
             $selected_groups = [];
-            $group_select    = new XoopsFormSelectGroup('<div class="bold spacer">' . _AM_SYSTEM_MAILUSERS_GROUPIS . '<span class="bold green">*</span></div>', 'mail_to_group', false, $selected_groups, 5, true);
+            $group_select    = new XoopsFormSelectGroup('<div class="bold spacer">' . _AM_SYSTEM_MAILUSERS_GROUPIS . '<span class="bold text-green">*</span></div>', 'mail_to_group', false, $selected_groups, 5, true);
 
-            $lastlog_min = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_LASTLOGMIN . '<span class="bold green">*</span>', 'mail_lastlog_min');
+            $lastlog_min = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_LASTLOGMIN . '<span class="bold text-green">*</span>', 'mail_lastlog_min');
             $lastlog_min->setValue('');
-            $lastlog_max = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_LASTLOGMAX . '<span class="bold green">*</span>', 'mail_lastlog_max');
+            $lastlog_max = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_LASTLOGMAX . '<span class="bold text-green">*</span>', 'mail_lastlog_max');
             $lastlog_max->setValue('');
 
             $date = new XoopsFormElementTray('<div class="bold spacer">' . _AM_SYSTEM_MAILUSERS_DATE . '</div>', '');
             $date->addElement($lastlog_min);
             $date->addElement($lastlog_max);
 
-            $idle_more = new XoopsFormText(_AM_SYSTEM_MAILUSERS_IDLEMORE . '<span class="bold green">*</span>', 'mail_idle_more', 10, 5);
-            $idle_less = new XoopsFormText(_AM_SYSTEM_MAILUSERS_IDLELESS . '<span class="bold green">*</span>', 'mail_idle_less', 10, 5);
+            $idle_more = new XoopsFormText(_AM_SYSTEM_MAILUSERS_IDLEMORE . '<span class="bold text-green">*</span>', 'mail_idle_more', 10, 5);
+            $idle_less = new XoopsFormText(_AM_SYSTEM_MAILUSERS_IDLELESS . '<span class="bold text-green">*</span>', 'mail_idle_less', 10, 5);
 
             $idle = new XoopsFormElementTray('<div class="bold spacer">' . _AM_SYSTEM_MAILUSERS_DAY . '</div>', '');
             $idle->addElement($idle_more);
             $idle->addElement($idle_less);
 
-            $regd_min = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_REGDMIN . '<span class="bold green">*</span>', 'mail_regd_min');
+            $regd_min = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_REGDMIN . '<span class="bold text-green">*</span>', 'mail_regd_min');
             $regd_min->setValue('');
-            $regd_max = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_REGDMAX . '<span class="bold green">*</span>', 'mail_regd_max');
+            $regd_max = new XoopsFormTextDateSelect(_AM_SYSTEM_MAILUSERS_REGDMAX . '<span class="bold text-green">*</span>', 'mail_regd_max');
             $regd_max->setValue('');
 
             $regdate = new XoopsFormElementTray('<div class="bold spacer">' . _AM_SYSTEM_MAILUSERS_REGDATE . '</div>', '');
@@ -94,12 +94,12 @@ switch ($op) {
             $regdate->addElement($regd_max);
 
             $mailok_cbox = new XoopsFormCheckBox('', 'mail_mailok');
-            $mailok_cbox->addOption(1, _AM_SYSTEM_MAILUSERS_MAILOK . '<span class="bold green">*</span>');
+            $mailok_cbox->addOption(1, _AM_SYSTEM_MAILUSERS_MAILOK . '<span class="bold text-green">*</span>');
             $inactive_cbox = new XoopsFormCheckBox('', 'mail_inactive');
-            $inactive_cbox->addOption(1, _AM_SYSTEM_MAILUSERS_INACTIVE . '<span class="bold green">*</span>');
+            $inactive_cbox->addOption(1, _AM_SYSTEM_MAILUSERS_INACTIVE . '<span class="bold text-green">*</span>');
             $inactive_cbox->setExtra("onclick='javascript:disableElement(\"mail_lastlog_min\");disableElement(\"mail_lastlog_max\");disableElement(\"mail_idle_more\");disableElement(\"mail_idle_less\");disableElement(\"mail_to_group[]\");'");
             $criteria_tray = new XoopsFormElementTray(_AM_SYSTEM_MAILUSERS_SENDTOUSERS, '<br><br>');
-            $criteria_tray->setDescription('<span class="bold green">*</span>' . _AM_SYSTEM_MAILUSERS_OPTIONAL);
+            $criteria_tray->setDescription('<span class="bold text-green">*</span>' . _AM_SYSTEM_MAILUSERS_OPTIONAL);
             $criteria_tray->addElement($group_select);
             //$criteria_tray->addElement($lastlog);
             $criteria_tray->addElement($date);

@@ -1,12 +1,12 @@
 <?php
 /**
- * Mail user settings
+ * Maintenance module version information
  *
  * You may not change or alter any portion of this comment or credits
  * of supporting developers from this source code or any supporting source code
- * which is considered copyrighted (c) material of the original comment or credit authors.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * which is considered copyrighted (c) material of the original comment or 
+ * credit authors. This program is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of 
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  *
  * @copyright       (c) 2000-2016 XOOPS Project (www.xoops.org)
@@ -15,17 +15,19 @@
  * @package             system
  */
 
-$modversion['name']        = _AM_SYSTEM_MAINTENANCE;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_MAINTENANCE_DESC;
-$modversion['author']      = 'Cointin Maxime (AKA Kraven30)';
-$modversion['credits']     = 'The XOOPS Project';
-$modversion['help']        = 'page=maintenance';
-$modversion['license']     = 'https://www.gnu.org/licenses/gpl-2.0.html';
-$modversion['official']    = 1;
-$modversion['image']       = 'maintenance.png';
-$modversion['icon']        = 'fa fa-bandcamp';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=maintenance';
-$modversion['category']  = XOOPS_SYSTEM_MAINTENANCE;
+// Module version information
+$modversion = [
+    'name'        => _AM_SYSTEM_MAINTENANCE,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_MAINTENANCE_DESC,
+    'author'      => 'Cointin Maxime (AKA Kraven30)',
+    'credits'     => 'The XOOPS Project',
+    'help'        => 'page=maintenance',
+    'license'     => 'https://www.gnu.org/licenses/gpl-2.0.html',
+    'official'    => 1,
+    'image'       => 'maintenance.png',
+    'icon'        => 'fa fa-bandcamp',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=maintenance',
+    'category'    => XOOPS_SYSTEM_MAINTENANCE,
+];

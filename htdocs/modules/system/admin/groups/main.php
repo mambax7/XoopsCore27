@@ -88,7 +88,7 @@ switch ($op) {
                                      <img src="./images/icons/delete.png" border="0" alt="' . _AM_SYSTEM_GROUPS_DELETE . '" title="' . _AM_SYSTEM_GROUPS_DELETE . '"></a>';
                 }
                 $groups['edit_delete'] = $edit_delete;
-                $xoopsTpl->appendByRef('groups', $groups);
+                $xoopsTpl->append('groups', $groups);
                 unset($groups);
             }
         }

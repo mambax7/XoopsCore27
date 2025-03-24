@@ -12,22 +12,24 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      system
+ * @subpackage   groups
+ * @since        2.7.0
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_ADGS;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_ADGS_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; Cointin Maxime (AKA Kraven30)';
-$modversion['help']        = 'page=groups';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'groups.png';
-$modversion['icon']        = 'fa fa-users';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=groups';
-$modversion['category']  = XOOPS_SYSTEM_GROUP;
+$modversion = [
+    'name'        => _AM_SYSTEM_ADGS,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_ADGS_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; Cointin Maxime (AKA Kraven30)',
+    'help'        => 'page=groups',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'groups.png',
+    'icon'        => 'fa fa-users',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=groups',
+    'category'    => XOOPS_SYSTEM_GROUP,
+];

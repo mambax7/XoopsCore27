@@ -12,22 +12,24 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      system
+ * @subpackage   blocksadmin
+ * @since        2.7.0
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_BLOCKS;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_BLOCKS_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; The MPN SE Project; Andricq Nicolas (AKA MusS)';
-$modversion['help']        = 'page=blocksadmin';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'blocks.png';
-$modversion['icon']        = 'fa fa-cubes';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=blocksadmin';
-$modversion['category']  = XOOPS_SYSTEM_BLOCK;
+$modversion = [
+    'name'        => _AM_SYSTEM_BLOCKS,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_BLOCKS_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; The MPN SE Project; Andricq Nicolas (AKA MusS)',
+    'help'        => 'page=blocksadmin',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'blocks.png',
+    'icon'        => 'fa fa-cubes',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=blocksadmin',
+    'category'    => XOOPS_SYSTEM_BLOCK,
+];

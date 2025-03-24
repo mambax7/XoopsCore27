@@ -12,22 +12,23 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      system
+ * @subpackage   smilies
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-$modversion['name']        = _AM_SYSTEM_SMLS;
-$modversion['version']     = '';
-$modversion['description'] = _AM_SYSTEM_SMLS_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; The MPN SE Project; Gregory Mage (AKA Mage)';
-$modversion['help']        = 'page=smilies';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'smilies.png';
-$modversion['icon']        = 'fa fa-smile-o';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=smilies';
-$modversion['category']  = XOOPS_SYSTEM_SMILE;
+ $modversion = [
+    'name'        => _AM_SYSTEM_SMLS,
+    'version'     => '',
+    'description' => _AM_SYSTEM_SMLS_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; The MPN SE Project; Gregory Mage (AKA Mage)',
+    'help'        => 'page=smilies',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'smilies.png',
+    'icon'        => 'fa fa-smile',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=smilies',
+    'category'    => XOOPS_SYSTEM_SMILE,
+ ];

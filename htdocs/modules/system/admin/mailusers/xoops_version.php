@@ -12,23 +12,24 @@
 /**
  * @copyright    XOOPS Project https://xoops.org/
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package
- * @since
+ * @package      System
+ * @since        2.7S.0
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
-
-$modversion['name']        = _AM_SYSTEM_MLUS;
-$modversion['version']     = '1.0';
-$modversion['description'] = _AM_SYSTEM_MLUS_DESC;
-$modversion['author']      = '';
-$modversion['credits']     = 'The XOOPS Project; Kazumi Ono; Gregory Mage (AKA Mage)';
-$modversion['help']        = 'page=mailusers';
-$modversion['license']     = 'GPL see LICENSE';
-$modversion['official']    = 1;
-$modversion['image']       = 'mailuser.png';
-$modversion['icon']        = 'fa fa-envelope-o';
-
-$modversion['hasAdmin']  = 1;
-$modversion['adminpath'] = 'admin.php?fct=mailusers';
-$modversion['category']  = XOOPS_SYSTEM_MAILU;
+// Module version information
+$modversion = [
+    'name'        => _AM_SYSTEM_MLUS,
+    'version'     => '1.0',
+    'description' => _AM_SYSTEM_MLUS_DESC,
+    'author'      => '',
+    'credits'     => 'The XOOPS Project; Kazumi Ono; Gregory Mage (AKA Mage)',
+    'help'        => 'page=mailusers',
+    'license'     => 'GPL see LICENSE',
+    'official'    => 1,
+    'image'       => 'mailuser.png',
+    'icon'        => 'fa fa-envelope',
+    'hasAdmin'    => 1,
+    'adminpath'   => 'admin.php?fct=mailusers',
+    'category'    => XOOPS_SYSTEM_MAILU,
+];

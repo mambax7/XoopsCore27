@@ -347,8 +347,8 @@ switch ($op) {
                 $banner['name']        = $name;
                 $banner['edit_delete'] = '<img class="cursorpointer" onclick="display_dialog(' . $bid . ', true, false, \'slide\', \'slide\', 200, 520);" src="images/icons/view.png" alt="' . _AM_SYSTEM_BANNERS_VIEW . '" title="' . _AM_SYSTEM_BANNERS_VIEW . '" /><a href="admin.php?fct=banners&amp;op=banner_edit&amp;bid=' . $bid . '"><img src="./images/icons/edit.png" border="0" alt="' . _AM_SYSTEM_BANNERS_EDIT . '" title="' . _AM_SYSTEM_BANNERS_EDIT . '"></a><a href="admin.php?fct=banners&amp;op=banner_delete&amp;bid=' . $bid . '"><img src="./images/icons/delete.png" border="0" alt="' . _AM_SYSTEM_BANNERS_DELETE . '" title="' . _AM_SYSTEM_BANNERS_DELETE . '"></a>';
 
-                $xoopsTpl->appendByRef('banner', $banner);
-                $xoopsTpl->appendByRef('popup_banner', $banner);
+                $xoopsTpl->append('banner', $banner);
+                $xoopsTpl->append('popup_banner', $banner);
                 unset($banner);
             }
         }
@@ -426,7 +426,7 @@ switch ($op) {
                 $banner_client['email']         = $banner_client_arr[$i]->getVar('email');
                 $banner_client['edit_delete']   = '<a href="admin.php?fct=banners&amp;op=banner_client_edit&amp;cid=' . $cid . '"><img src="./images/icons/edit.png" border="0" alt="' . _AM_SYSTEM_BANNERS_EDIT . '" title="' . _AM_SYSTEM_BANNERS_EDIT . '"></a><a href="admin.php?fct=banners&amp;op=banner_client_delete&amp;cid=' . $cid . '"><img src="./images/icons/delete.png" border="0" alt="' . _AM_SYSTEM_BANNERS_DELETE . '" title="' . _AM_SYSTEM_BANNERS_DELETE . '"></a>';
 
-                $xoopsTpl->appendByRef('banner_client', $banner_client);
+                $xoopsTpl->append('banner_client', $banner_client);
                 unset($banner_client);
             }
         }
