@@ -1,8 +1,8 @@
 <!-- Header -->
 <{include file="db:system_header.tpl"}>
 <script type="text/javascript">
-    IMG_ON = '<{xoAdminIcons 'success.png'}>';
-    IMG_OFF = '<{xoAdminIcons 'cancel.png'}>';
+    IMG_ON = '<{xoAdminIcons url='success.png'}>';
+    IMG_OFF = '<{xoAdminIcons url='cancel.png'}>';
 </script>
 <!-- Buttons -->
 <{if isset($type) && $type == 's'}>
@@ -59,21 +59,21 @@
                     <img id="loading_avt<{$avatar.avatar_id}>" src="images/spinner.gif" style="display:none;" title="<{$smarty.const._AM_SYSTEM_LOADING}>"
                          alt="<{$smarty.const._AM_SYSTEM_LOADING}>"/><img id="avt<{$avatar.avatar_id}>" data-toggle="tooltip"
                                                                           onclick="system_setStatus( { fct: 'avatars', op: 'display', avatar_id: <{$avatar.avatar_id}> }, 'avt<{$avatar.avatar_id}>', 'admin.php' )"
-                                                                          src="<{if isset($avatar.avatar_display)}><{xoAdminIcons 'success.png'}><{else}><{xoAdminIcons 'cancel.png'}><{/if}>"
+                                                                          src="<{if isset($avatar.avatar_display)}><{xoAdminIcons url='success.png'}><{else}><{xoAdminIcons url='cancel.png'}><{/if}>"
                                                                           alt="<{$smarty.const._IMGDISPLAY}>" title="<{$smarty.const._IMGDISPLAY}>"/>
                     <{if isset($avatar.type) &&  $avatar.type == 'c'}>
                         <a href="<{$xoops_url}>/modules/profile/userinfo.php?uid=<{$avatar.user}>" title="<{$smarty.const._AM_SYSTEM_AVATAR_USERS}>">
-                            <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_AVATAR_USERS}>"/>
+                            <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_AVATAR_USERS}>"/>
                         </a>
                     <{else}>
-                        <img class="cursorhelp" src="<{xoAdminIcons 'forum.png'}>" alt="<{$avatar.count}> <{$smarty.const._AM_SYSTEM_AVATAR_USERS}>" data-toggle="tooltip"
+                        <img class="cursorhelp" src="<{xoAdminIcons url='forum.png'}>" alt="<{$avatar.count}> <{$smarty.const._AM_SYSTEM_AVATAR_USERS}>" data-toggle="tooltip"
                              title="<{$avatar.count}> <{$smarty.const._AM_SYSTEM_AVATAR_USERS}>"/>
                     <{/if}>
-                    <a href="admin.php?fct=avatars&amp;op=edit&amp;avatar_id=<{$avatar.avatar_id}>" data-toggle="tooltip" title="<{$smarty.const._EDIT}>"> 
-                        <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._EDIT}>"/>
+                    <a href="admin.php?fct=avatars&amp;op=edit&amp;avatar_id=<{$avatar.avatar_id}>" data-toggle="tooltip" title="<{$smarty.const._EDIT}>">
+                        <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._EDIT}>"/>
                     </a>
                     <a href="admin.php?fct=avatars&amp;op=delfile&amp;avatar_id=<{$avatar.avatar_id}>" data-toggle="tooltip" title="<{$smarty.const._DELETE}>">
-                        <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._DELETE}>"/>
+                        <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._DELETE}>"/>
                     </a>
                 </div>
             </div>

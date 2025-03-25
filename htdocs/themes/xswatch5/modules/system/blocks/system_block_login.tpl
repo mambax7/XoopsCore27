@@ -1,5 +1,5 @@
 <div>
-    <form action="<{xoAppUrl 'user.php'}>" method="post" role="form">
+    <form action="<{xoAppUrl url='user.php'}>" method="post" role="form">
         <div class="mb-3 mt-2">
             <!-- <{$block.lang_username}> -->
             <div class="input-group">
@@ -19,7 +19,7 @@
                 <input class="form-control form-control-sm" type="password" name="pass" placeholder="<{$smarty.const.THEME_PASS}>">
             </div>
         </div>
-        
+
         <div class="checkbox my-2 text-center">
             <label>
                 <{if isset($block.lang_rememberme)}>
@@ -39,10 +39,10 @@
 
         <div class="d-flex justify-content-around">
             <div class="">
-                <a class="btn btn-secondary btn-sm" href="<{xoAppUrl 'user.php#lost'}>" title="<{$block.lang_lostpass}>"><{$block.lang_lostpass}></a>
+                <a class="btn btn-secondary btn-sm" href="<{xoAppUrl url='user.php#lost'}>" title="<{$block.lang_lostpass}>"><{$block.lang_lostpass}></a>
             </div>
             <div class="">
-                <a class="btn btn-info btn-sm" href="<{xoAppUrl 'register.php'}>" title="<{$block.lang_registernow}>"><{$block.lang_registernow}></a>
+                <a class="btn btn-info btn-sm" href="<{xoAppUrl url='register.php'}>" title="<{$block.lang_registernow}>"><{$block.lang_registernow}></a>
             </div>
         </div>
 

@@ -11,7 +11,7 @@
             </a>
         <{/foreach}>
         <a class="tooltip" href="admin.php?fct=preferences&amp;op=showmod&amp;mod=1" title="<{$smarty.const._AM_SYSTEM_PREFERENCES_SETTINGS}>">
-            <img src="<{xoAdminIcons 'xoops/system_mods.png'}>" alt="<{$smarty.const._AM_SYSTEM_PREFERENCES_SETTINGS}>"/>
+            <img src="<{xoAdminIcons url='xoops/system_mods.png'}>" alt="<{$smarty.const._AM_SYSTEM_PREFERENCES_SETTINGS}>"/>
             <span><{$smarty.const._AM_SYSTEM_PREFERENCES_SETTINGS}></span>
         </a>
     </div>

@@ -20,13 +20,13 @@
 <{/if}>
 
 <!-- Rss -->
-<link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>"/>
+<link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl url='backend.php'}>"/>
 
 <!-- path favicon -->
-<link rel="shortcut icon" type="image/ico" href="<{xoAppUrl 'favicon.ico'}>"/>
+<link rel="shortcut icon" type="image/ico" href="<{xoAppUrl url='favicon.ico'}>"/>
 
 <!-- Xoops style sheet -->
-<link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'xoops.css'}>"/>
+<link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl url='xoops.css'}>"/>
 
 <!-- Font Awesome -->
 <link rel="stylesheet" href="<{$theme_url}>/css/fontawesome-free/css/all.min.css">

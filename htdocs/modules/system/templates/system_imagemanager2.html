@@ -5,9 +5,9 @@
     <meta http-equiv="content-language" content="<{$xoops_langcode}>">
     <title><{$xoops_sitename}> <{$lang_imgmanager}></title>
     <{$image_form.javascript}>
-    <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'xoops.css'}>">
-    <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'modules/system/css/imagemanager.css'}>">
-    <link rel="stylesheet" type="text/css" media="screen" as="font" crossorigin="anonymous"  href="<{xoAppUrl 'media/font-awesome6/css/fontawesome.min.css'}>">
+    <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl url='xoops.css'}>">
+    <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl url='modules/system/css/imagemanager.css'}>">
+    <link rel="stylesheet" type="text/css" media="screen" as="font" crossorigin="anonymous"  href="<{xoAppUrl url='media/font-awesome6/css/fontawesome.min.css'}>">
 
     <{php}>
         $language = $GLOBALS['xoopsConfig']['language'];
@@ -20,8 +20,8 @@
     <!-- fine-upload -->
     <!-- Fine Uploader New/Modern CSS file
     ====================================================================== -->
-    <link href="<{xoAppUrl 'media/fine-uploader/fine-uploader-new.css'}>" rel="stylesheet">
-    <link href="<{xoAppUrl 'media/fine-uploader/ManuallyTriggerUploads.css'}>" rel="stylesheet">
+    <link href="<{xoAppUrl url='media/fine-uploader/fine-uploader-new.css'}>" rel="stylesheet">
+    <link href="<{xoAppUrl url='media/fine-uploader/ManuallyTriggerUploads.css'}>" rel="stylesheet">
 
     <!-- Fine Uploader JS file
     ====================================================================== -->

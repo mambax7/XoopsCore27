@@ -40,12 +40,12 @@
     <{/if}>
 
     <script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
-    <script src="<{xoImgUrl 'js/bootstrap.bundle.min.js'}>"></script>
+    <script src="<{xoImgUrl url='js/bootstrap.bundle.min.js'}>"></script>
     <{include file="$theme_name/tpl/cookieConsent.tpl"}>
     <{if !empty($xoops_isadmin)}>
     <script src="<{xoImgUrl}>js/js.cookie.min.js"></script>
     <{/if}>
-    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>">
+    <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl url='backend.php'}>">
 
     <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{else}><{if !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
 

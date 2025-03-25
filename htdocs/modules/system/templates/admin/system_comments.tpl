@@ -7,7 +7,7 @@
     <div class="floatright">
         <div class="xo-buttons">
             <button class="ui-corner-all" onclick="self.location.href='admin.php?fct=comments&op=comments_form_purge'">
-                <img src="<{xoAdminIcons 'clear.png'}>" alt="<{$smarty.const._AM_SYSTEM_COMMENTS_FORM_PURGE}>"/>
+                <img src="<{xoAdminIcons url='clear.png'}>" alt="<{$smarty.const._AM_SYSTEM_COMMENTS_FORM_PURGE}>"/>
                 <{$smarty.const._AM_SYSTEM_COMMENTS_FORM_PURGE}>
             </button>
         </div>
@@ -46,12 +46,12 @@
                     <td class="txtcenter"><{$comment.comments_status}></td>
                     <td class="xo-actions txtcenter">
                         <img class="cursorpointer" onclick="display_dialog('<{$comment.comments_id}>', true, true, 'slide', 'slide', 300, 500);"
-                             src="<{xoAdminIcons 'display.png'}>" alt="<{$smarty.const._AM_SYSTEM_COMMENTS_VIEW}>"
+                             src="<{xoAdminIcons url='display.png'}>" alt="<{$smarty.const._AM_SYSTEM_COMMENTS_VIEW}>"
                              title="<{$smarty.const._AM_SYSTEM_COMMENTS_VIEW}>"/>
                         <a href="admin/comments/comment_edit.php?com_id=<{$comment.comments_id}>" title="<{$smarty.const._EDIT}>">
-                            <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._EDIT}>"></a>
+                            <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._EDIT}>"></a>
                         <a href="admin/comments/comment_delete.php?com_id=<{$comment.comments_id}>" title="<{$smarty.const._DELETE}>">
-                            <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._DELETE}>"></a>
+                            <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._DELETE}>"></a>
                     </td>
                 </tr>
             <{/foreach}>
@@ -65,7 +65,7 @@
     <{foreach item=comment from=$comments_popup|default:null}>
         <!--Pop-pup-->
         <div id='dialog<{$comment.comments_id}>' title='<{$comment.comments_title}>' style='display:none;'>
-            <img src="<{xoAdminIcons 'comment.png'}>" alt="comments" title="comments" class="xo-commentsimg"/>
+            <img src="<{xoAdminIcons url='comment.png'}>" alt="comments" title="comments" class="xo-commentsimg"/>
 
             <p><{$comment.comments_text}></p>
         </div>

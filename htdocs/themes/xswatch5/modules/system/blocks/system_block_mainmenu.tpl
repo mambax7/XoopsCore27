@@ -1,8 +1,8 @@
 <ul class="nav flex-column">
     <li class="nav-item">
-        <a class="nav-link<{if empty($block.nothome)}> active<{/if}>" href="<{xoAppUrl ' '}>" title="<{$block.lang_home}>"><span class="fa fa-home text-info fa-fw"></span> <{$block.lang_home}></a>
+        <a class="nav-link<{if empty($block.nothome)}> active<{/if}>" href="<{xoAppUrl url=' '}>" title="<{$block.lang_home}>"><span class="fa fa-home text-info fa-fw"></span> <{$block.lang_home}></a>
     </li>
-    
+
     <!-- start module menu loop -->
     <{foreach item=module from=$block.modules|default:null}>
         <li class="nav-item <{if $module.highlight|default:false}>bg-secondary rounded pb-0<{/if}>">
@@ -19,7 +19,7 @@
                     <{/foreach}>
                 </ul>
             <{/if}>
-            
+
     <{/foreach}>
     <!-- end module menu loop -->
 </ul>

@@ -10,7 +10,7 @@
                 title="<{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>">
                 <i class="fas fa-sync ic-w mr-1"></i><{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>
             </a>
-            <a class="btn btn-sm btn-secondary" href="admin.php?fct=users&amp;op=users_add" 
+            <a class="btn btn-sm btn-secondary" href="admin.php?fct=users&amp;op=users_add"
                 title="<{$smarty.const._AM_SYSTEM_USERS_ADDUSER}>">
                 <i class="fa fa-plus-circle ic-w mr-1" ></i><{$smarty.const._AM_SYSTEM_USERS_ADDUSER}>
             </a>
@@ -34,7 +34,7 @@
         </thead>
         <!--Display data-->
         <{if isset($users_count) && $users_count == true}>
-            <form class="form-inline" name="memberslist" id="memberslist" action="<{xoAppUrl 'modules/system/admin.php?fct=users'}>" method="POST">
+            <form class="form-inline" name="memberslist" id="memberslist" action="<{xoAppUrl url='modules/system/admin.php?fct=users'}>" method="POST">
                 <tbody>
                 <{foreach item=user from=$users|default:null}>
                     <tr class="<{cycle values='even,odd'}> alignmiddle">
@@ -74,7 +74,7 @@
                                     <img src="<{xoAdminIcons url='xoops/active_user.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_ACTIVE}>"/>
                                 </a>
                                 <a data-toggle="modal" data-target="#dialog<{$user.uid}>">
-                                <img data-toggle="tooltip" 
+                                <img data-toggle="tooltip"
                                      src="<{xoAdminIcons url='display.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_VIEW}>"
                                      title="<{$smarty.const._AM_SYSTEM_USERS_VIEW}>"/>
                                 </a>
@@ -143,12 +143,12 @@
                             </td>
                             <td class="txtcenter">
                                 <a href='mailto:<{$users.email}>'>
-                                    <img src="<{xoAdminIcons 'mail_send.png'}>" alt="" title="<{$smarty.const._AM_SYSTEM_USERS_EMAIL}>">
+                                    <img src="<{xoAdminIcons url='mail_send.png'}>" alt="" title="<{$smarty.const._AM_SYSTEM_USERS_EMAIL}>">
                                 </a>
                                 <a href='javascript:openWithSelfMain("<{$xoops_url}>/pmlite.php?send2=1&amp;to_userid=<{$users.uid}>","pmlite",565,500);'>
-                                    <img src="<{xoAdminIcons 'pm.png'}>" alt="" title="<{$smarty.const._AM_SYSTEM_USERS_PM}>">
+                                    <img src="<{xoAdminIcons url='pm.png'}>" alt="" title="<{$smarty.const._AM_SYSTEM_USERS_PM}>">
                                 </a>
-                                <{if !empty($users.url)}><a href='<{$users.url}>' rel='external'><img src="<{xoAdminIcons 'url.png'}>" alt="" title=<{$smarty.const._AM_SYSTEM_USERS_URL}>></a><{/if}>
+                                <{if !empty($users.url)}><a href='<{$users.url}>' rel='external'><img src="<{xoAdminIcons url='url.png'}>" alt="" title=<{$smarty.const._AM_SYSTEM_USERS_URL}>></a><{/if}>
                             </td>
                         </tr>
                         <tr>

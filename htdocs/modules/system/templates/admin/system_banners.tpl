@@ -12,11 +12,11 @@
                 <div class="xo-buttons">
                     <a class="ui-corner-all tooltip" href="admin.php?fct=banners&amp;op=new_banner"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_ADDNWBNR}>">
-                        <img src="<{xoAdminIcons 'attach.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_ADDNWBNR}>"/>
+                        <img src="<{xoAdminIcons url='attach.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_ADDNWBNR}>"/>
                         <{$smarty.const._AM_SYSTEM_BANNERS_ADDNWBNR}></a>
                     <a class="ui-corner-all tooltip" href="admin.php?fct=banners&amp;op=new_client"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_ADDCLI}>">
-                        <img src="<{xoAdminIcons 'user_add.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_ADDCLI}>"/>
+                        <img src="<{xoAdminIcons url='user_add.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_ADDCLI}>"/>
                         <{$smarty.const._AM_SYSTEM_BANNERS_ADDCLI}></a>
                 </div>
             </div>
@@ -44,14 +44,14 @@
                 <td class="txtcenter"><{$bannerdetail.percent}>%</td>
                 <td class="txtcenter"><{$bannerdetail.name}></td>
                 <td class="xo-actions txtcenter">
-                    <img class="tooltip" onclick="display_dialog(<{$bannerdetail.bid}>, true, true, 'slide', 'slide', 200, 520);" src="<{xoAdminIcons 'display.png'}>"
+                    <img class="tooltip" onclick="display_dialog(<{$bannerdetail.bid}>, true, true, 'slide', 'slide', 200, 520);" src="<{xoAdminIcons url='display.png'}>"
                          alt="<{$smarty.const._AM_SYSTEM_BANNERS_VIEW}>" title="<{$smarty.const._AM_SYSTEM_BANNERS_VIEW}>"/>
                     <a class="tooltip" href="admin.php?fct=banners&amp;op=banner_edit&amp;bid=<{$bannerdetail.bid}>"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_EDIT}>">
-                        <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_EDIT}>"/></a>
+                        <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_EDIT}>"/></a>
                     <a class="tooltip" href="admin.php?fct=banners&amp;op=banner_delete&amp;bid=<{$bannerdetail.bid}>"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>">
-                        <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>"/></a>
+                        <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>"/></a>
                 </td>
             </tr>
         <{/foreach}>
@@ -98,7 +98,7 @@
                 <td class="xo-actions txtcenter">
                     <a class="tooltip" href="admin.php?fct=banners&amp;op=banner_finish_delete&amp;bid=<{$finished_banner.bid}>"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>">
-                        <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>"/></a>
+                        <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>"/></a>
                 </td>
             </tr>
         <{/foreach}>
@@ -134,10 +134,10 @@
                 <td class="xo-actions txtcenter">
                     <a class="tooltip" href="admin.php?fct=banners&amp;op=banner_client_edit&amp;cid=<{$banner_client_detail.cid}>"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_EDIT}>">
-                        <img src="<{xoAdminIcons 'edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_EDIT}>"/></a>
+                        <img src="<{xoAdminIcons url='edit.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_EDIT}>"/></a>
                     <a class="tooltip" href="admin.php?fct=banners&amp;op=banner_client_delete&amp;cid=<{$banner_client_detail.cid}>"
                        title="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>">
-                        <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>"/></a>
+                        <img src="<{xoAdminIcons url='delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_BANNERS_DELETE}>"/></a>
                 </td>
             </tr>
         <{/foreach}>

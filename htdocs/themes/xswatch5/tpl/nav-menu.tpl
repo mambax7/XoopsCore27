@@ -60,7 +60,7 @@
                 <{if $xoops_search|default:false}>
                 <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
-                    <form class="d-flex align-items-center my-2 my-lg-0" role="search" action="<{xoAppUrl 'search.php'}>" method="get">
+                    <form class="d-flex align-items-center my-2 my-lg-0" role="search" action="<{xoAppUrl url='search.php'}>" method="get">
 						<div class="input-group mb-3">
 							<input class="form-control" type="text" name="query" placeholder="<{$smarty.const.THEME_SEARCH_TEXT}>">
 							<div class="input-group-append">

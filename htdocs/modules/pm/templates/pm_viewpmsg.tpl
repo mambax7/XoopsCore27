@@ -46,7 +46,7 @@
 
             <tr class='txtcenter alignmiddle'>
                 <th><input name='allbox' id='allbox' onclick='xoopsCheckAll("<{$pmform.name}>", "allbox");' type='checkbox' value='Check All'/></th>
-                <th><img class='bnone' src='<{xoAppUrl 'images/download.gif'}>' alt=''/></th>
+                <th><img class='bnone' src='<{xoAppUrl url='images/download.gif'}>' alt=''/></th>
                 <th>&nbsp;</th>
                 <{if isset($op) && $op == "out"}>
                     <th><{$smarty.const._PM_TO}></th>
