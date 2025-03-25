@@ -1,7 +1,7 @@
 <div id="xo-logo-head">
     <div id="main-logo">
         <a class="tooltip" href="<{xoAppUrl url='admin.php'}>" title="<{$smarty.const._OXYGEN_ADMINISTRATION}>">
-            <img src="<{xoImgUrl 'images/logo-xoops.png'}>" alt="" id="xoops-logo">
+            <img src="<{xoImgUrl url='images/logo-xoops.png'}>" alt="" id="xoops-logo">
         </a>
     </div>
     <ul id="xo-headnav">

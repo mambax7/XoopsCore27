@@ -16,8 +16,8 @@
     <{/if}>
 
     <!-- path favicon -->
-    <link rel="shortcut icon" type="image/ico" href="<{xoImgUrl 'icons/favicon.ico'}>"/>
-    <link rel="icon" type="image/png" href="<{xoImgUrl 'icons/favicon.png'}>"/>
+    <link rel="shortcut icon" type="image/ico" href="<{xoImgUrl url='icons/favicon.ico'}>"/>
+    <link rel="icon" type="image/png" href="<{xoImgUrl url='icons/favicon.png'}>"/>
 
     <!-- include xoops.js and others via header.php -->
     <{$xoops_module_header|default:''}>
@@ -26,7 +26,7 @@
     <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl url='xoops.css'}>"/>
 
     <!-- Theme style sheets -->
-    <link rel="stylesheet" type="text/css" media="screen" title="Color" href="<{xoImgUrl 'style.css'}>"/>
+    <link rel="stylesheet" type="text/css" media="screen" title="Color" href="<{xoImgUrl url='style.css'}>"/>
 </head>
 <body>
 
@@ -41,7 +41,7 @@
             <!-- Start Header -->
             <table cellspacing="0">
                 <tr id="header">
-                    <td id="headerlogo"><a href="<{xoAppUrl url='/'}>" title="<{$xoops_sitename}>"><img src="<{xoImgUrl 'xoops-logo.png'}>"
+                    <td id="headerlogo"><a href="<{xoAppUrl url='/'}>" title="<{$xoops_sitename}>"><img src="<{xoImgUrl url='xoops-logo.png'}>"
                                                                                                   alt="<{$xoops_sitename}>"/></a></td>
                     <td id="headerbanner"><{$xoops_banner}></td>
                     <td id="xo-userbar_siteclosed">
