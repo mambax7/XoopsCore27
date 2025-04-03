@@ -150,6 +150,7 @@
                       </p>
                     </a>
                   <{if !empty($op.options) && $op.options == 0}></li><{/if}>
+                  <{if !empty($op.options)}>
                     <ul class="nav nav-treeview">
                     <{foreach item=sub from=$op.options|default:null}>
                       <li class="nav-item">
@@ -162,6 +163,7 @@
                       </li>
                     <{/foreach}>
                     </ul>
+                  <{/if}>
                   <{if !empty($op.options) && $op.options != 0}></li><{/if}>
                 <{/foreach}>
             </ul>
