@@ -100,6 +100,11 @@ class Smarty_Resource_Db extends Smarty\Resource\CustomPlugin
                 $directory = XOOPS_ROOT_PATH . '/modules/system/themes'; //\XoopsBaseConfig::get('adminthemes-path');
                 $path = 'admin/';
                 break;
+            case 'module':
+                $theme = $xoopsConfig['cpanel'] ?? 'default';
+                $directory = XOOPS_ROOT_PATH . '/modules/system/themes'; //\XoopsBaseConfig::get('adminthemes-path');
+                $path = 'modules/';
+                break;
             default:
                 $directory = XOOPS_ROOT_PATH . '/themes'; //\XoopsBaseConfig::get('themes-path');
                 $path = '';
