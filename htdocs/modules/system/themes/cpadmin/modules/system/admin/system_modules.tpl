@@ -67,7 +67,7 @@
 
                                                                 <div class="input-group">
                                                                     <div class="input-group-prepend">
-                                                                        <span class="input-group-text xo-mods">
+                                                                        <span class="input-group-text xo-mods" display="none">
                                                                             <a class=""
                                                                                 href="<{$xoops_url}>/modules/<{$row.dirname}>/<{$row.adminindex}>"
                                                                                 title="<{$row.name}>">

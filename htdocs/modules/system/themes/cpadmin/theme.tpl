@@ -188,7 +188,7 @@
                               <{$sub.title}><i class="fas fa-angle-left right"></i>
                             </p>
                           </a>
-                          <ul class="nav nav-treeview" style="display: none;">
+                    <ul class="nav nav-treeview <{if $xoops_dirname == $sub.dir}> menu-open<{/if}>" style="display: <{if $xoops_dirname == $sub.dir}> block<{else}>none<{/if}>;">
                             <{foreach item=optn from=$sub.options|default:null}>
                                 <li class="nav-item">
                                   <a href="<{$sub.url}><{$optn.link}>" class="nav-link">
