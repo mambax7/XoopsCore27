@@ -26,7 +26,7 @@ $modversion = [
     'license'     => 'https://www.gnu.org/licenses/gpl-2.0.html',
     'official'    => 1,
     'image'       => 'maintenance.png',
-    'icon'        => 'fa fa-bandcamp',
+    'icon'        => 'fas fa-broom',
     'hasAdmin'    => 1,
     'adminpath'   => 'admin.php?fct=maintenance',
     'category'    => XOOPS_SYSTEM_MAINTENANCE,

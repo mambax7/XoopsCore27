@@ -28,7 +28,7 @@ $modversion = [
     'license'     => 'GPL see LICENSE',
     'official'    => 1,
     'image'       => 'banners.png',
-    'icon'        => 'fa fa-bandcamp',
+    'icon'        => 'fab fa-bandcamp',
     'hasAdmin'    => 1,
     'adminpath'   => 'admin.php?fct=banners',
     'category'    => XOOPS_SYSTEM_BANNER,
