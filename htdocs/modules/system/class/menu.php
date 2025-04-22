@@ -165,7 +165,7 @@ class SystemMenuHandler
      */
     public function render($currentoption = 1, $display = true)
     {
-        global $modversion;
+        global $modversion, $xoopsTpl;
         $_dirname = $this->_obj->getVar('dirname');
         $i        = 0;
 
@@ -180,50 +180,12 @@ class SystemMenuHandler
             $menuItems[] = 'modmenu_' . $j++;
         }
 
-        $menuItems[$currentoption] = 'current';
-        $menu                      = "<div id='buttontop_mod'>";
-        $menu .= "<table style='width: 100%; padding: 0;' cellspacing='0'>\n<tr>";
-        $menu .= "<td style='font-size: 10px; text-align: left; color: #2F5376; padding: 0 6px; line-height: 18px;'>";
-        foreach ($this->_menutop as $k => $v) {
-            $menu .= " <a href=\"$k\">$v</a> |";
-        }
-        $menu = substr($menu, 0, -1);
-
-        $menu .= '</td>';
-        $menu .= "<td style='text-align: right;'><strong>" . $this->_obj->getVar('name') . '</strong> : ' . $breadcrumb . '</td>';
-        $menu .= "</tr>\n</table>\n";
-        $menu .= "</div>\n";
-        $menu .= "<div id='buttonbar_mod'><ul>";
-        foreach ($this->_menutabs as $k => $v) {
-            $menu .= "<li id='" . $menuItems[$i] . "'><a href='" . XOOPS_URL . '/modules/' . $this->_obj->getVar('dirname') . '/' . $k . "'><span>$v</span></a></li>\n";
-            ++$i;
-        }
-        $menu .= "</ul>\n</div>\n";
-        if ($this->_header) {
-            $menu .= "<h4 class='admin_header'>";
-            if (isset($modversion['name'])) {
-                if ($modversion['image'] && $this->_obj->getVar('mid') == 1) {
-                    $system_image = XOOPS_URL . '/modules/system/images/system/' . $modversion['image'];
-                } else {
-                    $system_image = XOOPS_URL . '/modules/' . $_dirname . '/images/' . $modversion['image'];
-                }
-                $menu .= "<img src='$system_image' align='middle' height='32' width='32' alt='' />";
-                $menu .= ' ' . $modversion['name'] . "</h4>\n";
-            } else {
-                $menu .= ' ' . $this->_header . "</h4>\n";
-            }
-        }
-        if ($this->_subheader) {
-            $menu .= "<div class='admin_subheader'>" . $this->_subheader . "</div>\n";
-        }
-        $menu .= '<div class="clear">&nbsp;</div>';
-        unset($this->_obj);
-        if ($display === true) {
-            echo $menu;
-        } else {
-            return $menu;
-        }
-
-        return null;
+        $xoopsTpl->assign('module_name', $this->_obj->getVar('name'));
+        $xoopsTpl->assign('module_dirname', $this->_obj->getVar('dirname'));
+        $xoopsTpl->assign('page', $breadcrumb);
+        $xoopsTpl->assign('menutop', $this->_menutop);
+        $xoopsTpl->assign('menutabs', $this->_menutabs);
+        // Display Module Menu
+        $xoopsTpl->display('db:system_modules_menu.tpl');
     }
 }

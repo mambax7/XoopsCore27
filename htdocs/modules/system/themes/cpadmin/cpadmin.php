@@ -41,7 +41,7 @@ class XoopsGuiCpadmin extends XoopsSystemGui
     {
         parent::header();
 
-        global $xoopsConfig, $xoopsUser, $xoopsModule, $xoTheme, $xoopsTpl, $xoopsDB;
+        global $xoops, $xoopsConfig, $xoopsUser, $xoopsModule, $xoTheme, $xoopsTpl, $xoopsDB;
         $tpl =& $this->template;
 
         /*xoops_load('XoopsFormRendererBootstrap4');
@@ -102,6 +102,12 @@ class XoopsGuiCpadmin extends XoopsSystemGui
         $menu[2]['absolute'] = 1;
         $menu[2]['icon']     = XOOPS_ADMINTHEME_URL . '/transition/images/logout.png';
         $tpl->append('navitems', ['link' => XOOPS_URL . '/admin.php', 'text' => '<span class="fa fa-cog"></span> ' . _CPADMIN_DASHBOARD, 'menu' => $menu]);
+
+        // Add the system menu items
+        // Load Language
+        xoops_loadLanguage('menu', 'system');
+        include_once XOOPS_ROOT_PATH . '/modules/system/admin/menu.php';
+        $xoopsTpl->assign('adminMenuDomain', $adminMenuDomain);
 
         // Add server configuration
         $this->getServerConfig();

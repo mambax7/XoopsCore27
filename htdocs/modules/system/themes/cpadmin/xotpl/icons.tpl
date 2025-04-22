@@ -1,3 +1,20 @@
+<div class="d-flex flex-wrap pb-3">
+<{foreach from=$adminMenuDomain item=domainBlock}>
+    <div class="card card-primary card-outline m-1">
+        <div class="card-header">
+            <h3 class="card-title"><i class="<{$domainBlock.icon}>"></i> <{$domainBlock.domain}></h3>
+        </div>
+        <ul class="list-group list-group-flush">
+        <{foreach from=$domainBlock.links item=link}>
+            <li class="list-group-item">
+                <a href="<{$xoops_url}>/modules/system/<{$link.url|escape}>"><{$link.title|escape}></a>
+            </li>
+        <{/foreach}>
+        </ul>
+    </div>
+<{/foreach}>
+</div>
+<!--
 <div class="x_toolbar">
     <{foreach item=op from=$adminmenu|default:null}>
     <a href="<{$op.link}>">
@@ -31,4 +48,4 @@
             </div>
         </div>
     </a>
-</div>
+</div>-->
