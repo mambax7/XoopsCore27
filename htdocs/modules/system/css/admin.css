@@ -1,6 +1,13 @@
 @import url(button.css);
 @import url(help.css);
 
+
+.table td.fit, 
+.table th.fit {
+   white-space: nowrap;
+   width: 1%;
+}
+
 a {
     outline: none;
 }

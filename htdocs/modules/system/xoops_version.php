@@ -112,6 +112,13 @@ $modversion['templates'][] = ['file' => 'system_index.tpl', 'description' => '',
 $modversion['templates'][] = ['file' => 'system_maintenance.tpl', 'description' => '', 'type' => 'admin'];
 $modversion['templates'][] = ['file' => 'system_help.tpl', 'description' => '', 'type' => 'admin'];
 
+// Admin Modules
+$modversion['templates'][] = ['file' => 'system_modules_menu.tpl', 'description' => '', 'type' => 'module'];
+$modversion['templates'][] = ['file' => 'system_modules_navigation.tpl', 'description' => '', 'type' => 'module'];
+$modversion['templates'][] = ['file' => 'system_modules_index.tpl', 'description' => '', 'type' => 'module'];
+$modversion['templates'][] = ['file' => 'system_modules_about.tpl', 'description' => '', 'type' => 'module'];
+$modversion['templates'][] = ['file' => 'system_modules_button.tpl', 'description' => '', 'type' => 'module'];
+
 // Blocks
 $modversion['blocks'][] = [
     'file'        => 'system_blocks.php',

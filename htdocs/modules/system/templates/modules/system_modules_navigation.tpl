@@ -1,0 +1,1 @@
+<h6 class="border-bottom"><img class="ic-w mr-1" src="<{$path}><{$icon}>" alt="<{$title}>" title="<{$title}>"><{$title}></h6>
