@@ -106,10 +106,20 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('modules', " VALUES (1, '" . _MI_SYSTEM_NAME . "', '" . $modversion['version'] . "', " . $time . ", 0, 1, 'system', 0, 1, 0, 0, 0, 0)");
 
     foreach ($modversion['templates'] as $tplfile) {
-        $templateType = isset($tplfile['type']) && 'admin' === $tplfile['type'] ? 'admin' : 'module';
-        $templatePath = 'admin' === $templateType
-            ? XOOPS_ROOT_PATH . '/modules/system/templates/admin/' . $tplfile['file']
-            : XOOPS_ROOT_PATH . '/modules/system/templates/' . $tplfile['file'];
+        $templateType = isset($tplfile['type']) ? $tplfile['type'] : '';
+        switch ($templateType) {
+            case 'admin':
+                $templatePath = XOOPS_ROOT_PATH . '/modules/system/templates/admin/' . $tplfile['file'];
+                break;
+            case 'block':
+                $templatePath = XOOPS_ROOT_PATH . '/modules/system/templates/block/' . $tplfile['file'];
+                break;
+            case 'module':
+                $templatePath = XOOPS_ROOT_PATH . '/modules/system/templates/modules/' . $tplfile['file'];
+                break;
+            default:
+                $templatePath = XOOPS_ROOT_PATH . '/modules/system/templates/' . $tplfile['file'];
+        }
 
         if ($fp = fopen($templatePath, 'r')) {
             $newtplid = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", '$templateType')");
