@@ -129,7 +129,7 @@ $xoopsDB = XoopsDatabaseFactory::getDatabaseConnection();
 /** @var XoopsConfigHandler $config_handler */
 $config_handler = xoops_getHandler('config');
 $xoopsConfig    = $config_handler->getConfigsByCat(XOOPS_CONF);
-
+$xoopsConfig    = array_merge($xoopsConfig, (array) $config_handler->getConfigsByCat(XOOPS_CONF_THEME) );
 /**
  * Merge file and db configs.
  */

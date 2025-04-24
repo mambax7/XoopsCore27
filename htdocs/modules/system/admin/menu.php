@@ -54,6 +54,7 @@ $adminMenuDomain = [
         'links' => [
             ['title' => _AM_SYSTEM_PREF, 'url' => 'admin.php?fct=preferences'],
             ['title' => _AM_SETTINGS_GENERAL, 'url' => 'admin.php?fct=preferences&op=show&confcat_id=1'],
+            ['title' => _AM_SETTINGS_THEME, 'url' => 'admin.php?fct=preferences&op=show&confcat_id=8'],
         ],
     ],
     [

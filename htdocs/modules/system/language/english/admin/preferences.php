@@ -299,5 +299,7 @@ define('_MD_AM_WELCOMETYPE_BOTH', 'Email and private message');
 define('_MD_AM_DEFAULT_NOTIFICATION_METHOD', 'Default notification method');
 define('_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'For new users when they subscribe to notifications from, e.g., a forum.');
 define('_MD_AM_MODULEPREF', 'Module Preferences');
+// 2.7.0
+define('_MD_AM_THEMEPREF', 'Theme Preferences');
 // Preference module system
 define('_AM_SYSTEM_PREFERENCES_SETTINGS', 'System Module Settings');

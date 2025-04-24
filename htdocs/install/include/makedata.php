@@ -168,7 +168,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', " VALUES (4, 0, 1, 'startpage', '_MD_AM_STARTPAGE', '--', '_MD_AM_STARTPAGEDSC', 'startpage', 'other', 6)");
     $dbm->insert('config', " VALUES (5, 0, 1, 'server_TZ', '_MD_AM_SERVERTZ', '0', '_MD_AM_SERVERTZDSC', 'timezone', 'float', 8)");
     $dbm->insert('config', " VALUES (6, 0, 1, 'default_TZ', '_MD_AM_DEFAULTTZ', '0', '_MD_AM_DEFAULTTZDSC', 'timezone', 'float', 10)");
-    $dbm->insert('config', " VALUES (7, 0, 1, 'theme_set', '_MD_AM_DTHEME', '" . $defaultTheme . "', '_MD_AM_DTHEMEDSC', 'theme', 'other', 12)");
+    $dbm->insert('config', " VALUES (7, 0, 8, 'theme_set', '_MD_AM_DTHEME', '" . $defaultTheme . "', '_MD_AM_DTHEMEDSC', 'theme', 'other', 12)");
     $dbm->insert('config', " VALUES (8, 0, 1, 'anonymous', '_MD_AM_ANONNAME', '" . addslashes(_INSTALL_ANON) . "', '_MD_AM_ANONNAMEDSC', 'textbox', 'text', 15)");
     $dbm->insert('config', " VALUES (9, 0, 1, 'gzip_compression', '_MD_AM_USEGZIP', '0', '_MD_AM_USEGZIPDSC', 'yesno', 'int', 16)");
     $dbm->insert('config', " VALUES (10, 0, 1, 'usercookie', '_MD_AM_USERCOOKIE', 'xoops_user_" . dechex(time()) . "', '_MD_AM_USERCOOKIEDSC', 'textbox', 'text', 18)");
@@ -227,13 +227,13 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', " VALUES (54, 0, 2, 'reg_dispdsclmr', '_MD_AM_DSPDSCLMR', 1, '_MD_AM_DSPDSCLMRDSC', 'yesno', 'int', 30)");
     $dbm->insert('config', " VALUES (55, 0, 2, 'reg_disclaimer', '_MD_AM_REGDSCLMR', '" . addslashes(_INSTALL_DISCLMR) . "', '_MD_AM_REGDSCLMRDSC', 'textarea', 'text', 32)");
     $dbm->insert('config', " VALUES (56, 0, 2, 'allow_register', '_MD_AM_ALLOWREG', 1, '_MD_AM_ALLOWREGDSC', 'yesno', 'int', 0)");
-    $dbm->insert('config', " VALUES (57, 0, 1, 'theme_fromfile', '_MD_AM_THEMEFILE', '0', '_MD_AM_THEMEFILEDSC', 'yesno', 'int', 13)");
+    $dbm->insert('config', " VALUES (57, 0, 8, 'theme_fromfile', '_MD_AM_THEMEFILE', '0', '_MD_AM_THEMEFILEDSC', 'yesno', 'int', 13)");
     $dbm->insert('config', " VALUES (58, 0, 1, 'closesite', '_MD_AM_CLOSESITE', '0', '_MD_AM_CLOSESITEDSC', 'yesno', 'int', 26)");
     $dbm->insert('config', " VALUES (59, 0, 1, 'closesite_okgrp', '_MD_AM_CLOSESITEOK', '" . addslashes(serialize(['1'])) . "', '_MD_AM_CLOSESITEOKDSC', 'group_multi', 'array', 27)");
     $dbm->insert('config', " VALUES (60, 0, 1, 'closesite_text', '_MD_AM_CLOSESITETXT', '" . _INSTALL_L165 . "', '_MD_AM_CLOSESITETXTDSC', 'textarea', 'text', 28)");
     $dbm->insert('config', " VALUES (61, 0, 1, 'sslpost_name', '_MD_AM_SSLPOST', 'xoops_ssl', '_MD_AM_SSLPOSTDSC', 'textbox', 'text', 31)");
     $dbm->insert('config', " VALUES (62, 0, 1, 'module_cache', '_MD_AM_MODCACHE', '', '_MD_AM_MODCACHEDSC', 'module_cache', 'array', 50)");
-    $dbm->insert('config', " VALUES (63, 0, 1, 'template_set', '_MD_AM_DTPLSET', 'default', '_MD_AM_DTPLSETDSC', 'tplset', 'other', 14)");
+    $dbm->insert('config', " VALUES (63, 0, 8, 'template_set', '_MD_AM_DTPLSET', 'default', '_MD_AM_DTPLSETDSC', 'tplset', 'other', 14)");
 
     $dbm->insert('config', " VALUES (64,0,6,'mailmethod','_MD_AM_MAILERMETHOD','mail','_MD_AM_MAILERMETHODDESC','select','text',4)");
     $dbm->insert('config', " VALUES (65,0,6,'smtphost','_MD_AM_SMTPHOST','a:1:{i:0;s:0:\"\";}', '_MD_AM_SMTPHOSTDESC','textarea','array',6)");
@@ -243,7 +243,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', " VALUES (69,0,6,'from','_MD_AM_MAILFROM','','_MD_AM_MAILFROMDESC','textbox','text', 1)");
     $dbm->insert('config', " VALUES (70,0,6,'fromname','_MD_AM_MAILFROMNAME','','_MD_AM_MAILFROMNAMEDESC','textbox','text',2)");
     $dbm->insert('config', " VALUES (71, 0, 1, 'sslloginlink', '_MD_AM_SSLLINK', 'https://', '_MD_AM_SSLLINKDSC', 'textbox', 'text', 33)");
-    $dbm->insert('config', " VALUES (72, 0, 1, 'theme_set_allowed', '_MD_AM_THEMEOK', '" . serialize([$defaultTheme]) . "', '_MD_AM_THEMEOKDSC', 'theme_multi', 'array', 13)");
+    $dbm->insert('config', " VALUES (72, 0, 8, 'theme_set_allowed', '_MD_AM_THEMEOK', '" . serialize([$defaultTheme]) . "', '_MD_AM_THEMEOKDSC', 'theme_multi', 'array', 13)");
     // RMV-NOTIFY... Need to specify which user is sender of notification PM
     $dbm->insert('config', " VALUES (73,0,6,'fromuid','_MD_AM_MAILFROMUID','1','_MD_AM_MAILFROMUIDDESC','user','int',3)");
 
@@ -269,7 +269,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', " VALUES (92,0,7,'ldap_provisionning_upd', '_MD_AM_LDAP_PROVIS_UPD', '1', '_MD_AM_LDAP_PROVIS_UPD_DESC', 'yesno', 'int', 19)");
     $dbm->insert('config', " VALUES (93,0,7,'ldap_use_TLS','_MD_AM_LDAP_USETLS','0','_MD_AM_LDAP_USETLS_DESC','yesno','int', 20)");
 
-    $dbm->insert('config', " VALUES (94, 0, 1, 'cpanel', '_MD_AM_CPANEL', 'transition', '_MD_AM_CPANELDSC', 'cpanel', 'other', 11)");
+    $dbm->insert('config', " VALUES (94, 0, 8, 'cpanel', '_MD_AM_CPANEL', 'cpadmin', '_MD_AM_CPANELDSC', 'cpanel', 'other', 11)");
     $dbm->insert('config', " VALUES (95, 0, 2, 'welcome_type', '_MD_AM_WELCOMETYPE', '1', '_MD_AM_WELCOMETYPE_DESC', 'select', 'int', 3)");
 
     // Module System
@@ -310,7 +310,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', " VALUES (130, 1, 0, 'com_anonpost', '_MI_SYSTEM_PREFERENCE_ANONPOST', '', '', 'hidden', 'text', 340)");
     $dbm->insert('config', " VALUES (133, 1, 0, 'jquery_theme', '_MI_SYSTEM_PREFERENCE_JQUERY_THEME', 'base', '', 'select', 'text', 35)");
 
-    $dbm->insert('config', " VALUES (134, 0, 1, 'redirect_message_ajax', '_MD_AM_CUSTOM_REDIRECT', '1', '_MD_AM_CUSTOM_REDIRECT_DESC', 'yesno', 'int', 12)");
+    $dbm->insert('config', " VALUES (134, 0, 8, 'redirect_message_ajax', '_MD_AM_CUSTOM_REDIRECT', '1', '_MD_AM_CUSTOM_REDIRECT_DESC', 'yesno', 'int', 12)");
     //notification method
     $dbm->insert('config', " VALUES (135, 0, 2, 'default_notification', '_MD_AM_DEFAULT_NOTIFICATION_METHOD', '1', '_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'select', 'int', 3)");
 

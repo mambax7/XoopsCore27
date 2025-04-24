@@ -39,5 +39,6 @@
         SYSTEM_CAT_SEARCH => 'system_search.png',
         SYSTEM_CAT_MAIL   => 'system_mail.png',
         SYSTEM_CAT_AUTH   => 'system_auth.png',
+        SYSTEM_CAT_TPL    => 'system_theme.png',
     ],
  ];

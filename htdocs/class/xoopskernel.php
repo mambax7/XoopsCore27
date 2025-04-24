@@ -32,10 +32,10 @@ class xos_kernel_Xoops2
      */
     public function __construct()
     {
-        $this->paths['XOOPS']   = [XOOPS_PATH, XOOPS_URL . 'browse.php'];
+        $this->paths['XOOPS']   = [XOOPS_PATH, XOOPS_URL . '/browse.php'];
         $this->paths['www']     = [XOOPS_ROOT_PATH, XOOPS_URL];
         $this->paths['var']     = [XOOPS_VAR_PATH, null];
-        $this->paths['lib']     = [XOOPS_PATH, XOOPS_URL . 'browse.php'];
+        $this->paths['lib']     = [XOOPS_PATH, XOOPS_URL . '/browse.php'];
         $this->paths['modules'] = [XOOPS_ROOT_PATH . '/modules', XOOPS_URL . '/modules'];
         $this->paths['themes']  = [XOOPS_ROOT_PATH . '/themes', XOOPS_URL . '/themes'];
     }
@@ -74,10 +74,10 @@ class xos_kernel_Xoops2
 
     /**
      * Convert a XOOPS path to a URL
-     * @param $url
+     * @param string $url
      * @return mixed|string
      */
-    public function url($url)
+    public function url(?string $url='')
     {
         return (false !== strpos($url, '://') ? $url : $this->path($url, true));
     }

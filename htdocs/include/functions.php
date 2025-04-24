@@ -1205,6 +1205,7 @@ function xoops_getConfigOption($option, $type = 'XOOPS_CONF')
     /** @var XoopsConfigHandler $config_handler */
     $config_handler = xoops_getHandler('config');
     $configs        = $config_handler->getConfigsByCat(is_array($type) ? $type : constant($type));
+    $configs    = array_merge($configs, (array) $config_handler->getConfigsByCat(XOOPS_CONF_THEME) );
     if ($configs) {
         if (isset($configs[$option])) {
             $ret = $configs[$option];

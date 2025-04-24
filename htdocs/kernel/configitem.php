@@ -27,6 +27,7 @@ define('XOOPS_CONF_CENSOR', 4);
 define('XOOPS_CONF_SEARCH', 5);
 define('XOOPS_CONF_MAILER', 6);
 define('XOOPS_CONF_AUTH', 7);
+define('XOOPS_CONF_THEME', 8);
 /**#@-*/
 
 /**

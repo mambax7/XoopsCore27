@@ -30,6 +30,7 @@ define('_AM_PAGES_MANAGEMENT', 'Page Management');
 define('_AM_TAG_FOOTER', 'Meta Tags and Footer');
 
 define('_AM_SETTINGS_GENERAL', 'General Settings');
+define('_AM_SETTINGS_THEME', 'Themes Settings');
 
 define('_AM_MODULES_INSTALL', 'Install Module');
 
