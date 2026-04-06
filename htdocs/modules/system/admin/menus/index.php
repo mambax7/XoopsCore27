@@ -16,5 +16,5 @@
  * @author       XOOPS Development Team
  */
 
-header('HTTP/1.1 404 Not Found');
-exit();
+http_response_code(404);
+exit;

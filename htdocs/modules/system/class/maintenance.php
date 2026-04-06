@@ -180,6 +180,104 @@ class SystemMaintenance
     }
 
     /**
+     * Build a non-sensitive path label for warning messages.
+     *
+     * @param string $filename
+     *
+     * @return string
+     */
+    private function getWarningPathLabel($filename)
+    {
+        $normalized = str_replace('\\', '/', $filename);
+        $rootPrefix = rtrim(str_replace('\\', '/', XOOPS_ROOT_PATH), '/') . '/';
+
+        if (strncmp($normalized, $rootPrefix, strlen($rootPrefix)) === 0) {
+            return substr($normalized, strlen($rootPrefix));
+        }
+
+        return basename($filename);
+    }
+
+    /**
+     * Write a file atomically and warn on failure or short write.
+     *
+     * @param string $filename
+     * @param string $content
+     *
+     * @return void
+     */
+    private function writeFileWithWarning($filename, $content)
+    {
+        $label    = $this->getWarningPathLabel($filename);
+        $expected = strlen($content);
+        $tempFile = tempnam(dirname($filename), 'mtn');
+
+        if ($tempFile === false) {
+            trigger_error(sprintf('Failed to create temp file for %s', $label), E_USER_WARNING);
+
+            return;
+        }
+
+        $result = file_put_contents($tempFile, $content, LOCK_EX);
+
+        if ($result === false) {
+            @unlink($tempFile);
+            trigger_error(sprintf('Failed to write guard file: %s', $label), E_USER_WARNING);
+        } elseif ($result !== $expected) {
+            @unlink($tempFile);
+            trigger_error(
+                sprintf(
+                    'Short write for guard file %s: wrote %d of %d bytes',
+                    $label,
+                    $result,
+                    $expected
+                ),
+                E_USER_WARNING
+            );
+        } else {
+            $targetPerms = 0644;
+            if (file_exists($filename)) {
+                $currentPerms = fileperms($filename);
+                if ($currentPerms !== false) {
+                    $targetPerms = $currentPerms & 0777;
+                }
+            }
+            @chmod($tempFile, $targetPerms);
+
+            $backupFile = null;
+            if (file_exists($filename)) {
+                $backupFile = tempnam(dirname($filename), 'mtb');
+                if ($backupFile === false) {
+                    @unlink($tempFile);
+                    trigger_error(sprintf('Failed to create backup file for %s', $label), E_USER_WARNING);
+
+                    return;
+                }
+                @unlink($backupFile);
+                if (!@rename($filename, $backupFile)) {
+                    @unlink($tempFile);
+                    trigger_error(sprintf('Failed to back up guard file: %s', $label), E_USER_WARNING);
+
+                    return;
+                }
+            }
+
+            if (!@rename($tempFile, $filename)) {
+                @unlink($tempFile);
+                if ($backupFile !== null) {
+                    if (!@rename($backupFile, $filename)) {
+                        trigger_error(sprintf('Failed to restore original guard file: %s', $label), E_USER_WARNING);
+                    }
+                }
+
+                trigger_error(sprintf('Failed to replace guard file: %s', $label), E_USER_WARNING);
+            } elseif ($backupFile !== null && file_exists($backupFile) && !@unlink($backupFile)) {
+                trigger_error(sprintf('Failed to remove backup guard file: %s', $label), E_USER_WARNING);
+            }
+        }
+    }
+
+    /**
      * Delete all files in a directory
      *
      * @param string $dir directory to clear
@@ -197,7 +295,9 @@ class SystemMaintenance
                 }
                 closedir($dirHandle);
             }
-            file_put_contents($dir . 'index.php', '<?php' . PHP_EOL . "header('HTTP/1.0 404 Not Found');" . PHP_EOL);
+            $guardFile = $dir . 'index.php';
+            $content   = '<?php' . PHP_EOL . "http_response_code(404);" . PHP_EOL . 'exit;' . PHP_EOL;
+            $this->writeFileWithWarning($guardFile, $content);
         }
     }
 

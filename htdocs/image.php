@@ -208,13 +208,13 @@ function findSharp($orig, $final)
 }
 
 /**
- * issue an error for bad request
+ * Issue a generic 404 for invalid requests and terminate the request.
  *
  * Many different issues end up here, so message is generic 404. This keeps us from leaking info by probing
  */
-function exit404BadReq()
+function exitInvalidRequest()
 {
-    header('HTTP/1.1 404 Not Found');
+    http_response_code(404);
     exit();
 }
 
@@ -228,23 +228,23 @@ function exit404BadReq()
 function imageFilenameCheck($imageUrl)
 {
     if ($imageUrl[0] !== '/') { // must start with slash
-        exit404BadReq();
+        exitInvalidRequest();
     }
 
     if ($imageUrl === '/') { // can't be empty
-        exit404BadReq();
+        exitInvalidRequest();
     }
 
     if (preg_match('/(\.\.|<|>|\:|[[:cntrl:]])/', $imageUrl)) { // no "..", "<", ">", ":" or controls
-        exit404BadReq();
+        exitInvalidRequest();
     }
 
     $fullPath = XOOPS_ROOT_PATH . $imageUrl;
     if (strpos($fullPath, XOOPS_VAR_PATH) === 0) { // no access to data (shouldn't be in root, but...)
-        exit404BadReq();
+        exitInvalidRequest();
     }
     if (strpos($fullPath, XOOPS_PATH) === 0) { // no access to lib (shouldn't be in root, but...)
-        exit404BadReq();
+        exitInvalidRequest();
     }
 
     return true;
@@ -305,7 +305,7 @@ if (!empty($imageId)) {
 
         $imagePath = XOOPS_ROOT_PATH . $imageUrl;
         if (!file_exists($imagePath)) {
-            exit404BadReq();
+            exitInvalidRequest();
         }
     } else {
         if ($imageUrl[0] === '/') {
@@ -335,7 +335,7 @@ if (!empty($imageId)) {
             $sourceImage = imagecreatefromwebp($imagePath);
             break;
         default:
-            exit404BadReq();
+            exitInvalidRequest();
             break;
     }
 } else {
@@ -487,7 +487,7 @@ switch ($imageMimetype) {
         $do_sharpen = false;
         break;
     default:
-        exit404BadReq();
+        exitInvalidRequest();
         break;
 }
 

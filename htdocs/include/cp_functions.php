@@ -16,6 +16,7 @@
  */
 
 define('XOOPS_CPFUNC_LOADED', 1);
+define('XOOPS_WRITE_FILE_WRITE_ERROR', 'Failed to write file: %s');
 
 /**
  * CP Header
@@ -96,6 +97,123 @@ function xoopsfwrite()
     if (!$GLOBALS['xoopsSecurity']->checkReferer()) {
         return false;
     } else {
+    }
+
+    return true;
+}
+
+/**
+ * Create a short, non-sensitive file label for warnings.
+ *
+ * @param string $filename
+ * @return string
+ */
+function xoops_file_label($filename)
+{
+    $normalized = str_replace('\\', '/', $filename);
+    $rootPrefix = rtrim(str_replace('\\', '/', XOOPS_ROOT_PATH), '/') . '/';
+
+    if (strncmp($normalized, $rootPrefix, strlen($rootPrefix)) === 0) {
+        return substr($normalized, strlen($rootPrefix));
+    }
+
+    return basename($filename);
+}
+
+/**
+ * Write a file through a temporary sibling and replace the target on success.
+ *
+ * @param string $filename
+ * @param string $content
+ * @return bool
+ */
+function xoops_write_file_atomically($filename, $content)
+{
+    $directory = dirname($filename);
+    $label     = xoops_file_label($filename);
+    $tempFile  = tempnam($directory, 'xwf');
+    if ($tempFile === false) {
+        trigger_error(sprintf('Failed to create temp file for %s', $label), E_USER_WARNING);
+
+        return false;
+    }
+
+    $expectedBytes = strlen($content);
+    $bytesWritten  = file_put_contents($tempFile, $content, LOCK_EX);
+    if ($bytesWritten === false) {
+        @unlink($tempFile);
+        trigger_error(sprintf('Failed to write file: %s', $label), E_USER_WARNING);
+
+        return false;
+    }
+    if ($bytesWritten !== $expectedBytes) {
+        @unlink($tempFile);
+        trigger_error(
+            sprintf(
+                'Short write for %s: wrote %d of %d bytes',
+                $label,
+                $bytesWritten,
+                $expectedBytes
+            ),
+            E_USER_WARNING
+        );
+
+        return false;
+    }
+    $targetPerms = 0644;
+    if (file_exists($filename)) {
+        $currentPerms = fileperms($filename);
+        if ($currentPerms !== false) {
+            $targetPerms = $currentPerms & 0777;
+        }
+    }
+    @chmod($tempFile, $targetPerms);
+
+    if (!@rename($tempFile, $filename)) {
+        if (!file_exists($filename)) {
+            @unlink($tempFile);
+            trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
+
+            return false;
+        }
+
+        $backupFile = tempnam($directory, 'xwb');
+        if ($backupFile === false) {
+            @unlink($tempFile);
+            trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
+
+            return false;
+        }
+        @unlink($backupFile);
+        if (!@rename($filename, $backupFile)) {
+            @unlink($tempFile);
+            trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
+
+            return false;
+        }
+
+        if (!@rename($tempFile, $filename)) {
+            if (!@rename($backupFile, $filename)) {
+                @unlink($tempFile);
+                trigger_error(
+                    sprintf(
+                        'Failed to replace file and restore original: %s. Original content was left in backup file %s; manual restoration may be required.',
+                        $label,
+                        basename($backupFile)
+                    ),
+                    E_USER_WARNING
+                );
+
+                return false;
+            }
+
+            @unlink($tempFile);
+            trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
+
+            return false;
+        }
+
+        @unlink($backupFile);
     }
 
     return true;
@@ -199,17 +317,9 @@ function xoops_module_write_admin_menu($content)
         return false;
     }
     $filename = XOOPS_CACHE_PATH . '/adminmenu.php';
-    if (!$file = fopen($filename, 'w')) {
-        echo 'failed open file';
-
+    if (!xoops_write_file_atomically($filename, $content)) {
         return false;
     }
-    if (fwrite($file, $content) == -1) {
-        echo 'failed write file';
-
-        return false;
-    }
-    fclose($file);
 
     // write index.php file in cache folder
     // file is delete after clear_cache (smarty)
@@ -235,21 +345,15 @@ function xoops_write_index_file($path = '')
 
     $path     = substr($path, -1) === '/' ? substr($path, 0, -1) : $path;
     $filename = $path . '/index.php';
+    $content  = '<?php' . PHP_EOL
+        . 'http_response_code(404);' . PHP_EOL
+        . 'exit;' . PHP_EOL;
     if (file_exists($filename)) {
         return true;
     }
-    if (!$file = fopen($filename, 'w')) {
-        echo 'failed open file';
-
+    if (!xoops_write_file_atomically($filename, $content)) {
         return false;
     }
-    if (fwrite($file, "<?php\nheader('HTTP/1.0 404 Not Found');\n") == -1) {
-
-        echo 'failed write file';
-
-        return false;
-    }
-    fclose($file);
 
     return true;
 }
