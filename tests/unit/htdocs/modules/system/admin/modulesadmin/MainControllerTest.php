@@ -215,21 +215,88 @@ class MainControllerTest extends TestCase
     }
 
     /**
-     * Verify that MyTextSanitizer is used for HTML output sanitization.
+     * Verify that htmlspecialchars is used for display output with proper flags,
+     * and that MyTextSanitizer is no longer used.
      */
-    public function testUsesTextSanitizerForOutput(): void
+    public function testUsesHtmlspecialcharsForDisplayOnly(): void
     {
+        // Display names in the list/confirm operation must use the full
+        // htmlspecialchars(..., ENT_QUOTES | ENT_HTML5, 'UTF-8') call shape
         $this->assertStringContainsString(
-            '$myts = \MyTextSanitizer::getInstance();',
+            "ENT_QUOTES | ENT_HTML5, 'UTF-8'",
             $this->sourceCode,
-            'Should initialize MyTextSanitizer'
+            'Should use htmlspecialchars with ENT_QUOTES | ENT_HTML5 and UTF-8 charset'
         );
 
-        // Should use htmlSpecialChars for output
-        $this->assertStringContainsString(
+        // MyTextSanitizer should no longer be used
+        $this->assertStringNotContainsString(
             '$myts->htmlSpecialChars',
             $this->sourceCode,
-            'Should use htmlSpecialChars for output sanitization'
+            'Should not use MyTextSanitizer htmlSpecialChars'
+        );
+        $this->assertStringNotContainsString(
+            'MyTextSanitizer::getInstance()',
+            $this->sourceCode,
+            'Should not instantiate MyTextSanitizer'
+        );
+    }
+
+    /**
+     * Verify that dirnames used for DB/filesystem operations are NOT escaped.
+     */
+    public function testDirnamesNotEscapedBeforeDbLookup(): void
+    {
+        // In the install, uninstall, and update operations, $module is a dirname
+        // used for loadInfoAsVar() and getByDirname(). It must NOT be escaped
+        // before those calls — escaping would change the identifier.
+        $installSection = $this->extractOperationSection('install');
+        $this->assertNotEmpty($installSection, 'Install operation should exist');
+        $this->assertStringNotContainsString(
+            'htmlspecialchars($module',
+            $installSection,
+            'Install operation must not escape $module dirname before DB lookup'
+        );
+
+        $uninstallSection = $this->extractOperationSection('uninstall');
+        $this->assertNotEmpty($uninstallSection, 'Uninstall operation should exist');
+        $this->assertStringNotContainsString(
+            'htmlspecialchars($module',
+            $uninstallSection,
+            'Uninstall operation must not escape $module dirname before DB lookup'
+        );
+
+        $updateSection = $this->extractOperationSection('update');
+        $this->assertNotEmpty($updateSection, 'Update operation should exist');
+        $this->assertStringNotContainsString(
+            'htmlspecialchars($module',
+            $updateSection,
+            'Update operation must not escape $module dirname before DB lookup'
+        );
+
+        // The _ok branches perform the actual module install/uninstall/update
+        // and also use $module as a dirname for handler lookups.
+        $installOkSection = $this->extractOperationSection('install_ok');
+        $this->assertNotEmpty($installOkSection, 'install_ok operation should exist');
+        $this->assertStringNotContainsString(
+            'htmlspecialchars($module',
+            $installOkSection,
+            'install_ok operation must not escape $module dirname'
+        );
+
+        $uninstallOkSection = $this->extractOperationSection('uninstall_ok');
+        $this->assertNotEmpty($uninstallOkSection, 'uninstall_ok operation should exist');
+        $this->assertStringNotContainsString(
+            'htmlspecialchars($module',
+            $uninstallOkSection,
+            'uninstall_ok operation must not escape $module dirname'
+        );
+
+        $updateOkSection = $this->extractOperationSection('update_ok');
+        $this->assertNotEmpty($updateOkSection, 'update_ok operation should exist');
+        $this->assertStringNotContainsString(
+            'htmlspecialchars($module',
+            $updateOkSection,
+            'update_ok operation must not escape $module dirname'
         );
     }
 
