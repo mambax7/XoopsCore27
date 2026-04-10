@@ -8,8 +8,8 @@ The Profile Module is for managing custom user profile fields.
  Requirements
  _____________________________________________________________________
 
-- PHP version >= 5.3.7
-- XOOPS 2.5.7+
+- PHP version >= 8.2
+- XOOPS 2.7.0+
 
 Install/uninstall
 ------------------

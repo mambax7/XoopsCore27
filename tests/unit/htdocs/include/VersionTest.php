@@ -31,7 +31,7 @@ class VersionTest extends TestCase
 
     public function testXoopsVersionContainsVersionNumber()
     {
-        // Should contain a version number pattern (e.g., 2.5.12)
+        // Should contain a version number pattern (e.g., 2.7.0)
         $this->assertMatchesRegularExpression(
             '/\d+\.\d+\.\d+/',
             XOOPS_VERSION,
@@ -42,7 +42,7 @@ class VersionTest extends TestCase
     public function testXoopsVersionValue()
     {
         // Verify the version starts with the expected major.minor.patch
-        $this->assertStringStartsWith('XOOPS 2.5.12', XOOPS_VERSION, 'Version should start with XOOPS 2.5.12');
+        $this->assertStringStartsWith('XOOPS 2.7.0', XOOPS_VERSION, 'Version should start with XOOPS 2.7.0');
     }
 
     public function testXoopsVersionContainsXoopsPrefix()
@@ -117,11 +117,11 @@ class VersionTest extends TestCase
 
     public function testVersionMinorNumber()
     {
-        // Extract minor version (should be 5 for XOOPS 2.5.x)
+        // Extract minor version (should be 7 for XOOPS 2.7.x)
         preg_match('/XOOPS\s+\d+\.(\d+)\./', XOOPS_VERSION, $matches);
         $this->assertNotEmpty($matches, 'Should extract minor version');
         $minorVersion = (int)$matches[1];
-        $this->assertEquals(5, $minorVersion, 'Minor version should be 5');
+        $this->assertEquals(7, $minorVersion, 'Minor version should be 7');
     }
 
     public function testVersionPatchNumber()

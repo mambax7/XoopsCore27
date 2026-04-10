@@ -13,7 +13,7 @@
  * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @package             kernel
  * @subpackage          form
- * @since               2.5.12
+ * @since               2.7.0
  * @author              XOOPS Project
  */
 

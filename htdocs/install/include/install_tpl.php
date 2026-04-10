@@ -94,12 +94,12 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                                 $supports =  include $supportFile;
                             }
                             if (isset($supports) && is_array($supports)) { foreach ($supports as $support): ?>
-                                <li><a class="dropdown-item" href="<?php echo $support['url']; ?>" target="_blank"><?php echo $support['title']; ?></a></li>
+                                <li><a class="dropdown-item" href="<?php echo htmlspecialchars($support['url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer"><?php echo htmlspecialchars($support['title'], ENT_QUOTES, 'UTF-8'); ?></a></li>
                             <?php endforeach; } ?>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="https://github.com/XOOPS/XoopsCore25" target="_blank" title="<?php echo XOOPS_SOURCE_CODE; ?>">
+                        <a class="nav-link" href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer" title="<?php echo htmlspecialchars(XOOPS_SOURCE_CODE, ENT_QUOTES, 'UTF-8'); ?>">
                             <i class="fa-brands fa-github fa-lg"></i>
                         </a>
                     </li>

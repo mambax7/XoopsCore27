@@ -54,5 +54,5 @@ define('_OXYGEN_HELP_DESC_2', 'Blocks can provide additional/specific content fr
 define('_OXYGEN_HELP_3', 'How I can find more help?');
 define('_OXYGEN_HELP_DESC_3', 'If you need more help and information to using XOOPS you can use <a href="modules/system/help.php">Help pages </a> in system module or use <a href="https://xoops.org/modules/xoopspartners/" rel="external">XOOPS Local support sites </a>');
 
-//2.5.12
+//2.7.0
 define('_OXYGEN_COMPOSER_PACKAGES', 'Composer Packages');

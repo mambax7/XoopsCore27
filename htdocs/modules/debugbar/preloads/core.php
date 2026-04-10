@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * DebugBar Module - Preload Event Hooks
  *
- * Wires DebugbarLogger into the XOOPS 2.5.12 request lifecycle via
+ * Wires DebugbarLogger into the XOOPS 2.7.0 request lifecycle via
  * the XoopsPreload event system. Replaces 2.6's DebugbarPreload.
  *
  * Class name: DebugbarCorePreload (module=debugbar, file=core)

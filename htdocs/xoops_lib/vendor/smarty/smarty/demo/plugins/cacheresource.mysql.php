@@ -54,7 +54,7 @@ class Smarty_CacheResource_Mysql extends Smarty_CacheResource_Custom
         try {
             $this->db = new PDO("mysql:dbname=test;host=127.0.0.1", "smarty");
         } catch (PDOException $e) {
-            throw new SmartyException('Mysql Resource failed: ' . $e->getMessage());
+            throw new SmartyException('MySQL Resource failed: ' . $e->getMessage());
         }
         $this->fetch = $this->db->prepare('SELECT modified, content FROM output_cache WHERE id = :id');
         $this->fetchTimestamp = $this->db->prepare('SELECT modified FROM output_cache WHERE id = :id');

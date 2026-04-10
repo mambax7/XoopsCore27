@@ -26,7 +26,7 @@
 
     <p class="even">
         For more information about the DebugBar module, please visit the
-        <a href="https://github.com/XOOPS/XoopsCore25" target="_blank" rel="noopener noreferrer">XOOPS Core repository on GitHub</a>.
+        <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer">XOOPS Core repository on GitHub</a>.
         <br> This document describes our <a href="https://xoops.gitbook.io/xoops-documentation-process/" target="_blank" rel="noopener noreferrer">Documentation Process</a> and it will help you to understand how to contribute.
         <br><br>
         There are more XOOPS Tutorials, so check them out in our <a href="https://www.gitbook.com/@xoops/" target="_blank" rel="noopener noreferrer">XOOPS Tutorial Repository on GitBook</a>.
@@ -43,7 +43,7 @@
 
     <h4 class="odd">DEVELOPMENT</h4> <br>
     <p class="even">
-        This module is Open Source and we would love your help in making it better! You can fork this module on <a href="https://github.com/XOOPS/XoopsCore25" target="_blank" rel="noopener noreferrer">GitHub</a><br><br>
+        This module is Open Source and we would love your help in making it better! You can fork this module on <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer">GitHub</a><br><br>
         But there is more happening on GitHub:<br><br>
         - <a href="https://github.com/xoops" target="_blank" rel="noopener noreferrer">XOOPS Core</a> <br>
         - <a href="https://github.com/XoopsModules25x" target="_blank" rel="noopener noreferrer">XOOPS Modules</a><br>

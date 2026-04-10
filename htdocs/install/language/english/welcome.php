@@ -39,10 +39,6 @@ $content = '
     <a href="https://xoops.gitbook.io/xoops-install-upgrade/" rel="external">XOOPS
     installation manual</a> for more information.<br><br>
 
-    <li><strong>MySQL 8.0</strong> is not supported in all PHP versions. Even in the supported versions, issues with the
-    PHP <em>mysqlnd</em> library may require the MySQL server&apos;s <em>default-authentication-plugin</em>
-    to be set to <em>mysql_native_password</em> to function correctly.<br><br>
-
     <li><strong>SELinux</strong> enabled systems (such as <strong>CentOS</strong>  and <strong>RHEL</strong>) may require changes to the security context
     for XOOPS directories in addition to the normal file permissions to make directories writable.
     Consult your system documentation and/or systems administrator.

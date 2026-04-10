@@ -1,7 +1,7 @@
 # language: php
 build:
   environment:
-    php: 8.0.11
+    php: 8.2.0
   nodes:
     tests: true
     analysis:
@@ -9,7 +9,7 @@ build:
         after:
         # The following installs the most recent XOOPS CMS version, you might want
         # to install a specific release tag or branch instead.
-        - git clone --depth=1 https://github.com/XOOPS/XoopsCore25
+        - git clone --depth=1 https://github.com/XOOPS/XoopsCore27
         - git clone --depth=1 https://github.com/mambax7/tag
       project_setup:
         override: true
@@ -18,5 +18,5 @@ build:
           - php-scrutinizer-run --enable-security-analysis
 filter:
   dependency_paths:
-    - XoopsCore25/*
+    - XoopsCore27/*
     - tag/*

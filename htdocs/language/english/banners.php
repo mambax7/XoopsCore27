@@ -55,7 +55,7 @@ define('_BANNERS_NO_LOGIN_DATA', 'No login data detected');
 define('_BANNERS_NO_REFERER', 'No referer detected');
 define('_BANNERS_NO_ID', 'No valid ID detected');
 
-//2.5.12
+//2.7.0
 
 define('_BANNERS_NO_FLASH', '>Sorry, Flash (.swf) files are no longer supported. Please use a modern video format.');
 

@@ -362,7 +362,7 @@ class XoopsBlock extends XoopsObject
     }
 
     /**
-     * Execute a PHP block — file-based only (eval removed in 2.5.12).
+     * Execute a PHP block — file-based only (eval removed in 2.7.0).
      *
      * The content field should contain: filename.php|function_name
      * The file must exist in XOOPS_ROOT_PATH/custom_blocks/
@@ -544,7 +544,7 @@ class XoopsBlock extends XoopsObject
     /**
      * Legacy eval()-based PHP block execution — permanently removed.
      *
-     * eval() of database-stored PHP has been removed in XOOPS 2.5.12 for security.
+     * eval() of database-stored PHP has been removed in XOOPS 2.7.0 for security.
      * Blocks using the file-based format (filename.php|function_name) still work.
      * Convert legacy P-type blocks to file-based, H (HTML), or S/T (sanitized text) type.
      *
@@ -560,7 +560,7 @@ class XoopsBlock extends XoopsObject
         static $loggedThisRequest = false;
         if (!$loggedThisRequest) {
             $this->logBlockWarning(
-                'PHP block eval() execution has been permanently removed in XOOPS 2.5.12. '
+                'PHP block eval() execution has been permanently removed in XOOPS 2.7.0. '
                 . 'Convert block to file-based format (filename.php|function_name in custom_blocks/), '
                 . 'H (HTML), or S/T (sanitized text) type.'
             );
@@ -568,7 +568,7 @@ class XoopsBlock extends XoopsObject
         }
         // Always emit deprecation so error handlers and tests can detect it
         trigger_error(
-            'XOOPS: PHP block eval() has been removed in 2.5.12. Convert to file-based format.',
+            'XOOPS: PHP block eval() has been removed in 2.7.0. Convert to file-based format.',
             E_USER_DEPRECATED
         );
 

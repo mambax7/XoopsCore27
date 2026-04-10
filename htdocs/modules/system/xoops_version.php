@@ -458,7 +458,7 @@ $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'int';
 $modversion['config'][$i]['default']     = 3;
 $modversion['config'][$i]['options']     = [_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE => 0, _MI_DEFAULT_NOTIFICATION_METHOD_PM => 1, _MI_DEFAULT_NOTIFICATION_METHOD_EMAIL => 2];
-//2.5.12
+//2.7.0
 ++$i;
 $modversion['config'][$i]['name']        = 'active_menus';
 $modversion['config'][$i]['title']       = '_MI_SYSTEM_MENUS_ACTIVE';

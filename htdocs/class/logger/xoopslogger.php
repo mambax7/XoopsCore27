@@ -380,7 +380,7 @@ class XoopsLogger
     }
 
     /**
-     * Determine if an object implements Throwable (or is an Exception that would under PHP 7.)
+     * Determine if an object implements Throwable
      *
      * @param mixed $e Expected to be an object related to Exception or Throwable
      *

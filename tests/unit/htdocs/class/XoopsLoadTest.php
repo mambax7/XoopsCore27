@@ -13,7 +13,7 @@ use XoopsLoad;
 /**
  * Comprehensive unit tests for XoopsLoad.
  *
- * XoopsLoad is the core autoloader for XOOPS 2.5.x. It provides a static
+ * XoopsLoad is the core autoloader for XOOPS 2.7.x. It provides a static
  * class-to-file mapping via loadCoreConfig(), and dispatches loading by type
  * (core, framework, module) through load(). Deprecated names are transparently
  * remapped to their modern equivalents.

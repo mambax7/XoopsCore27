@@ -55,7 +55,7 @@ define('_MD_AM_SESSNAME', 'Session name');
 define('_MD_AM_SESSNAMEDSC', "The name of session (Valid only when 'use custom session' is enabled)");
 define('_MD_AM_SESSEXPIRE', 'Session expiration');
 define('_MD_AM_SESSEXPIREDSC', "Maximum duration of session idle time in minutes (Valid only when 'use custom session' is enabled.)");
-// 2.5.12
+// 2.7.0
 define('_MD_AM_SESSSAMESITE', 'Session cookie SameSite');
 define('_MD_AM_SESSSAMESITE_DSC', 'SameSite attribute for the session cookie. Use "None" only when needed; it requires Secure=true in modern browsers.');
 define('_MD_AM_SESSSECURE', 'Session cookie Secure');
@@ -307,6 +307,6 @@ define('_MD_AM_MODULEPREF', 'Module Preferences');
 // Preference module system
 define('_AM_SYSTEM_PREFERENCES_SETTINGS', 'System Module Settings');
 
-//2.5.12
+//2.7.0
 define('_MD_AM_SENDMAIL_NOT_FOUND', 'Sendmail binary not found. Please check your server configuration.');
 define('_MD_AM_SENDMAIL_HELP_MISSING_BIN', 'No valid sendmail-compatible binary was detected. Install an MTA (e.g. Postfix, msmtp) or switch to SMTP in Preferences.');

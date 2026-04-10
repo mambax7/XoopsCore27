@@ -146,7 +146,7 @@ class XoopsModuleTest extends TestCase
 
     public function testGetStatusWithVersionString()
     {
-        $this->module->setVar('version', '2.5.12-Beta9');
+        $this->module->setVar('version', '2.7.0-Beta9');
 
         $status = $this->module->getStatus();
 
@@ -155,7 +155,7 @@ class XoopsModuleTest extends TestCase
 
     public function testGetStatusWithoutStatus()
     {
-        $this->module->setVar('version', '2.5.12');
+        $this->module->setVar('version', '2.7.0');
 
         $status = $this->module->getStatus();
 
@@ -219,7 +219,7 @@ class XoopsModuleTest extends TestCase
 
     public function testVersionCompareWithComplexVersions()
     {
-        $result = $this->module->versionCompare('2.5.11-stable', '2.5.12', '<');
+        $result = $this->module->versionCompare('2.5.11-stable', '2.7.0', '<');
 
         $this->assertTrue($result);
     }
@@ -676,7 +676,7 @@ class XoopsModuleTest extends TestCase
 
     public function testVersionCompareWithOnlyStableSuffix()
     {
-        $result = $this->module->versionCompare('2.5.12-stable', '2.5.12', '==');
+        $result = $this->module->versionCompare('2.7.0-stable', '2.7.0', '==');
 
         $this->assertTrue($result, 'Versions with -stable suffix should equal versions without');
     }

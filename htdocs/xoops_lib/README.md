@@ -1,6 +1,6 @@
 # XOOPS Libraries (`xoops_lib`)
 
-Third-party PHP libraries for XOOPS CMS 2.5.12+, managed by [Composer](https://getcomposer.org/).
+Third-party PHP libraries for XOOPS CMS 2.7.0+, managed by [Composer](https://getcomposer.org/).
 
 > ## Security Notice:
 > For production deployments, move this folder outside the document root. The included `.htaccess` and `index.php` block direct web access, but placing it outside the web root is the strongest protection.
@@ -26,7 +26,7 @@ Power users may use Composer to manage or customize dependencies.
 
 ### How It Works
 
-- `composer.dist.json` lists all required libraries directly. Starting with XOOPS 2.5.12, the external `xoops/base-requires25` metapackage has been dropped; all dependencies are now defined inline in `composer.dist.json`.
+- `composer.dist.json` lists all required libraries directly. Starting with XOOPS 2.7.0, the external `xoops/base-requires25` metapackage has been dropped; all dependencies are now defined inline in `composer.dist.json`.
 - When XOOPS is updated, `composer.dist.json` may change, but your custom `composer.json` will not be overwritten.
 - You are responsible for merging any upstream changes into your customized file.
 

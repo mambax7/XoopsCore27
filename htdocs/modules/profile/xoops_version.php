@@ -86,7 +86,7 @@ if ($GLOBALS['xoopsUser']) {
     ];
 }
 
-// Mysql file
+// MySQL file
 $modversion['sqlfile']['mysql'] = 'sql/mysql.sql';
 
 // Tables created by sql file (without prefix!)

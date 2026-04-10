@@ -4,7 +4,7 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
-2025/03/30: Version 2.5.12-Betas
+2025/03/30: Version 2.7.0-Betas (previously released as 2.5.12-Betas)
 ================================
 /htdocs/modules/system/language/english/admin.php
 - added define('_AM_SYSTEM_MENUS', 'Menus');
@@ -272,7 +272,7 @@ htdocs/xoops_lib/modules/protector/language/english/admin.php
 - define('_AM_TXT_HOWTOCHANGEDB',"If you want to change prefix,<br> edit %s/data/secure.php manually.<br><br>define('XOOPS_DB_PREFIX', '<b>%s</b>');");
 
 htdocs/install/english/welcome.php
-- changed recommended PHP version, added Special Notes section for SELinux and MySQL 8.0
+- changed recommended PHP version, added Special Notes section for SELinux
 
 /home/richard/sites/x258i/htdocs/Frameworks/moduleclasses/moduleadmin/language/english/main.php
 - in define of '_AM_MODULEADMIN_ADMIN_FOOTER', changed XOOPS links to 'https://xoops.org'

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace XoopsModules\Debugbar;
 
 /**
- * DebugBar Logger for XOOPS 2.5.12
+ * DebugBar Logger for XOOPS 2.7.0
  *
  * Collects log information and presents to PHP DebugBar for display.
  * Records information about database queries, blocks, execution time, and various logs.

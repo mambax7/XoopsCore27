@@ -150,7 +150,7 @@ switch ($op) {
             } else {
                 $listed_mods[$i]['warning_update'] = false;
             }
-            // Only to request the update because since xoops 2.5.11 the version is a character string.This condition can be removed from xoops 2.5.12.
+            // Only to request the update because since XOOPS 2.5.11 the version is a character string. This condition can be removed from XOOPS 2.7.0.
             if (strpos($listed_mods[$i]['version'], '.') === false) {
                 $listed_mods[$i]['warning_update'] = true;
             }

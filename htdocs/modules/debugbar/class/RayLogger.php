@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace XoopsModules\Debugbar;
 
 /**
- * Ray Logger for XOOPS 2.5.12
+ * Ray Logger for XOOPS 2.7.0
  *
  * Optional companion to DebugbarLogger. When spatie/ray is installed,
  * this logger forwards all XOOPS debug data (queries, blocks, errors,

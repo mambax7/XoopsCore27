@@ -438,7 +438,7 @@ Clear both the browser cache and the XOOPS Smarty cache (System Admin > Maintena
 
 ### Can I use this theme on XOOPS 2.5.11?
 
-The theme was designed for 2.5.12 but may work on 2.5.11. The widget system requires modules to have the `ModernThemeWidget.php` file, which is independent of XOOPS version.
+The theme was designed for 2.7.0 but may work on 2.5.11. The widget system requires modules to have the `ModernThemeWidget.php` file, which is independent of XOOPS version.
 
 ### What browsers are supported?
 

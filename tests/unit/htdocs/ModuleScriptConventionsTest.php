@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Verify that module update/install scripts follow XOOPS 2.5.12 conventions.
+ * Verify that module update/install scripts follow XOOPS 2.7.0 conventions.
  */
 #[CoversNothing]
 class ModuleScriptConventionsTest extends TestCase

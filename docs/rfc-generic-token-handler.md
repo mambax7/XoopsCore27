@@ -185,7 +185,7 @@ No point expanding a column we plan to deprecate.
 
 ## Migration (upgrade script)
 
-Added to `upgrade/upd_2.5.11-to-2.5.12/index.php` as a `createtokenstable` task.
+Added to `upgrade/upd_2.5.11-to-2.7.0/index.php` as a `createtokenstable` task.
 Also added to `mysql.structure.sql` for new installations.
 
 ---

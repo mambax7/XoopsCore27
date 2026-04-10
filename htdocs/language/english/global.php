@@ -266,7 +266,7 @@ define('_PDF', 'PDF');
 define('_OFF', 'Off');
 define('_DB_QUERY_ERROR', 'Query Failed! SQL: %s - Error: ');
 
-//XOOPS 2.5.12
+//XOOPS 2.7.0
 // Guards allow RTL language packs (e.g. Arabic, Hebrew) to define these
 // constants in their own global.php before this English fallback loads.
 if (!defined('_TEXT_DIRECTION')) {

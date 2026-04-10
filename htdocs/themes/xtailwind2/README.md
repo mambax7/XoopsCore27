@@ -1,6 +1,6 @@
 # xTailwind2
 
-xTailwind2 is a curated Tailwind CSS + DaisyUI theme for XOOPS 2.5.12. It was built as a stronger, more art-directed follow-up to `xtailwind`, with a calmer layout, a more editorial homepage, quieter side rails, and a smaller set of intentional palettes instead of a long generic theme list.
+xTailwind2 is a curated Tailwind CSS + DaisyUI theme for XOOPS 2.7.0. It was built as a stronger, more art-directed follow-up to `xtailwind`, with a calmer layout, a more editorial homepage, quieter side rails, and a smaller set of intentional palettes instead of a long generic theme list.
 
 ## What makes this theme different
 

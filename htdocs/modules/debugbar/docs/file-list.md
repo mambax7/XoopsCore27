@@ -1,7 +1,7 @@
-# DebugBar Module - Complete File List for XOOPS 2.5.12
+# DebugBar Module - Complete File List for XOOPS 2.7.0
 
 All files required to add the DebugBar + Ray debugging functionality
-to a standard XOOPS 2.5.12 installation.
+to a standard XOOPS 2.7.0 installation.
 
 ## Composer Dependency (added by this PR)
 

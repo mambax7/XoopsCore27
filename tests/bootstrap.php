@@ -388,7 +388,7 @@ if (!defined('XOOPS_THEME_PATH')) {
 
 // XOOPS version + cache path (needed by Frameworks)
 if (!defined('XOOPS_VERSION')) {
-    define('XOOPS_VERSION', 'XOOPS 2.5.12-RC1');
+    define('XOOPS_VERSION', 'XOOPS 2.7.0-RC1');
 }
 if (!defined('XOOPS_CACHE_PATH')) {
     define('XOOPS_CACHE_PATH', XOOPS_VAR_PATH . '/caches/xoops_cache');

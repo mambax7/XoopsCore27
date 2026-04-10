@@ -2,7 +2,7 @@
 
 ![XOOPS CMS](https://xoops.org/images/logoXoops4GithubRepository.png)
 
-A modern, responsive admin theme for XOOPS 2.5.12 with an enhanced dashboard, dark mode, customizer panel, module widget system, and configurable content tracking.
+A modern, responsive admin theme for XOOPS 2.7.0+ with an enhanced dashboard, dark mode, customizer panel, module widget system, and configurable content tracking.
 
 ## Features
 
@@ -48,7 +48,7 @@ A modern, responsive admin theme for XOOPS 2.5.12 with an enhanced dashboard, da
 
 ## Requirements
 
-- XOOPS 2.5.12+
+- XOOPS 2.7.0+
 - PHP 8.2 or higher (tested through PHP 8.5)
 - Chart.js 4.x — local or CDN (see [Installation](#2-chartjs-dependency))
 
@@ -269,7 +269,7 @@ Key design tokens (all defined in `modern.css :root`): `--primary`, `--bg-primar
 **Author**: Mamba (mambax7@gmail.com)
 **Version**: 1.0
 **License**: GNU GPL 2.0 or later
-**XOOPS**: 2.5.12+
+**XOOPS**: 2.7.0+
 **PHP**: 8.2 - 8.5
 
 ## Changelog
@@ -288,7 +288,7 @@ Key design tokens (all defined in `modern.css :root`): `--primary`, `--bg-primar
 - Warning/error message auto-dismiss
 - Collapsible System Information and Composer Packages sections
 - Chart.js bundled via XOOPS Frameworks pattern
-- PHP 8.1+ compatible (no `strftime()` deprecation warnings)
+- PHP 8.2+ compatible (no `strftime()` deprecation warnings)
 
 ## Support
 

@@ -234,7 +234,7 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
     {
 
         if (is_object($this->logger)) {
-            $this->logger->addDeprecated(__METHOD__ . " is deprecated since XOOPS 2.5.12, please use 'quote()' instead.");
+            $this->logger->addDeprecated(__METHOD__ . " is deprecated since XOOPS 2.7.0, please use 'quote()' instead.");
         }
 
         return $this->quote($str);

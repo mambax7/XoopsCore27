@@ -8,8 +8,8 @@ The PM (Private Messaging) Module is for private messaging between users
  Requirements
  _____________________________________________________________________
 
-- PHP version >= 5.2.0
-- XOOPS 2.5.3+
+- PHP version >= 8.2
+- XOOPS 2.7.0+
 
 Install/uninstall
 ------------------

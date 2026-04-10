@@ -1,6 +1,6 @@
 <?php
 /**
- * DebugBar Module for XOOPS 2.5.12
+ * DebugBar Module for XOOPS 2.7.0
  *
  * Provides PHP DebugBar integration for in-browser debugging.
  * Ported from XOOPS 2.6.0 modules/debugbar.
@@ -30,7 +30,7 @@ $modversion['dirname']      = 'debugbar';
 
 // --- Min Requirements ---
 $modversion['min_php']   = '8.2.0';
-$modversion['min_xoops'] = '2.5.12';
+$modversion['min_xoops'] = '2.7.0';
 
 // --- Admin ---
 $modversion['hasAdmin']    = 1;

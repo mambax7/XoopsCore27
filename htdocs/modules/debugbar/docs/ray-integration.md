@@ -1,4 +1,4 @@
-# Ray + DebugBar Integration for XOOPS 2.5.12
+# Ray + DebugBar Integration for XOOPS 2.7.0
 
 ## What Is This?
 

@@ -1,0 +1,236 @@
+XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
+
+===================================
+2.7.0 RC1                    2026-04
+===================================
+Version and platform:
+- renamed version from 2.5.12 to 2.7.0 RC1 (mamba)
+- raise minimum PHP version to 8.2 by @mambax7
+  - update CI matrix to PHP 8.2/8.3/8.4/8.5, PHPUnit 11
+  - update SonarCloud and Qodana analysis configs to PHP 8.2
+  - update installer PHP version check to 8.2.0
+  - consolidate session handlers into single session.php (remove session74.php)
+  - remove dead PHP < 7.3 and < 8.0 code branches
+- fix PHP 8.4 deprecated implicit nullable parameters across core (mamba)
+- add PHP 8.5 to CI matrix as forward-compatibility check (mamba)
+- drop external xoops/base-requires25 metapackage; all libraries are now listed directly in composer.dist.json (mamba)
+- rename Composer meta-package from xoopscore25/libraries to xoopscore27/libraries — downstream consumers referencing the old name in their own require blocks must update accordingly (mamba)
+
+Security hardening (RC candidate review):
+- add CSRF token to module admin AJAX requests by @mambax7 in #1685
+- add configurable session cookie SameSite and Secure preferences by @mambax7 in #1501, #1660
+- fix SonarCloud blocker XSS vulnerabilities: escape all reflected user data (mamba) in #1662
+- add exec() override to Protector dblayertrap and check exec results (mamba) in #1644
+- remove eval() from PHP blocks and Protector lifecycle legacy cleanup (mamba) in #1653
+- all unserialize() calls now use allowed_classes restriction to prevent object injection (mamba) in #1636, #1638
+- validate Protector prefix input instead of silently rewriting (mamba) in #1661
+- fix Protector badips file handling, replace die() with exception in validatePrefix (mamba)
+- fix instanceof operator precedence in result set guards (mamba) in #1654
+- use strict comparison for passwords, pin uname Request to POST (mamba)
+- fix AJAX toggle handlers to read IDs from POST, not GET (mamba)
+- sanitize errfile path before storing and dispatching to sub-loggers (mamba)
+- clamp search limit to prevent unbounded queries, harden test file reads (mamba)
+- harden upgrade with scoped queries and duplicate prevention (mamba)
+- tighten hash_equals assertions to target actkey comparison specifically (mamba)
+- URL scheme whitelist: decode entities before checking scheme, check only scheme portion (mamba)
+- JSON_HEX_TAG in <script> blocks to prevent </script> breakout (mamba)
+- basename() before filename allowlist to block directory traversal via encoded paths (mamba)
+- mb_strlen() for multibyte-aware length validation across form input (mamba)
+- fix for XOOPS_COOKIE_DOMAIN (mamba) in #1578 (see: https://xoops.org/modules/newbb/viewtopic.php?topic_id=79632&post_id=367525#forumpost367525)
+- improve validation of $_SERVER['HTTP_HOST'] (mamba) in #1578
+- update htdocs/include/xoopssetcookie.php (mamba) in #1578
+- fix custom block c_type lowercase regression from Request::getCmd() (mamba) in #1657
+- fix Elvis operator dropping zero values in Request::getXxx() fallbacks (mamba) in #1650
+
+Admin UI and themes:
+- new "Modern" admin theme based on AdminLTE 3 (mamba)
+- clean-room system menu administration rewrite by @mambax7 in #1666
+- fix system menu table creation and xbootstrap5 dropdown styling (mamba) in #1676
+- add xSwatch5 theme based on Bootstrap 5.3.8 in #1686
+- add files required for Tailwind CSS based themes (xtailwind) in #1687
+- add xTailwind theme: Tailwind CSS + DaisyUI with 35 palettes and Alpine.js interactivity (mamba)
+- add xTailwind2 theme: art-directed sibling with curated palettes and refined module styling (mamba)
+- add XoopsFormRendererTailwind form renderer (mamba)
+- feature: change module display order for all modules in #1677
+- add renderFooterInfo and displayFooterInfo methods to moduleadmin in #1679
+- fix for module admin required field asterisk in #1673
+- fix breadcrumbs and xoAdminIcons consistency across system admin pages (mamba)
+- add menu icon support for custom module submenus (mamba)
+
+Forms and templates:
+- allow empty/blank dates in XoopsFormTextDateSelect by @mambax7 in #1163, #1659
+- fix DHTML editor image width defaulting to 300px — use strict regex validation (mamba) in #1658
+- fix Admin users search by @mambax7 in #1554
+- fix Admin help toggle by @mambax7 in #1553
+- language fixes by @mambax7 in #1550
+- copyright update by @mambax7 in #1551
+
+PM (Private Messaging) module:
+- filter recipients by PM module access permission (mamba) in #1680
+- improve delete confirmation UX, centered popups, xbootstrap5 templates (mamba) in #1684
+
+Installer and upgrade:
+- fix broken Next button on non-form pages in installer (mamba) in #1668
+- add upgrade path from 2.5.11 with tasks: deletepurifier, deletephpmailer, createtokenstable, widenbannerclientpasswd, addsessioncookieprefs (mamba)
+- preflight.php detects outdated themes and templates incompatible with Smarty 4 (mamba)
+- copying in a new XOOPS release does not overwrite existing configuration files (mamba)
+
+Refactors and code quality:
+- refactor(modulesadmin): replace $myts->htmlSpecialChars() with native htmlspecialchars in #1689
+- refactor(htdocs): use http_response_code(404) for direct-access guards in #1688
+- delete obsolete pda.php in #1675
+- fix(browse): serve source maps for proxied JS/CSS files in #1682
+- add composite logger pattern to XoopsLogger and fix Protector module icon (mamba)
+- dispatch raw messages to sub-loggers, let consumers format from context (mamba)
+- consolidate convention tests into single method (SonarCloud duplication gate) (mamba)
+- remove legacy @package/@subpackage/@category tags per PSR-12 (mamba)
+- database query modernization: deprecate queryF() — use exec() for writes/DDL and query() for SELECTs; deprecate quoteString() — use quote() (mamba) in #1646
+- criteria cleanup: IN clause uses array passing instead of string concat (mamba) in #1572
+- mailer cleanup (mamba) in #1574
+- add abstract methods for error(), errorno(), query() to XoopsDatabase by @mambax7 in #1571
+- MyISAM compensating restore pattern for avatar delete — capture UIDs, restore on failure (mamba) in #1651
+- use getVar('n') for fields with intentional HTML to prevent double-escaping (mamba) in #1665
+
+Internationalization:
+- add RTL support (mamba, عبدالعزيز الجهني)
+- add _AM_SYSTEM_USERS_UNKNOWN_GROUP language constant
+- add groups to member list view (Ggoffy) in #1577
+
+Libraries and assets:
+- Font Awesome 7.1.0 (mamba)
+- Bootstrap 5.3.8 (mamba)
+- Smarty 4.5.5 — major upgrade from Smarty 2 (mamba)
+- HTML Purifier 4.19.0 (mamba)
+- PhpMailer 6.12.0 (mamba)
+- jQuery UI 1.14.1 (mamba)
+- TinyMCE 7.7.2 (new default) and legacy TinyMCE 5.10.9 retained for backward compatibility (mamba)
+- tablesorter 2.32.0 (mamba)
+- jquery.form 4.3.1 (mamba)
+- jGrowl 1.4.10 (mamba)
+- RegDom 2.0.2 Beta 2 refactor (mamba) in #1578
+- update XMF by @mambax7
+- move PhpMailer and HTML Purifier to /xoops_lib/ (mamba)
+
+CI and tooling:
+- fix CI to run real XOOPS test suite instead of placeholder, enable CodeRabbit in #1664
+- PHPUnit 11 with attribute syntax (#[Test], #[CoversClass]) across test suite
+- SonarCloud, Qodana, Scrutinizer integration
+- Bump codecov/codecov-action 5.5.2 → 6.0.0 (#1672, #1674)
+- Bump JetBrains/qodana-action 2025.2.4 → 2025.3.2 (#1671)
+- Bump actions/cache 4.3.0 → 5.0.4 (#1670)
+- Bump shivammathur/setup-php 2.36.0 → 2.37.0 (#1669)
+- Bump SonarSource/sonarqube-scan-action 7.0.0 → 7.1.0
+- Bump actions/checkout 5.0.0 → 6.0.2
+
+New Contributors since 2.5.12 Beta 8: @koreus, @CHCCD, @عبدالعزيز الجهني
+
+===================================
+NOTE: Development releases Beta1–Beta8 were published under
+the 2.5.12 version number. The project was renumbered to 2.7.0
+before the RC1 milestone. Beta entries below retain their
+original 2.5.12 version for historical accuracy.
+
+===================================
+2.5.12 Beta8             2025-09-11
+===================================
+- language fixes by @mambax7 in #1550
+- copyright update by @mambax7 in #1551
+- fix Admin help toggle by @mambax7 in #1553
+- fix for Admin users search by @mambax7 in #1554
+- Bootstrap 5.3.7 by @mambax7 in #1557
+- Feature/updates by @mambax7 in #1555
+- Fix Deprecated addSlashes by @GregMage in #1566
+- Fix: #1564 by @GregMage in #1565
+- Hide empty userinfo value by @GregMage in #1568
+- User Search Issue #1559 by @mambax7 in #1560
+- add abstract methods for error(), errorno(), query() to XoopsDatabase by @mambax7 in #1571
+- cosmetics by @mambax7 in #1570
+- Criteria cleanup by @mambax7 in #1572
+- cleanup mailer by @mambax7 in #1574
+- update XMF by @mambax7 in #1573
+
+===================================
+2.5.12 Beta7             2025-04-27
+===================================
+- Bootstrap 5.3.4
+- New feature: menu icons for modules
+- Adding "id" to sublinks for custom menu icons
+- Updating minimum requirements
+- TinyMCE 5.10.9
+
+===================================
+2.5.12 Beta6             2025-04-03
+===================================
+- fix for PathController
+
+
+===================================
+2.5.12 Beta5             2025-03-31
+===================================
+- New path for composer files in install file by @koreus in #1504
+- fix in xbootstrap5 is system_siteclosed.tpl by @mambax7 in #1506
+- Fix tag.tpl always loading in modules/news by @koreus in #1510
+- Subforum not expanding by @koreus in #1513
+- Fix problem with admin save preference by @koreus in #1511
+- fix for #1515 by @mambax7 in #1516
+- adding Font Awesome 6.7.2 by @mambax7 in #1505
+- Update main.php by @CHCCD in #1517
+- http is default by @koreus in #1520
+- fix for #1519 by @mambax7 in #1521
+- template cosmetics by @mambax7 in #1522
+- composer updates by @mambax7 in #1523
+- version updates by @mambax7 in #1524
+- fix for new bug from PR#1511 by @mambax7 in #1525
+- fix for waiting block deprecated messages by @mambax7 in #1527
+- updated install, Bootstrap 5.3.3 by @mambax7 in #1531
+- updates for Font Awesome 6 by @mambax7 in #1529
+- remove flash by @mambax7 in #1526
+- extracting module CSS by @mambax7 in #1532
+
+New Contributors: @CHCCD, @koreus
+
+===================================
+2.5.12 Beta4             2025-01-21
+===================================
+- added in Admin Composer packages info (mamba)
+- updates for PHP 8.4 (mamba)
+- fix for /issue #1464 (GregMage)
+- fix for XOOPS reading blocks from deactivated modules  #1335 (mamba)
+- moved all Composer packages to /xoops_lib/ (mamba)
+- moved PhpMailer and HTML Purifier to /xoops_lib/ (mamba)
+
+Updated libraries and assets:
+- Smarty 4.5.5 (mamba)
+- HTML Purifier to 4.18 (mamba)
+- jQuery UI 1.14.1 (mamba)
+- jGrowl 1.4.10 (mamba)
+- tablesorter 2.32.0 (mamba)
+- jquery.form 4.3.1 (mamba)
+- PhpMailer to 6.9.3 (mamba)
+
+===================================
+2.5.12 Beta3             2024/12/05
+===================================
+- fixing bug with button cancel by @ggoffy in #1481
+- fixed bug in search tpl by @ggoffy in #1482
+- improvements by @mambax7 in #1477
+- XMF 1.2.31 by @mambax7 in #1485
+- Kint by @mambax7 in #1486
+- replace trigger_error with \Exception by @mambax7 in #1487
+- change samesite to Lax by @mambax7 in #1488
+- Various changes by @mambax7 in #1489
+
+Updated libraries and assets:
+- Smarty 4.5.4 by @mambax7 in #1475
+
+===================================
+2.5.12 Beta1             2024/07/28
+===================================
+- Update to Smarty v4.5.3 (mamba)
+- added in Admin Composer packages info (mamba)
+- updates for PHP 8.4 (mamba)
+
+Updated libraries and assets:
+- HTML Purifier to 4.17 (mamba)
+
+===================================

@@ -159,7 +159,7 @@ abstract class XoopsDatabase
         // Deprecated: delegate to exec().
         // Optional: behind a dev flag, emit a deprecation warning.
 //        if (is_object($GLOBALS['xoopsLogger'])) {
-//            $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated since XOOPS 2.5.12, please use 'exec()' instead.");
+//            $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated since XOOPS 2.7.0, please use 'exec()' instead.");
 //        }
 
         return $this->exec($sql);
@@ -183,7 +183,7 @@ abstract class XoopsDatabase
     public function quoteString(string $str)
     {
            if (is_object($GLOBALS['xoopsLogger'])) {
-             $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ ." is deprecated since XOOPS 2.5.12, use quote() instead.");
+             $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ ." is deprecated since XOOPS 2.7.0, use quote() instead.");
          }
         return $this->quote($str);
     }

@@ -1,10 +1,10 @@
-# XoopsCore25 (2.5.x) — Copilot Instructions
+# XoopsCore27 (2.7.x) — Copilot Instructions
 
 <!-- Generic XOOPS conventions: see .github/xoops-copilot-template.md for reuse in other repos -->
 
 ## About This Repository
 
-XoopsCore25 is the XOOPS 2.5.x CMS framework. It provides the core content management system including user management, module framework, theme engine, and database abstraction layer for building dynamic web applications.
+XoopsCore27 is the XOOPS 2.7.x CMS framework. It provides the core content management system including user management, module framework, theme engine, and database abstraction layer for building dynamic web applications.
 
 ## Project Layout
 
@@ -33,7 +33,7 @@ composer install              # Install dependencies
 vendor/bin/phpunit            # Run PHPUnit tests
 ```
 
-The CI workflow dynamically creates `composer.json` in `htdocs/class/libraries/` with `xoops/base-requires25` as the base dependency package.
+Starting with XOOPS 2.7.0, the external `xoops/base-requires25` metapackage has been dropped; all dependencies are listed directly in `htdocs/xoops_lib/composer.dist.json`.
 
 ## PHP Compatibility
 
@@ -48,7 +48,7 @@ Code must run on PHP 8.2 through 8.5. Features introduced in PHP 8.0, 8.1, and 8
 - Prefer `\Throwable` in catch blocks over `\Exception` to cover both exceptions and errors.
 - Use `trigger_error()` with `E_USER_WARNING` for non-fatal failures. Use `basename()` in error messages to avoid exposing server paths.
 
-## XOOPS 2.5.x Architecture
+## XOOPS 2.7.x Architecture
 
 - **Global-based**: Core objects via `$GLOBALS['xoopsModule']`, `$GLOBALS['xoopsConfig']`, `$GLOBALS['xoopsDB']`.
 - **Handler pattern**: Data access via `xoops_getHandler('user')`, `xoops_getModuleHandler('item', 'modulename')`.

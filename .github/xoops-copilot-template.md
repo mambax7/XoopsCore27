@@ -68,10 +68,10 @@ Code must run on PHP 8.2 through 8.5. Features introduced in PHP 8.0, 8.1, and 8
 XOOPS has two major generations with different APIs. Code must support both:
 
 - **XOOPS 2.6+**: Use `class_exists('Xoops', false)` to detect. Access via `\Xoops::getInstance()`.
-- **XOOPS 2.5.x**: Fall back to globals (`$GLOBALS['xoopsModule']`, `$GLOBALS['xoopsConfig']`) and helper functions (`xoops_getHandler()`, `xoops_getModuleHandler()`).
+- **XOOPS 2.7.x**: Fall back to globals (`$GLOBALS['xoopsModule']`, `$GLOBALS['xoopsConfig']`) and helper functions (`xoops_getHandler()`, `xoops_getModuleHandler()`).
 - Never assume XOOPS is present at runtime — libraries (like XMF) may be used in standalone contexts.
 - Use the `class_exists()` check with `false` as the second parameter to avoid triggering autoload.
-- For module helpers, use `Xmf\Module\Helper::getHelper($dirname)` which handles the 2.5/2.6 detection internally.
+- For module helpers, use `Xmf\Module\Helper::getHelper($dirname)` which handles the version detection internally.
 
 ## Security Practices
 

@@ -1272,7 +1272,7 @@ The theme requires PHP 8.2+ and is tested through PHP 8.5. Features introduced i
 
 ### XOOPS Version
 
-Designed for XOOPS 2.5.12. The theme relies on:
+Designed for XOOPS 2.7.0. The theme relies on:
 - `XoopsSystemGui` parent class
 - `$xoTheme->addScript()` / `addStylesheet()` for asset injection
 - `xoops_getHandler()` for database queries

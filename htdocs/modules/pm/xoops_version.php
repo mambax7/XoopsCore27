@@ -56,7 +56,7 @@ $modversion['hasAdmin']   = 1;
 $modversion['adminindex'] = 'admin/admin.php';
 $modversion['adminmenu']  = 'admin/menu.php';
 
-// Mysql file
+// MySQL file
 //$modversion['sqlfile']['mysql'] = "sql/mysql.sql";
 
 // Table

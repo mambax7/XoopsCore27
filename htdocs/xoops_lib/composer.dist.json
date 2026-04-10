@@ -1,6 +1,6 @@
 {
-  "name": "xoopscore25/libraries",
-  "description": "Libraries for XOOPS 2.5.12 (meta-package, no code)",
+  "name": "xoopscore27/libraries",
+  "description": "Libraries for XOOPS 2.7.0 (meta-package, no code)",
   "type": "metapackage",
   "license": "GPL-2.0-or-later",
   "homepage": "https://xoops.org",
@@ -42,8 +42,8 @@
   "minimum-stability": "beta",
   "prefer-stable": true,
   "support": {
-    "issues": "https://github.com/XOOPS/XoopsCore25/issues",
-    "source": "https://github.com/XOOPS/XoopsCore25"
+    "issues": "https://github.com/XOOPS/XoopsCore27/issues",
+    "source": "https://github.com/XOOPS/XoopsCore27"
   },
   "funding": [
     {

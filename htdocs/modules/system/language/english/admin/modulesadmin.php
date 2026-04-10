@@ -168,7 +168,7 @@ define('_AM_SYSTEM_MODULES_INSTALL_TESTDATA', 'Add Test Data');
 define('_AM_SYSTEM_MODULES_INSTALL_MORE', 'Install more modules');
 // 2.5.11
 define('_AM_SYSTEM_MODULES_INSTALL_THISMODULE', 'This Module Admin');
-// 2.5.12
+// 2.7.0
 define('_AM_SYSTEM_MODULES_FK_DISABLE', 'Failed to disable foreign key checks');
 define('_AM_SYSTEM_MODULES_FK_ENABLE', 'Failed to enable foreign key checks');
 define('_AM_SYSTEM_MODULES_DROP_FAIL', 'Failed to drop table: %s');

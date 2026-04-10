@@ -37,7 +37,7 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
             $ret = false;
         }
     }
-    // Create/upgrade menu tables and seed defaults (added in 2.5.12)
+    // Create/upgrade menu tables and seed defaults (added in 2.7.0)
     if (!system_menu_update($module)) {
         $ret = false;
     }

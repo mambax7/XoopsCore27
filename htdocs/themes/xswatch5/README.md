@@ -1,7 +1,7 @@
 xSwatch5
 =======
 
-A Bootstrap 5 theme for [XOOPS 2.5.12](https://xoops.org), based on [Bootswatch](https://bootswatch.com/) 5.3.8.
+A Bootstrap 5 theme for [XOOPS 2.7.0](https://xoops.org), based on [Bootswatch](https://bootswatch.com/) 5.3.8.
 
 The default variant is [Bootswatch Cerulean](https://bootswatch.com/cerulean/).
 
@@ -93,7 +93,7 @@ Bootstrap 5 templates are included for the following modules:
 
 ## Requirements
 
-- XOOPS 2.5.12+
+- XOOPS 2.7.0+
 - PHP 8.2+
 
 ## Credits

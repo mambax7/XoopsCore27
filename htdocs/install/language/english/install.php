@@ -196,7 +196,7 @@ define('MODULES_AVAILABLE', 'Available Modules');
 define('INSTALL_THIS_MODULE', 'Add %s');
 //2.5.11
 define('ERR_COPY_CONFIG_FILE', 'Could not copy the configuration file %s');
-//2.5.12
+//2.7.0
 // website name and slogan
 define('_WEBSITE_NAME', 'XOOPS Site');
 define('_WEBSITE_SLOGAN', 'Just use it!');

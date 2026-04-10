@@ -84,7 +84,7 @@ foreach ($upgradeControl->supportSites as $lang => $support) {
                 </ul>
             </li>
             <li>
-                <a href="https://github.com/XOOPS/XoopsCore25" target="_blank" title="<?php echo _XOOPS_SOURCE_CODE; ?>"><i class="fa-brands fa-lg fa-github"></i></a>
+                <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer" title="<?php echo htmlspecialchars(_XOOPS_SOURCE_CODE, ENT_QUOTES, 'UTF-8'); ?>"><i class="fa-brands fa-lg fa-github"></i></a>
             </li>
         </ul>
         <!-- Sidebar Menu Items - These collapse to the responsive navigation menu on small screens -->

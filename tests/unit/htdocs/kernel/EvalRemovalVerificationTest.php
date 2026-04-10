@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 use XoopsBlock;
 
 /**
- * Verification tests for eval() removal and legacy cleanup (2.5.12 RC).
+ * Verification tests for eval() removal and legacy cleanup (2.7.0 RC).
  *
  * These tests scan source files to confirm that eval() calls have been
  * removed from security-critical paths.

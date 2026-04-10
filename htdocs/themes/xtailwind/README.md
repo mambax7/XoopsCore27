@@ -1,7 +1,7 @@
 xTailwind
 =========
 
-A Tailwind CSS + DaisyUI theme for [XOOPS 2.5.12](https://xoops.org). Proof of concept sibling to xSwatch5 for site owners who prefer a utility-first CSS framework.
+A Tailwind CSS + DaisyUI theme for [XOOPS 2.7.0](https://xoops.org). Proof of concept sibling to xSwatch5 for site owners who prefer a utility-first CSS framework.
 
 **Status: Proof of concept.** Use for evaluation. For production sites, see [xSwatch5](../xswatch5/).
 
@@ -90,7 +90,7 @@ The navbar includes:
 ## Requirements
 
 ### End users (site administrators)
-- XOOPS 2.5.11+ (RTL auto-detection requires 2.5.12+)
+- XOOPS 2.5.11+ (RTL auto-detection requires 2.7.0+)
 - PHP 8.2+
 - `XoopsFormRendererTailwind` class in XOOPS core is **recommended** (shipped with XOOPS 2.5.13+). If your XOOPS version doesn't include it, the theme automatically falls back to the Bootstrap 5 form renderer — forms will still work and look mostly correct because DaisyUI aliases most Bootstrap 5 form classes. For pixel-perfect form styling, add `XoopsFormRendererTailwind.php` to `htdocs/class/xoopsform/renderer/` manually.
 

@@ -9,7 +9,7 @@ on:
 jobs:
   qodana:
     runs-on: ubuntu-22.04
-    if: github.repository == 'XOOPS/XoopsCore25'
+    if: github.repository == 'XOOPS/XoopsCore27'
     permissions:
       contents: read
       pull-requests: write

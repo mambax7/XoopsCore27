@@ -34,11 +34,11 @@ final class XoopsModuleVersionCompareTest extends TestCase
     public static function provideStableSuffixPairs(): array
     {
         return [
-            'stable suffix on v1'         => ['2.5.12-stable', '2.5.12'],
-            'stable suffix on v2'         => ['2.5.12', '2.5.12-stable'],
-            'mixed case StAbLe on v2'     => ['2.5.12', '2.5.12-StAbLe'],
-            'mixed case Stable on v1'     => ['2.5.12-Stable', '2.5.12'],
-            'both have stable'            => ['2.5.12-stable', '2.5.12-STABLE'],
+            'stable suffix on v1'         => ['2.7.0-stable', '2.7.0'],
+            'stable suffix on v2'         => ['2.7.0', '2.7.0-stable'],
+            'mixed case StAbLe on v2'     => ['2.7.0', '2.7.0-StAbLe'],
+            'mixed case Stable on v1'     => ['2.7.0-Stable', '2.7.0'],
+            'both have stable'            => ['2.7.0-stable', '2.7.0-STABLE'],
         ];
     }
 
@@ -64,10 +64,10 @@ final class XoopsModuleVersionCompareTest extends TestCase
     public static function providePreReleaseSuffixPairs(): array
     {
         return [
-            'beta8 == release'     => ['2.5.12-beta8', '2.5.12'],
-            'rc1 == release'       => ['2.5.12-rc1', '2.5.12'],
-            'alpha1 == release'    => ['2.5.12-alpha1', '2.5.12'],
-            'BeTa8 == release'     => ['2.5.12-BeTa8', '2.5.12'],
+            'beta8 == release'     => ['2.7.0-beta8', '2.7.0'],
+            'rc1 == release'       => ['2.7.0-rc1', '2.7.0'],
+            'alpha1 == release'    => ['2.7.0-alpha1', '2.7.0'],
+            'BeTa8 == release'     => ['2.7.0-BeTa8', '2.7.0'],
         ];
     }
 
@@ -87,8 +87,8 @@ final class XoopsModuleVersionCompareTest extends TestCase
     public static function provideReleaseEqualToPreRelease(): array
     {
         return [
-            'release == beta'  => ['2.5.12', '2.5.12-beta'],
-            'release == rc2'   => ['2.5.12', '2.5.12-rc2'],
+            'release == beta'  => ['2.7.0', '2.7.0-beta'],
+            'release == rc2'   => ['2.7.0', '2.7.0-rc2'],
         ];
     }
 
@@ -114,9 +114,9 @@ final class XoopsModuleVersionCompareTest extends TestCase
     {
         return [
             // All suffixes are stripped, so beta8 == release
-            'beta8 vs release (both become 2.5.12)' => [
-                '2.5.12-beta8',
-                '2.5.12',
+            'beta8 vs release (both become 2.7.0)' => [
+                '2.7.0-beta8',
+                '2.7.0',
                 [
                     '<'  => false,
                     '<=' => true,
@@ -126,10 +126,10 @@ final class XoopsModuleVersionCompareTest extends TestCase
                     '!=' => false,
                 ],
             ],
-            // Lower base version (both suffixes stripped: 2.5.11 < 2.5.12)
+            // Lower base version (both suffixes stripped: 2.6.0 < 2.7.0)
             'lower stable vs higher beta' => [
-                '2.5.11-stable',
-                '2.5.12-beta',
+                '2.6.0-stable',
+                '2.7.0-beta',
                 [
                     '<'  => true,
                     '<=' => true,
@@ -139,10 +139,10 @@ final class XoopsModuleVersionCompareTest extends TestCase
                     '!=' => true,
                 ],
             ],
-            // Higher base wins, alpha suffix stripped (2.5.13 > 2.5.12)
+            // Higher base wins, alpha suffix stripped (2.7.1 > 2.7.0)
             'higher alpha vs lower release' => [
-                '2.5.13-alpha1',
-                '2.5.12',
+                '2.7.1-alpha1',
+                '2.7.0',
                 [
                     '<'  => false,
                     '<=' => false,
@@ -154,8 +154,8 @@ final class XoopsModuleVersionCompareTest extends TestCase
             ],
             // Equal with stable stripped
             'stable vs bare' => [
-                '2.5.12-stable',
-                '2.5.12',
+                '2.7.0-stable',
+                '2.7.0',
                 [
                     '<'  => false,
                     '<=' => true,
@@ -184,9 +184,9 @@ final class XoopsModuleVersionCompareTest extends TestCase
     {
         return [
             // Clean versions without whitespace work as expected
-            'clean lower version'    => ['2.5.11', '2.5.12', '<', true],
-            'clean equal versions'   => ['2.5.12', '2.5.12', '==', true],
-            'clean stable stripped'  => ['2.5.12-stable', '2.5.12', '==', true],
+            'clean lower version'    => ['2.5.11', '2.7.0', '<', true],
+            'clean equal versions'   => ['2.7.0', '2.7.0', '==', true],
+            'clean stable stripped'  => ['2.7.0-stable', '2.7.0', '==', true],
         ];
     }
 
@@ -207,12 +207,12 @@ final class XoopsModuleVersionCompareTest extends TestCase
     {
         return [
             ['', '', '=='],
-            ['', '2.5.12', '<'],
-            ['2.5.12', '', '>='],
-            ['garbage', '2.5.12', '<'],
-            ['2.5.12', 'garbage', '>='],
-            ['2.5.x-beta', '2.5.12', '<'],
-            ['2..12', '2.5.12', '<'],
+            ['', '2.7.0', '<'],
+            ['2.7.0', '', '>='],
+            ['garbage', '2.7.0', '<'],
+            ['2.7.0', 'garbage', '>='],
+            ['2.7.x-beta', '2.7.0', '<'],
+            ['2..7', '2.7.0', '<'],
         ];
     }
 }

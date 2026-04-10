@@ -29,7 +29,7 @@ define('_XOOPS_SMARTY4_TEMPLATE_EXT', 'Template Extension (optional)');
 define(
     '_XOOPS_SMARTY4_SCANNER_OFFER',
     <<<'EOT'
-<h3>XOOPS 2.5.12 introduces a significant change: Smarty 4</h3>
+<h3>XOOPS 2.7.0 introduces a significant change: Smarty 4</h3>
 
 <p>Unfortunately, this change may potentially disrupt some older themes. Therefore, before proceeding with the upgrade, please ensure that you follow these steps:
 

@@ -2,7 +2,7 @@
 
 ## What Changed
 
-XOOPS 2.5.12 replaces the legacy `eval()`-based PHP blocks with a **file-based
+XOOPS 2.7.0 replaces the legacy `eval()`-based PHP blocks with a **file-based
 callback** system. Custom PHP blocks now reference a PHP file and function name
 instead of storing raw PHP code in the database.
 
