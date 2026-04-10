@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alpine.js x-cloak — hides elements until Alpine initializes.
+   Prevents flash-of-visible-content for `x-show="false"` elements. */
+[x-cloak] {
+    display: none !important;
+}
+
+/* =============================================================================
+   xTailwind — custom layer
+   Add any theme-specific overrides or custom component classes here.
+   Prefer `@apply` with Tailwind utilities over raw CSS when possible.
+   ============================================================================= */
+
+@layer components {
+    /* XOOPS content areas rendered via $xoops_contents use raw HTML from the
+       editor. The @tailwindcss/typography `prose` class styles it sanely. */
+    .xoops-content :where(h1, h2, h3, h4, h5, h6) {
+        @apply font-semibold;
+    }
+
+    /* XOOPS system blocks (user menu, main menu, etc.) output menu items
+       in inconsistent formats — sometimes as <ul><li><a>, sometimes as a
+       flat series of <a> tags separated by whitespace. Normalize both to
+       a stacked vertical menu layout. */
+    .block-content {
+        font-size: 0.875rem;
+    }
+    .block-content ul,
+    .block-content ol {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .block-content li {
+        display: block;
+    }
+    .block-content a {
+        display: block;
+        padding: 0.375rem 0.5rem;
+        border-radius: 0.375rem;
+        text-decoration: none;
+        color: hsl(var(--bc));
+    }
+    .block-content a:hover {
+        background-color: hsl(var(--b3));
+    }
+    /* Separators between flat anchors (whitespace, <br>, commas) collapse nicely */
+    .block-content br {
+        display: none;
+    }
+    /* Preserve prose-like styling for paragraph blocks (e.g. site info, text blocks) */
+    .block-content p {
+        margin: 0.5rem 0;
+    }
+    .block-content img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* Admin toolbar block-edit button visibility is toggled by JS */
+    .toolbar-block-edit {
+        display: none;
+    }
+    .toolbar-edit-on .toolbar-block-edit {
+        display: inline-flex;
+    }
+}
+
+@layer utilities {
+    /* Hover-to-open dropdowns on desktop. DaisyUI opens dropdowns on click
+       by default; this adds hover behavior for top-level nav items. */
+    @media (min-width: 1024px) {
+        .dropdown.dropdown-hover:hover > .dropdown-content {
+            display: block;
+        }
+    }
+}

@@ -1,0 +1,21 @@
+# Node.js build dependencies — only needed during CSS compilation
+node_modules/
+
+# npm / yarn logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor cruft
+.idea/
+.vscode/
+*.swp
+*~
+
+# Leave css/styles.css COMMITTED — end users should not need Node.js to use the theme
+# Leave package-lock.json COMMITTED — reproducible builds

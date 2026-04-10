@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none !important;
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply font-body;
+        background-color: hsl(var(--b1));
+        background-image:
+            radial-gradient(circle at 12% 12%, hsl(var(--p) / 0.15), transparent 26%),
+            radial-gradient(circle at 85% 0%, hsl(var(--s) / 0.12), transparent 24%),
+            radial-gradient(circle at 50% 100%, hsl(var(--a) / 0.09), transparent 30%),
+            linear-gradient(180deg, hsl(var(--b1)) 0%, hsl(var(--b1)) 52%, hsl(var(--b2)) 100%);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-display tracking-tight;
+    }
+
+    ::selection {
+        background: hsl(var(--p) / 0.22);
+        color: hsl(var(--bc));
+    }
+}
+
+@layer components {
+    .shell-container {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+
+    .glass-chrome {
+        @apply border border-base-300/70 bg-base-100/70 backdrop-blur-xl;
+        box-shadow: 0 24px 80px -34px rgba(15, 23, 42, 0.38);
+    }
+
+    .editorial-kicker {
+        @apply inline-flex items-center gap-2 rounded-full border border-base-300/80 bg-base-100/80 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-base-content/70;
+    }
+
+    .hero-panel {
+        @apply relative overflow-hidden rounded-shell border border-base-300/70 bg-base-100/80;
+        box-shadow: 0 28px 120px -48px rgba(15, 23, 42, 0.5);
+    }
+
+    .hero-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at top right, hsl(var(--p) / 0.2), transparent 28%),
+            radial-gradient(circle at bottom left, hsl(var(--s) / 0.16), transparent 26%);
+        pointer-events: none;
+    }
+
+    .hero-metric {
+        @apply rounded-3xl border border-base-300/70 bg-base-100/80 p-4 backdrop-blur-md;
+        box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.35);
+    }
+
+    .content-panel {
+        @apply rounded-shell border border-base-300/70 p-5 sm:p-7;
+        background-color: hsl(var(--b1) / 0.82);
+        box-shadow: 0 24px 70px -38px rgba(15, 23, 42, 0.32);
+    }
+
+    .rail-panel {
+        @apply rounded-3xl border border-base-300/70 p-4 backdrop-blur-md;
+        background-color: hsl(var(--b1) / 0.72);
+        box-shadow: 0 20px 50px -34px rgba(15, 23, 42, 0.3);
+    }
+
+    .surface-label {
+        @apply mb-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-base-content/50;
+    }
+
+    .block-content {
+        @apply text-sm leading-6 text-base-content/80;
+    }
+
+    .block-content ul,
+    .block-content ol {
+        @apply m-0 list-none p-0;
+    }
+
+    .block-content li {
+        @apply block;
+    }
+
+    .block-content a {
+        @apply block rounded-2xl px-3 py-2 text-sm font-medium text-base-content transition duration-200;
+        background: linear-gradient(180deg, transparent, transparent);
+    }
+
+    .block-content a:hover {
+        @apply text-base-content;
+        background: linear-gradient(90deg, hsl(var(--p) / 0.12), transparent 80%);
+        transform: translateX(2px);
+    }
+
+    .block-content p {
+        @apply my-2;
+    }
+
+    .block-content img {
+        @apply h-auto max-w-full rounded-2xl;
+    }
+
+    .block-content br {
+        display: none;
+    }
+
+    .xoops-content {
+        @apply text-[0.98rem] leading-8 text-base-content/85;
+    }
+
+    .xoops-content :where(h1, h2, h3, h4) {
+        @apply mt-10 mb-4 font-display font-semibold tracking-tight text-base-content;
+    }
+
+    .xoops-content :where(p, ul, ol, table, blockquote) {
+        @apply mb-5;
+    }
+
+    .xoops-content :where(a) {
+        @apply font-medium text-primary underline decoration-primary/35 underline-offset-4 transition-colors;
+    }
+
+    .xoops-content :where(a:hover) {
+        @apply text-secondary decoration-secondary/50;
+    }
+
+    .xoops-content :where(table) {
+        @apply w-full overflow-hidden rounded-3xl border border-base-300/80 bg-base-100/70 text-sm;
+    }
+
+    .xoops-content :where(th) {
+        @apply bg-base-200/80 px-4 py-3 text-left font-semibold text-base-content;
+    }
+
+    .xoops-content :where(td) {
+        @apply border-t border-base-300/70 px-4 py-3 align-top;
+    }
+
+    .xoops-content :where(blockquote) {
+        @apply rounded-r-3xl border-l-4 border-primary/60 bg-base-200/55 px-5 py-4 italic text-base-content/75;
+    }
+
+    .xoops-content :where(img) {
+        @apply rounded-3xl shadow-lg;
+    }
+
+    .toolbar-block-edit {
+        display: none;
+    }
+
+    .toolbar-edit-on .toolbar-block-edit {
+        @apply inline-flex;
+    }
+}
+
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .ambient-line {
+        background: linear-gradient(90deg, transparent, hsl(var(--p) / 0.18), transparent);
+    }
+}
