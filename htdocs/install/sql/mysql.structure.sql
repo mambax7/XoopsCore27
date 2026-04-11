@@ -231,6 +231,46 @@ CREATE TABLE group_permission (
 ) ENGINE=MyISAM;
 # --------------------------------------------------------
 
+#
+# Table structure for table `menuscategory`
+#
+
+CREATE TABLE menuscategory (
+  category_id int unsigned NOT NULL auto_increment,
+  category_title varchar(100) NOT NULL default '',
+  category_prefix text NOT NULL,
+  category_suffix text NOT NULL,
+  category_url varchar(255) NOT NULL default '',
+  category_target tinyint(1) unsigned NOT NULL default '0',
+  category_position int NOT NULL default '0',
+  category_protected int NOT NULL default '0',
+  category_active tinyint(1) unsigned NOT NULL default '1',
+  PRIMARY KEY  (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# --------------------------------------------------------
+
+#
+# Table structure for table `menusitems`
+#
+
+CREATE TABLE menusitems (
+  items_id int unsigned NOT NULL auto_increment,
+  items_pid int NOT NULL default '0',
+  items_cid int unsigned NOT NULL default '0',
+  items_title varchar(100) NOT NULL default '',
+  items_prefix text NOT NULL,
+  items_suffix text NOT NULL,
+  items_url varchar(255) NOT NULL default '',
+  items_target tinyint(1) unsigned NOT NULL default '0',
+  items_position int NOT NULL default '0',
+  items_protected int NOT NULL default '0',
+  items_active tinyint(1) unsigned NOT NULL default '1',
+  PRIMARY KEY  (items_id),
+  KEY idx_items_cid (items_cid),
+  KEY idx_items_pid (items_pid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# --------------------------------------------------------
+
 
 #
 # Table structure for table `groups_users_link`

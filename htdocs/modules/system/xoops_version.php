@@ -32,6 +32,7 @@ $modversion['hasAdmin']   = 1;
 $modversion['adminindex'] = 'admin.php';
 $modversion['adminmenu']  = 'menu.php';
 
+$modversion['onInstall'] = 'include/update.php';
 $modversion['onUpdate'] = 'include/update.php';
 
 // Templates

@@ -17,6 +17,7 @@
             <directory suffix=".php">../htdocs/modules/pm</directory>
             <directory suffix=".php">../htdocs/modules/profile</directory>
             <directory suffix=".php">../htdocs/modules/protector</directory>
+            <directory suffix=".php">../htdocs/install</directory>
         </include>
         <exclude>
             <directory>../htdocs/class/libraries/vendor</directory>

@@ -15,6 +15,25 @@
  * @author       XOOPS Development Team, Kazumi Ono (AKA onokazu)
  */
 
+require_once __DIR__ . '/menu_seed.php';
+
+/**
+ * System module install hook.
+ *
+ * On a fresh XOOPS install this does not fire, because the installer inserts
+ * the System module row directly and seeds menus from htdocs/install/include/makedata.php.
+ * This hook exists for module-admin reinstall flows, where reusing the idempotent
+ * update logic is the safest behavior.
+ *
+ * @param XoopsModule $module
+ *
+ * @return bool
+ */
+function xoops_module_install_system(XoopsModule $module)
+{
+    return system_menu_update($module);
+}
+
 /**
  * @param XoopsModule $module
  * @param string|null $prev_version
@@ -283,15 +302,15 @@ function system_menu_create_tables(XoopsMySQLDatabase $db): void
 {
     $prefix = $db->prefix('menuscategory');
     $sql = "CREATE TABLE IF NOT EXISTS `{$prefix}` (
-        `category_id`        INT          NOT NULL AUTO_INCREMENT,
+        `category_id`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `category_title`     VARCHAR(100) NOT NULL DEFAULT '',
         `category_prefix`    TEXT         NOT NULL,
         `category_suffix`    TEXT         NOT NULL,
         `category_url`       VARCHAR(255) NOT NULL DEFAULT '',
-        `category_target`    TINYINT(1)   NOT NULL DEFAULT 0,
+        `category_target`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
         `category_position`  INT          NOT NULL DEFAULT 0,
         `category_protected` INT          NOT NULL DEFAULT 0,
-        `category_active`    TINYINT(1)   NOT NULL DEFAULT 1,
+        `category_active`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
         PRIMARY KEY (`category_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
     system_menu_exec_or_throw($db, $sql);
@@ -304,17 +323,17 @@ function system_menu_create_tables(XoopsMySQLDatabase $db): void
     $prefix = $db->prefix('menusitems');
     $fkName = $db->prefix('fk_items_category');
     $sql = "CREATE TABLE IF NOT EXISTS `{$prefix}` (
-        `items_id`        INT          NOT NULL AUTO_INCREMENT,
+        `items_id`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `items_pid`       INT          NOT NULL DEFAULT 0,
-        `items_cid`       INT          NOT NULL DEFAULT 0,
+        `items_cid`       INT UNSIGNED NOT NULL DEFAULT 0,
         `items_title`     VARCHAR(100) NOT NULL DEFAULT '',
         `items_prefix`    TEXT         NOT NULL,
         `items_suffix`    TEXT         NOT NULL,
         `items_url`       VARCHAR(255) NOT NULL DEFAULT '',
-        `items_target`    TINYINT(1)   NOT NULL DEFAULT 0,
+        `items_target`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
         `items_position`  INT          NOT NULL DEFAULT 0,
         `items_protected` INT          NOT NULL DEFAULT 0,
-        `items_active`    TINYINT(1)   NOT NULL DEFAULT 1,
+        `items_active`    TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
         PRIMARY KEY (`items_id`),
         KEY `idx_items_cid` (`items_cid`),
         KEY `idx_items_pid` (`items_pid`),
@@ -354,6 +373,10 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
 {
     $catTable = $db->prefix('menuscategory');
     $itemTable = $db->prefix('menusitems');
+    $fkName = $db->prefix('fk_items_category');
+
+    // Drop category FKs before changing signedness on the parent/child key columns.
+    system_menu_drop_parent_foreign_keys($db, 'menuscategory');
 
     // Drop self-referencing FK on items_pid (incompatible with 0-as-root convention)
     $result = $db->query(
@@ -373,6 +396,15 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
     system_menu_exec_or_throw($db, "UPDATE `{$itemTable}` SET `items_pid` = 0 WHERE `items_pid` IS NULL");
     system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_pid` INT NOT NULL DEFAULT 0");
 
+    // Keep fresh-install and upgraded schemas aligned.
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_target` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_cid` INT UNSIGNED NOT NULL DEFAULT 0");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_target` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1");
+
     // Enforce NOT NULL on affix columns
     system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_prefix` TEXT NOT NULL");
     system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_suffix` TEXT NOT NULL");
@@ -385,6 +417,22 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
         "UPDATE `{$catTable}` SET `category_url` = " . $db->quote('index.php')
         . " WHERE `category_protected` = 1 AND `category_url` = " . $db->quote('/')
     );
+
+    // Restore the category FK after type normalization if it is absent.
+    $fkCheck = $db->query(
+        "SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS"
+        . " WHERE CONSTRAINT_NAME = " . $db->quote($fkName)
+        . " AND TABLE_NAME = " . $db->quote($itemTable)
+        . " AND TABLE_SCHEMA = DATABASE()"
+    );
+    if ($db->isResultSet($fkCheck) && ($fkCheck instanceof \mysqli_result) && 0 === $db->getRowsNum($fkCheck)) {
+        system_menu_exec_or_throw(
+            $db,
+            "ALTER TABLE `{$itemTable}` ADD CONSTRAINT `{$fkName}`"
+            . " FOREIGN KEY (`items_cid`) REFERENCES `{$catTable}` (`category_id`)"
+            . " ON DELETE CASCADE"
+        );
+    }
 }
 
 /**
@@ -536,138 +584,14 @@ function system_menu_seed_permissions(
  */
 function system_menu_seed_defaults(XoopsMySQLDatabase $db, int $moduleId): void
 {
-    $adminGroup = defined('XOOPS_GROUP_ADMIN') ? (int) XOOPS_GROUP_ADMIN : 1;
-    $usersGroup = defined('XOOPS_GROUP_USERS') ? (int) XOOPS_GROUP_USERS : 2;
-    $anonGroup  = defined('XOOPS_GROUP_ANONYMOUS') ? (int) XOOPS_GROUP_ANONYMOUS : 3;
-
-    $allGroups   = [$adminGroup, $usersGroup, $anonGroup];
-    $authGroups  = [$adminGroup, $usersGroup];
-    $adminGroups = [$adminGroup];
-
-    // --- Category definitions ---
-    $categories = [
-        'home' => [
-            'title'     => 'MENUS_HOME',
-            'prefix'    => '<span class="fa fa-home"></span>',
-            'suffix'    => '',
-            'url'       => 'index.php',
-            'target'    => 0,
-            'position'  => 1,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $allGroups,
-        ],
-        'account' => [
-            'title'     => 'MENUS_ACCOUNT',
-            'prefix'    => '<span class="fa fa-user fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => '',
-            'target'    => 0,
-            'position'  => 2,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $allGroups,
-        ],
-        'admin' => [
-            'title'     => 'MENUS_ADMIN',
-            'prefix'    => '<span class="fa fa-wrench fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => 'admin.php',
-            'target'    => 0,
-            'position'  => 3,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $adminGroups,
-        ],
+    $groupMap = [
+        'admin'     => defined('XOOPS_GROUP_ADMIN') ? (int) XOOPS_GROUP_ADMIN : 1,
+        'users'     => defined('XOOPS_GROUP_USERS') ? (int) XOOPS_GROUP_USERS : 2,
+        'anonymous' => defined('XOOPS_GROUP_ANONYMOUS') ? (int) XOOPS_GROUP_ANONYMOUS : 3,
     ];
-
-    // --- Item definitions (under Account) ---
-    $items = [
-        [
-            'title'     => 'MENUS_ACCOUNT_EDIT',
-            'prefix'    => '<span class="fa fa-edit fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => 'user.php',
-            'target'    => 0,
-            'position'  => 1,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $authGroups,
-        ],
-        [
-            'title'     => 'MENUS_ACCOUNT_LOGIN',
-            'prefix'    => '<span class="fa fa-sign-in fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => 'user.php',
-            'target'    => 0,
-            'position'  => 2,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => [$anonGroup],
-        ],
-        [
-            'title'     => 'MENUS_ACCOUNT_REGISTER',
-            'prefix'    => '<span class="fa fa-sign-in fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => 'register.php',
-            'target'    => 0,
-            'position'  => 3,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => [$anonGroup],
-        ],
-        [
-            'title'     => 'MENUS_ACCOUNT_MESSAGES',
-            'prefix'    => '<span class="fa fa-envelope fa-fw"></span>',
-            'suffix'    => '<span class="badge bg-primary rounded-pill"><{xoInboxCount}></span>',
-            'url'       => 'viewpmsg.php',
-            'target'    => 0,
-            'position'  => 4,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $authGroups,
-        ],
-        [
-            'title'     => 'MENUS_ACCOUNT_NOTIFICATIONS',
-            'prefix'    => '<span class="fa fa-info-circle fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => 'notifications.php',
-            'target'    => 0,
-            'position'  => 5,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $authGroups,
-        ],
-        [
-            'title'     => 'MENUS_ACCOUNT_TOOLBAR',
-            'prefix'    => '<span class="fa fa-wrench fa-fw"></span>',
-            'suffix'    => '<span id="xswatch-toolbar-ind"></span>',
-            'url'       => '#xswatch-toolbar-toggle',
-            'target'    => 0,
-            'position'  => 6,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $authGroups,
-        ],
-        [
-            'title'     => 'MENUS_ACCOUNT_LOGOUT',
-            'prefix'    => '<span class="fa fa-sign-out fa-fw"></span>',
-            'suffix'    => '',
-            'url'       => 'user.php?op=logout',
-            'target'    => 0,
-            'position'  => 7,
-            'pid'       => 0,
-            'protected' => 1,
-            'active'    => 1,
-            'groups'    => $authGroups,
-        ],
-    ];
+    $seed = system_menu_get_seed_definitions();
+    $categories = $seed['categories'];
+    $items = $seed['items'];
 
     // --- Persist categories ---
     $categoryIds = [];
@@ -683,12 +607,22 @@ function system_menu_seed_defaults(XoopsMySQLDatabase $db, int $moduleId): void
 
     // --- Seed category permissions (idempotent — skips existing) ---
     foreach ($categories as $key => $catDef) {
-        system_menu_seed_permissions($moduleId, 'menus_category_view', $categoryIds[$key], $catDef['groups']);
+        system_menu_seed_permissions(
+            $moduleId,
+            'menus_category_view',
+            $categoryIds[$key],
+            system_menu_map_group_keys($catDef['group_keys'], $groupMap)
+        );
     }
 
     // --- Seed item permissions ---
     foreach ($items as $idx => $itemDef) {
-        system_menu_seed_permissions($moduleId, 'menus_items_view', $itemIds[$idx], $itemDef['groups']);
+        system_menu_seed_permissions(
+            $moduleId,
+            'menus_items_view',
+            $itemIds[$idx],
+            system_menu_map_group_keys($itemDef['group_keys'], $groupMap)
+        );
     }
 }
 

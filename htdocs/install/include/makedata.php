@@ -30,6 +30,9 @@
 // TODO: Shouldn't we insert specific field names??  That way we can use
 // the defaults specified in the database...!!!! (and don't have problem
 // of missing fields in install file, when add new fields to database)
+
+require_once XOOPS_ROOT_PATH . '/modules/system/include/menu_seed.php';
+
 function make_groups($dbm)
 {
     $groups['XOOPS_GROUP_ADMIN']     = $dbm->insert('groups', " VALUES (1, '" . addslashes(_INSTALL_WEBMASTER) . "', '" . addslashes(_INSTALL_WEBMASTERD) . "', 'Admin')");
@@ -40,6 +43,103 @@ function make_groups($dbm)
     }
 
     return $groups;
+}
+
+/**
+ * Seed protected front-end menus for a fresh install.
+ *
+ * @param Db_manager         $dbm
+ * @param array<string, int> $groups
+ * @param int                $moduleId
+ *
+ * @return bool
+ */
+function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): bool
+{
+    $seed = system_menu_get_seed_definitions();
+    $groupMap = [
+        'admin'     => (int) $groups['XOOPS_GROUP_ADMIN'],
+        'users'     => (int) $groups['XOOPS_GROUP_USERS'],
+        'anonymous' => (int) $groups['XOOPS_GROUP_ANONYMOUS'],
+    ];
+    $categoryIds = [];
+
+    foreach ($seed['categories'] as $key => $definition) {
+        $categoryId = $dbm->insert(
+            'menuscategory',
+            " (`category_title`, `category_prefix`, `category_suffix`, `category_url`, `category_target`, `category_position`, `category_protected`, `category_active`) VALUES ("
+            . "'" . addslashes($definition['title']) . "', "
+            . "'" . addslashes($definition['prefix']) . "', "
+            . "'" . addslashes($definition['suffix']) . "', "
+            . "'" . addslashes($definition['url']) . "', "
+            . (int) $definition['target'] . ', '
+            . (int) $definition['position'] . ', '
+            . (int) $definition['protected'] . ', '
+            . (int) $definition['active']
+            . ')'
+        );
+        if (!$categoryId) {
+            trigger_error(
+                sprintf('Failed to seed menu category "%s" during install.', $definition['title']),
+                E_USER_WARNING
+            );
+            return false;
+        }
+        $categoryIds[$key] = (int) $categoryId;
+
+        foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
+            if (!$dbm->insert(
+                'group_permission',
+                ' VALUES (0, ' . $groupId . ', ' . (int) $categoryId . ', ' . $moduleId . ", 'menus_category_view')"
+            )) {
+                trigger_error(
+                    sprintf('Failed to seed menu category permissions for "%s" during install.', $definition['title']),
+                    E_USER_WARNING
+                );
+                return false;
+            }
+        }
+    }
+
+    foreach ($seed['items'] as $definition) {
+        $itemId = $dbm->insert(
+            'menusitems',
+            " (`items_pid`, `items_cid`, `items_title`, `items_prefix`, `items_suffix`, `items_url`, `items_target`, `items_position`, `items_protected`, `items_active`) VALUES ("
+            . (int) $definition['pid'] . ', '
+            . $categoryIds['account'] . ', '
+            . "'" . addslashes($definition['title']) . "', "
+            . "'" . addslashes($definition['prefix']) . "', "
+            . "'" . addslashes($definition['suffix']) . "', "
+            . "'" . addslashes($definition['url']) . "', "
+            . (int) $definition['target'] . ', '
+            . (int) $definition['position'] . ', '
+            . (int) $definition['protected'] . ', '
+            . (int) $definition['active']
+            . ')'
+        );
+        if (!$itemId) {
+            trigger_error(
+                sprintf('Failed to seed menu item "%s" during install.', $definition['title']),
+                E_USER_WARNING
+            );
+            return false;
+        }
+
+        foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
+            if (!$dbm->insert(
+                'group_permission',
+                ' VALUES (0, ' . $groupId . ', ' . (int) $itemId . ', ' . $moduleId . ", 'menus_items_view')"
+            )) {
+                trigger_error(
+                    sprintf('Failed to seed menu item permissions for "%s" during install.', $definition['title']),
+                    E_USER_WARNING
+                );
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 /**
@@ -104,6 +204,9 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $time = time();
     // RMV-NOTIFY (updated for extra column in table)
     $dbm->insert('modules', " VALUES (1, '" . _MI_SYSTEM_NAME . "', '" . $modversion['version'] . "', " . $time . ", 0, 1, 'system', 0, 1, 0, 0, 0, 0)");
+    if (!system_menu_install_seed_defaults($dbm, $groups, 1)) {
+        return false;
+    }
 
     foreach ($modversion['templates'] as $tplfile) {
         $templateType = isset($tplfile['type']) && 'admin' === $tplfile['type'] ? 'admin' : 'module';

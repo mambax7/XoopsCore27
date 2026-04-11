@@ -138,12 +138,12 @@ class SystemMenusRegressionTest extends TestCase
     #[Test]
     public function updateScriptSeedsToolbarWithSafeFragmentUrl(): void
     {
-        $source = $this->readSourceFile('modules/system/include/update.php');
+        $source = $this->readSourceFile('modules/system/include/menu_seed.php');
 
         $this->assertStringContainsString(
             '#xswatch-toolbar-toggle',
             $source,
-            'Toolbar seed must use fragment URL, not javascript:'
+            'Toolbar seed must use fragment URL in the shared seed definitions, not javascript:'
         );
     }
 
