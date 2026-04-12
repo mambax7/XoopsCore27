@@ -9,6 +9,9 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
+
 /**
  * Upgrader from 2.3.0 to 2.3.1
  *
@@ -26,9 +29,9 @@ class Upgrade_231 extends XoopsUpgrade
     /**
      * Upgrade_231 constructor.
      */
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['field'];
     }
 
@@ -36,7 +39,7 @@ class Upgrade_231 extends XoopsUpgrade
      * Check if field type already fixed for mysql strict mode
      *
      */
-    public function check_field()
+    public function check_field(): bool
     {
         $fields = [
             'cache_data' => 'cache_model',
@@ -55,12 +58,12 @@ class Upgrade_231 extends XoopsUpgrade
             'bio' => 'users',
         ];
         foreach ($fields as $field => $table) {
-            $sql = 'SHOW COLUMNS FROM `' . $GLOBALS['xoopsDB']->prefix($table) . "` LIKE '{$field}'";
-            $result = $GLOBALS['xoopsDB']->query($sql);
-            if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+            $sql = 'SHOW COLUMNS FROM `' . $this->db->prefix($table) . "` LIKE '{$field}'";
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
                 return false;
             }
-            while (false !== ($row = $GLOBALS['xoopsDB']->fetchArray($result))) {
+            while (false !== ($row = $this->db->fetchArray($result))) {
                 if ($row['Field'] != $field) {
                     continue;
                 }
@@ -73,16 +76,15 @@ class Upgrade_231 extends XoopsUpgrade
         return true;
     }
 
-    public function apply_field()
+    public function apply_field(): bool
     {
-        $allowWebChanges                     = $GLOBALS['xoopsDB']->allowWebChanges;
-        $GLOBALS['xoopsDB']->allowWebChanges = true;
-        $result                              = $GLOBALS['xoopsDB']->queryFromFile(__DIR__ . '/mysql.structure.sql');
-        $GLOBALS['xoopsDB']->allowWebChanges = $allowWebChanges;
+        $allowWebChanges           = $this->db->allowWebChanges;
+        $this->db->allowWebChanges = true;
+        $result                    = $this->db->queryFromFile(__DIR__ . '/mysql.structure.sql');
+        $this->db->allowWebChanges = $allowWebChanges;
 
         return $result;
     }
 }
 
-$upg = new Upgrade_231();
-return $upg;
+return Upgrade_231::class;

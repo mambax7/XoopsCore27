@@ -1,26 +1,38 @@
 <?php
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
+
 /**
  * Load mainfile.php wedge that checks for needed upgrades.
  *
- * This should be included instead of mainfile.php
+ * This should be included instead of mainfile.php.
  *
- * You may not change or alter any portion of this comment or credits
- * of supporting developers from this source code or any supporting source code
- * which is considered copyrighted (c) material of the original comment or credit authors.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * @copyright 2000-2026 XOOPS Project (https://xoops.org)
- * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package   upgrader
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
  * @since     2.5.9
  * @author    Richard Griffith <richard@geekwright.com>
+ * @author    XOOPS Development Team
  */
 
-$loadCommon = !isset($xoopsOption['nocommon']);
+$loadCommon             = !isset($xoopsOption['nocommon']);
 $xoopsOption['nocommon'] = true;
-include_once __DIR__ . '/../mainfile.php';
+
+if (!defined('XOOPS_ROOT_PATH')) {
+    define('XOOPS_ROOT_PATH', dirname(__DIR__));
+}
+
+if (file_exists(XOOPS_ROOT_PATH . '/mainfile.php')) {
+    include_once XOOPS_ROOT_PATH . '/mainfile.php';
+} else {
+    exit('mainfile.php not found.');
+}
 
 $mainfileKeys = [
     // in mainfile.php

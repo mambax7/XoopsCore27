@@ -1,6 +1,8 @@
 <?php
 
 use Xmf\Database\Tables;
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
 
 /**
  * Upgrade from 2.5.8 to 2.5.9
@@ -18,10 +20,13 @@ class Upgrade_259 extends XoopsUpgrade
 {
     /**
      * __construct
+     *
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
      */
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['sess_id', 'mainfile', 'zaplegacy'];
         $this->usedFiles = [
             'mainfile.php',
@@ -38,26 +43,22 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return int column length or zero on error
      */
-    private function getColumnLength($table, $column)
+    private function getColumnLength(string $table, string $column): int
     {
-        /** @var XoopsMySQLDatabase $db */
-        $db = XoopsDatabaseFactory::getDatabaseConnection();
-
         $dbname = constant('XOOPS_DB_NAME');
-        $table = $db->prefix($table);
+        $table = $this->db->prefix($table);
 
         $sql = sprintf(
             'SELECT `CHARACTER_MAXIMUM_LENGTH` FROM `information_schema`.`COLUMNS` '
             . "WHERE TABLE_SCHEMA = '%s'AND TABLE_NAME = '%s' AND COLUMN_NAME = '%s'",
-            $db->escape($dbname),
-            $db->escape($table),
-            $db->escape($column),
+            $this->db->escape($dbname),
+            $this->db->escape($table),
+            $this->db->escape($column),
         );
 
-        /** @var mysqli_result $result */
-        $result = $db->query($sql);
-        if ($db->isResultSet($result)) {
-            $row = $db->fetchRow($result);
+        $result = $this->db->query($sql);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
+            $row = $this->db->fetchRow($result);
             if ($row) {
                 $columnLength = $row[0];
                 return (int) $columnLength;
@@ -71,7 +72,7 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_sess_id()
+    public function check_sess_id(): bool
     {
         return (bool) ($this->getColumnLength('session', 'sess_id') >= 256);
     }
@@ -82,7 +83,7 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_sess_id()
+    public function apply_sess_id(): bool
     {
         $migrate = new Tables();
         $migrate->useTable('session');
@@ -136,11 +137,9 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_mainfile()
+    public function check_mainfile(): bool
     {
-        /** @var UpgradeControl $upgradeControl */
-        global $upgradeControl;
-        return !$upgradeControl->needMainfileRewrite;
+        return !$this->control->needMainfileRewrite;
     }
 
     /**
@@ -148,16 +147,13 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_mainfile()
+    public function apply_mainfile(): bool
     {
-        /** @var UpgradeControl $upgradeControl */
-        global $upgradeControl;
-
-        if (null === $upgradeControl->mainfileKeys['XOOPS_COOKIE_DOMAIN']) {
-            $upgradeControl->mainfileKeys['XOOPS_COOKIE_DOMAIN'] = xoops_getBaseDomain(XOOPS_URL);
+        if (null === $this->control->mainfileKeys['XOOPS_COOKIE_DOMAIN']) {
+            $this->control->mainfileKeys['XOOPS_COOKIE_DOMAIN'] = xoops_getBaseDomain(XOOPS_URL);
         }
         $result = $this->writeConfigurationFile(
-            $upgradeControl->mainfileKeys,
+            $this->control->mainfileKeys,
             XOOPS_ROOT_PATH,
             'mainfile.dist.php',
             'mainfile.php',
@@ -166,7 +162,7 @@ class Upgrade_259 extends XoopsUpgrade
             $this->logs[] = $result;
         } else {
             $result = $this->writeConfigurationFile(
-                $upgradeControl->mainfileKeys,
+                $this->control->mainfileKeys,
                 XOOPS_VAR_PATH . '/data',
                 'secure.dist.php',
                 'secure.php',
@@ -184,9 +180,9 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_zaplegacy()
+    public function check_zaplegacy(): bool
     {
-        return !file_exists('../modules/system/themes/legacy/legacy.php');
+        return !file_exists(XOOPS_ROOT_PATH . '/modules/system/themes/legacy/legacy.php');
     }
 
     /**
@@ -194,16 +190,16 @@ class Upgrade_259 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_zaplegacy()
+    public function apply_zaplegacy(): bool
     {
-        $fileName = 'modules/system/themes/legacy/legacy.php';
-        $result = rename('../' . $fileName, '../' . $fileName . '.bak');
+        $fileName = XOOPS_ROOT_PATH . '/modules/system/themes/legacy/legacy.php';
+        $result = rename($fileName, $fileName . '.bak');
         if (false === $result) {
-            return sprintf(_FILE_ACCESS_ERROR, $fileName);
+            $this->logs[] = sprintf(defined('_FILE_ACCESS_ERROR') ? _FILE_ACCESS_ERROR : 'File access error: %s', $fileName);
+            return false;
         }
         return true;
     }
 }
 
-$upg = new Upgrade_259();
-return $upg;
+return Upgrade_259::class;

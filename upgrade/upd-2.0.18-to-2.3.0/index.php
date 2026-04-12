@@ -10,49 +10,49 @@
 */
 
 use Xmf\Database\Tables;
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
 
 /**
- * Upgrader from 2.0.18 to 2.3.0
+ * Upgrade from 2.0.18 to 2.3.0
  *
- * See the enclosed file license.txt for licensing information.
- * If you did not receive this file, get it at https://www.gnu.org/licenses/gpl-2.0.html
- *
- * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
- * @license          GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package          upgrader
- * @since            2.3.0
- * @author           Taiwen Jiang <phppp@users.sourceforge.net>
- */
-
-include_once __DIR__ . '/pathcontroller.php';
-
-/**
- * Class upgrade_230
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.3.0
+ * @author    Taiwen Jiang <phppp@users.sourceforge.net>
+ * @author    XOOPS Development Team
  */
 class Upgrade_230 extends XoopsUpgrade
 {
-    /*
-     *  __construct()
+    /**
+     * @var string
      */
-    public function __construct()
+    protected $pathControllerFile;
+
+    /**
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
+     */
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
-        $this->usedFiles = ['mainfile.php'];
-        $this->tasks     = ['config', 'cache', 'path', 'db', 'bmlink'];
+        parent::__construct($db, $control, basename(__DIR__));
+        $this->usedFiles          = ['mainfile.php'];
+        $this->tasks              = ['config', 'cache', 'path', 'db', 'bmlink'];
+        $this->pathControllerFile = __DIR__ . '/pathcontroller.php';
     }
 
     /**
      * Check if cpanel config already exists
      *
      */
-    public function check_config()
+    public function check_config(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` IN ('welcome_type', 'cpanel')";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` IN ('welcome_type', 'cpanel')";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return ($count == 2);
     }
@@ -61,20 +61,20 @@ class Upgrade_230 extends XoopsUpgrade
      * Check if cache_model table already exists
      *
      */
-    public function check_cache()
+    public function check_cache(): bool
     {
-        $sql    = "SHOW TABLES LIKE '" . $GLOBALS['xoopsDB']->prefix('cache_model') . "'";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql    = "SHOW TABLES LIKE '" . $this->db->prefix('cache_model') . "'";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
 
-        $temp = $GLOBALS['xoopsDB']->getRowsNum($result) > 0;
+        $temp = $this->db->getRowsNum($result) > 0;
         return $temp;
 
         /*
-        $sql = "SELECT COUNT(*) FROM `" . $GLOBALS['xoopsDB']->prefix('cache_model') . "`";
-        if ( !$result = $GLOBALS['xoopsDB']->queryF( $sql ) ) {
+        $sql = "SELECT COUNT(*) FROM `" . $this->db->prefix('cache_model') . "`";
+        if ( !$result = $this->db->queryF( $sql ) ) {
             return false;
         }
 
@@ -86,16 +86,16 @@ class Upgrade_230 extends XoopsUpgrade
      * Check if primary key for `block_module_link` is already set
      *
      */
-    public function check_bmlink()
+    public function check_bmlink(): bool
     {
         // MySQL 5.0+
-        //$sql = "SHOW KEYS FROM `" . $GLOBALS['xoopsDB']->prefix('block_module_link') . "` WHERE `KEY_NAME` LIKE 'PRIMARY'";
-        $sql = 'SHOW KEYS FROM `' . $GLOBALS['xoopsDB']->prefix('block_module_link') . '`';
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        //$sql = "SHOW KEYS FROM `" . $this->db->prefix('block_module_link') . "` WHERE `KEY_NAME` LIKE 'PRIMARY'";
+        $sql = 'SHOW KEYS FROM `' . $this->db->prefix('block_module_link') . '`';
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        while (false !== ($row = $GLOBALS['xoopsDB']->fetchArray($result))) {
+        while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['Key_name'] === 'PRIMARY') {
                 return true;
             }
@@ -107,7 +107,7 @@ class Upgrade_230 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_bmlink()
+    public function apply_bmlink(): bool
     {
         $tableName = 'block_module_link';
         $tableNameOld = $tableName . '_old';
@@ -135,10 +135,10 @@ class Upgrade_230 extends XoopsUpgrade
                 E_USER_ERROR,
             );
         }
-        $prefixedName = $GLOBALS['xoopsDB']->prefix('block_module_link');
+        $prefixedName = $this->db->prefix('block_module_link');
         $sql = 'INSERT INTO `' . $prefixedName . '` (`block_id`, `module_id`) ' .
             'SELECT DISTINCT `block_id`, `module_id` FROM `' . $prefixedName . '_old`';
-        $result = $GLOBALS['xoopsDB']->exec($sql);
+        $result = $this->db->exec($sql);
         if (true !== $result) {
             throw new \RuntimeException(
                 __METHOD__ . ' failed.',
@@ -152,34 +152,34 @@ class Upgrade_230 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_config()
+    public function apply_config(): bool
     {
         $result = true;
         if (!isset($GLOBALS['xoopsConfig']['cpanel'])) {
-            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 1, 'cpanel', '_MD_AM_CPANEL', 'default', '_MD_AM_CPANELDSC', 'cpanel', 'other', 11)";
+            $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 1, 'cpanel', '_MD_AM_CPANEL', 'default', '_MD_AM_CPANELDSC', 'cpanel', 'other', 11)";
 
-            $result *= $GLOBALS['xoopsDB']->exec($sql);
+            $result *= $this->db->exec($sql);
         }
 
         $welcometype_installed = false;
-        $sql                   = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` = 'welcome_type'";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if ($GLOBALS['xoopsDB']->isResultSet($result)) {
-            [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        $sql                   = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'welcome_type'";
+        $result = $this->db->query($sql);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
+            [$count] = $this->db->fetchRow($result);
             if ($count == 1) {
                 $welcometype_installed = true;
             }
         }
         if (!$welcometype_installed) {
-            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'welcome_type', '_MD_AM_WELCOMETYPE', '1', '_MD_AM_WELCOMETYPE_DESC', 'select', 'int', 3)";
+            $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'welcome_type', '_MD_AM_WELCOMETYPE', '1', '_MD_AM_WELCOMETYPE_DESC', 'select', 'int', 3)";
 
-            if (!$GLOBALS['xoopsDB']->exec($sql)) {
+            if (!$this->db->exec($sql)) {
                 return false;
             }
-            $config_id = $GLOBALS['xoopsDB']->getInsertId();
+            $config_id = $this->db->getInsertId();
 
-            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES' . " (NULL, '_NO', '0', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_EMAIL', '1', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_PM', '2', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_BOTH', '3', {$config_id})";
-            if (!$result = $GLOBALS['xoopsDB']->exec($sql)) {
+            $sql = 'INSERT INTO ' . $this->db->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES' . " (NULL, '_NO', '0', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_EMAIL', '1', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_PM', '2', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_BOTH', '3', {$config_id})";
+            if (!$result = $this->db->exec($sql)) {
                 return false;
             }
         }
@@ -187,12 +187,12 @@ class Upgrade_230 extends XoopsUpgrade
         return $result;
     }
 
-    public function apply_cache()
+    public function apply_cache(): bool
     {
-        $allowWebChanges                     = $GLOBALS['xoopsDB']->allowWebChanges;
-        $GLOBALS['xoopsDB']->allowWebChanges = true;
-        $result                              = $GLOBALS['xoopsDB']->queryFromFile(__DIR__ . '/mysql.structure.sql');
-        $GLOBALS['xoopsDB']->allowWebChanges = $allowWebChanges;
+        $allowWebChanges                   = $this->db->allowWebChanges;
+        $this->db->allowWebChanges         = true;
+        $result                            = $this->db->queryFromFile(__DIR__ . '/mysql.structure.sql');
+        $this->db->allowWebChanges         = $allowWebChanges;
 
         return $result;
     }
@@ -200,11 +200,18 @@ class Upgrade_230 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_path()
+    public function check_path(): bool
     {
         if (!(defined('XOOPS_PATH') && defined('XOOPS_VAR_PATH') && defined('XOOPS_TRUST_PATH'))) {
             return false;
         }
+
+        if (!file_exists($this->pathControllerFile)) {
+            $this->logs[] = 'Path controller file not found: ' . $this->pathControllerFile;
+            return false;
+        }
+        require_once $this->pathControllerFile;
+
         $ctrl = new PathController();
         if (!$ctrl->checkPath()) {
             return false;
@@ -219,7 +226,7 @@ class Upgrade_230 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_path()
+    public function apply_path(): bool
     {
         return $this->update_configs('path');
     }
@@ -227,7 +234,7 @@ class Upgrade_230 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_db()
+    public function check_db(): bool
     {
         // mainfile was included to get here, just check for definition
         if (defined('XOOPS_DB_CHARSET')) {
@@ -247,7 +254,7 @@ class Upgrade_230 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_db()
+    public function apply_db(): bool
     {
         return $this->update_configs('db');
     }
@@ -280,24 +287,24 @@ class Upgrade_230 extends XoopsUpgrade
      */
     public function convert_db($charset, $collation)
     {
-        $sql = 'ALTER DATABASE `' . XOOPS_DB_NAME . '` DEFAULT CHARACTER SET ' . $GLOBALS['xoopsDB']->quote($charset) . ' COLLATE ' . $GLOBALS['xoopsDB']->quote($collation);
-        if (!$GLOBALS['xoopsDB']->exec($sql)) {
+        $sql = 'ALTER DATABASE `' . XOOPS_DB_NAME . '` DEFAULT CHARACTER SET ' . $this->db->quote($charset) . ' COLLATE ' . $this->db->quote($collation);
+        if (!$this->db->exec($sql)) {
             return false;
         }
 
         $sql = "SHOW TABLES LIKE '" . XOOPS_DB_PREFIX . "\_%'";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
         $tables = [];
-        while (false !== (list($table) = $GLOBALS['xoopsDB']->fetchRow($result))) {
+        while (false !== (list($table) = $this->db->fetchRow($result))) {
             $tables[] = $table;
-            //$GLOBALS["xoopsDB"]->exec( "ALTER TABLE `{$table}` DEFAULT CHARACTER SET " . $GLOBALS["xoopsDB"]->quote($charset) . " COLLATE " . $GLOBALS["xoopsDB"]->quote($collation) );
-            //$GLOBALS["xoopsDB"]->exec( "ALTER TABLE `{$table}` CONVERT TO CHARACTER SET " . $GLOBALS["xoopsDB"]->quote($charset) . " COLLATE " . $GLOBALS["xoopsDB"]->quote($collation) );
+            //$this->db->exec( "ALTER TABLE `{$table}` DEFAULT CHARACTER SET " . $this->db->quote($charset) . " COLLATE " . $this->db->quote($collation) );
+            //$this->db->exec( "ALTER TABLE `{$table}` CONVERT TO CHARACTER SET " . $this->db->quote($charset) . " COLLATE " . $this->db->quote($collation) );
         }
         $this->convert_table($tables, $charset, $collation);
-        return null;
+        return true;
     }
 
     // Some code not ready to use
@@ -324,14 +331,14 @@ class Upgrade_230 extends XoopsUpgrade
             foreach ((array) $tables as $table) {
                 // Analyze tables for string types columns and generate his binary and string correctness sql sentences.
                 $sql = "DESCRIBE $table";
-                $result = $GLOBALS['xoopsDB']->query($sql);
-                if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+                $result = $this->db->query($sql);
+                if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
                     throw new \RuntimeException(
-                        \sprintf(_DB_QUERY_ERROR, $sql) . $GLOBALS['xoopsDB']->error(),
+                        \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                         E_USER_ERROR,
                     );
                 }
-                while (false !== ($myrow = $GLOBALS['xoopsDB']->fetchArray($result))) {
+                while (false !== ($myrow = $this->db->fetchArray($result))) {
                     if (preg_match('/(char)|(text)|(enum)|(set)/', $myrow['Type'])) {
                         // String Type SQL Sentence.
                         $string_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . " CHARACTER SET $charset COLLATE $collation " . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
@@ -350,14 +357,14 @@ class Upgrade_230 extends XoopsUpgrade
                 // Analyze table indexes for any FULLTEXT-Type of index in the table.
                 $fulltext_indexes = [];
                 $sql         = "SHOW INDEX FROM `$table`";
-                $result = $GLOBALS['xoopsDB']->query($sql);
-                if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+                $result = $this->db->query($sql);
+                if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
                     throw new \RuntimeException(
-                        \sprintf(_DB_QUERY_ERROR, $sql) . $GLOBALS['xoopsDB']->error(),
+                        \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                         E_USER_ERROR,
                     );
                 }
-                while (false !== ($myrow = $GLOBALS['xoopsDB']->fetchArray($result))) {
+                while (false !== ($myrow = $this->db->fetchArray($result))) {
                     if (preg_match('/FULLTEXT/', $myrow['Index_type'])) {
                         $fulltext_indexes[$myrow['Key_name']][$myrow['Column_name']] = 1;
                     }
@@ -389,7 +396,7 @@ class Upgrade_230 extends XoopsUpgrade
         $final_querys = array_merge((array) $drop_index_querys, (array) $binary_querys, (array) $tables_querys, (array) $string_querys, (array) $gen_index_querys, (array) $optimize_querys);
 
         foreach ($final_querys as $sql) {
-            $GLOBALS['xoopsDB']->exec($sql);
+            $this->db->exec($sql);
         }
 
         // Time to return.
@@ -461,5 +468,4 @@ class Upgrade_230 extends XoopsUpgrade
     }
 }
 
-$upg = new Upgrade_230();
-return $upg;
+return Upgrade_230::class;

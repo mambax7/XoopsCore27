@@ -13,6 +13,10 @@
  * @author           Taiwen Jiang <phppp@users.sourceforge.net>
  * @author           trabis <lusopoemas@gmail.com>
  */
+
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
+
 class Upgrade_255 extends XoopsUpgrade
 {
     /**
@@ -20,19 +24,19 @@ class Upgrade_255 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_keys()
+    public function check_keys(): bool
     {
         $tables['groups_users_link'] = ['uid'];
 
         foreach ($tables as $table => $keys) {
-            $sql = 'SHOW KEYS FROM `' . $GLOBALS['xoopsDB']->prefix($table) . '`';
-            $result = $GLOBALS['xoopsDB']->query($sql);
-            if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
-                $this->logs[] = sprintf('check_keys: SHOW KEYS failed for table %s: %s', $table, $GLOBALS['xoopsDB']->error());
+            $sql = 'SHOW KEYS FROM `' . $this->db->prefix($table) . '`';
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = sprintf('check_keys: SHOW KEYS failed for table %s: %s', $table, $this->db->error());
                 return false;
             }
             $existing_keys = [];
-            while (false !== ($row = $GLOBALS['xoopsDB']->fetchArray($result))) {
+            while (false !== ($row = $this->db->fetchArray($result))) {
                 $existing_keys[] = $row['Key_name'];
             }
             foreach ($keys as $key) {
@@ -50,25 +54,27 @@ class Upgrade_255 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_keys()
+    public function apply_keys(): bool
     {
         $tables['groups_users_link'] = ['uid'];
 
         foreach ($tables as $table => $keys) {
-            $sql = 'SHOW KEYS FROM `' . $GLOBALS['xoopsDB']->prefix($table) . '`';
-            $result = $GLOBALS['xoopsDB']->query($sql);
-            if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
-                $this->logs[] = sprintf('apply_keys: SHOW KEYS failed for table %s: %s', $table, $GLOBALS['xoopsDB']->error());
+            $sql = 'SHOW KEYS FROM `' . $this->db->prefix($table) . '`';
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = sprintf('apply_keys: SHOW KEYS failed for table %s: %s', $table, $this->db->error());
                 return false;
             }
             $existing_keys = [];
-            while (false !== ($row = $GLOBALS['xoopsDB']->fetchArray($result))) {
+            while (false !== ($row = $this->db->fetchArray($result))) {
                 $existing_keys[] = $row['Key_name'];
             }
             foreach ($keys as $key) {
                 if (!in_array($key, $existing_keys)) {
-                    $sql = 'ALTER TABLE `' . $GLOBALS['xoopsDB']->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
-                    if (!$result = $GLOBALS['xoopsDB']->exec($sql)) {
+                    $sql = 'ALTER TABLE `' . $this->db->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
+                    if (!$this->db->exec($sql)) {
+                        $this->logs[] = sprintf('apply_keys: ALTER TABLE failed for key %s on %s: %s', $key, $table, $this->db->error());
+
                         return false;
                     }
                 }
@@ -83,16 +89,24 @@ class Upgrade_255 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_imptotal()
+    public function check_imptotal(): bool
     {
-        $sql = 'SELECT `imptotal` FROM `' . $GLOBALS['xoopsDB']->prefix('banner') . '` WHERE `bid` = 1';
-        if ($result = $GLOBALS['xoopsDB']->query($sql)) {
-            $fieldInfo = mysqli_fetch_field_direct($result, 0);
-            $length = $fieldInfo->length;
+        $sql    = 'SELECT `imptotal` FROM `' . $this->db->prefix('banner') . '` WHERE `bid` = 1';
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logs[] = 'check_imptotal: query failed: ' . $this->db->error();
 
-            return ($length != 8);
+            return false;
         }
-        return null;
+
+        $fieldInfo = mysqli_fetch_field_direct($result, 0);
+        if (false === $fieldInfo) {
+            $this->logs[] = 'check_imptotal: unable to read imptotal column metadata';
+
+            return false;
+        }
+
+        return ($fieldInfo->length != 8);
     }
 
     /**
@@ -100,22 +114,27 @@ class Upgrade_255 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_imptotal()
+    public function apply_imptotal(): bool
     {
-        $sql = 'ALTER TABLE `' . $GLOBALS['xoopsDB']->prefix('banner') . "` CHANGE `imptotal` `imptotal` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0'";
-        if (!$GLOBALS['xoopsDB']->exec($sql)) {
+        $sql = 'ALTER TABLE `' . $this->db->prefix('banner') . "` CHANGE `imptotal` `imptotal` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0'";
+        if (!$this->db->exec($sql)) {
+            $this->logs[] = 'apply_imptotal: ALTER TABLE failed: ' . $this->db->error();
+
             return false;
         }
 
         return true;
     }
 
-    public function __construct()
+    /**
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
+     */
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['keys', 'imptotal'];
     }
 }
 
-$upg = new Upgrade_255();
-return $upg;
+return Upgrade_255::class;

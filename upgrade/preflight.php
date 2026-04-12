@@ -1,23 +1,24 @@
 <?php
-/**
- * Upgrade Smarty 3 Migration
- *
- * You may not change or alter any portion of this comment or credits
- * of supporting developers from this source code or any supporting source code
- * which is considered copyrighted (c) material of the original comment or credit authors.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * @copyright       (c) 2000-2026 XOOPS Project (https://xoops.org)
- * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package             upgrader
- * @since               2.3.0
- * @author              Skalpa Keo <skalpa@xoops.org>
- * @author              Taiwen Jiang <phppp@users.sourceforge.net>
- */
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
 
-/** @var XoopsUser $xoopsUser */
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
+
+/**
+ * XOOPS Upgrade Pre-flight checks (Smarty migration).
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.3.0
+ * @author    Skalpa Keo <skalpa@xoops.org>
+ * @author    Taiwen Jiang <phppp@users.sourceforge.net>
+ * @author    XOOPS Development Team
+ */
 
 use Xoops\Upgrade\ScannerOutput;
 use Xoops\Upgrade\ScannerProcess;
@@ -26,25 +27,9 @@ use Xoops\Upgrade\Smarty4ScannerOutput;
 use Xoops\Upgrade\Smarty4TemplateChecks;
 use Xoops\Upgrade\Smarty4TemplateRepair;
 use Xoops\Upgrade\Smarty4RepairOutput;
+use Xoops\Upgrade\UpgradeControl;
 
-function fatalPhpErrorHandler($e = null)
-{
-    $messageFormat = '<br><div>Fatal %s %s file: %s : %d </div>';
-    $exceptionClass = '\Exception';
-    $throwableClass = '\Throwable';
-    if ($e === null) {
-        $lastError = error_get_last();
-        if (null !== $lastError && $lastError['type'] === E_ERROR) {
-            // fatal error
-            printf($messageFormat, 'Error', $lastError['message'], $lastError['file'], $lastError['line']);
-        }
-    } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
-        /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
-    }
-}
-register_shutdown_function('fatalPhpErrorHandler');
-set_exception_handler('fatalPhpErrorHandler');
+require_once __DIR__ . '/class/fatal_error_handler.php';
 
 /*
  * Before xoops 2.5.8 the table 'sess_ip' was of type varchar (15). This is a problem for IPv6
@@ -81,33 +66,28 @@ $xoopsLogger->enableRendering();
 xoops_loadLanguage('logger');
 set_exception_handler('fatalPhpErrorHandler'); // should have been changed by now, reset to ours
 
-require __DIR__ . '/class/Xoops/Upgrade/ScannerOutput.php';
-require __DIR__ . '/class/Xoops/Upgrade/ScannerProcess.php';
-require __DIR__ . '/class/Xoops/Upgrade/ScannerWalker.php';
-require __DIR__ . '/class/Xoops/Upgrade/Smarty4ScannerOutput.php';
-require __DIR__ . '/class/Xoops/Upgrade/Smarty4TemplateChecks.php';
-require __DIR__ . '/class/Xoops/Upgrade/Smarty4TemplateRepair.php';
-require __DIR__ . '/class/Xoops/Upgrade/Smarty4RepairOutput.php';
+require_once __DIR__ . '/class/autoload.php';
 
-require __DIR__ . '/class/abstract.php';
-require __DIR__ . '/class/patchstatus.php';
-require __DIR__ . '/class/control.php';
-
-$GLOBALS['error'] = false;
-$GLOBALS['upgradeControl'] = new UpgradeControl();
+$error = false;
+$upgradeControl = new UpgradeControl($GLOBALS['xoopsDB']);
 
 $upgradeControl->determineLanguage();
 
-if (file_exists(__DIR__ . "../language/{$upgradeControl->upgradeLanguage}/user.php")) {
-    include_once __DIR__ . "../language/{$upgradeControl->upgradeLanguage}/user.php";
+$languageRoot = realpath(__DIR__ . '/language');
+$language = $upgradeControl->normalizeLanguage($upgradeControl->upgradeLanguage);
+$userFile = false !== $languageRoot
+    ? realpath($languageRoot . DIRECTORY_SEPARATOR . $language . DIRECTORY_SEPARATOR . 'user.php')
+    : false;
+if (
+    false !== $languageRoot
+    && false !== $userFile
+    && str_starts_with($userFile, $languageRoot . DIRECTORY_SEPARATOR)
+) {
+    include_once $userFile;
 } else {
     include_once XOOPS_ROOT_PATH . "/language/english/user.php";
 }
-if (file_exists(__DIR__ . "/language/{$upgradeControl->upgradeLanguage}/smarty4.php")) {
-    include_once __DIR__ . "/language/{$upgradeControl->upgradeLanguage}/smarty4.php";
-} else {
-    include_once __DIR__ . "/language/english/smarty4.php";
-}
+$upgradeControl->loadLanguage('smarty4');
 
 /**
  * User options form for preflight
@@ -206,5 +186,23 @@ $content = ob_get_contents();
 ob_end_clean();
 
 //echo $content;
+
+$allSupportSites = [];
+foreach ($upgradeControl->availableLanguages() as $lang) {
+    $upgradeControl->supportSites = [];
+    $upgradeControl->loadLanguage('support', $lang);
+    $allSupportSites[$lang] = $upgradeControl->supportSites;
+}
+
+$viewModel = [
+    'content'         => $content,
+    'upgradeQueue'    => [],
+    'upgradeLanguage' => $upgradeControl->upgradeLanguage,
+    'patchCount'      => 0,
+    'hasError'        => $error,
+    'preflightDone'   => false,
+    'languages'       => $upgradeControl->availableLanguages(),
+    'supportSites'    => $allSupportSites,
+];
 
 include_once __DIR__ . '/upgrade_tpl.php';

@@ -1,7 +1,29 @@
 <?php
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
+
+/**
+ * Login handler for the XOOPS upgrade wizard.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.7.0
+ * @author    XOOPS Development Team
+ */
+
 defined('XOOPS_ROOT_PATH') or exit();
 
-if (empty($_POST['uname']) || empty($_POST['pass'])) {
+$uname = \Xmf\Request::getString('uname', '', 'POST');
+$pass  = \Xmf\Request::getString('pass', '', 'POST');
+
+if ('' === $uname || '' === $pass) {
     ?>
     <h2><?php echo _USER_LOGIN; ?></h2>
 
@@ -24,14 +46,20 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
     </form>
     <?php
 } else {
-    $myts  = \MyTextSanitizer::getInstance();
-    $uname = !isset($_POST['uname']) ? '' : $myts->addSlashes(trim($_POST['uname']));
-    $pass  = !isset($_POST['pass']) ? '' : $myts->addSlashes(trim($_POST['pass']));
-
     $member_handler = xoops_getHandler('member');
 
     include_once XOOPS_ROOT_PATH . '/class/auth/authfactory.php';
-    if (!@include_once XOOPS_ROOT_PATH . '/language/' . $upgrade_language . '/auth.php') {
+    $language = isset($upgradeControl) && $upgradeControl instanceof \Xoops\Upgrade\UpgradeControl
+        ? $upgradeControl->normalizeLanguage($upgradeControl->upgradeLanguage)
+        : 'english';
+    $languageRoot = realpath(XOOPS_ROOT_PATH . '/language');
+    $authFile = false !== $languageRoot
+        ? realpath($languageRoot . DIRECTORY_SEPARATOR . $language . DIRECTORY_SEPARATOR . 'auth.php')
+        : false;
+
+    if (false !== $languageRoot && false !== $authFile && str_starts_with($authFile, $languageRoot . DIRECTORY_SEPARATOR)) {
+        include_once $authFile;
+    } else {
         include_once XOOPS_ROOT_PATH . '/language/english/auth.php';
     }
     $xoopsAuth = XoopsAuthFactory::getAuthConnection($uname);
@@ -43,7 +71,7 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
             $criteria = new CriteriaCompo(new Criteria('loginname', $uname));
             $criteria->add(new Criteria('pass', md5($pass)));
             [$user] = $member_handler->getUsers($criteria);
-        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
             $user = false;
         }
     }
@@ -63,6 +91,16 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
     if ($isAllowed) {
         $user->setVar('last_login', time());
         if (!$member_handler->insertUser($user)) {
+            $errors = method_exists($user, 'getErrors') ? $user->getErrors() : [];
+            $errorText = is_array($errors) ? implode('; ', $errors) : (string) $errors;
+            trigger_error(
+                sprintf(
+                    'insertUser failed for uid %d during upgrade login%s',
+                    (int) $user->getVar('uid'),
+                    '' !== $errorText ? ': ' . $errorText : ''
+                ),
+                E_USER_WARNING
+            );
         }
         // Regenerate a new session id and destroy old session
         $GLOBALS['sess_handler']->regenerate_id(true);

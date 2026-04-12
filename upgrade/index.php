@@ -1,41 +1,26 @@
 <?php
-/**
- * Upgrader index file
- *
- * You may not change or alter any portion of this comment or credits
- * of supporting developers from this source code or any supporting source code
- * which is considered copyrighted (c) material of the original comment or credit authors.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * @copyright       (c) 2000-2026 XOOPS Project (https://xoops.org)
- * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package             upgrader
- * @since               2.3.0
- * @author              Skalpa Keo <skalpa@xoops.org>
- * @author              Taiwen Jiang <phppp@users.sourceforge.net>
- */
-/** @var  XoopsUser $xoopsUser */
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
 
-function fatalPhpErrorHandler($e = null)
-{
-    $messageFormat = '<br><div>Fatal %s %s file: %s : %d </div>';
-    $exceptionClass = '\Exception';
-    $throwableClass = '\Throwable';
-    if ($e === null) {
-        $lastError = error_get_last();
-        if ($lastError['type'] === E_ERROR) {
-            // fatal error
-            printf($messageFormat, 'Error', $lastError['message'], $lastError['file'], $lastError['line']);
-        }
-    } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
-        /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
-    }
-}
-register_shutdown_function('fatalPhpErrorHandler');
-set_exception_handler('fatalPhpErrorHandler');
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
+
+/**
+ * XOOPS Upgrade wizard.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.3.0
+ * @author    Skalpa Keo <skalpa@xoops.org>
+ * @author    Taiwen Jiang <phppp@users.sourceforge.net>
+ * @author    XOOPS Development Team
+ */
+
+require_once __DIR__ . '/class/fatal_error_handler.php';
 
 /*
  * Before xoops 2.5.8 the table 'sess_ip' was of type varchar (15). This is a problem for IPv6
@@ -70,28 +55,32 @@ $xoopsLogger->enableRendering();
 xoops_loadLanguage('logger');
 set_exception_handler('fatalPhpErrorHandler'); // should have been changed by now, reset to ours
 
-require __DIR__ . '/class/abstract.php';
-require __DIR__ . '/class/patchstatus.php';
-require __DIR__ . '/class/control.php';
+require_once __DIR__ . '/class/autoload.php';
 
-$GLOBALS['error'] = false;
-$GLOBALS['upgradeControl'] = new UpgradeControl();
+$error = false;
+$upgradeControl = new \Xoops\Upgrade\UpgradeControl($GLOBALS['xoopsDB']);
 
-if (file_exists(__DIR__ . "../language/{$upgradeControl->upgradeLanguage}/user.php")) {
-    include_once __DIR__ . "../language/{$upgradeControl->upgradeLanguage}/user.php";
+// Determine language FIRST (loads 'upgrade' language internally)
+$upgradeControl->determineLanguage();
+
+// Then load additional language files
+$languageRoot = realpath(__DIR__ . '/language');
+$language = $upgradeControl->normalizeLanguage($upgradeControl->upgradeLanguage);
+$userFile = false !== $languageRoot
+    ? realpath($languageRoot . DIRECTORY_SEPARATOR . $language . DIRECTORY_SEPARATOR . 'user.php')
+    : false;
+if (
+    false !== $languageRoot
+    && false !== $userFile
+    && str_starts_with($userFile, $languageRoot . DIRECTORY_SEPARATOR)
+) {
+    include_once $userFile;
 } else {
     include_once XOOPS_ROOT_PATH . '/language/english/user.php';
 }
-
-if (file_exists(__DIR__ . "/language/{$upgradeControl->upgradeLanguage}/smarty4.php")) {
-    include_once __DIR__ . "/language/{$upgradeControl->upgradeLanguage}/smarty4.php";
-} else {
-    include_once __DIR__ . "/language/english/smarty4.php";
-}
-
+$upgradeControl->loadLanguage('smarty4');
 
 $upgradeControl->storeMainfileCheck($needMainfileRewrite, $mainfileKeys);
-$upgradeControl->determineLanguage();
 $upgradeControl->buildUpgradeQueue();
 
 ob_start();
@@ -113,15 +102,14 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
                 . '<div class="panel-body"><ul class="fa-ul">';
             foreach ($upgradeControl->needWriteFiles as $file) {
                 echo '<li><i class="fa-li fa-solid fa-ban text-danger"></i>' . $file . '</li>';
-                $GLOBALS['error'] = true;
+                $error = true;
             }
             echo '</ul></div></div>';
         } else {
             $next = $upgradeControl->getNextPatch();
             printf('<h2>' . _PERFORMING_UPGRADE . '</h2>', $next);
             /** @var XoopsUpgrade $upgrader */
-            $upgradeClass = $upgradeControl->upgradeQueue[$next]->patchClass;
-            $upgrader = new $upgradeClass();
+            $upgrader = $upgradeControl->upgradeQueue[$next]->getPatch();
             $res = $upgrader->apply();
             if ($message = $upgrader->message()) {
                 echo '<div class="well">' . $message . '</div>';
@@ -129,6 +117,8 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
 
             if ($res) {
                 $upgradeControl->upgradeQueue[$next]->applied = true;
+            } else {
+                $error = true;
             }
         }
     }
@@ -143,5 +133,24 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
 }
 $content = ob_get_contents();
 ob_end_clean();
+
+// Pre-compute support data for all languages
+$allSupportSites = [];
+foreach ($upgradeControl->availableLanguages() as $lang) {
+    $upgradeControl->supportSites = [];
+    $upgradeControl->loadLanguage('support', $lang);
+    $allSupportSites[$lang] = $upgradeControl->supportSites;
+}
+
+$viewModel = [
+    'content'         => $content,
+    'upgradeQueue'    => $upgradeControl->upgradeQueue,
+    'upgradeLanguage' => $upgradeControl->upgradeLanguage,
+    'patchCount'      => $upgradeControl->countUpgradeQueue(),
+    'hasError'        => $error,
+    'preflightDone'   => ($_SESSION['preflight'] ?? '') === 'complete',
+    'languages'       => $upgradeControl->availableLanguages(),
+    'supportSites'    => $allSupportSites,
+];
 
 include_once __DIR__ . '/upgrade_tpl.php';

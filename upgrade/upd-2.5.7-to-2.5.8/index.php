@@ -3,6 +3,8 @@
 use Xmf\Database\Tables;
 use Xmf\Key\Basic;
 use Xmf\Key\FileStorage;
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
 
 /**
  * Upgrade from 2.5.7 to 2.5.8
@@ -22,10 +24,13 @@ class Upgrade_258 extends XoopsUpgrade
      * __construct
      *
      * make sure we have XMF active
+     *
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
      */
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = [
             'users_pass',
             'com_ip',
@@ -42,26 +47,23 @@ class Upgrade_258 extends XoopsUpgrade
      *
      * @return int column length or zero on error
      */
-    private function getColumnLength($table, $column)
+    private function getColumnLength(string $table, string $column): int
     {
-        /** @var XoopsMySQLDatabase $db */
-        $db = XoopsDatabaseFactory::getDatabaseConnection();
-
         $dbname = constant('XOOPS_DB_NAME');
-        $table = $db->prefix($table);
+        $table = $this->db->prefix($table);
 
         $sql = sprintf(
             'SELECT `CHARACTER_MAXIMUM_LENGTH` FROM `information_schema`.`COLUMNS` '
             . "WHERE TABLE_SCHEMA = '%s'AND TABLE_NAME = '%s' AND COLUMN_NAME = '%s'",
-            $db->escape($dbname),
-            $db->escape($table),
-            $db->escape($column),
+            $this->db->escape($dbname),
+            $this->db->escape($table),
+            $this->db->escape($column),
         );
 
         /** @var mysqli_result $result */
-        $result = $db->query($sql);
-        if ($db->isResultSet($result)) {
-            $row = $db->fetchRow($result);
+        $result = $this->db->query($sql);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
+            $row = $this->db->fetchRow($result);
             if ($row) {
                 $columnLength = $row[0];
                 return (int) $columnLength;
@@ -75,7 +77,7 @@ class Upgrade_258 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_users_pass()
+    public function check_users_pass(): bool
     {
         return (bool) ($this->getColumnLength('users', 'pass') >= 255);
     }
@@ -83,7 +85,7 @@ class Upgrade_258 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_users_pass()
+    public function apply_users_pass(): bool
     {
         $migrate = new Tables();
         $migrate->useTable('users');
@@ -104,7 +106,7 @@ class Upgrade_258 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_com_ip()
+    public function check_com_ip(): bool
     {
         return (bool) ($this->getColumnLength('xoopscomments', 'com_ip') >= 45);
     }
@@ -112,7 +114,7 @@ class Upgrade_258 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_com_ip()
+    public function apply_com_ip(): bool
     {
         $migrate = new Tables();
         $migrate->useTable('xoopscomments');
@@ -125,7 +127,7 @@ class Upgrade_258 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_sess_ip()
+    public function check_sess_ip(): bool
     {
         return (bool) ($this->getColumnLength('session', 'sess_ip') >= 45);
     }
@@ -133,7 +135,7 @@ class Upgrade_258 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_sess_ip()
+    public function apply_sess_ip(): bool
     {
         $migrate = new Tables();
         $migrate->useTable('session');
@@ -146,7 +148,7 @@ class Upgrade_258 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_online_ip()
+    public function check_online_ip(): bool
     {
         return (bool) ($this->getColumnLength('online', 'online_ip') >= 45);
     }
@@ -154,7 +156,7 @@ class Upgrade_258 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_online_ip()
+    public function apply_online_ip(): bool
     {
         $migrate = new Tables();
         $migrate->useTable('online');
@@ -163,5 +165,4 @@ class Upgrade_258 extends XoopsUpgrade
     }
 }
 
-$upg = new Upgrade_258();
-return $upg;
+return Upgrade_258::class;

@@ -9,6 +9,9 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
+
 /**
  * Upgrader from 2.3.3 to 2.4.0
  *
@@ -27,34 +30,37 @@ class Upgrade_240 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_version()
+    public function check_version(): bool
     {
-        if (defined('XOOPS_LICENSE_KEY')) {
-            return true; // skip setup if license.php was included
-        }
-        if (defined('XOOPS_LICENSE_KEY') == false) {
+        if (!defined('XOOPS_LICENSE_KEY')) {
             return false;
-        } elseif (XOOPS_LICENSE_KEY == '000000-000000-000000-000000-000000') {
-            return false;
-        } else {
-            return true;
         }
+
+        $licenseKey = trim((string) constant('XOOPS_LICENSE_KEY'));
+
+        return '' !== $licenseKey && '000000-000000-000000-000000-000000' !== $licenseKey;
     }
 
     /**
      * @return bool|string
      */
-    public function apply_version()
+    public function apply_version(): bool|string
     {
         set_time_limit(120);
-        chmod('../include/license.php', 0777);
-        if (!is_writable('../include/license.php')) {
-            echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php - is not writeable</span> - Windows Read Only (Off) / UNIX chmod 0777</p>";
+        $licenseFile = XOOPS_ROOT_PATH . '/include/license.php';
+        $licenseDir  = dirname($licenseFile);
+        if (!is_writable($licenseFile) || !is_writable($licenseDir)) {
+            echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php and its parent directory must be writable by the web server.</span></p>";
 
             return false;
         }
 
-        return @$this->xoops_putLicenseKey($this->xoops_buildLicenceKey(), XOOPS_ROOT_PATH . '/include/license.php', __DIR__ . '/license.dist.php');
+        $result = $this->xoops_putLicenseKey($this->xoops_buildLicenceKey(), $licenseFile, __DIR__ . '/license.dist.php');
+        if (false === $result) {
+            $this->logs[] = 'License key write failed';
+            return false;
+        }
+        return (bool) $result;
     }
 
     /**
@@ -63,18 +69,48 @@ class Upgrade_240 extends XoopsUpgrade
      */
     public function xoops_putLicenseKey($system_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        chmod($licensefile, 0777);
-        $fver     = fopen($licensefile, 'w');
         $fver_buf = file($license_file_dist);
+        if (false === $fver_buf) {
+            return false;
+        }
+
+        $content = '';
         foreach ($fver_buf as $line => $value) {
             if (strpos($value, 'XOOPS_LICENSE_KEY') > 0) {
-                $ret = 'define(\'XOOPS_LICENSE_KEY\', \'' . $system_key . "');";
+                $content .= 'define(\'XOOPS_LICENSE_KEY\', \'' . $system_key . "');";
             } else {
-                $ret = $value;
+                $content .= $value;
             }
-            fwrite($fver, $ret, strlen($ret));
         }
+
+        $tmpFile = tempnam(dirname($licensefile), 'tmp_license_');
+        if (false === $tmpFile) {
+            return false;
+        }
+
+        $fver = fopen($tmpFile, 'wb');
+        if (false === $fver) {
+            @unlink($tmpFile);
+
+            return false;
+        }
+
+        $written = fwrite($fver, $content);
+        if ($written !== strlen($content)) {
+            fclose($fver);
+            @unlink($tmpFile);
+
+            return false;
+        }
+        fflush($fver);
         fclose($fver);
+
+        if (!@rename($tmpFile, $licensefile)) {
+            @unlink($tmpFile);
+
+            return false;
+        }
+
         chmod($licensefile, 0444);
 
         return 'Written License Key: ' . $system_key;
@@ -117,6 +153,7 @@ class Upgrade_240 extends XoopsUpgrade
             $xoops_serdat[$key] = substr($func(serialize($data)), 0, 4);
         }
 
+        $xoops_key = '';
         foreach ($xoops_serdat as $key => $data) {
             $xoops_key .= $data;
         }
@@ -138,6 +175,7 @@ class Upgrade_240 extends XoopsUpgrade
         $num    = 6;
         $length = 30;
         $strip  = floor(strlen($xoops_key) / 6);
+        $ret = '';
         for ($i = 0; $i < strlen($xoops_key); ++$i) {
             if ($i < $length) {
                 ++$uu;
@@ -168,7 +206,7 @@ class Upgrade_240 extends XoopsUpgrade
      * Check if keys already exist
      *
      */
-    public function check_keys()
+    public function check_keys(): bool
     {
         $tables['modules']       = ['isactive', 'weight', 'hascomments'];
         $tables['users']         = ['level'];
@@ -177,13 +215,15 @@ class Upgrade_240 extends XoopsUpgrade
         $tables['xoopscomments'] = ['com_status'];
 
         foreach ($tables as $table => $keys) {
-            $sql = 'SHOW KEYS FROM `' . $GLOBALS['xoopsDB']->prefix($table) . '`';
-            $result = $GLOBALS['xoopsDB']->query($sql);
-            if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
-                continue;
+            $sql = 'SHOW KEYS FROM `' . $this->db->prefix($table) . '`';
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+                return false;
             }
             $existing_keys = [];
-            while (false !== ($row = $GLOBALS['xoopsDB']->fetchArray($result))) {
+            while (false !== ($row = $this->db->fetchArray($result))) {
                 $existing_keys[] = $row['Key_name'];
             }
             foreach ($keys as $key) {
@@ -200,7 +240,7 @@ class Upgrade_240 extends XoopsUpgrade
      * Apply keys that are missing
      *
      */
-    public function apply_keys()
+    public function apply_keys(): bool
     {
         $tables['modules']       = ['isactive', 'weight', 'hascomments'];
         $tables['users']         = ['level'];
@@ -209,19 +249,23 @@ class Upgrade_240 extends XoopsUpgrade
         $tables['xoopscomments'] = ['com_status'];
 
         foreach ($tables as $table => $keys) {
-            $sql = 'SHOW KEYS FROM `' . $GLOBALS['xoopsDB']->prefix($table) . '`';
-            $result = $GLOBALS['xoopsDB']->query($sql);
-            if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
-                continue;
+            $sql = 'SHOW KEYS FROM `' . $this->db->prefix($table) . '`';
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+                return false;
             }
             $existing_keys = [];
-            while (false !== ($row = $GLOBALS['xoopsDB']->fetchArray($result))) {
+            while (false !== ($row = $this->db->fetchArray($result))) {
                 $existing_keys[] = $row['Key_name'];
             }
             foreach ($keys as $key) {
                 if (!in_array($key, $existing_keys)) {
-                    $sql = 'ALTER TABLE `' . $GLOBALS['xoopsDB']->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
-                    if (!$result = $GLOBALS['xoopsDB']->exec($sql)) {
+                    $sql = 'ALTER TABLE `' . $this->db->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
+                    if (!$result = $this->db->exec($sql)) {
+                        $this->logs[] = sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
                         return false;
                     }
                 }
@@ -231,12 +275,11 @@ class Upgrade_240 extends XoopsUpgrade
         return true;
     }
 
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['keys', 'version'];
     }
 }
 
-$upg = new Upgrade_240();
-return $upg;
+return Upgrade_240::class;

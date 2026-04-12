@@ -1,6 +1,8 @@
 <?php
 
 use Xmf\Database\Tables;
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
 
 /**
  * Upgrade from 2.5.9 to 2.5.10
@@ -18,10 +20,13 @@ class Upgrade_2510 extends XoopsUpgrade
 {
     /**
      * __construct
+     *
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
      */
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['metarobots', 'protectordata'];
         $this->usedFiles = [];
     }
@@ -31,23 +36,20 @@ class Upgrade_2510 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_metarobots()
+    public function check_metarobots(): bool
     {
-        /** @var XoopsMySQLDatabase $db */
-        $db = XoopsDatabaseFactory::getDatabaseConnection();
-
-        $table = $db->prefix('config');
+        $table = $this->db->prefix('config');
 
         $sql = sprintf(
             'SELECT count(*) FROM `%s` '
             . "WHERE `conf_formtype` = 'select' AND `conf_name` = 'meta_robots' AND `conf_modid` = 0",
-            $db->escape($table),
+            $this->db->escape($table),
         );
 
         /** @var mysqli_result $result */
-        $result = $db->query($sql);
-        if ($db->isResultSet($result)) {
-            $row = $db->fetchRow($result);
+        $result = $this->db->query($sql);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
+            $row = $this->db->fetchRow($result);
             if ($row) {
                 $count = $row[0];
                 return (0 === (int) $count) ? true : false;
@@ -64,7 +66,7 @@ class Upgrade_2510 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_metarobots()
+    public function apply_metarobots(): bool
     {
         // UPDATE `x569_config` SET `conf_formtype` = 'textbox' WHERE `conf_name` = 'meta_robots' and `conf_modid` = 0
 
@@ -79,7 +81,7 @@ class Upgrade_2510 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_protectordata()
+    public function check_protectordata(): bool
     {
         $destinationPath = XOOPS_VAR_PATH . '/protector/';
         return file_exists($destinationPath);
@@ -90,7 +92,7 @@ class Upgrade_2510 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_protectordata()
+    public function apply_protectordata(): bool
     {
         $returnResult = false;
         $sourcePath = XOOPS_PATH . '/modules/protector/configs/';
@@ -119,5 +121,4 @@ class Upgrade_2510 extends XoopsUpgrade
     }
 }
 
-$upg = new Upgrade_2510();
-return $upg;
+return Upgrade_2510::class;

@@ -1,7 +1,6 @@
 <?php
 defined('XOOPS_ROOT_PATH') or die();
 
-global $upgradeControl;
 
 ?><body>
 <!doctype html>
@@ -36,9 +35,9 @@ global $upgradeControl;
     }
 ?>
     <?php
-if (file_exists('language/' . $upgradeControl->upgradeLanguage . '/style.css')) {
+if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
     echo '<link rel="stylesheet" type="text/css" media="all" href="language/'
-        . $upgradeControl->upgradeLanguage . '/style.css" />';
+        . htmlspecialchars((string) $viewModel['upgradeLanguage'], ENT_QUOTES, 'UTF-8') . '/style.css" />';
 }
 ?>
 
@@ -65,10 +64,10 @@ if (file_exists('language/' . $upgradeControl->upgradeLanguage . '/style.css')) 
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown" title="<?php echo _LANGUAGE; ?>"><i class="fa-solid fa-lg fa-language"></i> <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                     <?php
-                $languages = $upgradeControl->availableLanguages();
+                $languages = $viewModel['languages'];
 foreach ($languages as $lang) {
-    $upgradeControl->loadLanguage('support', $lang);
-    echo '<li><a href="?lang=' . $lang . '">' . $lang . '</a></li>';
+    echo '<li><a href="?lang=' . rawurlencode((string) $lang) . '">'
+        . htmlspecialchars((string) $lang, ENT_QUOTES, 'UTF-8') . '</a></li>';
 }
 ?>
                 </ul>
@@ -77,8 +76,16 @@ foreach ($languages as $lang) {
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa-solid fa-book"></i> <?php echo _SUPPORT; ?> <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                     <?php
-foreach ($upgradeControl->supportSites as $lang => $support) {
-    echo '<li><a href="' . $support['url'] . '" target="_blank">' . $support['title'] . '</a></li>';
+$allSupport = [];
+foreach ($viewModel['supportSites'] as $sites) {
+    if (is_array($sites)) {
+        $allSupport = array_merge($allSupport, $sites);
+    }
+}
+foreach ($allSupport as $support) {
+    echo '<li><a href="' . htmlspecialchars((string) $support['url'], ENT_QUOTES, 'UTF-8')
+        . '" target="_blank" rel="noopener noreferrer">'
+        . htmlspecialchars((string) $support['title'], ENT_QUOTES, 'UTF-8') . '</a></li>';
 }
 ?>
                 </ul>
@@ -92,17 +99,17 @@ foreach ($upgradeControl->supportSites as $lang => $support) {
             <ul class="nav navbar-nav side-nav">
                 <?php
                 $firstNeeded = true;
-foreach ($upgradeControl->upgradeQueue as $stepName => $info) {
+foreach ($viewModel['upgradeQueue'] as $stepName => $info) {
     if (!$info->applied && $firstNeeded) {
         echo'<li class="active"><a><span class="fa-solid fa-exclamation-triangle"></span> '
-            . $stepName . '</a></li>';
+            . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</a></li>';
         $firstNeeded = false;
     } elseif (!$info->applied) {
         echo'<li><a><span class="fa-solid fa-exclamation-triangle text-warning"></span> '
-            . $stepName . '</a></li>';
+            . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</a></li>';
     } else {
         echo'<li><a><span class="fa-solid fa-check text-success"></span> '
-            . $stepName . '</a></li>';
+            . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</a></li>';
     }
 }
 ?>
@@ -115,7 +122,7 @@ foreach ($upgradeControl->upgradeQueue as $stepName => $info) {
 
         <div class="container-fluid">
             <div class="row">
-                <?php if (!isset($_SESSION['preflight']) ||  $_SESSION['preflight'] != 'complete') { ?>
+                <?php if (!$viewModel['preflightDone']) { ?>
                 <div class="col-lg-3 col-md-6">
                     <div class="panel panel-red">
                         <div class="panel-heading">
@@ -135,7 +142,7 @@ foreach ($upgradeControl->upgradeQueue as $stepName => $info) {
                     </div>
                 </div>
                 <?php } ?>
-                <?php if (!empty($error)) { ?>
+                <?php if ($viewModel['hasError']) { ?>
                 <div class="col-lg-3 col-md-6">
                     <div class="panel panel-red">
                         <div class="panel-heading">
@@ -164,7 +171,7 @@ foreach ($upgradeControl->upgradeQueue as $stepName => $info) {
                                     <span class="fa-solid fa-gauge fa-5x"></span>
                                 </div>
                                 <div class="col-xs-9 text-right">
-                                    <div class="huge"><?php echo $upgradeControl->countUpgradeQueue(); ?></div>
+                                    <div class="huge"><?php echo $viewModel['patchCount']; ?></div>
                                     <div><?php echo _PATCH_COUNT; ?></div>
                                 </div>
                             </div>
@@ -206,7 +213,7 @@ $versionResult = preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionP
 </div-->
             <div id="wizard" class="row">
 
-                <?php echo $content; ?>
+                <?php echo $viewModel['content']; ?>
 
             </div>
         <!-- /.container-fluid -->
