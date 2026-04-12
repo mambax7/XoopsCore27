@@ -7,7 +7,7 @@
 [![Quality Score](https://img.shields.io/scrutinizer/g/XOOPS/XoopsCore27.svg?style=flat)](https://scrutinizer-ci.com/g/XOOPS/XoopsCore27)
 [![Latest Version](https://img.shields.io/github/release/XOOPS/XoopsCore27.svg?style=flat)](https://github.com/XOOPS/XoopsCore27/releases)
 
-> **Note:** This repository contains the core code of the XOOPS Core 2.7.x. Our next generation is currently under development on [GitHub](https://github.com/XOOPS/XoopsCore).
+> **Note:** This repository contains the core code of the XOOPS Core 2.7.x. Our next generation is currently under development [See more info here](https://xoops.org/modules/publisher/item.php?itemid=6108).
 
 To install this version of XOOPS 2.7.x follow the instructions in [The XOOPS Install & Upgrade Guide](https://xoops.gitbook.io/xoops-install-upgrade/)
 
