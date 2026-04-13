@@ -37,10 +37,7 @@ phpstan9.neon export-ignore
 qodana.yaml export-ignore
 renovate.json export-ignore
 sonar-project.properties export-ignore
-constants.php export-ignore
 phpinsights.txt export-ignore
-CHANGELOG.md export-ignore
 CLAUDE.md export-ignore
 CONTRIBUTING.md export-ignore
 SECURITY.md export-ignore
-release_notes.txt export-ignore
