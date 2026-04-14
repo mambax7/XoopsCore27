@@ -36,178 +36,48 @@ $pageHasHelp = true;
 
 $pathController = new PathController($wizard->configs['xoopsPathDefault'], $wizard->configs['dataPath']);
 
-//if ($_SERVER['REQUEST_METHOD'] === 'GET' && @$_GET['var'] && Xmf\Request::getString('action', '', 'GET') === 'checkpath') {
-//    $path                   = $_GET['var'];
-//    $pathController->xoopsPath[$path] = htmlspecialchars(trim($_GET['path']), ENT_QUOTES | ENT_HTML5);
-//    echo genPathCheckHtml($path, $pathController->checkPath($path));
-//    exit();
-//}
+// Handle GET request for AJAX path checking (validation only).
+// Raw $_GET — XMF autoloader is not available until the user enters the
+// xoops_lib path on THIS page. This handler validates and returns HTML
+// status. It does not write session state. Note: checkPath('root') reads
+// version.php from the validated root path to verify XOOPS_VERSION.
+$allowedPathKeys = ['root', 'data', 'lib'];
+$rawAction      = $_GET['action'] ?? '';
+$rawPathKey     = $_GET['var'] ?? '';
+$rawNewPath     = $_GET['path'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && is_string($rawAction) && $rawAction === 'checkpath') {
+    $pathKey = is_string($rawPathKey) ? trim($rawPathKey) : '';
+    $newPath = is_string($rawNewPath) ? trim($rawNewPath) : '';
 
-// install/page_pathsettings.php
-
-/*
-
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var']) && isset($_GET['action']) && $_GET['action'] === 'checkpath') {
-    // Sanitize the input
-    $pathKey = htmlspecialchars(trim($_GET['var']), ENT_QUOTES | ENT_HTML5);
-    $newPath = htmlspecialchars(trim($_GET['path']), ENT_QUOTES | ENT_HTML5);
-
-    // Perform basic validation for the new path
-    if (!is_dir($newPath)) {
-        echo "Error: The specified path does not exist. Please verify the folder and try again.";
+    // Whitelist the path key — reject unknown values
+    if (!in_array($pathKey, $allowedPathKeys, true)) {
+        echo 'Error: Unknown path key.';
         exit();
     }
 
-    // Update the XOOPS_TRUST_PATH dynamically if it's the library path
-    if ($pathKey === 'lib') {
-        // Update session and constant
-        $_SESSION['settings']['TRUST_PATH'] = $newPath;
-
-        if (!defined('XOOPS_TRUST_PATH')) {
-            define('XOOPS_TRUST_PATH', $newPath);
-        }
-
-        if (defined('XOOPS_TRUST_PATH') && XOOPS_TRUST_PATH !== $newPath ){
-//redefine XOOPS_TRUST_PATH if it is different from $newPath, because obviously the XOOPS_TRUST_PATH has been changed
-        }
-
-        $pathController->updateXoopsTrustPath($newPath);
-
-//        if ($newPath) {
-//            try {
-//                $pathController->updateXoopsTrustPath($newPath);
-//            } catch (RuntimeException $e) {
-//                $pathController->validPath['lib'] = false;
-//                $pathController->errorMessage = $e->getMessage();
-//            }
-//        } else {
-//            $pathController->validPath['lib'] = false;
-//            $pathController->errorMessage = "Invalid XOOPS library directory. Please check the path.";
-//        }
-//
-
-
-
-
-
-        // Check for the autoloader in the new path
-        $composerAutoloader = XOOPS_TRUST_PATH . '/vendor/autoload.php';
-        echo "$composerAutoloader";
-        if (!file_exists($composerAutoloader)) {
-            echo "Error: Could not find the Composer autoloader in the specified path.";
-            exit();
-        }
-
-        // Include the autoloader
-        require_once $composerAutoloader;
+    // Normalize the path via the controller (strips traversal, trailing slashes)
+    $newPath = $pathController->sanitizePath($newPath);
+    if (false === $newPath || !is_dir($newPath)) {
+        echo 'Error: The specified path does not exist. Please verify the folder and try again.';
+        exit();
     }
 
-    // Perform the path check
+    // For the library path, verify the Composer autoloader is present and readable
+    $autoloader = $newPath . '/vendor/autoload.php';
+    if ($pathKey === 'lib' && (!is_file($autoloader) || !is_readable($autoloader))) {
+        echo 'Error: Could not find or read vendor/autoload.php in the specified library path.';
+        exit();
+    }
+
+    // Perform the path check (read-only — does not write session)
     $pathController->xoopsPath[$pathKey] = $newPath;
     echo genPathCheckHtml($pathKey, $pathController->checkPath($pathKey));
     exit();
 }
 
-*/
-
-
-// Handle GET request for path checking
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && \Xmf\Request::hasVar('var', 'GET') && \Xmf\Request::hasVar('action', 'GET') && \Xmf\Request::getCmd('action', '', 'GET') === 'checkpath') {
-    // Sanitize input
-    $pathKey = htmlspecialchars(trim(\Xmf\Request::getString('var', '', 'GET')), ENT_QUOTES | ENT_HTML5);
-    $newPath = htmlspecialchars(trim(\Xmf\Request::getString('path', '', 'GET')), ENT_QUOTES | ENT_HTML5);
-
-    // Validate directory
-    if (!is_dir($newPath)) {
-        echo "Error: The specified path does not exist. Please verify the folder and try again.";
-        exit();
-    }
-
-    if ($pathKey === 'lib') {
-        // Update session and variable
-        $_SESSION['settings']['TRUST_PATH'] = $newPath;
-        $xoopsTrustPath = $newPath;
-
-        $pathController->updateXoopsTrustPath($newPath);
-
-        // Check for Composer autoloader
-        $composerAutoloader = $xoopsTrustPath . '/vendor/autoload.php';
-        echo "$composerAutoloader";
-        if (!file_exists($composerAutoloader)) {
-            echo "Error: Could not find the Composer autoloader in the specified path.";
-            exit();
-        }
-
-        // Include the autoloader only once
-//        if (!class_exists('ComposerAutoloaderInit401aa2fe6008ca63602daf4ec1d196f2')) {
-        include_once $composerAutoloader;
-//        }
-    }
-
-    // Perform the path check
-    $pathController->xoopsPath[$pathKey] = $newPath;
-    echo genPathCheckHtml($pathKey, $pathController->checkPath($pathKey));
-    exit();
-}
-
-
+// PathController::checkPath('lib') requires vendor/autoload.php to exist.
+// execute() syncs TRUST_PATH into the session and exits after redirect.
 $pathController->execute();
-//if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-//    return null;
-//}
-
-/*
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['lib']) && $_POST['lib'] !== $pathController->xoopsPath['lib']) {
-        $newTrustPath = $pathController->sanitizePath(trim($_POST['lib']));
-
-        if ($newTrustPath) {
-            try {
-                $pathController->updateXoopsTrustPath($newTrustPath);
-            } catch (RuntimeException $e) {
-                $pathController->validPath['lib'] = false;
-                $pathController->errorMessage = $e->getMessage();
-            }
-        } else {
-            $pathController->validPath['lib'] = false;
-            $pathController->errorMessage = "Invalid XOOPS library directory. Please check the path.";
-        }
-    }
-}
-
-*/
-
-// Handle POST request for updating paths
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (\Xmf\Request::hasVar('lib', 'POST') && \Xmf\Request::getString('lib', '', 'POST') !== $pathController->xoopsPath['lib']) {
-        $newTrustPath = $pathController->sanitizePath(trim(\Xmf\Request::getString('lib', '', 'POST')));
-
-        if ($newTrustPath && is_dir($newTrustPath)) {
-            $xoopsTrustPath = $newTrustPath;
-            $_SESSION['settings']['TRUST_PATH'] = $newTrustPath;
-
-            try {
-                $pathController->updateXoopsTrustPath($newTrustPath);
-            } catch (RuntimeException $e) {
-                $pathController->validPath['lib'] = false;
-                $pathController->errorMessage = $e->getMessage();
-            }
-        } else {
-            $pathController->validPath['lib'] = false;
-            $pathController->errorMessage = "Invalid XOOPS library directory. Please check the path.";
-        }
-    }
-}
-
-// Include Composer autoloader if not already included
-//if (!class_exists('ComposerAutoloaderInit401aa2fe6008ca63602daf4ec1d196f2')) {
-//   include_once $xoopsTrustPath . '/vendor/autoload.php';
-//}
-
-
-
-
 
 ob_start();
 ?>
@@ -220,15 +90,6 @@ ob_start();
 
             return val;
         }
-
-        //function updPath(key, val) {
-        //    val = removeTrailing(key, val);
-        //    $.get( "<?php //echo $_SERVER['PHP_SELF']; ?>//", { action: "checkpath", var: key, path: val } )
-        //        .done(function( data ) {
-        //            $("#" + key + 'pathimg').html(data);
-        //        });
-        //    $("#" + key + 'perms').style.display = 'none';
-        //}
 
         function updPath(key, val) {
             // Remove trailing slashes
@@ -261,7 +122,7 @@ ob_start();
             <div class="form-group">
                 <label class="xolabel" for="root"><?php echo XOOPS_ROOT_PATH_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_ROOT_PATH_HELP; ?></div>
-                <input type="text" class="form-control" name="root" id="root" value="<?php echo $pathController->xoopsPath['root']; ?>" onchange="updPath('root', this.value)"/>
+                <input type="text" class="form-control" name="root" id="root" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['root']); ?>" onchange="updPath('root', this.value)"/>
                 <span id="rootpathimg"><?php echo genPathCheckHtml('root', $pathController->validPath['root']); ?></span>
             </div>
 
@@ -286,7 +147,7 @@ ob_start();
             <div class="form-group">
                 <label for="data"><?php echo XOOPS_DATA_PATH_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_DATA_PATH_HELP; ?></div>
-                <input type="text" class="form-control" name="data" id="data" value="<?php echo $pathController->xoopsPath['data']; ?>" onchange="updPath('data', this.value)"/>
+                <input type="text" class="form-control" name="data" id="data" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['data']); ?>" onchange="updPath('data', this.value)"/>
                 <span id="datapathimg"><?php echo genPathCheckHtml('data', $pathController->validPath['data']); ?></span>
             </div>
             <?php
@@ -310,7 +171,7 @@ ob_start();
             <div class="form-group">
                 <label class="xolabel" for="lib"><?php echo XOOPS_LIB_PATH_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_LIB_PATH_HELP; ?></div>
-                <input type="text" class="form-control" name="lib" id="lib" value="<?php echo $pathController->xoopsPath['lib']; ?>" onchange="updPath('lib', this.value)"/>
+                <input type="text" class="form-control" name="lib" id="lib" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['lib']); ?>" onchange="updPath('lib', this.value)"/>
                 <span id="libpathimg"><?php echo genPathCheckHtml('lib', $pathController->validPath['lib']); ?></span>
             </div>
 
@@ -333,13 +194,13 @@ ob_start();
             <div class="form-group">
                 <label class="xolabel" for="url"><?php echo XOOPS_URL_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_URL_HELP; ?></div>
-                <input type="text" class="form-control" name="URL" id="url" value="<?php echo $pathController->xoopsUrl; ?>" onchange="removeTrailing('url', this.value)"/>
+                <input type="text" class="form-control" name="URL" id="url" value="<?php echo installerHtmlSpecialChars($pathController->xoopsUrl); ?>" onchange="removeTrailing('url', this.value)"/>
             </div>
 
             <div class="form-group">
                 <label class="xolabel" for="cookie_domain"><?php echo XOOPS_COOKIE_DOMAIN_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_COOKIE_DOMAIN_HELP; ?></div>
-                <input type="text" class="form-control" name="COOKIE_DOMAIN" id="cookie_domain" value="<?php echo $pathController->xoopsCookieDomain; ?>" onchange="removeTrailing('url', this.value)"/>
+                <input type="text" class="form-control" name="COOKIE_DOMAIN" id="cookie_domain" value="<?php echo installerHtmlSpecialChars($pathController->xoopsCookieDomain); ?>" onchange="removeTrailing('url', this.value)"/>
             </div>
         </div>
     </div>

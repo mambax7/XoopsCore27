@@ -233,22 +233,136 @@ class PathController
         return false; // Return false for invalid paths
     }
 
+    /**
+     * Determine whether the given PHP source contains an executable
+     * XOOPS_VERSION definition.
+     *
+     * @param string $source
+     *
+     * @return bool
+     */
+    private function hasXoopsVersionDefinition($source)
+    {
+        $tokens = token_get_all($source);
+        $count  = count($tokens);
+        $depth  = 0;
+
+        for ($i = 0; $i < $count; ++$i) {
+            if (is_string($tokens[$i])) {
+                if ('{' === $tokens[$i]) {
+                    ++$depth;
+                } elseif ('}' === $tokens[$i] && $depth > 0) {
+                    --$depth;
+                }
+                continue;
+            }
+            if (!is_array($tokens[$i]) || $tokens[$i][0] !== T_STRING || strtolower($tokens[$i][1]) !== 'define') {
+                continue;
+            }
+            if ($depth > 0) {
+                continue;
+            }
+            $previousIndex = $this->nextSignificantTokenIndexReverse($tokens, $i - 1);
+            if (null !== $previousIndex && is_array($tokens[$previousIndex]) && in_array($tokens[$previousIndex][0], [T_OBJECT_OPERATOR, T_DOUBLE_COLON], true)) {
+                continue;
+            }
+            $openParenIndex = $this->nextSignificantTokenIndex($tokens, $i + 1);
+            if (null === $openParenIndex || '(' !== $tokens[$openParenIndex]) {
+                continue;
+            }
+            $nameIndex = $this->nextSignificantTokenIndex($tokens, $openParenIndex + 1);
+            if (null === $nameIndex || !is_array($tokens[$nameIndex]) || $tokens[$nameIndex][0] !== T_CONSTANT_ENCAPSED_STRING) {
+                continue;
+            }
+            if ('XOOPS_VERSION' === trim($tokens[$nameIndex][1], "\"'")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Find the next non-whitespace/comment token.
+     *
+     * @param array<int, mixed> $tokens
+     * @param int               $startIndex
+     *
+     * @return int|null
+     */
+    private function nextSignificantTokenIndex(array $tokens, $startIndex)
+    {
+        $count = count($tokens);
+        for ($i = $startIndex; $i < $count; ++$i) {
+            if (!is_array($tokens[$i])) {
+                return $i;
+            }
+            if (!in_array($tokens[$i][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find the previous non-whitespace/comment token.
+     *
+     * @param array<int, mixed> $tokens
+     * @param int               $startIndex
+     *
+     * @return int|null
+     */
+    private function nextSignificantTokenIndexReverse(array $tokens, $startIndex)
+    {
+        for ($i = $startIndex; $i >= 0; --$i) {
+            if (!is_array($tokens[$i])) {
+                return $i;
+            }
+            if (!in_array($tokens[$i][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
     //========================================
     public function execute()
     {
         $this->readRequest();
         $valid = $this->validate();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Always persist submitted paths so the form repopulates on
+            // validation failure (redirect back to this page).
             foreach ($this->path_lookup as $req => $sess) {
                 $_SESSION['settings'][$sess] = $this->xoopsPath[$req];
             }
             $_SESSION['settings']['URL']           = $this->xoopsUrl;
             $_SESSION['settings']['COOKIE_DOMAIN'] = $this->xoopsCookieDomain;
             if ($valid) {
+                foreach ($this->path_lookup as $req => $sess) {
+                    $canonicalPath = $this->sanitizePath($this->xoopsPath[$req]);
+                    if (false !== $canonicalPath) {
+                        $this->xoopsPath[$req] = $canonicalPath;
+                        $_SESSION['settings'][$sess] = $canonicalPath;
+                    }
+                }
+                // Sync TRUST_PATH only on valid POST — common.inc.php loads
+                // the Composer autoloader from TRUST_PATH, not PATH. A bad
+                // lib path must not poison TRUST_PATH. Canonicalize it before
+                // storing it so later bootstrap code gets an absolute path.
+                $trustPath = $this->sanitizePath($this->xoopsPath['lib']);
+                if (false !== $trustPath) {
+                    $this->xoopsPath['lib']             = $trustPath;
+                    $_SESSION['settings']['PATH']       = $trustPath;
+                    $_SESSION['settings']['TRUST_PATH'] = $trustPath;
+                }
                 $GLOBALS['wizard']->redirectToPage('+1');
             } else {
                 $GLOBALS['wizard']->redirectToPage('+0');
             }
+            exit;
         }
     }
 
@@ -257,7 +371,7 @@ class PathController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $request = $_POST;
             foreach ($this->path_lookup as $req => $sess) {
-                if (isset($request[$req])) {
+                if (isset($request[$req]) && is_string($request[$req])) {
                     $request[$req] = str_replace("\\", '/', trim($request[$req]));
                     if (substr($request[$req], -1) === '/') {
                         $request[$req] = substr($request[$req], 0, -1);
@@ -265,14 +379,14 @@ class PathController
                     $this->xoopsPath[$req] = $request[$req];
                 }
             }
-            if (isset($request['URL'])) {
+            if (isset($request['URL']) && is_string($request['URL'])) {
                 $request['URL'] = trim($request['URL']);
                 if (substr($request['URL'], -1) === '/') {
                     $request['URL'] = substr($request['URL'], 0, -1);
                 }
                 $this->xoopsUrl = $request['URL'];
             }
-            if (isset($request['COOKIE_DOMAIN'])) {
+            if (isset($request['COOKIE_DOMAIN']) && is_string($request['COOKIE_DOMAIN'])) {
                 $tempCookieDomain = trim($request['COOKIE_DOMAIN']);
                 $tempParts        = parse_url($tempCookieDomain);
                 if (!empty($tempParts['host'])) {
@@ -322,21 +436,33 @@ class PathController
         $ret = 1;
         if ($PATH === 'root' || empty($PATH)) {
             $path = 'root';
+            $this->validPath[$path] = 0;
             if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
                 $versionFile = "{$this->xoopsPath[$path]}/include/version.php";
-                if (file_exists($versionFile)) {
-                    include_once $versionFile;
-                }
-                if (defined('XOOPS_VERSION') && file_exists("{$this->xoopsPath[$path]}/mainfile.dist.php")) {
-                    $this->validPath[$path] = 1;
+                $distFile    = "{$this->xoopsPath[$path]}/mainfile.dist.php";
+                if (is_file($versionFile) && is_readable($versionFile)) {
+                    $versionContents = file_get_contents($versionFile);
+                    if (false !== $versionContents && $this->hasXoopsVersionDefinition($versionContents) && is_file($distFile) && is_readable($distFile)) {
+                        $this->validPath[$path] = 1;
+                    }
                 }
             }
             $ret *= $this->validPath[$path];
         }
         if ($PATH === 'lib' || empty($PATH)) {
             $path = 'lib';
-            if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
+            $autoloader = $this->xoopsPath[$path] . '/vendor/autoload.php';
+            $xmfMarker = $this->xoopsPath[$path] . '/vendor/xoops/xmf/src/Request.php';
+            if (is_dir($this->xoopsPath[$path])
+                && is_readable($this->xoopsPath[$path])
+                && is_file($autoloader)
+                && is_readable($autoloader)
+                && is_file($xmfMarker)
+                && is_readable($xmfMarker)
+            ) {
                 $this->validPath[$path] = 1;
+            } else {
+                $this->validPath[$path] = 0;
             }
             $ret *= $this->validPath[$path];
         }
@@ -344,6 +470,8 @@ class PathController
             $path = 'data';
             if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
                 $this->validPath[$path] = 1;
+            } else {
+                $this->validPath[$path] = 0;
             }
             $ret *= $this->validPath[$path];
         }

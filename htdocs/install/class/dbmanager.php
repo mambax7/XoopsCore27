@@ -93,12 +93,16 @@ class Db_manager
      */
     public function queryFromFile($sql_file_path)
     {
-        $tables = [];
+        $allSucceeded = true;
 
         if (!file_exists($sql_file_path)) {
             return false;
         }
-        $sql_query = trim(fread(fopen($sql_file_path, 'r'), filesize($sql_file_path)));
+        $sql_query = file_get_contents($sql_file_path);
+        if (false === $sql_query) {
+            return false;
+        }
+        $sql_query = trim($sql_query);
         SqlUtility::splitMySqlFile($pieces, $sql_query);
         $this->db->connect();
         foreach ($pieces as $piece) {
@@ -114,6 +118,7 @@ class Db_manager
                             $this->s_tables['create'][$table] = 1;
                         }
                     } else {
+                        $allSucceeded = false;
                         if (!isset($this->f_tables['create'][$table])) {
                             $this->f_tables['create'][$table] = 1;
                         }
@@ -126,6 +131,7 @@ class Db_manager
                             $this->s_tables['insert'][$table]++;
                         }
                     } else {
+                        $allSucceeded = false;
                         if (!isset($this->f_tables['insert'][$table])) {
                             $this->f_tables['insert'][$table] = 1;
                         } else {
@@ -138,7 +144,8 @@ class Db_manager
                             $this->s_tables['alter'][$table] = 1;
                         }
                     } else {
-                        if (!isset($this->s_tables['alter'][$table])) {
+                        $allSucceeded = false;
+                        if (!isset($this->f_tables['alter'][$table])) {
                             $this->f_tables['alter'][$table] = 1;
                         }
                     }
@@ -148,7 +155,8 @@ class Db_manager
                             $this->s_tables['drop'][$table] = 1;
                         }
                     } else {
-                        if (!isset($this->s_tables['drop'][$table])) {
+                        $allSucceeded = false;
+                        if (!isset($this->f_tables['drop'][$table])) {
                             $this->f_tables['drop'][$table] = 1;
                         }
                     }
@@ -156,7 +164,7 @@ class Db_manager
             }
         }
 
-        return true;
+        return $allSucceeded;
     }
 
     public array $successStrings = [
@@ -273,7 +281,7 @@ class Db_manager
      */
     public function isError()
     {
-        return isset($this->f_tables) ? true : false;
+        return !empty($this->f_tables);
     }
 
     /**

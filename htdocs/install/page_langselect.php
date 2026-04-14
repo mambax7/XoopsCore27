@@ -30,8 +30,22 @@ require_once __DIR__ . '/include/common.inc.php';
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
 xoops_setcookie('xo_install_lang', 'english', 0, '', '');
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && \Xmf\Request::hasVar('lang', 'POST')) {
-    $lang = \Xmf\Request::getString('lang', '', 'POST');
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Raw $_POST here — XMF autoloader is not available until the user
+    // configures the xoops_lib path on the pathsettings page (page 4).
+    // Validate using the same pattern as initLanguage() — strip invalid
+    // characters and verify the language directory exists.
+    $rawLang = $_POST['lang'] ?? '';
+    $lang    = 'english';
+    if (is_string($rawLang) && $rawLang !== '') {
+        $lang = preg_replace('/[^a-z0-9_\-]/i', '', trim($rawLang));
+        if (!is_string($lang) || $lang === '' || !file_exists(XOOPS_INSTALL_PATH . "/language/{$lang}/install.php")) {
+            $lang = 'english';
+        }
+    }
+    if (!file_exists(XOOPS_INSTALL_PATH . "/language/{$lang}/install.php")) {
+        $lang = 'english';
+    }
     xoops_setcookie('xo_install_lang', $lang, 0, '', '');
 
     $wizard->redirectToPage('+1');
@@ -50,10 +64,12 @@ $content =<<<EOT
     <select name="lang" id="lang" class="form-control">
 EOT;
 
-$languages = getDirList(__DIR__ . '/../language/');
+// List installer languages (not site languages) to match initLanguage() validation
+$languages = getDirList(XOOPS_INSTALL_PATH . '/language/');
 foreach ($languages as $lang) {
     $sel = ($lang == $wizard->language) ? ' selected' : '';
-    $content .= "<option value=\"{$lang}\"{$sel}>{$lang}</option>\n";
+    $escapedLang = installerHtmlSpecialChars($lang);
+    $content .= "<option value=\"{$escapedLang}\"{$sel}>{$escapedLang}</option>\n";
 }
 $content .=<<<EOB
     </select>

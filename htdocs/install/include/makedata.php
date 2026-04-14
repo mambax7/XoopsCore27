@@ -79,7 +79,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
             . (int) $definition['active']
             . ')'
         );
-        if (!$categoryId) {
+        if (false === $categoryId) {
             trigger_error(
                 sprintf('Failed to seed menu category "%s" during install.', $definition['title']),
                 E_USER_WARNING
@@ -89,7 +89,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
         $categoryIds[$key] = (int) $categoryId;
 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
-            if (!$dbm->insert(
+            if (false === $dbm->insert(
                 'group_permission',
                 ' (gperm_id, gperm_groupid, gperm_itemid, gperm_modid, gperm_name) VALUES (0, ' . $groupId . ', ' . (int) $categoryId . ', ' . $moduleId . ", 'menus_category_view')"
             )) {
@@ -118,7 +118,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
             . (int) $definition['active']
             . ')'
         );
-        if (!$itemId) {
+        if (false === $itemId) {
             trigger_error(
                 sprintf('Failed to seed menu item "%s" during install.', $definition['title']),
                 E_USER_WARNING
@@ -127,7 +127,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
         }
 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
-            if (!$dbm->insert(
+            if (false === $dbm->insert(
                 'group_permission',
                 ' (gperm_id, gperm_groupid, gperm_itemid, gperm_modid, gperm_name) VALUES (0, ' . $groupId . ', ' . (int) $itemId . ', ' . $moduleId . ", 'menus_items_view')"
             )) {
@@ -416,7 +416,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', $cfgCols . " VALUES (128, 1, 0, 'general_editor', '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR', 'dhtmltextarea', '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR_DSC', 'select', 'text', 320)");
     $dbm->insert('config', $cfgCols . " VALUES (129, 1, 0, 'redirect', '_MI_SYSTEM_PREFERENCE_REDIRECT', 'admin.php?fct=preferences', '', 'hidden', 'text', 330)");
     $dbm->insert('config', $cfgCols . " VALUES (130, 1, 0, 'com_anonpost', '_MI_SYSTEM_PREFERENCE_ANONPOST', '', '', 'hidden', 'text', 340)");
-    $dbm->insert('config', $cfgCols . " VALUES (133, 1, 0, 'jquery_theme', '_MI_SYSTEM_PREFERENCE_JQUERY_THEME', 'base', '', 'select', 'text', 35)");
+    $dbm->insert('config', $cfgCols . " VALUES (131, 1, 0, 'jquery_theme', '_MI_SYSTEM_PREFERENCE_JQUERY_THEME', 'base', '', 'select', 'text', 35)");
 
     $dbm->insert('config', $cfgCols . " VALUES (134, 0, 1, 'redirect_message_ajax', '_MD_AM_CUSTOM_REDIRECT', '1', '_MD_AM_CUSTOM_REDIRECT_DESC', 'yesno', 'int', 12)");
     //notification method
@@ -424,6 +424,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     // Session cookie preferences (2.7.0)
     $dbm->insert('config', $cfgCols . " VALUES (136, 0, 1, 'session_cookie_samesite', '_MD_AM_SESSSAMESITE', 'Lax', '_MD_AM_SESSSAMESITE_DSC', 'select', 'text', 43)");
     $dbm->insert('config', $cfgCols . " VALUES (137, 0, 1, 'session_cookie_secure', '_MD_AM_SESSSECURE', '0', '_MD_AM_SESSSECURE_DSC', 'yesno', 'int', 44)");
+    $dbm->insert('config', $cfgCols . " VALUES (138, 1, 0, 'active_menus', '_MI_SYSTEM_MENUS_ACTIVE', '1', '_MI_SYSTEM_MENUS_ACTIVE_DESC', 'yesno', 'int', 145)");
 
     require_once XOOPS_ROOT_PATH . '/class/xoopslists.php';
     $editors = XoopsLists::getDirListAsArray(XOOPS_ROOT_PATH . '/class/xoopseditor');
@@ -452,7 +453,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     }
     $jqueryui = XoopsLists::getDirListAsArray(XOOPS_ROOT_PATH . '/modules/system/css/ui');
     foreach ($jqueryui as $dir) {
-        $dbm->insert('configoption', ' (confop_id, confop_name, confop_value, conf_id) VALUES (' . $conf . ", '" . $dir . "', '" . $dir . "', 133)");
+        $dbm->insert('configoption', ' (confop_id, confop_name, confop_value, conf_id) VALUES (' . $conf . ", '" . $dir . "', '" . $dir . "', 131)");
         ++$conf;
     }
     //notification method

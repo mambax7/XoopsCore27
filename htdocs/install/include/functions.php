@@ -12,8 +12,6 @@
  * @author           Skalpa Keo <skalpa@xoops.org>
  * @author           Taiwen Jiang <phppp@users.sourceforge.net>
  * @author           DuGris (aka L. JEN) <dugris@frxoops.org>
- * @param string $hash
- * @return bool
  */
 
 /**
@@ -26,7 +24,7 @@ function installerHtmlSpecialChars($value = '')
     return htmlspecialchars($value, ENT_QUOTES, _INSTALL_CHARSET, true);
 }
 
-function install_acceptUser($hash = '')
+function install_acceptUser()
 {
     $GLOBALS['xoopsUser'] = null;
     $assertClaims = [

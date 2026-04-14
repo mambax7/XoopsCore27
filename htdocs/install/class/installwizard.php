@@ -128,9 +128,9 @@ class XoopsInstallWizard
             return true;
         }
 
-        $installUser = \Xmf\Request::getString('xo_install_user', '', 'COOKIE');
-        if (empty($GLOBALS['xoopsUser']) && !empty($installUser)) {
-            return install_acceptUser($installUser);
+        $installUserCookie = $_COOKIE['xo_install_user'] ?? '';
+        if (empty($GLOBALS['xoopsUser']) && is_string($installUserCookie) && $installUserCookie !== '') {
+            return install_acceptUser();
         }
         if (empty($GLOBALS['xoopsUser'])) {
             redirect_header('../user.php');
@@ -185,8 +185,10 @@ class XoopsInstallWizard
             return false;
         }
 
-        if ($this->pageIndex > 0 && !\Xmf\Request::hasVar('xo_install_lang', 'COOKIE')) {
+        $installLanguageCookie = $_COOKIE['xo_install_lang'] ?? null;
+        if ($this->pageIndex > 0 && (!is_string($installLanguageCookie) || '' === $installLanguageCookie)) {
             header('Location: index.php');
+            exit;
         }
 
         return $this->pageIndex;

@@ -55,21 +55,20 @@ function xoops_setcookie(
     }
 
     // Validate the domain BEFORE using it.
-    if (class_exists('\Xoops\RegDom\RegisteredDomain')) {
-        if (!\Xoops\RegDom\RegisteredDomain::domainMatches($host, $domain)) {
-            $originalDomain = $domain;
-            $domain = ''; // Auto-correct to a safe, host-only cookie
+    if (!xoops_cookieDomainMatches($host, $domain)) {
+        $originalDomain = $domain;
+        $domain = ''; // Auto-correct to a safe, host-only cookie
 
-            if (defined('XOOPS_DEBUG_MODE') && XOOPS_DEBUG_MODE) {
-                error_log(
-                    sprintf(
-                        '[XOOPS Cookie] Invalid domain "%s" for host "%s" (cookie: %s) - using host-only.',
-                        $originalDomain,
-                        $host,
-                        $name
-                    )
-                );
-            }
+        if (defined('XOOPS_DEBUG_MODE') && XOOPS_DEBUG_MODE) {
+            trigger_error(
+                sprintf(
+                    '[XOOPS Cookie] Invalid domain "%s" for host "%s" (cookie: %s) - using host-only.',
+                    $originalDomain,
+                    $host,
+                    $name
+                ),
+                E_USER_WARNING
+            );
         }
     }
 
@@ -91,6 +90,33 @@ function xoops_setcookie(
         $options['domain'] = $domain;
     }
     return setcookie($name, $value, $options);
+}
+
+/**
+ * Validate a cookie domain against the current host while remaining
+ * compatible with older RegDom releases that do not provide domainMatches().
+ */
+function xoops_cookieDomainMatches(string $host, string $domain): bool
+{
+    $host = strtolower(trim($host));
+    $domain = strtolower(ltrim(trim($domain), '.'));
+    if ($domain === '') {
+        return true;
+    }
+    if ($domain === 'localhost') {
+        return false;
+    }
+    if (filter_var($host, FILTER_VALIDATE_IP) || filter_var($domain, FILTER_VALIDATE_IP)) {
+        return false;
+    }
+    if (class_exists('\Xoops\RegDom\RegisteredDomain') && is_callable(['\Xoops\RegDom\RegisteredDomain', 'domainMatches'])) {
+        return \Xoops\RegDom\RegisteredDomain::domainMatches($host, $domain);
+    }
+    if ($host === $domain) {
+        return true;
+    }
+
+    return (strlen($host) > strlen($domain)) && (substr_compare($host, '.' . $domain, -1 - strlen($domain)) === 0);
 }
 
 /**

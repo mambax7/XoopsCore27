@@ -60,10 +60,8 @@ class XoopsSessionHandler implements
             $host = '';
         }
         $cookieDomain = XOOPS_COOKIE_DOMAIN;
-        if (class_exists('\Xoops\RegDom\RegisteredDomain')) {
-            if (!\Xoops\RegDom\RegisteredDomain::domainMatches($host, $cookieDomain)) {
-                $cookieDomain = '';
-            }
+        if (!xoops_cookieDomainMatches($host, $cookieDomain)) {
+            $cookieDomain = '';
         }
 
         // Resolve SameSite and Secure from XOOPS config preferences
