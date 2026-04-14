@@ -124,7 +124,7 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
     }
     if (0 === $upgradeControl->countUpgradeQueue()) {
         echo $upgradeControl->oneButtonContinueForm(
-            XOOPS_URL . '/modules/system/admin.php?fct=modulesadmin&amp;op=update&amp;module=system',
+            XOOPS_URL . '/modules/system/admin.php?fct=modulesadmin&op=update&module=system',
             [],
         );
     } else {

@@ -228,7 +228,24 @@ class UpgradeControl
 
         foreach ($dirs as $dir) {
             if (str_contains($dir, '-to-')) {
-                $className = include $upgradeRoot . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . 'index.php';
+                $patchFile = $upgradeRoot . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . 'index.php';
+                if (!file_exists($patchFile)) {
+                    continue;
+                }
+                try {
+                    $className = include $patchFile;
+                } catch (\Throwable $e) {
+                    // Stale directories from a previous version (e.g.
+                    // upd_2.5.11-to-2.5.12 from the pre-rename beta cycle) can
+                    // fail to load because they reference classes that no longer
+                    // exist. Emit a visible warning and skip — crashing the
+                    // entire upgrade is worse than skipping one broken patch.
+                    trigger_error(
+                        sprintf('Upgrade patch %s could not be loaded: %s', $dir, $e->getMessage()),
+                        E_USER_WARNING
+                    );
+                    continue;
+                }
                 if (is_string($className) && class_exists($className)) {
                     $upg           = $this->createPatch($className);
                     $results[$dir] = $upg->isApplied();
