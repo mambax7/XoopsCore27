@@ -41,8 +41,11 @@ class XoopsInstallWizard
             $_SERVER['REQUEST_URI'] = $_SERVER['PHP_SELF'];
         }
 
-        // Load the main language file
-        $installLang = \Xmf\Request::getString('xo_install_lang', '', 'COOKIE');
+        // Load the main language file.
+        // Use raw $_COOKIE here — the XMF autoloader is not reliably available
+        // this early in the install bootstrap (xoops_lib may be relocated and
+        // mainfile.php doesn't exist yet on the first page load).
+        $installLang = isset($_COOKIE['xo_install_lang']) ? trim((string) $_COOKIE['xo_install_lang']) : '';
         $this->initLanguage(!empty($installLang) ? $installLang : 'english');
         // Setup pages
         $pages = include __DIR__ . '/../include/page.php';
