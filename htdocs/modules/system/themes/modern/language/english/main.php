@@ -20,9 +20,10 @@ if (!defined('_OXYGEN_SYSOPTIONS')) {
 
 // -- Dashboard: KPI Cards --
 define('_MODERN_TOTAL_USERS', 'Total Users');
-define('_MODERN_NEW_THIS_MONTH', 'new this month');
+define('_MODERN_NEW_THIS_MONTH', 'New this month');
 define('_MODERN_ACTIVE_MODULES', 'Active Modules');
-define('_MODERN_INACTIVE', 'inactive');
+define('_MODERN_ACTIVE_MODULES_USERS', 'User-Facing Modules');
+define('_MODERN_ACTIVE_MODULES_ADMINS', 'Admin-Only Modules');
 define('_MODERN_ACTIVE_USERS', 'Active Users');
 define('_MODERN_LAST_30_DAYS', 'Last 30 days');
 define('_MODERN_SERVER_LOAD', 'Server Load');

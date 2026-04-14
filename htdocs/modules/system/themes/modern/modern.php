@@ -243,18 +243,21 @@ class XoopsGuiModern extends XoopsSystemGui
     {
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
+
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('hasmain', 1));
+        // active modules
         $criteria->add(new Criteria('isactive', 1));
-
         $active_modules = $module_handler->getCount($criteria);
-
-        $criteria_all = new Criteria('dirname', '', '!=');
-        $total_modules = $module_handler->getCount($criteria_all);
+        // active modules for user side
+        $criteria->add(new Criteria('hasmain', 1));
+        $active_modules_user = $module_handler->getCount($criteria);
 
         $tpl->assign('active_modules', $active_modules);
-        $tpl->assign('total_modules', $total_modules);
-        $tpl->assign('inactive_modules', $total_modules - $active_modules);
+        $tpl->assign('active_modules_user', $active_modules_user);
+        // Modules without a frontend entry (hasmain=0) are admin-only by XOOPS design.
+        // Every active module has at least hasmain=1 or hasadmin=1, so this subtraction
+        // equals querying isactive=1 AND hasmain=0 without an extra DB round-trip.
+        $tpl->assign('active_modules_admin', $active_modules - $active_modules_user);
     }
 
     /**
