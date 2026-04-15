@@ -365,6 +365,7 @@ class XoopsGuiModern extends XoopsSystemGui
             $system_services[$item]['icon'] = empty($system_services[$item]['icon']) ? '' : XOOPS_ADMINTHEME_URL . '/modern/' . $system_services[$item]['icon'];
             unset($system_services[$item]['icon_small']);
         }
+        // assign links for system services list (icons) in xo_head
         $tpl->assign('system_services', $system_services);
 
         // Handle current module context
@@ -388,6 +389,13 @@ class XoopsGuiModern extends XoopsSystemGui
             }
         }
 
+        // Detect whether system panel should be opened
+        $isSystemAdmin = strpos($_SERVER['REQUEST_URI'], '/modules/system/admin.php') !== false;
+        $isControlPanelHome = strpos($_SERVER['REQUEST_URI'], '/admin.php') !== false;
+        $GLOBALS['xoopsTpl']->assign('showSystemServices', $isSystemAdmin || $isControlPanelHome);
+
+        // assign vars
+        $tpl->assign('sys_options', $system_services);
         $tpl->assign('mod_options', $mod_options);
         $tpl->assign('modpath', $modpath);
         $tpl->assign('modname', $modname);
@@ -409,7 +417,7 @@ class XoopsGuiModern extends XoopsSystemGui
         // Build modules array for dashboard display
         $modules_list = [];
         foreach ($modules as $mod) {
-            if ($moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups())) {
+            if ($moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups()) && 'system' !== $mod->getVar('dirname')) {
                 $info = $mod->getInfo();
 
                 $item = [];
