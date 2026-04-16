@@ -20,7 +20,7 @@
                 <span class="nav-section-arrow">&#9654;</span>
             </summary>
             <div class="nav-section-items">
-                <{foreach item=item from=$sys_options}>
+                <{foreach item='item' from=$sys_options}>
                 <a href="<{$item.link|escape:'html'}>" class="nav-item">
                     <{if $item.icon|default:''|escape:'html'}>
                         <img src="<{$item.icon|escape:'html'}>" class="nav-icon-img" alt="">
@@ -41,7 +41,7 @@
                     <span class="nav-section-arrow">&#9654;</span>
                 </summary>
                 <div class="nav-section-items">
-                <{foreach item=module from=$module_menu}>
+                <{foreach item='module' from=$module_menu}>
                     <{if $module.link}>
                         <a href="<{$module.link|escape:'html'}>" class="nav-item">
                             <{if $module.icon|default:''|escape:'html'}>
