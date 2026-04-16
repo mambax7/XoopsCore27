@@ -501,7 +501,7 @@ body.dark-mode #help-template p.even {
 /* Hide the icon grid squares */
 .rmmenuicon,
 #xo-modadmin-index .rmmenuicon {
-    display: none !important;
+    /*display: none !important;*/
 }
 
 /* Module admin toolbar area */
