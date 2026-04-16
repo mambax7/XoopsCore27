@@ -11,7 +11,7 @@
                 <{* Horizontal Icon Toolbar - inline with module name *}>
                 <{if $mod_options}>
                     <div id="xo-toolbar">
-                        <{foreach item=option from=$mod_options}>
+                        <{foreach item='option' from=$mod_options}>
                             <a class="tooltip" href="<{$option.link}>" title="<{$option.title}>">
                                 <{if $option.icon}>
                                     <img src='<{$option.icon}>' alt="<{$option.title}>"/>

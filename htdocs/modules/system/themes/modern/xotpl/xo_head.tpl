@@ -13,7 +13,7 @@
     <{* Quick-access icon strip - always shows System Services *}>
     <{if $system_services}>
     <div class="header-toolbar-icons">
-        <{foreach item=op from=$system_services}>
+        <{foreach item='op' from=$system_services}>
             <a class="header-toolbar-icon" href="<{$op.link}>" title="<{$op.title}>">
                 <{if $op.icon}>
                     <img src="<{$op.icon}>" alt="<{$op.title}>">
