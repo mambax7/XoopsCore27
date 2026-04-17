@@ -13,7 +13,7 @@
             <{/foreach}>
         </div>
 
-        <!-- Nav section with sytem module -->
+        <!-- Nav section with system module -->
         <details class="nav-section nav-section-collapsible" <{if $showSystemServices}>open<{/if}>>
             <summary class="nav-section-title">
                 <span><{$smarty.const._MODERN_SYSTEM}></span>
@@ -43,7 +43,7 @@
                 <div class="nav-section-items">
                 <{foreach item='module' from=$module_menu}>
                     <{if $module.link}>
-                        <a href="<{$module.link|escape:'html'}>" class="nav-item">
+                        <a href="<{$module.link}>" class="nav-item">
                             <{if $module.icon|default:''|escape:'html'}>
                                 <img src="<{$module.icon|escape:'html'}>" class="nav-icon-img" alt="">
                             <{else}>
