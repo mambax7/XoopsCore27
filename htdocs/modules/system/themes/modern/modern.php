@@ -365,6 +365,7 @@ class XoopsGuiModern extends XoopsSystemGui
             $system_services[$item]['icon'] = empty($system_services[$item]['icon']) ? '' : XOOPS_ADMINTHEME_URL . '/modern/' . $system_services[$item]['icon'];
             unset($system_services[$item]['icon_small']);
         }
+        // assign links for system services list (icons) in xo_head
         $tpl->assign('system_services', $system_services);
 
         // Handle current module context
@@ -388,6 +389,17 @@ class XoopsGuiModern extends XoopsSystemGui
             }
         }
 
+        // Detect whether system panel should be opened
+        $requestUri = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
+        $path       = (string) parse_url($requestUri, PHP_URL_PATH);          // strip query string
+        $basePath   = rtrim((string) parse_url(XOOPS_URL, PHP_URL_PATH), '/'); // '' on root, '/xoops27' on WAMP
+
+        $isSystemAdmin      = ($path === $basePath . '/modules/system/admin.php');
+        $isControlPanelHome = ($path === $basePath . '/admin.php');
+        $tpl->assign('showSystemServices', $isSystemAdmin || $isControlPanelHome);
+
+        // assign vars
+        $tpl->assign('sys_options', $system_services);
         $tpl->assign('mod_options', $mod_options);
         $tpl->assign('modpath', $modpath);
         $tpl->assign('modname', $modname);
@@ -409,7 +421,7 @@ class XoopsGuiModern extends XoopsSystemGui
         // Build modules array for dashboard display
         $modules_list = [];
         foreach ($modules as $mod) {
-            if ($moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups())) {
+            if ($moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups()) && 'system' !== $mod->getVar('dirname')) {
                 $info = $mod->getInfo();
 
                 $item = [];
@@ -420,7 +432,7 @@ class XoopsGuiModern extends XoopsSystemGui
                 if (!empty($info['adminindex'])) {
                     $item['link'] = XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . $info['adminindex'];
                 } else {
-                    $item['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
+                    $item['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mod->getVar('mid');
                 }
 
                 $module_menu[] = $item;
@@ -430,7 +442,7 @@ class XoopsGuiModern extends XoopsSystemGui
                 if (!empty($info['adminindex'])) {
                     $rtn['link'] = XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . $info['adminindex'];
                 } else {
-                    $rtn['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
+                    $rtn['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mod->getVar('mid');
                 }
                 $rtn['title'] = htmlspecialchars((string) $mod->getVar('name'), ENT_QUOTES | ENT_HTML5);
                 $rtn['description'] = $mod->getInfo('description');

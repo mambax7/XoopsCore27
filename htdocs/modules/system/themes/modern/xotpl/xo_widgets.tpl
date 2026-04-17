@@ -2,7 +2,7 @@
 <{* Dynamically renders widgets from any module that implements ModernThemeWidgetInterface *}>
 
 <{if !empty($module_widgets)}>
-    <{foreach key=mod_name item=widget from=$module_widgets}>
+    <{foreach key=mod_name item='widget' from=$module_widgets}>
         <{if is_array($widget)}>
         <div class="widget-card">
             <div class="widget-header">
@@ -14,10 +14,10 @@
             <div class="widget-body">
                 <{if !empty($widget.stats)}>
                 <div class="widget-stats">
-                    <{foreach key=stat_key item=stat_val from=$widget.stats}>
+                    <{foreach key=stat_key item='stat_val' from=$widget.stats}>
                     <div class="widget-stat">
                         <div class="widget-stat-value"><{$stat_val|escape:'html'}></div>
-                        <div class="widget-stat-label"><{$stat_key|replace:'_':' '|capitalize}></div>
+                        <div class="widget-stat-label"><{$stat_key|replace:'_':' '|capitalize|escape:'html'}></div>
                     </div>
                     <{/foreach}>
                 </div>
@@ -25,7 +25,7 @@
 
                 <{if !empty($widget.recent)}>
                 <div class="widget-recent">
-                    <{foreach item=item from=$widget.recent}>
+                    <{foreach item='item' from=$widget.recent}>
                     <div class="widget-recent-item">
                         <span class="widget-recent-title"><{$item.title|escape:'html'|truncate:50}></span>
                         <{if !empty($item.author)}>

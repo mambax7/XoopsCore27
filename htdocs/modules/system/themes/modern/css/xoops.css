@@ -498,12 +498,6 @@ body.dark-mode #help-template p.even {
    MODULE ADMIN PAGES - HORIZONTAL TABS
    ======================================== */
 
-/* Hide the icon grid squares */
-.rmmenuicon,
-#xo-modadmin-index .rmmenuicon {
-    display: none !important;
-}
-
 /* Module admin toolbar area */
 #xo-nav-options {
     background: var(--bg-secondary);

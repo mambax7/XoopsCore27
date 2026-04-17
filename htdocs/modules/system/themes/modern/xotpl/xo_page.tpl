@@ -11,7 +11,7 @@
                 <{* Horizontal Icon Toolbar - inline with module name *}>
                 <{if $mod_options}>
                     <div id="xo-toolbar">
-                        <{foreach item=option from=$mod_options}>
+                        <{foreach item='option' from=$mod_options}>
                             <a class="tooltip" href="<{$option.link}>" title="<{$option.title}>">
                                 <{if $option.icon}>
                                     <img src='<{$option.icon}>' alt="<{$option.title}>"/>
@@ -46,7 +46,7 @@
                     <{if $module.description}>
                         <p class="module-description"><{$module.description|escape:'html'}></p>
                     <{/if}>
-                    <a href="<{$module.link}>" class="module-link"><{$smarty.const._MODERN_OPEN}></a>
+                    <a href="<{$module.link|escape:'html'}>" class="module-link"><{$smarty.const._MODERN_OPEN}></a>
                 </div>
             <{/foreach}>
         </div>
