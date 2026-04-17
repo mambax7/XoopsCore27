@@ -432,7 +432,7 @@ class XoopsGuiModern extends XoopsSystemGui
                 if (!empty($info['adminindex'])) {
                     $item['link'] = XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . $info['adminindex'];
                 } else {
-                    $item['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
+                    $item['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mod->getVar('mid');
                 }
 
                 $module_menu[] = $item;
@@ -442,7 +442,7 @@ class XoopsGuiModern extends XoopsSystemGui
                 if (!empty($info['adminindex'])) {
                     $rtn['link'] = XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . $info['adminindex'];
                 } else {
-                    $rtn['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');
+                    $rtn['link'] = XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $mod->getVar('mid');
                 }
                 $rtn['title'] = htmlspecialchars((string) $mod->getVar('name'), ENT_QUOTES | ENT_HTML5);
                 $rtn['description'] = $mod->getInfo('description');

@@ -46,7 +46,7 @@
                     <{if $module.description}>
                         <p class="module-description"><{$module.description|escape:'html'}></p>
                     <{/if}>
-                    <a href="<{$module.link}>" class="module-link"><{$smarty.const._MODERN_OPEN}></a>
+                    <a href="<{$module.link|escape:'html'}>" class="module-link"><{$smarty.const._MODERN_OPEN}></a>
                 </div>
             <{/foreach}>
         </div>

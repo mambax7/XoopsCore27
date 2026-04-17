@@ -14,9 +14,9 @@
     <{if $system_services}>
     <div class="header-toolbar-icons">
         <{foreach item='op' from=$system_services}>
-            <a class="header-toolbar-icon" href="<{$op.link}>" title="<{$op.title}>">
+            <a class="header-toolbar-icon" href="<{$op.link|escape:'html'}>" title="<{$op.title|escape:'html'}>">
                 <{if $op.icon}>
-                    <img src="<{$op.icon}>" alt="<{$op.title}>">
+                    <img src="<{$op.icon|escape:'html'}>" alt="<{$op.title|escape:'html'}>">
                 <{else}>
                     <span>⚙️</span>
                 <{/if}>
