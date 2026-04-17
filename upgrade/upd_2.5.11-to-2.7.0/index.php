@@ -27,7 +27,9 @@ use Xoops\Upgrade\UpgradeControl;
  *  8. cleanuplibraries       — Delete obsolete build artifacts from class/libraries/
  *  9. deletetinymce5nested   — Delete duplicate nested tinymce5/tinymce5/ directory
  * 10. deleteflashsanitizer   — Delete obsolete Flash text sanitizer plugin
- * 11. cleancache             — Clear compiled templates and cache files
+ * 11. normalizeprofilefieldname   — Normalize profile_field.field_name column + unique index (prefix 64)
+ * 12. normalizeprofileregstepsort — Normalize profile_regstep.sort index (step_name prefix 100)
+ * 13. cleancache             — Clear compiled templates and cache files
  *
  * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -44,6 +46,14 @@ class Upgrade_270 extends XoopsUpgrade
 
     /** @var string Session key to track cache cleanup completion */
     protected string $cleanCacheKey = 'cache-cleaned-270';
+
+    /**
+     * @var string Session key set when apply_normalizeprofilefieldname has
+     *             already taken the skip-with-warning path for a widened
+     *             column this session. Read by check_ so the patch doesn't
+     *             stay permanently "not applied" on widened-column installs.
+     */
+    protected string $widenedFieldNameSkipKey = 'normalize-profilefield-widened-270';
 
     /**
      * @param XoopsMySQLDatabase $db      database connection
@@ -65,6 +75,8 @@ class Upgrade_270 extends XoopsUpgrade
             'cleanuplibraries',
             'deletetinymce5nested',
             'deleteflashsanitizer',
+            'normalizeprofilefieldname',
+            'normalizeprofileregstepsort',
             'cleancache',
         ];
         $this->usedFiles = [];
@@ -607,7 +619,390 @@ class Upgrade_270 extends XoopsUpgrade
     }
 
     // =========================================================================
-    // Task 11: cleancache — Clear compiled templates and cache files
+    // Task 11: normalizeprofilefieldname — Normalize profile_field.field_name
+    //
+    // Older installations have profile_field.field_name as varchar(64) with a
+    // plain UNIQUE index on the full column (no explicit prefix). The
+    // normalize task enforces the full column and index shape defined by the
+    // module's own install SQL:
+    //   - column:  varchar(64) NOT NULL DEFAULT ''
+    //   - index:   UNIQUE `field_name` (`field_name`(64)) USING BTREE
+    // All four column attributes (type, length, nullability, default) are
+    // checked and rewritten when any diverge, so the task is truly idempotent
+    // and genuinely converges sites to the documented target. A site that has
+    // intentionally made the column nullable or changed its default will have
+    // those properties reset; existing NULL values would be coerced to '' by
+    // the MODIFY and a warning is logged so admins can audit.
+    //
+    // The explicit (64) prefix standardises DDL across installs so index
+    // definitions read identically whether captured from schema dump or ALTER.
+    // =========================================================================
+
+    /**
+     * Check if profile_field.field_name matches the full canonical shape:
+     *   varchar(64) NOT NULL DEFAULT '' AND
+     *   UNIQUE `field_name` (`field_name`(64)).
+     *
+     * Verifies data type, length, nullability, default, and full index
+     * layout — not just prefix length — so a non-UNIQUE index, composite
+     * index, nullable column, or different default does not incorrectly
+     * pass the normalise check. Skipped silently when the table is absent
+     * (Profile module not installed).
+     *
+     * @return bool true if already normalised (no action needed)
+     */
+    public function check_normalizeprofilefieldname(): bool
+    {
+        $table = $this->db->prefix('profile_field');
+
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            // Don't silently skip — the DB is in an indeterminate state.
+            return false;
+        }
+        if (!$exists) {
+            // Profile module not installed → nothing to normalise; treat as done.
+            return true;
+        }
+
+        // Column must be varchar(64) NOT NULL DEFAULT ''
+        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
+                . " FROM `information_schema`.`COLUMNS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+        $row = $this->db->fetchRow($result);
+
+        // Skip-with-warning flag is honoured only while the column is STILL
+        // widened (the condition that originally triggered the skip).
+        // If the admin followed the logged advice and narrowed the column
+        // in the same session, the flag is stale — clear it and fall
+        // through to the normal canonical-shape check so the index can
+        // still be normalised without waiting for a new session.
+        if (!empty($_SESSION[$this->widenedFieldNameSkipKey])) {
+            if ($row && (int) $row[1] > 64) {
+                return true;  // still widened — defer to manual action
+            }
+            unset($_SESSION[$this->widenedFieldNameSkipKey]);
+        }
+
+        if (!$row
+            || 'varchar' !== strtolower((string) $row[0])
+            || 64 !== (int) $row[1]
+            || 'NO' !== strtoupper((string) $row[2])
+            || '' !== self::normaliseColumnDefault($row[3])  // reject NULL default
+        ) {
+            return false;
+        }
+
+        // Unique index `field_name` must be the sole, single-column entry
+        // with SUB_PART = 64 and NON_UNIQUE = 0.
+        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`"
+                . " FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = 'field_name'"
+                . " ORDER BY `SEQ_IN_INDEX`";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        $rows = [];
+        while ($row = $this->db->fetchRow($result)) {
+            $rows[] = $row;
+        }
+
+        // Expect exactly: [('field_name', 1, 64, 0)]
+        if (1 !== count($rows)) {
+            return false;
+        }
+
+        return 'field_name' === $rows[0][0]
+            && 1 === (int) $rows[0][1]
+            && 64 === (int) $rows[0][2]
+            && 0 === (int) $rows[0][3];
+    }
+
+    /**
+     * Ensure profile_field.field_name is varchar(64) NOT NULL DEFAULT ''
+     * and its unique index uses an explicit (64) prefix.
+     *
+     * Rewrites the column when any of type/length/nullability/default
+     * diverge from the target. A divergence on nullability or default is
+     * logged explicitly so admins can audit — NULL values are coerced to
+     * empty strings by the MODIFY.
+     *
+     * Skipped silently when the table is absent (Profile module not
+     * installed). Skipped with a warning in the log when the column has
+     * been widened beyond 64 chars locally — the admin must resolve that
+     * manually, but the rest of the 2.7.0 upgrade is not blocked.
+     *
+     * @return bool true on success, table absent, or skipped with warning
+     */
+    public function apply_normalizeprofilefieldname(): bool
+    {
+        $table = $this->db->prefix('profile_field');
+
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if (!$exists) {
+            return true;
+        }
+
+        // Step 1: Ensure the column is varchar(64) NOT NULL DEFAULT ''.
+        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
+                . " FROM `information_schema`.`COLUMNS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+            return false;
+        }
+        $row = $this->db->fetchRow($result);
+        if (!$row) {
+            $this->logs[] = 'Unable to read profile_field.field_name column metadata';
+            return false;
+        }
+        $dataType       = strtolower((string) $row[0]);
+        $currentLen     = (int) $row[1];
+        $isNullable     = 'YES' === strtoupper((string) $row[2]);
+        $currentDefault = self::normaliseColumnDefault($row[3]);
+
+        // Guard 1: reject unexpected types outright — admin must intervene.
+        // Checked before the length guard so a `text` column (length 65535)
+        // produces a "type mismatch" diagnostic instead of a misleading
+        // "refusing to narrow" message.
+        if (!in_array($dataType, ['varchar', 'char'], true)) {
+            $this->logs[] = sprintf(
+                'profile_field.field_name has unexpected data type `%s`; refusing to convert to varchar(64) automatically.',
+                $dataType
+            );
+            return false;
+        }
+
+        // Guard 2: skip-with-warning when the column has been widened.
+        // Narrowing could silently truncate data (if sql_mode lacks
+        // STRICT_ALL_TABLES); recreating the UNIQUE index with prefix(64)
+        // on a wider column would weaken uniqueness from "full width" to
+        // "first 64 chars". Either outcome is worse than leaving the
+        // customised column alone, so the task logs a warning, sets a
+        // session flag so check_ treats the task as resolved on subsequent
+        // isApplied() calls (otherwise the patch would remain permanently
+        // "not applied"), and returns true so the rest of the 2.7.0
+        // upgrade is not blocked.
+        if ($currentLen > 64) {
+            $this->logs[] = sprintf(
+                'profile_field.field_name is %s(%d); skipping index normalisation — column is wider than 64 chars. Reduce the column manually after verifying no values exceed 64 chars, then re-run the upgrade.',
+                $dataType,
+                $currentLen
+            );
+            $_SESSION[$this->widenedFieldNameSkipKey] = true;
+            return true;
+        }
+
+        // MODIFY if any of the four column attributes diverge from the target:
+        //   type = varchar, length = 64, NOT NULL, DEFAULT ''
+        $columnDiverges = ('varchar' !== $dataType)
+                      || (64 !== $currentLen)
+                      || $isNullable
+                      || ('' !== $currentDefault);
+        if ($columnDiverges) {
+            // Guard 3: when the column is nullable and the UNIQUE index still
+            // exists, multiple rows may legally share NULL (SQL treats NULL !=
+            // NULL for uniqueness). Coercing NULL → '' via MODIFY NOT NULL
+            // would collapse them into duplicate '' values and either the
+            // MODIFY itself or the later ADD UNIQUE would fail with a low-
+            // signal duplicate-key error. Pre-flight a COUNT and refuse with
+            // an actionable message when > 1 row would collide.
+            if ($isNullable) {
+                $countSql = "SELECT COUNT(*) FROM `{$table}`"
+                          . " WHERE `field_name` IS NULL OR `field_name` = ''";
+                $countResult = $this->db->query($countSql);
+                // Treat query failure as a hard error — falling through here
+                // would defeat the whole purpose of the pre-flight and let
+                // the subsequent MODIFY abort with a low-signal duplicate-key
+                // error instead of the actionable message below.
+                if (!$this->db->isResultSet($countResult) || !($countResult instanceof \mysqli_result)) {
+                    $this->logs[] = \sprintf(_DB_QUERY_ERROR, $countSql) . $this->db->error();
+                    return false;
+                }
+                $countRow = $this->db->fetchRow($countResult);
+                $conflictCount = $countRow ? (int) $countRow[0] : 0;
+                if ($conflictCount > 1) {
+                    $this->logs[] = sprintf(
+                        'profile_field has %d rows where field_name is NULL or empty; coercing them via MODIFY ... NOT NULL DEFAULT \'\' would violate the UNIQUE index on field_name. Resolve these rows manually (assign distinct values or delete duplicates) and re-run the upgrade.',
+                        $conflictCount
+                    );
+                    return false;
+                }
+            }
+
+            // Log the specific divergence so admins can audit what changed —
+            // especially important when nullability or default is being
+            // rewritten (NULL values are coerced to '' by the MODIFY).
+            // Log values are htmlspecialchars-escaped because the upgrader
+            // renders $this->logs entries as HTML (joined with <br>).
+            if ($isNullable || '' !== $currentDefault) {
+                $this->logs[] = sprintf(
+                    'profile_field.field_name is %s(%d) %s DEFAULT %s — rewriting to varchar(64) NOT NULL DEFAULT \'\'. Any existing NULL values will be coerced to empty strings.',
+                    htmlspecialchars($dataType, ENT_QUOTES, 'UTF-8'),
+                    $currentLen,
+                    $isNullable ? 'NULL' : 'NOT NULL',
+                    null === $currentDefault
+                        ? 'NULL'
+                        : "'" . htmlspecialchars($currentDefault, ENT_QUOTES, 'UTF-8') . "'"
+                );
+            }
+            $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
+            if (!$this->execOrFail($alter)) {
+                return false;
+            }
+        }
+
+        // Step 2: Recreate the unique index with an explicit prefix of 64.
+        $hasIndex = $this->indexExists($table, 'field_name');
+        if (null === $hasIndex) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of index `field_name` on `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if ($hasIndex && !$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `field_name`")) {
+            return false;
+        }
+        $addIndex = "ALTER TABLE `{$table}` ADD UNIQUE `field_name` (`field_name`(64)) USING BTREE";
+
+        return $this->execOrFail($addIndex);
+    }
+
+    // =========================================================================
+    // Task 12: normalizeprofileregstepsort — Normalize profile_regstep.sort index
+    //
+    // The historical prefix (100) on step_name is the canonical form. Target:
+    //   KEY `sort` (`step_order`, `step_name`(100)) USING BTREE
+    // Composite size under utf8mb4: 2 (smallint) + 100*4 = 402 bytes — safe
+    // on MyISAM (1000), default InnoDB 5.7 (767), and modern InnoDB (3072).
+    // =========================================================================
+
+    /**
+     * Check if the `sort` index already uses the canonical layout:
+     *   KEY `sort` (`step_order`, `step_name`(100)) — non-UNIQUE.
+     *
+     * Verifies the full layout (column order, prefix lengths, AND that the
+     * index is non-UNIQUE), not just the prefix length on step_name — a
+     * partial hand-patch that left step_order out, or upgraded the index
+     * to UNIQUE, must still be rebuilt. Skipped silently when the table is
+     * absent (Profile module not installed).
+     *
+     * @return bool true if already normalised (no action needed)
+     */
+    public function check_normalizeprofileregstepsort(): bool
+    {
+        $table = $this->db->prefix('profile_regstep');
+
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            return false;
+        }
+        if (!$exists) {
+            return true;
+        }
+
+        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`"
+                . " FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = 'sort'"
+                . " ORDER BY `SEQ_IN_INDEX`";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        $rows = [];
+        while ($row = $this->db->fetchRow($result)) {
+            $rows[] = $row;
+        }
+
+        // Expect exactly two non-UNIQUE rows:
+        //   [('step_order', 1, NULL, 1), ('step_name', 2, 100, 1)]
+        if (2 !== count($rows)) {
+            return false;
+        }
+        if ('step_order' !== $rows[0][0]
+            || 1 !== (int) $rows[0][1]
+            || null !== $rows[0][2]
+            || 1 !== (int) $rows[0][3]
+        ) {
+            return false;
+        }
+        if ('step_name' !== $rows[1][0]
+            || 2 !== (int) $rows[1][1]
+            || 100 !== (int) $rows[1][2]
+            || 1 !== (int) $rows[1][3]
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Recreate the `sort` index with the canonical layout
+     *   (step_order, step_name(100)) USING BTREE.
+     *
+     * Skipped silently when the table is absent (Profile module not installed).
+     *
+     * @return bool true on success (or table absent)
+     */
+    public function apply_normalizeprofileregstepsort(): bool
+    {
+        $table = $this->db->prefix('profile_regstep');
+
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if (!$exists) {
+            return true;
+        }
+
+        $hasIndex = $this->indexExists($table, 'sort');
+        if (null === $hasIndex) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of index `sort` on `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if ($hasIndex && !$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `sort`")) {
+            return false;
+        }
+        $sql = "ALTER TABLE `{$table}` ADD KEY `sort` (`step_order`, `step_name`(100)) USING BTREE";
+
+        return $this->execOrFail($sql);
+    }
+
+    // =========================================================================
+    // Task 13: cleancache — Clear compiled templates and cache files
     // =========================================================================
 
     /**
@@ -753,6 +1148,88 @@ class Upgrade_270 extends XoopsUpgrade
         $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
 
         return false;
+    }
+
+    /**
+     * Normalise an information_schema.COLUMNS.COLUMN_DEFAULT value.
+     *
+     * MariaDB 10.2.7+ wraps string-literal defaults in single quotes, so a
+     * column `DEFAULT ''` comes back as the 2-char string "''". MySQL (all
+     * versions) and MariaDB ≤10.2.6 return the bare literal (the empty
+     * string). This helper returns the unwrapped literal, or null when no
+     * default is set, so downstream callers can compare against the raw
+     * target value consistently across MySQL and MariaDB.
+     *
+     * @param mixed $default raw COLUMN_DEFAULT value as returned by mysqli
+     * @return string|null   unwrapped literal, or null when no default set
+     */
+    private static function normaliseColumnDefault(mixed $default): ?string
+    {
+        if (null === $default) {
+            return null;
+        }
+        $value = (string) $default;
+        if (strlen($value) >= 2
+            && str_starts_with($value, "'")
+            && str_ends_with($value, "'")
+        ) {
+            return substr($value, 1, -1);
+        }
+        return $value;
+    }
+
+    /**
+     * Check whether a table exists in the current database.
+     *
+     * Tri-state so callers can distinguish "module not installed" from
+     * "we don't know":
+     *   true  → table exists
+     *   false → table is absent (caller should skip)
+     *   null  → information_schema query failed (caller should log + fail,
+     *           never silently skip a possibly-present table)
+     *
+     * @param string $table fully prefixed table name
+     */
+    private function tableExists(string $table): ?bool
+    {
+        $sql    = "SELECT 1 FROM `information_schema`.`TABLES`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+
+        return (bool) $this->db->fetchArray($result);
+    }
+
+    /**
+     * Check whether an index exists on a table.
+     *
+     * Tri-state so callers can distinguish "index genuinely absent" from
+     * "we don't know" — mirrors tableExists():
+     *   true  → index exists
+     *   false → index is absent (caller can safely skip a DROP)
+     *   null  → information_schema query failed (caller should log + fail
+     *           rather than risk an ADD against an index that actually exists)
+     *
+     * @param string $table     fully prefixed table name
+     * @param string $indexName index name (use 'PRIMARY' for the primary key)
+     */
+    private function indexExists(string $table, string $indexName): ?bool
+    {
+        $sql    = "SELECT 1 FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = " . $this->db->quote($indexName)
+                . " LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+
+        return (bool) $this->db->fetchArray($result);
     }
 }
 
