@@ -9,10 +9,6 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
-if (!class_exists('Db_manager', false)) {
-    require_once XOOPS_ROOT_PATH . '/install/class/dbmanager.php';
-}
-
 use Xmf\Database\Tables;
 use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;
@@ -168,12 +164,12 @@ class Upgrade_2511 extends XoopsUpgrade
 
         $result = $migrate->executeQueue(true);
         if (false === $result) {
-            $this->logs[] = sprintf(
+            $this->logEscaped(sprintf(
                 'Migration of %s table failed. Error: %s - %s',
                 $this->bannerTableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
-            );
+            ));
             return false;
         }
 
@@ -224,7 +220,7 @@ class Upgrade_2511 extends XoopsUpgrade
     {
         $confId = $this->getMailerMethodConfigId();
         if (null === $confId) {
-            $this->logs[] = 'Unable to locate the mailmethod configuration row for qmail option insertion.';
+            $this->logEscaped('Unable to locate the mailmethod configuration row for qmail option insertion.');
 
             return false;
         }
@@ -286,7 +282,7 @@ class Upgrade_2511 extends XoopsUpgrade
     private function makeDirectory($newPath)
     {
         if (!mkdir($newPath) && !is_dir($newPath)) {
-            $this->logs[] = sprintf('Captcha config directory %s was not created', $newPath);
+            $this->logEscaped(sprintf('Captcha config directory %s was not created', $newPath));
             return false;
         }
         return true;
@@ -305,7 +301,7 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!file_exists($destination)) { // don't overwrite anything
             $result = copy($source, $destination);
             if (false === $result) {
-                $this->logs[] = sprintf('Captcha config file copy %s failed', basename($source));
+                $this->logEscaped(sprintf('Captcha config file copy %s failed', basename($source)));
                 return false;
             }
         }
@@ -328,7 +324,7 @@ class Upgrade_2511 extends XoopsUpgrade
         }
         $directory = dir($sourcePath);
         if (false === $directory) {
-            $this->logs[] = sprintf('Failed to read source %s', $sourcePath);
+            $this->logEscaped(sprintf('Failed to read source %s', $sourcePath));
             return false;
         }
         while (false !== ($entry = $directory->read())) {
@@ -392,12 +388,12 @@ class Upgrade_2511 extends XoopsUpgrade
 
         $result = $migrate->executeQueue(true);
         if (false === $result) {
-            $this->logs[] = sprintf(
+            $this->logEscaped(sprintf(
                 'Migration of %s table failed. Error: %s - %s',
                 $tableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
-            );
+            ));
             return false;
         }
 
@@ -428,7 +424,7 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!file_exists($destination)) { // don't overwrite anything
             $result = copy($source, $destination);
             if (false === $result) {
-                $this->logs[] = 'xoopsconfig.php file copy failed';
+                $this->logEscaped('xoopsconfig.php file copy failed');
                 return false;
             }
         }
@@ -517,7 +513,7 @@ class Upgrade_2511 extends XoopsUpgrade
             if (!file_exists($dest) && file_exists($src)) {
                 $result = copy($src, $dest);
                 if (false === $result) {
-                    $this->logs[] = sprintf('textsanitizer file copy to %s failed', $destination);
+                    $this->logEscaped(sprintf('textsanitizer file copy to %s failed', $destination));
                     $return = false;
                 }
             }
@@ -695,12 +691,12 @@ class Upgrade_2511 extends XoopsUpgrade
 
         $result = $migrate->executeQueue(true);
         if (false === $result) {
-            $this->logs[] = sprintf(
+            $this->logEscaped(sprintf(
                 'Migration of %s table failed. Error: %s - %s',
                 $this->modulesTableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
-            );
+            ));
             return false;
         }
 
@@ -818,19 +814,19 @@ class Upgrade_2511 extends XoopsUpgrade
 
             if (is_link($path)) {
                 if (!unlink($path)) {
-                    $this->logs[] = 'Failed to delete Smarty symlink: ' . basename($path);
+                    $this->logEscaped('Failed to delete Smarty symlink: ' . basename($path));
 
                     return false;
                 }
             } elseif (is_dir($path)) {
                 if (!self::deleteFolder($path)) {
-                    $this->logs[] = 'Failed to delete Smarty directory: ' . basename($path);
+                    $this->logEscaped('Failed to delete Smarty directory: ' . basename($path));
 
                     return false;
                 }
             } elseif (is_file($path)) {
                 if (!unlink($path)) {
-                    $this->logs[] = 'Failed to delete Smarty file: ' . basename($path);
+                    $this->logEscaped('Failed to delete Smarty file: ' . basename($path));
 
                     return false;
                 }
@@ -1025,26 +1021,25 @@ class Upgrade_2511 extends XoopsUpgrade
             return false;
         }
 
-        $dbm  = new Db_manager();
         $time = time();
         foreach ($templates as $tplfile) {
             $fileName = (string) ($tplfile['file'] ?? '');
             if ('' === $fileName) {
-                $this->logs[] = sprintf('Missing template file name in system template metadata for %s templates.', $type);
+                $this->logEscaped(sprintf('Missing template file name in system template metadata for %s templates.', $type));
 
                 return false;
             }
 
             $filePath = $templateBasePath . '/' . $fileName;
             if (!is_readable($filePath)) {
-                $this->logs[] = sprintf('Template file is not readable: %s', $fileName);
+                $this->logEscaped(sprintf('Template file is not readable: %s', $fileName));
 
                 return false;
             }
 
             $tplsource = file_get_contents($filePath);
             if (false === $tplsource) {
-                $this->logs[] = sprintf('Failed to read template file: %s', $fileName);
+                $this->logEscaped(sprintf('Failed to read template file: %s', $fileName));
 
                 return false;
             }
@@ -1058,7 +1053,7 @@ class Upgrade_2511 extends XoopsUpgrade
                 . ' ORDER BY tf.`tpl_id` ASC LIMIT 1';
             $result = $this->db->query($sql);
             if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-                $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+                $this->logDbError($sql);
 
                 return false;
             }
@@ -1070,11 +1065,12 @@ class Upgrade_2511 extends XoopsUpgrade
                     continue;
                 }
 
-                if (!$dbm->insert(
-                    'tplsource',
-                    ' (tpl_id, tpl_source) VALUES (' . $tplId . ', ' . $this->db->quote($tplsource) . ')'
-                )) {
-                    $this->logs[] = sprintf('Failed to backfill tplsource row for %s', $fileName);
+                $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                    . ' (tpl_id, tpl_source) VALUES (' . (int) $tplId . ', ' . $this->db->quote($tplsource) . ')';
+                $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                    . ' (tpl_id, tpl_source) VALUES (' . (int) $tplId . ', [tpl_source omitted])';
+                if (!$this->execOrFail($sql, $logSql)) {
+                    $this->logEscaped(sprintf('Failed to backfill tplsource row for %s', $fileName));
 
                     return false;
                 }
@@ -1082,9 +1078,9 @@ class Upgrade_2511 extends XoopsUpgrade
                 continue;
             }
 
-            $newtplid = $dbm->insert(
-                'tplfile',
-                " VALUES (0, 1, 'system', 'default', "
+            $sql = 'INSERT INTO ' . $this->db->prefix('tplfile')
+                . ' (tpl_id, tpl_refid, tpl_module, tpl_tplset, tpl_file, tpl_desc, tpl_lastmodified, tpl_lastimported, tpl_type)'
+                . " VALUES (NULL, 1, 'system', 'default', "
                 . $this->db->quote($fileName)
                 . ', '
                 . $this->db->quote((string) ($tplfile['description'] ?? ''))
@@ -1094,19 +1090,37 @@ class Upgrade_2511 extends XoopsUpgrade
                 . $time
                 . ', '
                 . $this->db->quote($type)
-                . ')'
-            );
-            if (!$newtplid) {
-                $this->logs[] = sprintf('Failed to insert tplfile row for %s', $fileName);
+                . ')';
+            if (!$this->execOrFail($sql)) {
+                $this->logEscaped(sprintf('Failed to insert tplfile row for %s', $fileName));
+
+                return false;
+            }
+            $newtplid = $this->db->getInsertId();
+            if ($newtplid <= 0) {
+                $this->logEscaped(sprintf('Failed to resolve tplfile id after insert for %s', $fileName));
 
                 return false;
             }
 
-            if (!$dbm->insert(
-                'tplsource',
-                ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')'
-            )) {
-                $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
+            $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')';
+            $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', [tpl_source omitted])';
+            if (!$this->execOrFail($sql, $logSql)) {
+                $this->logEscaped(sprintf('Failed to insert tplsource row for %s', $fileName));
+                // Best-effort cleanup so re-running the upgrade is not blocked by an orphan tplfile row.
+                $cleanupSql = 'DELETE FROM ' . $this->db->prefix('tplfile')
+                    . ' WHERE `tpl_id` = ' . (int) $newtplid . ' LIMIT 1';
+                if (!$this->execOrFail($cleanupSql)) {
+                    $this->logEscaped(
+                        sprintf(
+                            'Failed to remove orphan tplfile row %d for %s',
+                            (int) $newtplid,
+                            $fileName
+                        )
+                    );
+                }
 
                 return false;
             }
@@ -1115,15 +1129,59 @@ class Upgrade_2511 extends XoopsUpgrade
         return true;
     }
 
-    private function execOrFail(string $sql): bool
+    /**
+     * Execute a SQL statement and append an HTML-safe failure message when it fails.
+     *
+     * Callers may pass a redacted SQL string for logging when the executed statement
+     * contains large or sensitive payloads such as tpl_source. Pass raw, unescaped
+     * text here; this method performs the final HTML escaping before writing to logs.
+     *
+     * @param string      $sql    SQL statement to execute.
+     * @param string|null $logSql Optional redacted SQL used only in the logged message.
+     *
+     * @return bool True on success, false on failure.
+     */
+    private function execOrFail(string $sql, ?string $logSql = null): bool
     {
         if ($this->db->exec($sql)) {
             return true;
         }
 
-        $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+        $this->logDbError($sql, $logSql);
 
         return false;
+    }
+
+    /**
+     * Append an HTML-safe DB error entry to $this->logs.
+     *
+     * Formats _DB_QUERY_ERROR with $logSql (or $sql if null) and appends
+     * $this->db->error(), then HTML-escapes the full line for safe UI rendering.
+     *
+     * @param string      $sql    SQL statement that failed.
+     * @param string|null $logSql Optional redacted SQL used only in the logged message
+     *                            (e.g. to omit large blobs such as tpl_source).
+     *
+     * @return void
+     */
+    private function logDbError(string $sql, ?string $logSql = null): void
+    {
+        $this->logEscaped(\sprintf(_DB_QUERY_ERROR, $logSql ?? $sql) . $this->db->error());
+    }
+
+    /**
+     * HTML-escape $message and append it to $this->logs.
+     *
+     * Callers must pass raw, unescaped text to avoid double-encoding when the
+     * upgrade UI renders $this->logs as raw HTML.
+     *
+     * @param string $message Raw log message.
+     *
+     * @return void
+     */
+    private function logEscaped(string $message): void
+    {
+        $this->logs[] = \htmlspecialchars($message, \ENT_QUOTES, _UPGRADE_CHARSET);
     }
 }
 
