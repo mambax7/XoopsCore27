@@ -174,6 +174,194 @@ final class SystemMenuInstallationTest extends TestCase
     }
 
     #[Test]
+    public function installerInvokesForeignKeyHelperAfterSuccessfulMenuSeeding(): void
+    {
+        $source = $this->readSourceFile('install/include/makedata.php');
+
+        $this->assertMatchesRegularExpression(
+            '/if\\s*\\(\\s*!system_menu_install_seed_defaults\\(\\$dbm, \\$groups, 1\\)\\s*\\).*?'
+            . 'system_menu_install_add_category_fk\\(\\$dbm\\);/s',
+            $source,
+            'make_data() must call system_menu_install_add_category_fk() after the seed-success guard'
+        );
+    }
+
+    #[Test]
+    public function installerForeignKeyHelperBuildsPrefixedAlterTableStatement(): void
+    {
+        $source = $this->readSourceFile('install/include/makedata.php');
+
+        $this->assertStringContainsString(
+            'function system_menu_install_add_category_fk($dbm): bool',
+            $source,
+            'Helper must be defined in install/include/makedata.php'
+        );
+        $this->assertStringContainsString(
+            "\$db->prefix('menusitems')",
+            $source
+        );
+        $this->assertStringContainsString(
+            "\$db->prefix('menuscategory')",
+            $source
+        );
+        $this->assertStringContainsString(
+            "\$db->prefix('fk_items_category')",
+            $source
+        );
+        $this->assertMatchesRegularExpression(
+            '/ALTER TABLE `[^`]*` ADD CONSTRAINT `[^`]*`/',
+            $source
+        );
+        $this->assertStringContainsString(
+            'FOREIGN KEY (`items_cid`) REFERENCES',
+            $source
+        );
+        $this->assertStringContainsString(
+            'ON DELETE CASCADE',
+            $source
+        );
+    }
+
+    #[Test]
+    public function installerForeignKeyHelperIsIdempotentAndNonFatal(): void
+    {
+        $source = $this->readSourceFile('install/include/makedata.php');
+
+        $this->assertStringContainsString(
+            'INFORMATION_SCHEMA.TABLE_CONSTRAINTS',
+            $source,
+            'Helper must check INFORMATION_SCHEMA to stay idempotent'
+        );
+        $this->assertMatchesRegularExpression(
+            '/getRowsNum\\(\\$result\\)\\s*>\\s*0\\s*\\)\\s*\\{\\s*return true;/',
+            $source,
+            'Helper must short-circuit when the FK already exists'
+        );
+        $this->assertMatchesRegularExpression(
+            '/trigger_error\\(\\s*[\'"][^\'"]*foreign key[^\'"]*[\'"]\\s*,\\s*E_USER_WARNING\\s*\\)/i',
+            $source,
+            'Helper must surface exec failure via trigger_error(E_USER_WARNING)'
+        );
+        $this->assertMatchesRegularExpression(
+            '/false === \\$db->exec\\(\\$sql\\)\\)\\s*\\{[^}]*return false;/s',
+            $source,
+            'Helper must return false on exec failure without aborting install'
+        );
+    }
+
+    #[Test]
+    public function foreignKeyHelperEmitsPrefixedAlterTableWhenFkMissing(): void
+    {
+        $dbm = new class {
+            public object $db;
+            public function __construct()
+            {
+                // Stubs declare no parameters; PHP accepts extra positional args silently.
+                // This keeps the helper's $db->query($sql) etc. call sites working while
+                // not declaring (therefore not leaving unused) the args the stub ignores.
+                $this->db = new class {
+                    public array $execCalls = [];
+                    public function prefix(string $name): string
+                    {
+                        return 'xo_' . $name;
+                    }
+                    public function quote(string $value): string
+                    {
+                        return "'" . addslashes($value) . "'";
+                    }
+                    public function query(): bool
+                    {
+                        // Returning false makes the existence-short-circuit fall through
+                        // to the ALTER branch (the path being tested).
+                        return false;
+                    }
+                    public function isResultSet(): bool
+                    {
+                        return false;
+                    }
+                    public function getRowsNum(): int
+                    {
+                        return 0;
+                    }
+                    public function exec(string $sql)
+                    {
+                        $this->execCalls[] = $sql;
+                        return 1;
+                    }
+                };
+            }
+        };
+
+        $result = system_menu_install_add_category_fk($dbm);
+
+        $this->assertTrue($result, 'Helper must return true when the ALTER succeeds');
+        $this->assertCount(1, $dbm->db->execCalls, 'Helper must issue exactly one ALTER');
+        $alter = $dbm->db->execCalls[0];
+        $this->assertStringContainsString('ALTER TABLE `xo_menusitems`', $alter);
+        $this->assertStringContainsString('ADD CONSTRAINT `xo_fk_items_category`', $alter);
+        $this->assertStringContainsString('FOREIGN KEY (`items_cid`)', $alter);
+        $this->assertStringContainsString('REFERENCES `xo_menuscategory` (`category_id`)', $alter);
+        $this->assertStringContainsString('ON DELETE CASCADE', $alter);
+    }
+
+    #[Test]
+    public function foreignKeyHelperWarnsAndReturnsFalseWhenAlterFails(): void
+    {
+        $dbm = new class {
+            public object $db;
+            public function __construct()
+            {
+                $this->db = new class {
+                    public int $execCallCount = 0;
+                    public function prefix(string $name): string
+                    {
+                        return 'xo_' . $name;
+                    }
+                    public function quote(string $value): string
+                    {
+                        return "'" . addslashes($value) . "'";
+                    }
+                    public function query(): bool
+                    {
+                        return false;
+                    }
+                    public function isResultSet(): bool
+                    {
+                        return false;
+                    }
+                    public function getRowsNum(): int
+                    {
+                        return 0;
+                    }
+                    public function exec(): bool
+                    {
+                        $this->execCallCount++;
+                        return false;
+                    }
+                };
+            }
+        };
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = [$errno, $errstr];
+            return true;
+        });
+
+        try {
+            $result = system_menu_install_add_category_fk($dbm);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertFalse($result, 'Helper must return false when the ALTER fails');
+        $this->assertSame(1, $dbm->db->execCallCount, 'Helper must attempt the ALTER exactly once');
+        $this->assertCount(1, $warnings, 'Helper must emit exactly one E_USER_WARNING on failure');
+        $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        $this->assertStringContainsString('foreign key', $warnings[0][1]);
+    }
+
+    #[Test]
     public function systemModuleRegistersInstallAndUpdateHooksToSameScript(): void
     {
         $modversion = [];

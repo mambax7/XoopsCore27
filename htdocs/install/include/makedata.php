@@ -144,6 +144,56 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
 }
 
 /**
+ * Add the menusitems -> menuscategory foreign key during fresh install.
+ *
+ * The install SQL in sql/mysql.structure.sql cannot carry this FK inline
+ * because SqlUtility::prefixQuery() only rewrites the leading table name
+ * and does not rewrite REFERENCES targets inside CREATE TABLE bodies.
+ * Running a prefixed ALTER TABLE ADD CONSTRAINT after the menu tables are
+ * created and seeded keeps fresh-install schema in parity with the runtime
+ * system-module upgrade path in modules/system/include/update.php
+ * (see system_menu_create_tables()).
+ *
+ * Idempotent: returns true early if the FK already exists. Non-fatal on
+ * failure — the caller continues and the next system module upgrade
+ * retries the add via the same constraint name.
+ *
+ * @param Db_manager $dbm
+ *
+ * @return bool true on success or already-present, false if the ALTER failed
+ */
+function system_menu_install_add_category_fk($dbm): bool
+{
+    $db        = $dbm->db;
+    $itemTable = $db->prefix('menusitems');
+    $catTable  = $db->prefix('menuscategory');
+    $fkName    = $db->prefix('fk_items_category');
+
+    $result = $db->query(
+        'SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS'
+        . ' WHERE CONSTRAINT_NAME = ' . $db->quote($fkName)
+        . ' AND TABLE_NAME = ' . $db->quote($itemTable)
+        . ' AND TABLE_SCHEMA = DATABASE()'
+    );
+    if ($db->isResultSet($result) && ($result instanceof \mysqli_result) && $db->getRowsNum($result) > 0) {
+        return true;
+    }
+
+    $sql = 'ALTER TABLE `' . $itemTable . '` ADD CONSTRAINT `' . $fkName . '`'
+         . ' FOREIGN KEY (`items_cid`) REFERENCES `' . $catTable . '` (`category_id`)'
+         . ' ON DELETE CASCADE';
+    if (false === $db->exec($sql)) {
+        trigger_error(
+            'Failed to add menusitems foreign key during install; next system module upgrade will retry.',
+            E_USER_WARNING
+        );
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * @param $dbm
  * @param $adminname
  * @param $hashedAdminPass
@@ -200,6 +250,9 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     if (!system_menu_install_seed_defaults($dbm, $groups, 1)) {
         return false;
     }
+    // Best-effort: add the menusitems FK after seeding completes. Non-fatal on
+    // failure — install continues and the next system module upgrade retries.
+    system_menu_install_add_category_fk($dbm);
 
     foreach ($modversion['templates'] as $tplfile) {
         $templateType = isset($tplfile['type']) && 'admin' === $tplfile['type'] ? 'admin' : 'module';
