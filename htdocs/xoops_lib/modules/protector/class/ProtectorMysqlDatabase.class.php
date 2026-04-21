@@ -45,7 +45,16 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
         $protector->last_error_type = 'SQL Injection';
         $protector->message .= $sql;
         $protector->output_log($protector->last_error_type);
-        die('SQL Injection found');
+
+        // Fix 1.4: reply with HTTP 403 and a generic body. The previous
+        // terminator returned HTTP 200 with a distinctive plain-text body,
+        // which fingerprinted the dblayertrap response and allowed attackers
+        // to probe the module's sensitivity character-by-character. A generic
+        // 'Forbidden' response matches any other blocked-request path.
+        if (!headers_sent()) {
+            http_response_code(403);
+        }
+        die('Forbidden');
     }
 
     /**

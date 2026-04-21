@@ -141,7 +141,12 @@ class Protector
             }
 
             // register as doubtful requests against SQL Injections
-            if (preg_match('?[\s\'"`/]?', $val)) {
+            // Fix 1.1: pin the PCRE delimiter to '#' for clarity. The legacy '?' form
+            // parsed correctly (PHP accepts '?' as a delimiter) but was visually
+            // ambiguous because '?' also serves as the zero-or-one quantifier. No
+            // detection-semantic change — the character class and match behaviour
+            // are identical to the previous form.
+            if (preg_match('#[\s\'"`/]#', $val)) {
                 $this->_doubtful_requests[(string)$key] = $val;
             }
         }
@@ -242,7 +247,11 @@ class Protector
     public function purgeCookies()
     {
         if (!headers_sent()) {
-            $domain =  defined(XOOPS_COOKIE_DOMAIN) ? XOOPS_COOKIE_DOMAIN : '';
+            // Fix 1.2: defined() requires the constant name as a string literal.
+            // Without quotes PHP 8 throws a Fatal Error when XOOPS_COOKIE_DOMAIN is absent;
+            // when it is defined, PHP evaluates it first and passes its value to defined(),
+            // so defined() checks the wrong constant name and will typically return false.
+            $domain =  defined('XOOPS_COOKIE_DOMAIN') ? XOOPS_COOKIE_DOMAIN : '';
             $past = time() - 3600;
             foreach ($_COOKIE as $key => $value) {
                 setcookie($key, '', $past, '', $domain);
@@ -681,7 +690,44 @@ class Protector
         $this->_dblayertrap_check_recursive($_POST);
         $this->_dblayertrap_check_recursive($_COOKIE);
         if (empty($this->_conf['dblayertrap_wo_server'])) {
-            $this->_dblayertrap_check_recursive($_SERVER);
+            // Fix 1.5: scan only a positive allowlist of server-intrinsic $_SERVER keys.
+            // Any denylist over this surface is incomplete. Request-derived keys are
+            // excluded — attacker-controlled values in them would otherwise poison
+            // _dblayertrap_doubtfuls and trigger false-positive cascades on queries
+            // that happen to share a substring with the attacker's input.
+            //
+            // Excluded classes:
+            //   - HTTP_* (all request headers expand to this namespace)
+            //   - CONTENT_TYPE, CONTENT_LENGTH (request headers outside HTTP_*)
+            //   - PHP_AUTH_USER, PHP_AUTH_PW, PHP_AUTH_DIGEST, AUTH_TYPE (auth headers)
+            //   - QUERY_STRING, REQUEST_URI, PATH_INFO, PATH_TRANSLATED, ORIG_PATH_INFO (URL parts)
+            //   - REDIRECT_* (mod_rewrite/redirect context)
+            //   - PHP_SELF, SCRIPT_NAME (request-derived on URL-rewriting deployments;
+            //     Protector itself has documented XSS handling for these elsewhere)
+            //   - SERVER_NAME (reflects the Host header when UseCanonicalName is Off,
+            //     which is common on Apache and default on many reverse-proxied setups)
+            //   - REQUEST_METHOD (client-supplied token from the request line; Apache
+            //     and many other servers pass arbitrary method names like SELECT or
+            //     UNION straight through to PHP)
+            //   - SERVER_PROTOCOL (client-supplied token from the request line; a
+            //     lenient server can surface values like SELECT/1.0, and its realistic
+            //     contents HTTP/1.0 | HTTP/1.1 | HTTP/2.0 offer no SQLi signal anyway)
+            //
+            // The existing dblayertrap_wo_server config flag remains as the escape hatch
+            // for admins who want to skip the $_SERVER scan entirely.
+            static $serverScanAllowlist = [
+                'SERVER_ADDR'       => true,
+                'SERVER_PORT'       => true,
+                'SERVER_SOFTWARE'   => true,
+                'GATEWAY_INTERFACE' => true,
+                'DOCUMENT_ROOT'     => true,
+                'REQUEST_SCHEME'    => true,
+                'REMOTE_ADDR'       => true,
+                'REMOTE_PORT'       => true,
+                'SCRIPT_FILENAME'   => true,
+            ];
+            $serverSafe = array_intersect_key($_SERVER, $serverScanAllowlist);
+            $this->_dblayertrap_check_recursive($serverSafe);
         }
 
         if (!empty($this->_dblayertrap_doubtfuls) || $force_override) {
@@ -1284,7 +1330,15 @@ class Protector
         }
 
         // Check its Agent
-        if ('' != trim($this->_conf['dos_crsafe']) && isset($_SERVER['HTTP_USER_AGENT']) && preg_match($this->_conf['dos_crsafe'], $_SERVER['HTTP_USER_AGENT'])) {
+        // Fix 1.3 (runtime guard): an admin-supplied regex that is syntactically invalid
+        // would emit a PHP warning on every request. Probe validity against an empty
+        // subject first; silently ignore the setting if invalid.
+        // NOTE: this check covers SYNTAX only. A syntactically-valid but catastrophically
+        // backtracking pattern (ReDoS) still runs against the real User-Agent. Full
+        // admin-side validation and PCRE backtrack-limit handling defer to 3.7.0.
+        $crsafe_pattern = trim((string)($this->_conf['dos_crsafe'] ?? ''));
+        $crsafe_valid   = '' !== $crsafe_pattern && false !== @preg_match($crsafe_pattern, '');
+        if ($crsafe_valid && isset($_SERVER['HTTP_USER_AGENT']) && preg_match($crsafe_pattern, $_SERVER['HTTP_USER_AGENT'])) {
             // welcomed crawler
             $this->_done_dos = true;
 
