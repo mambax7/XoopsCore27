@@ -678,14 +678,21 @@ class Upgrade_270 extends XoopsUpgrade
         $row = $this->db->fetchRow($result);
 
         // Skip-with-warning flag is honoured only while the column is STILL
-        // widened (the condition that originally triggered the skip).
-        // If the admin followed the logged advice and narrowed the column
-        // in the same session, the flag is stale — clear it and fall
-        // through to the normal canonical-shape check so the index can
-        // still be normalised without waiting for a new session.
+        // widened AND actual stored data still exceeds 64 chars (the
+        // condition that still requires manual action). If the admin
+        // narrowed the data or the column in the same session, the flag is
+        // stale — clear it and fall through to the normal canonical-shape
+        // check so the column/index can still be normalised without waiting
+        // for a new session.
         if (!empty($_SESSION[$this->widenedFieldNameSkipKey])) {
             if ($row && (int) $row[1] > 64) {
-                return true;  // still widened — defer to manual action
+                $maxStoredLength = $this->getMaxCharLength($table, 'field_name');
+                if (null === $maxStoredLength) {
+                    return false;
+                }
+                if ($maxStoredLength > 64) {
+                    return true;  // still widened with overlong data — defer to manual action
+                }
             }
             unset($_SESSION[$this->widenedFieldNameSkipKey]);
         }
@@ -793,24 +800,35 @@ class Upgrade_270 extends XoopsUpgrade
             return false;
         }
 
-        // Guard 2: skip-with-warning when the column has been widened.
-        // Narrowing could silently truncate data (if sql_mode lacks
-        // STRICT_ALL_TABLES); recreating the UNIQUE index with prefix(64)
-        // on a wider column would weaken uniqueness from "full width" to
-        // "first 64 chars". Either outcome is worse than leaving the
-        // customised column alone, so the task logs a warning, sets a
-        // session flag so check_ treats the task as resolved on subsequent
-        // isApplied() calls (otherwise the patch would remain permanently
-        // "not applied"), and returns true so the rest of the 2.7.0
-        // upgrade is not blocked.
+        // Guard 2: when the column has been widened, inspect actual stored
+        // data before deciding whether to skip. A wider declaration alone is
+        // not a problem if every value already fits within 64 chars. Only
+        // skip when overlong data is present, because narrowing in that case
+        // could silently truncate data (if sql_mode lacks STRICT_ALL_TABLES)
+        // and recreating the UNIQUE index with prefix(64) would weaken
+        // uniqueness from "full width" to "first 64 chars".
         if ($currentLen > 64) {
+            $maxStoredLength = $this->getMaxCharLength($table, 'field_name');
+            if (null === $maxStoredLength) {
+                return false;
+            }
+            if ($maxStoredLength > 64) {
+                $this->logs[] = sprintf(
+                    'profile_field.field_name is %s(%d) and contains values up to %d chars; skipping index normalisation. Reduce or rename the overlong values so all fit within 64 chars, then re-run the upgrade.',
+                    $dataType,
+                    $currentLen,
+                    $maxStoredLength
+                );
+                $_SESSION[$this->widenedFieldNameSkipKey] = true;
+                return true;
+            }
+
             $this->logs[] = sprintf(
-                'profile_field.field_name is %s(%d); skipping index normalisation — column is wider than 64 chars. Reduce the column manually after verifying no values exceed 64 chars, then re-run the upgrade.',
-                $dataType,
-                $currentLen
+                'profile_field.field_name is declared as %s(%d), but all stored values fit within 64 chars (max %d); rewriting to varchar(64) NOT NULL DEFAULT \'\'.',
+                htmlspecialchars($dataType, ENT_QUOTES, 'UTF-8'),
+                $currentLen,
+                $maxStoredLength
             );
-            $_SESSION[$this->widenedFieldNameSkipKey] = true;
-            return true;
         }
 
         // MODIFY if any of the four column attributes diverge from the target:
@@ -1148,6 +1166,29 @@ class Upgrade_270 extends XoopsUpgrade
         $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
 
         return false;
+    }
+
+    /**
+     * Get the maximum CHAR_LENGTH currently stored in a character column.
+     *
+     * Returns null on query failure so callers can abort with the emitted DB
+     * error instead of making a schema decision on incomplete information.
+     *
+     * @param string $table  fully prefixed trusted table name
+     * @param string $column trusted column name
+     */
+    private function getMaxCharLength(string $table, string $column): ?int
+    {
+        $sql    = "SELECT COALESCE(MAX(CHAR_LENGTH(`{$column}`)), 0) FROM `{$table}`";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+            return null;
+        }
+
+        $row = $this->db->fetchRow($result);
+
+        return $row ? (int) $row[0] : 0;
     }
 
     /**
