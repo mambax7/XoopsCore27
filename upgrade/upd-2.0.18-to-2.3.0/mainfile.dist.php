@@ -71,7 +71,7 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
     if (defined('XOOPS_DB_CHARSET')) {
         die('Restricted Access');
     }
-    define('XOOPS_DB_CHARSET', '');
+    define('XOOPS_DB_CHARSET', 'utf8mb4');
 
     // Table Prefix
     // This prefix will be added to all new tables created to avoid name conflict in the database. If you are unsure, just use the default "xoops".
