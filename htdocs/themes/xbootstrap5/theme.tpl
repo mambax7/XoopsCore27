@@ -11,7 +11,6 @@
     <meta name="rating" content="<{$xoops_meta_rating}>">
     <meta name="author" content="<{$xoops_meta_author}>">
     <meta name="generator" content="XOOPS">
-    <title><{$xoops_sitename}> - <{$xoops_pagetitle}></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Owl Carousel Assets -->
     <link href="<{xoImgUrl}>js/owl/assets/owl.carousel.css" rel="stylesheet">
@@ -46,7 +45,10 @@
 
     <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>">
 
-    <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{else}><{if !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
+    <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{elseif !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{else}><{$xoops_sitename}><{/if}></title>
+
+    <script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
+    <script src="<{xoImgUrl}>js/bootstrap.bundle.min.js"></script>
 
     <{include file="$theme_name/tpl/shareaholic-script.tpl"}>
 
@@ -54,8 +56,6 @@
 
 
 </head>
-<body>
-
 <body id="<{$xoops_dirname}>">
 
 <{include file="$theme_name/tpl/nav-menu.tpl"}>
@@ -128,30 +128,19 @@
 
 <{*=============================  JS   ==================================*}>
 
-<!-- 1. jQuery must be first -->
-<script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
-
-<!-- 2. Bootstrap (if using Bootstrap JS) -->
-<{*<script src="<{xoImgUrl}>js/bootstrap.bundle.min.js"></script>*}>
-
-<!-- 3. Plugins that require jQuery -->
+<!-- 1. Plugins that require jQuery -->
 <script src="<{xoImgUrl}>js/jquery.scrollUp.min.js"></script>
 <script src="<{xoImgUrl}>js/masonry.pkgd.min.js"></script>
 <script src="<{xoImgUrl}>js/imagesloaded.pkgd.min.js"></script>
 <script src="<{xoImgUrl}>js/headhesive.min.js"></script>
 
 
-<!-- 4. Your custom scripts (js.js etc.) -->
-
-<script src="<{xoImgUrl}>js/bootstrap.bundle.min.js"></script>
+<!-- 2. Your custom scripts (js.js etc.) -->
 
 <script src="<{xoImgUrl}>js/theme-toggle.js"></script>
 <script src="<{xoImgUrl}>js/js.js"></script>
 
-<!-- 5. XOOPS module header (injects module-specific JS if needed) -->
-<{$xoops_module_header}>
-
-<!-- 6. Inline scripts (AFTER all libraries) -->
+<!-- 3. Inline scripts (AFTER all libraries) -->
 <script>
     // Set options
     var options = {

@@ -1,5 +1,32 @@
 // JavaScript Document
 
+function initBootstrapCarousels($, options) {
+	const root = typeof globalThis !== 'undefined'
+		? globalThis
+		: (typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : {}));
+	const $carousels = $('.carousel');
+
+	if (!$carousels.length) {
+		return;
+	}
+
+	if (root.bootstrap && root.bootstrap.Carousel) {
+		$carousels.each(function () {
+			root.bootstrap.Carousel.getOrCreateInstance(this, options);
+		});
+
+		return;
+	}
+
+	if (typeof $.fn.carousel === 'function') {
+		$carousels.carousel(options);
+
+		return;
+	}
+
+	console.warn('Bootstrap carousel API not available.');
+}
+
 /* Scroll Top */
 jQuery(function ($) {
 	if (typeof $.scrollUp === 'function') {
@@ -21,7 +48,7 @@ jQuery(function ($) {
 
 /* Bootstrap Carousel */
 jQuery(function ($) {
-	$('.carousel').carousel({
+	initBootstrapCarousels($, {
 		interval: 5000,
 		pause: 'hover',
 		wrap: true
@@ -30,7 +57,7 @@ jQuery(function ($) {
 
 /* Masonry Grid */
 jQuery(function ($) {
-	var $container = $('#xoopsgrid').masonry();
+	const $container = $('#xoopsgrid').masonry();
 	$container.imagesLoaded(function () {
 		$container.masonry();
 	});
@@ -44,20 +71,3 @@ jQuery(function ($) {
 	$(".newbb-links").find('span').removeClass('forum_icon forum_button');
 	$('.newbb-thread-attachment').find('br, hr').remove();
 });
-
-/* Slider init */
-function initSlider() {
-	jQuery(function ($) {
-		$('.carousel').carousel({
-			interval: 5000,
-			ride: 'carousel'
-		});
-	});
-}
-
-// Load when browser is idle
-if ('requestIdleCallback' in window) {
-	requestIdleCallback(initSlider);
-} else {
-	setTimeout(initSlider, 200); // fallback
-}
