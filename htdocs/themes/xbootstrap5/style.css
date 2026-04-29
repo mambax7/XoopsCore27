@@ -360,6 +360,15 @@ a.navbar-brand.xlogo {
     border-color: var(--bs-primary);
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+
+select[name="xoops_theme_select"]:not(:focus) option:checked {
+    color: var(--bs-body-color) !important;
+    background-color: var(--bs-secondary-bg) !important;
+    background-image: linear-gradient(var(--bs-secondary-bg), var(--bs-secondary-bg)) !important;
+    box-shadow: 0 0 0 9999px var(--bs-secondary-bg) inset;
+    font-weight: 700;
+}
+
 /* Custom checkbox styling */
 .form-check-input:checked {
     background-color: var(--bs-primary);

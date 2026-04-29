@@ -667,7 +667,7 @@ function b_system_themes_show($options)
     $block = [];
 
     if (!isset($options[2])) {
-        $options[2] = 3; // this was the fixed value pre 2.5.8
+        $options[2] = 6; // default visible theme rows
     }
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $xoopsConfig['theme_set'], $selectSize);
@@ -695,6 +695,7 @@ function b_system_themes_show($options)
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
             . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
+    $block['theme_redirect'] = (string) ($_SERVER['REQUEST_URI'] ?? '');
 
     return $block;
 }
@@ -709,7 +710,7 @@ function b_system_themes_edit($options)
     $chk  = '';
     $form = _MB_SYSTEM_THSHOW . '&nbsp;';
     if (!isset($options[2])) {
-        $options[2] = 3; // this was the fixed value pre 2.5.8
+        $options[2] = 6; // default visible theme rows
     }
     if ($options[0] == 1) {
         $chk = " checked";

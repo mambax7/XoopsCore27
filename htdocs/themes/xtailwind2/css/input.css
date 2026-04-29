@@ -164,6 +164,14 @@
     .toolbar-edit-on .toolbar-block-edit {
         @apply inline-flex;
     }
+
+    select[name="xoops_theme_select"]:not(:focus) option:checked {
+        color: hsl(var(--bc)) !important;
+        background-color: hsl(var(--b3)) !important;
+        background-image: linear-gradient(hsl(var(--b3)), hsl(var(--b3))) !important;
+        box-shadow: 0 0 0 9999px hsl(var(--b3)) inset;
+        font-weight: 700;
+    }
 }
 
 @layer utilities {

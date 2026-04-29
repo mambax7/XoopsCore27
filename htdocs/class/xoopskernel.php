@@ -192,8 +192,68 @@ class xos_kernel_Xoops2
         if ($themeSelect !== '' && in_array($themeSelect, xoops_getConfigOption('theme_set_allowed'))) {
             xoops_setConfigOption('theme_set', $themeSelect);
             $_SESSION['xoopsUserTheme'] = $themeSelect;
+
+            $redirectUrl = $this->getThemeRedirectUrl();
+            if ($redirectUrl !== '') {
+                header('Location: ' . $redirectUrl, true, 303);
+                exit;
+            }
         } elseif (!empty($_SESSION['xoopsUserTheme']) && in_array($_SESSION['xoopsUserTheme'], xoops_getConfigOption('theme_set_allowed'))) {
             xoops_setConfigOption('theme_set', $_SESSION['xoopsUserTheme']);
         }
+    }
+
+    /**
+     * Return a safe same-site target for the theme selector redirect.
+     */
+    protected function getThemeRedirectUrl(): string
+    {
+        $redirect = \Xmf\Request::getString('xoops_theme_redirect', '', 'POST');
+        if ($redirect === '') {
+            return '';
+        }
+
+        $redirect = trim($redirect);
+        if ($redirect === '' || preg_match('/[\r\n]/', $redirect) === 1 || str_starts_with($redirect, '//')) {
+            return '';
+        }
+
+        $parts = parse_url($redirect);
+        if ($parts === false) {
+            return '';
+        }
+
+        $baseHost = (string) parse_url(XOOPS_URL, PHP_URL_HOST);
+        $basePort = parse_url(XOOPS_URL, PHP_URL_PORT);
+        $basePath = rtrim((string) parse_url(XOOPS_URL, PHP_URL_PATH), '/');
+
+        if (isset($parts['scheme']) || isset($parts['host'])) {
+            $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+            $host   = (string) ($parts['host'] ?? '');
+            if (!in_array($scheme, ['http', 'https'], true)) {
+                return '';
+            }
+            if ($host === '' || strcasecmp($host, $baseHost) !== 0) {
+                return '';
+            }
+            if (($parts['port'] ?? null) !== $basePort) {
+                return '';
+            }
+            $path = (string) ($parts['path'] ?? '/');
+            if ($basePath !== '' && $path !== $basePath && !str_starts_with($path, $basePath . '/')) {
+                return '';
+            }
+
+            return $redirect;
+        }
+
+        if (!str_starts_with($redirect, '/')) {
+            return '';
+        }
+        if ($basePath !== '' && $redirect !== $basePath && !str_starts_with($redirect, $basePath . '/')) {
+            return '';
+        }
+
+        return $redirect;
     }
 }
