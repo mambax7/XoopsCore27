@@ -52,7 +52,8 @@
         display: none;
     }
 
-    select[name="xoops_theme_select"]:not(:focus) option:checked {
+    .xoops-theme-select select[name="xoops_theme_select"][size="1"]:not(:focus),
+    .xoops-theme-select select[name="xoops_theme_select"]:not(:focus) option:checked {
         color: hsl(var(--bc)) !important;
         background-color: hsl(var(--b3)) !important;
         background-image: linear-gradient(hsl(var(--b3)), hsl(var(--b3))) !important;

@@ -315,7 +315,8 @@ strong.hit-counter {
     width: 100%;
 }
 
-select[name="xoops_theme_select"]:not(:focus) option:checked {
+.xoops-theme-select select[name="xoops_theme_select"][size="1"]:not(:focus),
+.xoops-theme-select select[name="xoops_theme_select"]:not(:focus) option:checked {
     color: var(--bs-body-color) !important;
     background-color: var(--bs-secondary-bg) !important;
     background-image: linear-gradient(var(--bs-secondary-bg), var(--bs-secondary-bg)) !important;

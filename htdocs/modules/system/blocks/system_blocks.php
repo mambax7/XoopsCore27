@@ -695,7 +695,7 @@ function b_system_themes_show($options)
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
             . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
-    $block['theme_redirect'] = (string) ($_SERVER['REQUEST_URI'] ?? '');
+    $block['theme_redirect'] = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
 
     return $block;
 }

@@ -208,13 +208,23 @@ class xos_kernel_Xoops2
      */
     protected function getThemeRedirectUrl(): string
     {
-        $redirect = \Xmf\Request::getString('xoops_theme_redirect', '', 'POST');
-        if ($redirect === '') {
-            return '';
-        }
+        return $this->validateThemeRedirectUrl(
+            \Xmf\Request::getString('xoops_theme_redirect', '', 'POST'),
+            XOOPS_URL
+        );
+    }
 
+    /**
+     * Validate a theme selector redirect against a XOOPS base URL.
+     */
+    protected function validateThemeRedirectUrl(string $redirect, string $baseUrl): string
+    {
         $redirect = trim($redirect);
-        if ($redirect === '' || preg_match('/[\r\n]/', $redirect) === 1 || str_starts_with($redirect, '//')) {
+        if (
+            $redirect === ''
+            || preg_match('/[\r\n\\\\]/', $redirect) === 1
+            || str_starts_with($redirect, '//')
+        ) {
             return '';
         }
 
@@ -223,24 +233,31 @@ class xos_kernel_Xoops2
             return '';
         }
 
-        $baseHost = (string) parse_url(XOOPS_URL, PHP_URL_HOST);
-        $basePort = parse_url(XOOPS_URL, PHP_URL_PORT);
-        $basePath = rtrim((string) parse_url(XOOPS_URL, PHP_URL_PATH), '/');
+        $baseScheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        $baseHost   = (string) parse_url($baseUrl, PHP_URL_HOST);
+        $basePort   = $this->normalizeThemeRedirectPort($baseScheme, parse_url($baseUrl, PHP_URL_PORT));
+        $basePath   = rtrim((string) parse_url($baseUrl, PHP_URL_PATH), '/');
+        if ($baseScheme === '' || $baseHost === '') {
+            return '';
+        }
 
         if (isset($parts['scheme']) || isset($parts['host'])) {
             $scheme = strtolower((string) ($parts['scheme'] ?? ''));
             $host   = (string) ($parts['host'] ?? '');
-            if (!in_array($scheme, ['http', 'https'], true)) {
+            if ($scheme !== $baseScheme) {
                 return '';
             }
             if ($host === '' || strcasecmp($host, $baseHost) !== 0) {
                 return '';
             }
-            if (($parts['port'] ?? null) !== $basePort) {
+            if ($this->normalizeThemeRedirectPort($scheme, $parts['port'] ?? null) !== $basePort) {
                 return '';
             }
             $path = (string) ($parts['path'] ?? '/');
-            if ($basePath !== '' && $path !== $basePath && !str_starts_with($path, $basePath . '/')) {
+            if ($this->hasThemeRedirectParentPathSegment($path)) {
+                return '';
+            }
+            if (!$this->themeRedirectPathMatchesBase($path, $basePath)) {
                 return '';
             }
 
@@ -250,10 +267,54 @@ class xos_kernel_Xoops2
         if (!str_starts_with($redirect, '/')) {
             return '';
         }
-        if ($basePath !== '' && $redirect !== $basePath && !str_starts_with($redirect, $basePath . '/')) {
+        $path = (string) ($parts['path'] ?? '/');
+        if ($this->hasThemeRedirectParentPathSegment($path)) {
+            return '';
+        }
+        if (!$this->themeRedirectPathMatchesBase($path, $basePath)) {
             return '';
         }
 
         return $redirect;
+    }
+
+    /**
+     * Return the effective port for comparing same-site redirect URLs.
+     */
+    protected function normalizeThemeRedirectPort(string $scheme, mixed $port): ?int
+    {
+        if ($port !== null) {
+            return (int) $port;
+        }
+        if ($scheme === 'http') {
+            return 80;
+        }
+        if ($scheme === 'https') {
+            return 443;
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect parent-directory path segments before browser URL normalization.
+     */
+    protected function hasThemeRedirectParentPathSegment(string $path): bool
+    {
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '..' || rawurldecode($segment) === '..') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Ensure a redirect path stays inside the XOOPS base path.
+     */
+    protected function themeRedirectPathMatchesBase(string $path, string $basePath): bool
+    {
+        return $basePath === '' || $path === $basePath || str_starts_with($path, $basePath . '/');
     }
 }
