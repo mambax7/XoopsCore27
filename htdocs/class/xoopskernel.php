@@ -243,6 +243,14 @@ class xos_kernel_Xoops2
             return '';
         }
 
+        // Reject userinfo in absolute URLs. It serves no purpose for a same-site
+        // theme-switch return URL and browsers handle it inconsistently on
+        // redirects (some strip, some prompt, some forward silently), which can
+        // be used to dress up a phishing-style URL even when host matches.
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            return '';
+        }
+
         $baseScheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
         $baseHost   = (string) parse_url($baseUrl, PHP_URL_HOST);
         $basePort   = $this->normalizeThemeRedirectPort($baseScheme, parse_url($baseUrl, PHP_URL_PORT));

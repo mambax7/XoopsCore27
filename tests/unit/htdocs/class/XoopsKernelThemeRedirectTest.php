@@ -64,6 +64,9 @@ final class XoopsKernelThemeRedirectTest extends TestCase
             'encoded backslash scheme-relative lower' => ['/%5c%5cevil.com', 'http://localhost', ''],
             'absolute encoded slash traversal' => ['http://localhost/xoops/%2e%2e%2fadmin', 'http://localhost/xoops', ''],
             'query with encoded slash allowed' => ['/news.php?path=a%2Fb', 'http://localhost', '/news.php?path=a%2Fb'],
+            'absolute with userinfo' => ['http://user@localhost/modules/newbb/viewpost.php', 'http://localhost', ''],
+            'absolute with user and password' => ['http://user:pass@localhost/modules/newbb/viewpost.php', 'http://localhost', ''],
+            'absolute with empty userinfo' => ['http://@localhost/modules/newbb/viewpost.php', 'http://localhost', ''],
         ];
     }
 
