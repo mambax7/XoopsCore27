@@ -65,7 +65,8 @@ final class XoopsKernelThemeRedirectTest extends TestCase
             'absolute encoded slash traversal' => ['http://localhost/xoops/%2e%2e%2fadmin', 'http://localhost/xoops', ''],
             'query with encoded slash allowed' => ['/news.php?path=a%2Fb', 'http://localhost', '/news.php?path=a%2Fb'],
             'absolute with userinfo' => ['http://user@localhost/modules/newbb/viewpost.php', 'http://localhost', ''],
-            'absolute with user and password' => ['http://user:pass@localhost/modules/newbb/viewpost.php', 'http://localhost', ''],
+            // Adversarial fixture: the userinfo here is the security test, not a credential.
+            'absolute with user and password' => ['http://user:pass@localhost/modules/newbb/viewpost.php', 'http://localhost', ''], // NOSONAR
             'absolute with empty userinfo' => ['http://@localhost/modules/newbb/viewpost.php', 'http://localhost', ''],
         ];
     }
