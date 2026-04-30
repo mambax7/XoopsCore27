@@ -701,16 +701,15 @@ function b_system_themes_show($options)
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
             . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
-    // The hidden xoops_theme_redirect field is intentionally empty in the
-    // rendered block. Populating it server-side from REQUEST_URI would leak
-    // the cache-warming request's path and query string (potentially session
-    // or password-reset tokens) into every subsequent visitor's page when
-    // bcachetime > 0. The block templates' onsubmit handler and the listbox
-    // onchange handler above fill the value from window.location at submit
-    // time, which is both cache-safe and privacy-safe. Users without JS lose
-    // the return-URL behavior and land on the home page after switching —
-    // matching pre-PR behavior.
-    $block['theme_redirect'] = '';
+    // Note: the rendered `xoops_theme_redirect` hidden field is intentionally
+    // emitted with an empty value="" by the templates. Do NOT add a server-side
+    // seed here from REQUEST_URI — when bcachetime > 0 the cache-warming
+    // request's path and query string (potentially session or password-reset
+    // tokens) would leak into every subsequent visitor's page. The listbox
+    // onchange handler above and the templates' onsubmit handler fill the
+    // value from window.location at submit time, which is both cache-safe and
+    // privacy-safe. Users without JS keep the pre-PR behavior of landing on
+    // the home page after switching themes.
 
     return $block;
 }
