@@ -205,6 +205,8 @@ class xos_kernel_Xoops2
 
     /**
      * Return a safe same-site target for the theme selector redirect.
+     *
+     * @return string Validated redirect URL, or '' if no safe target was supplied.
      */
     protected function getThemeRedirectUrl(): string
     {
@@ -216,6 +218,10 @@ class xos_kernel_Xoops2
 
     /**
      * Validate a theme selector redirect against a XOOPS base URL.
+     *
+     * @param string $redirect Untrusted redirect target submitted by the form.
+     * @param string $baseUrl  Authoritative XOOPS base URL (typically XOOPS_URL).
+     * @return string The validated redirect URL, or '' if the input is unsafe.
      */
     protected function validateThemeRedirectUrl(string $redirect, string $baseUrl): string
     {
@@ -298,6 +304,10 @@ class xos_kernel_Xoops2
 
     /**
      * Return the effective port for comparing same-site redirect URLs.
+     *
+     * @param string $scheme Lowercase URL scheme ('http' or 'https' expected).
+     * @param mixed  $port   Port from parse_url(); null/empty means scheme default.
+     * @return int|null The numeric port, or null if neither explicit nor a known default applies.
      */
     protected function normalizeThemeRedirectPort(string $scheme, mixed $port): ?int
     {
@@ -316,6 +326,9 @@ class xos_kernel_Xoops2
 
     /**
      * Detect parent-directory path segments before browser URL normalization.
+     *
+     * @param string $path URL path component (literal or percent-encoded).
+     * @return bool True if the path contains a '..' segment after decoding.
      */
     protected function hasThemeRedirectParentPathSegment(string $path): bool
     {
@@ -336,6 +349,10 @@ class xos_kernel_Xoops2
 
     /**
      * Ensure a redirect path stays inside the XOOPS base path.
+     *
+     * @param string $path     Candidate URL path component.
+     * @param string $basePath Trimmed XOOPS base path ('' for root install).
+     * @return bool True if the candidate is the base path itself or a child of it.
      */
     protected function themeRedirectPathMatchesBase(string $path, string $basePath): bool
     {

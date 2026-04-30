@@ -691,19 +691,26 @@ function b_system_themes_show($options)
     } else {
         // The form's onsubmit handler does NOT fire on form.submit() (legacy DOM
         // method does not raise a submit event). Set the redirect target inline
-        // here so the listbox auto-submit path stays cache-safe alongside the
-        // template's onsubmit fallback used by the screenshot-mode submit button.
-        $select->setExtra(' onchange="this.form.elements[\'xoops_theme_redirect\'].value=location.pathname+location.search+location.hash;this.form.submit();" ');
+        // here so the listbox auto-submit path stays cache-safe. The hidden
+        // input is created on the fly when missing so custom theme overrides of
+        // system_block_themes.tpl that omit it still get the return-URL feature
+        // and don't break theme switching.
+        $select->setExtra(' onchange="var f=this.form,e=f.elements[\'xoops_theme_redirect\'];if(!e){e=document.createElement(\'input\');e.type=\'hidden\';e.name=\'xoops_theme_redirect\';f.appendChild(e);}e.value=location.pathname+location.search+location.hash;f.submit();" ');
         $themeSelect = $select->render();
     }
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
             . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
-    // Seed the return URL from the current request. The block templates also
-    // overwrite this hidden field via an onsubmit handler from window.location,
-    // which keeps the redirect target accurate even when the block is cached
-    // (bcachetime > 0); the server-side seed is the no-JS fallback.
-    $block['theme_redirect'] = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
+    // The hidden xoops_theme_redirect field is intentionally empty in the
+    // rendered block. Populating it server-side from REQUEST_URI would leak
+    // the cache-warming request's path and query string (potentially session
+    // or password-reset tokens) into every subsequent visitor's page when
+    // bcachetime > 0. The block templates' onsubmit handler and the listbox
+    // onchange handler above fill the value from window.location at submit
+    // time, which is both cache-safe and privacy-safe. Users without JS lose
+    // the return-URL behavior and land on the home page after switching —
+    // matching pre-PR behavior.
+    $block['theme_redirect'] = '';
 
     return $block;
 }
