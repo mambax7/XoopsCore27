@@ -390,13 +390,17 @@ class XoopsGuiModern extends XoopsSystemGui
         }
 
         // Detect whether system panel should be opened
-        $requestUri = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
-        $path       = (string) parse_url($requestUri, PHP_URL_PATH);          // strip query string
+        $requestUri  = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
+        $pathUri     = (string) parse_url($requestUri, PHP_URL_PATH);          // strip query string
         $basePath   = rtrim((string) parse_url(XOOPS_URL, PHP_URL_PATH), '/'); // '' on root, '/xoops27' on WAMP
 
-        $isSystemAdmin      = ($path === $basePath . '/modules/system/admin.php');
-        $isControlPanelHome = ($path === $basePath . '/admin.php');
-        $tpl->assign('showSystemServices', $isSystemAdmin || $isControlPanelHome);
+        $isSystemAdmin      = ($pathUri === $basePath . '/modules/system/admin.php');
+        $isControlPanelHome = ($pathUri === $basePath . '/admin.php');
+        $fct = \Xmf\Request::getString('fct', '', 'GET');
+        $op  = \Xmf\Request::getString('op', '', 'GET');
+        $mod = \Xmf\Request::getInt('mod', 0, 'GET');
+        $isModulePreferenceEdit = $isSystemAdmin && $fct === 'preferences' && $op === 'showmod' && $mod > 0;
+        $tpl->assign('showSystemServices', $isControlPanelHome || ($isSystemAdmin && !$isModulePreferenceEdit));
 
         // assign vars
         $tpl->assign('sys_options', $system_services);

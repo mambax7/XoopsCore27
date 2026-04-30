@@ -349,3 +349,107 @@ body.dark-mode #buttontop_mod td a:hover {
     background-color: rgba(59, 130, 246, 0.15) !important;
 }
 
+/* Breadcrumb in Admin area */
+/* Container */
+#xo-breadcrumb {
+    background-image: none !important;
+    background-color: var(--primary-light);
+    min-height: 60px !important;
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    padding: 8px 12px;
+    margin: 0 0 20px 0 !important;
+    border-radius: 6px;
+}
+/* List items */
+#xo-breadcrumb li {
+    display: flex !important;
+    align-items: center;
+    color: white;
+    line-height: 30px;
+    font-weight: bold !important;
+}
+#xo-breadcrumb li:not(:has(a)) {
+    margin-left: 0;
+}
+/* Links */
+#xo-breadcrumb a {
+    padding: 0 10px !important;
+    background-image: none !important;
+    color: white !important;
+    font-weight: bold !important;
+    display: inline-flex !important;
+    align-items: center;
+    text-decoration: none;
+    border-radius: var(--radius-sm) !important;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+#xo-breadcrumb a:hover {
+    background-image: none !important;
+    background-color: var(--primary-dark) !important;
+}
+/* Separator */
+#xo-breadcrumb li:not(.xo-help):not(:has(+ .xo-help))::after {
+    content: "›";
+    margin: 0 6px;
+    color: white;
+}
+/* nicer Home Icon */
+#xo-breadcrumb img.home {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+/* put Help image to right */
+#xo-breadcrumb .xo-help {
+    margin-left: auto;
+    margin-right:10px;
+}
+/* Help Icons */
+#xo-breadcrumb .xo-help img {
+    width: 18px;
+    height: 18px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    margin-top:5px;
+}
+#xo-breadcrumb .xo-help a:hover img {
+    opacity: 1;
+}
+
+#xo-breadcrumb .xo-help a.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none;
+}
+
+/* Buttons and Links */
+.xo-buttons button,
+.xo-buttons a,
+button.btn.btn-default,
+button.btn.btn-primary,
+input[type="reset"],
+input.formbutton[type="reset"] {
+    padding: 6px 16px !important;
+    margin: 2px 2px 10px 0 !important;
+    background: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.xo-buttons button:hover,
+.xo-buttons a:hover,
+button.btn.btn-default:hover,
+button.btn.btn-primary:hover,
+input[type="reset"]:hover,
+input.formbutton[type="reset"]:hover {
+    background: var(--primary-dark) !important;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
