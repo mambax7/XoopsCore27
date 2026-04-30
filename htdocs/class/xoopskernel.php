@@ -233,6 +233,16 @@ class xos_kernel_Xoops2
             return '';
         }
 
+        // Reject percent-encoded slashes and backslashes in the path component.
+        // Query strings legitimately use %2F as data; paths never need it, and
+        // either form can be normalized by proxies/clients to escape basepath
+        // (e.g. /xoops/%2e%2e%2fadmin → /admin) or invent a scheme-relative
+        // redirect (e.g. /%5C%5Cevil.com → //evil.com).
+        $rawPath = (string) ($parts['path'] ?? '');
+        if (preg_match('/%(?:2f|5c)/i', $rawPath) === 1) {
+            return '';
+        }
+
         $baseScheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
         $baseHost   = (string) parse_url($baseUrl, PHP_URL_HOST);
         $basePort   = $this->normalizeThemeRedirectPort($baseScheme, parse_url($baseUrl, PHP_URL_PORT));
@@ -301,8 +311,14 @@ class xos_kernel_Xoops2
      */
     protected function hasThemeRedirectParentPathSegment(string $path): bool
     {
-        foreach (explode('/', $path) as $segment) {
-            if ($segment === '..' || rawurldecode($segment) === '..') {
+        // Decode the whole path before splitting so multi-character encoded
+        // forms like '%2e%2e%2f' are exposed as a real '../' segment boundary,
+        // not a single opaque token. The up-front %2F/%5C rejection in
+        // validateThemeRedirectUrl() means anything reaching here is already
+        // safe to decode for the purpose of segment inspection.
+        $decoded = rawurldecode($path);
+        foreach (explode('/', $decoded) as $segment) {
+            if ($segment === '..') {
                 return true;
             }
         }

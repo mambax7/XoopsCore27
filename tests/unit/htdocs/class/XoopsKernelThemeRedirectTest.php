@@ -57,6 +57,13 @@ final class XoopsKernelThemeRedirectTest extends TestCase
             'subdirectory dot-dot bypass' => ['/xoops/../admin', 'http://localhost/xoops', ''],
             'absolute subdirectory dot-dot bypass' => ['http://localhost/xoops/../admin', 'http://localhost/xoops', ''],
             'encoded dot-dot bypass' => ['/xoops/%2e%2e/admin', 'http://localhost/xoops', ''],
+            'encoded slash traversal lower' => ['/xoops/%2e%2e%2fadmin', 'http://localhost/xoops', ''],
+            'encoded slash traversal upper' => ['/xoops/%2E%2E%2FAdmin', 'http://localhost/xoops', ''],
+            'encoded backslash traversal' => ['/xoops/%2e%2e%5cadmin', 'http://localhost/xoops', ''],
+            'encoded backslash scheme-relative' => ['/%5C%5Cevil.com', 'http://localhost', ''],
+            'encoded backslash scheme-relative lower' => ['/%5c%5cevil.com', 'http://localhost', ''],
+            'absolute encoded slash traversal' => ['http://localhost/xoops/%2e%2e%2fadmin', 'http://localhost/xoops', ''],
+            'query with encoded slash allowed' => ['/news.php?path=a%2Fb', 'http://localhost', '/news.php?path=a%2Fb'],
         ];
     }
 
