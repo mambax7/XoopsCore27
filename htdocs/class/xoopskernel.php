@@ -192,8 +192,170 @@ class xos_kernel_Xoops2
         if ($themeSelect !== '' && in_array($themeSelect, xoops_getConfigOption('theme_set_allowed'))) {
             xoops_setConfigOption('theme_set', $themeSelect);
             $_SESSION['xoopsUserTheme'] = $themeSelect;
+
+            $redirectUrl = $this->getThemeRedirectUrl();
+            if ($redirectUrl !== '') {
+                header('Location: ' . $redirectUrl, true, 303);
+                exit;
+            }
         } elseif (!empty($_SESSION['xoopsUserTheme']) && in_array($_SESSION['xoopsUserTheme'], xoops_getConfigOption('theme_set_allowed'))) {
             xoops_setConfigOption('theme_set', $_SESSION['xoopsUserTheme']);
         }
+    }
+
+    /**
+     * Return a safe same-site target for the theme selector redirect.
+     *
+     * @return string Validated redirect URL, or '' if no safe target was supplied.
+     */
+    protected function getThemeRedirectUrl(): string
+    {
+        return $this->validateThemeRedirectUrl(
+            \Xmf\Request::getString('xoops_theme_redirect', '', 'POST'),
+            XOOPS_URL
+        );
+    }
+
+    /**
+     * Validate a theme selector redirect against a XOOPS base URL.
+     *
+     * @param string $redirect Untrusted redirect target submitted by the form.
+     * @param string $baseUrl  Authoritative XOOPS base URL (typically XOOPS_URL).
+     * @return string The validated redirect URL, or '' if the input is unsafe.
+     */
+    protected function validateThemeRedirectUrl(string $redirect, string $baseUrl): string
+    {
+        $redirect = trim($redirect);
+        if (
+            $redirect === ''
+            || preg_match('/[\r\n\\\\]/', $redirect) === 1
+            || str_starts_with($redirect, '//')
+        ) {
+            return '';
+        }
+
+        $parts = parse_url($redirect);
+        if ($parts === false) {
+            return '';
+        }
+
+        // Reject percent-encoded slashes and backslashes in the path component.
+        // Query strings legitimately use %2F as data; paths never need it, and
+        // either form can be normalized by proxies/clients to escape basepath
+        // (e.g. /xoops/%2e%2e%2fadmin → /admin) or invent a scheme-relative
+        // redirect (e.g. /%5C%5Cevil.com → //evil.com).
+        $rawPath = (string) ($parts['path'] ?? '');
+        if (preg_match('/%(?:2f|5c)/i', $rawPath) === 1) {
+            return '';
+        }
+
+        // Reject userinfo in absolute URLs. It serves no purpose for a same-site
+        // theme-switch return URL and browsers handle it inconsistently on
+        // redirects (some strip, some prompt, some forward silently), which can
+        // be used to dress up a phishing-style URL even when host matches.
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            return '';
+        }
+
+        $baseScheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        $baseHost   = (string) parse_url($baseUrl, PHP_URL_HOST);
+        $basePort   = $this->normalizeThemeRedirectPort($baseScheme, parse_url($baseUrl, PHP_URL_PORT));
+        $basePath   = rtrim((string) parse_url($baseUrl, PHP_URL_PATH), '/');
+        if ($baseScheme === '' || $baseHost === '') {
+            return '';
+        }
+
+        if (isset($parts['scheme']) || isset($parts['host'])) {
+            $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+            $host   = (string) ($parts['host'] ?? '');
+            if ($scheme !== $baseScheme) {
+                return '';
+            }
+            if ($host === '' || strcasecmp($host, $baseHost) !== 0) {
+                return '';
+            }
+            if ($this->normalizeThemeRedirectPort($scheme, $parts['port'] ?? null) !== $basePort) {
+                return '';
+            }
+            $path = (string) ($parts['path'] ?? '/');
+            if ($this->hasThemeRedirectParentPathSegment($path)) {
+                return '';
+            }
+            if (!$this->themeRedirectPathMatchesBase($path, $basePath)) {
+                return '';
+            }
+
+            return $redirect;
+        }
+
+        if (!str_starts_with($redirect, '/')) {
+            return '';
+        }
+        $path = (string) ($parts['path'] ?? '/');
+        if ($this->hasThemeRedirectParentPathSegment($path)) {
+            return '';
+        }
+        if (!$this->themeRedirectPathMatchesBase($path, $basePath)) {
+            return '';
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * Return the effective port for comparing same-site redirect URLs.
+     *
+     * @param string $scheme Lowercase URL scheme ('http' or 'https' expected).
+     * @param mixed  $port   Port from parse_url(); null/empty means scheme default.
+     * @return int|null The numeric port, or null if neither explicit nor a known default applies.
+     */
+    protected function normalizeThemeRedirectPort(string $scheme, mixed $port): ?int
+    {
+        if ($port !== null) {
+            return (int) $port;
+        }
+        if ($scheme === 'http') {
+            return 80;
+        }
+        if ($scheme === 'https') {
+            return 443;
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect parent-directory path segments before browser URL normalization.
+     *
+     * @param string $path URL path component (literal or percent-encoded).
+     * @return bool True if the path contains a '..' segment after decoding.
+     */
+    protected function hasThemeRedirectParentPathSegment(string $path): bool
+    {
+        // Decode the whole path before splitting so multi-character encoded
+        // forms like '%2e%2e%2f' are exposed as a real '../' segment boundary,
+        // not a single opaque token. The up-front %2F/%5C rejection in
+        // validateThemeRedirectUrl() means anything reaching here is already
+        // safe to decode for the purpose of segment inspection.
+        $decoded = rawurldecode($path);
+        foreach (explode('/', $decoded) as $segment) {
+            if ($segment === '..') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Ensure a redirect path stays inside the XOOPS base path.
+     *
+     * @param string $path     Candidate URL path component.
+     * @param string $basePath Trimmed XOOPS base path ('' for root install).
+     * @return bool True if the candidate is the base path itself or a child of it.
+     */
+    protected function themeRedirectPathMatchesBase(string $path, string $basePath): bool
+    {
+        return $basePath === '' || $path === $basePath || str_starts_with($path, $basePath . '/');
     }
 }

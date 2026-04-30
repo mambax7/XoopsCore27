@@ -390,6 +390,15 @@ input.formButton {
     background-color: #fcc;
 }
 
+.xoops-theme-select select[name="xoops_theme_select"][size="1"]:not(:focus),
+.xoops-theme-select select[name="xoops_theme_select"]:not(:focus) option:checked {
+    color: #000;
+    background: #ccc;
+    background-image: linear-gradient(#ccc, #ccc);
+    box-shadow: 0 0 0 9999px #ccc inset;
+    font-weight: bold;
+}
+
 caption {
     font-weight: bold;
 }

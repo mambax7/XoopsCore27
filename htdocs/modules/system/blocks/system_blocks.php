@@ -667,7 +667,7 @@ function b_system_themes_show($options)
     $block = [];
 
     if (!isset($options[2])) {
-        $options[2] = 3; // this was the fixed value pre 2.5.8
+        $options[2] = 6; // default visible theme rows
     }
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $xoopsConfig['theme_set'], $selectSize);
@@ -689,12 +689,27 @@ function b_system_themes_show($options)
         $themeSelect .= $selectTray->render();
         $themeSelect .= '</div>';
     } else {
-        $select->setExtra(' onchange="submit();" ');
+        // The form's onsubmit handler does NOT fire on form.submit() (legacy DOM
+        // method does not raise a submit event). Set the redirect target inline
+        // here so the listbox auto-submit path stays cache-safe. The hidden
+        // input is created on the fly when missing so custom theme overrides of
+        // system_block_themes.tpl that omit it still get the return-URL feature
+        // and don't break theme switching.
+        $select->setExtra(' onchange="var f=this.form,e=f.elements[\'xoops_theme_redirect\'];if(!e){e=document.createElement(\'input\');e.type=\'hidden\';e.name=\'xoops_theme_redirect\';f.appendChild(e);}e.value=location.pathname+location.search+location.hash;f.submit();" ');
         $themeSelect = $select->render();
     }
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
             . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
+    // Note: the rendered `xoops_theme_redirect` hidden field is intentionally
+    // emitted with an empty value="" by the templates. Do NOT add a server-side
+    // seed here from REQUEST_URI — when bcachetime > 0 the cache-warming
+    // request's path and query string (potentially session or password-reset
+    // tokens) would leak into every subsequent visitor's page. The listbox
+    // onchange handler above and the templates' onsubmit handler fill the
+    // value from window.location at submit time, which is both cache-safe and
+    // privacy-safe. Users without JS keep the pre-PR behavior of landing on
+    // the home page after switching themes.
 
     return $block;
 }
@@ -709,7 +724,7 @@ function b_system_themes_edit($options)
     $chk  = '';
     $form = _MB_SYSTEM_THSHOW . '&nbsp;';
     if (!isset($options[2])) {
-        $options[2] = 3; // this was the fixed value pre 2.5.8
+        $options[2] = 6; // default visible theme rows
     }
     if ($options[0] == 1) {
         $chk = " checked";

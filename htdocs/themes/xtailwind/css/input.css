@@ -51,6 +51,16 @@
     .block-content br {
         display: none;
     }
+
+    .xoops-theme-select select[name="xoops_theme_select"][size="1"]:not(:focus),
+    .xoops-theme-select select[name="xoops_theme_select"]:not(:focus) option:checked {
+        color: hsl(var(--bc)) !important;
+        background-color: hsl(var(--b3)) !important;
+        background-image: linear-gradient(hsl(var(--b3)), hsl(var(--b3))) !important;
+        box-shadow: 0 0 0 9999px hsl(var(--b3)) inset;
+        font-weight: 700;
+    }
+
     /* Preserve prose-like styling for paragraph blocks (e.g. site info, text blocks) */
     .block-content p {
         margin: 0.5rem 0;

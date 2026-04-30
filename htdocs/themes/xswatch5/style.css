@@ -315,6 +315,15 @@ strong.hit-counter {
     width: 100%;
 }
 
+.xoops-theme-select select[name="xoops_theme_select"][size="1"]:not(:focus),
+.xoops-theme-select select[name="xoops_theme_select"]:not(:focus) option:checked {
+    color: var(--bs-body-color) !important;
+    background-color: var(--bs-secondary-bg) !important;
+    background-image: linear-gradient(var(--bs-secondary-bg), var(--bs-secondary-bg)) !important;
+    box-shadow: 0 0 0 9999px var(--bs-secondary-bg) inset;
+    font-weight: 700;
+}
+
 .xoops-theme-select img {
     max-width: 100%;
     display: inline;
@@ -1371,6 +1380,3 @@ img.avatar {
     background-color: #6D6D6D;
     color: #ffffff;
 }
-
-
-
