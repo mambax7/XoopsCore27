@@ -47,15 +47,18 @@ if (!class_exists('XoopsLocalAbstract')) {
  */
 class XoopsLocal extends XoopsLocalAbstract
 {
+    /** Per-locale currency formatting data. Pattern uses positional placeholders: %1$s = amount, %2$s = symbol. */
+    private const CURRENCY = ['locale' => 'en_US', 'code' => 'USD', 'symbol' => '$',  'decimals' => 2, 'decSep' => '.', 'thouSep' => ',', 'pattern' => '%2$s%1$s'];
+
     /**
      * Number Formats
      *
-     * @param  unknown_type $number
-     * @return mixed
+     * @param  int|float|string $number
+     * @return string
      */
     public function number_format($number)
     {
-        return number_format($number, 2, '.', ',');
+        return number_format($number, self::CURRENCY['decimals'], self::CURRENCY['decSep'], self::CURRENCY['thouSep']);
     }
 
     /**
@@ -69,17 +72,21 @@ class XoopsLocal extends XoopsLocalAbstract
      */
     public function money_format($format, $number)
     {
-        if (!extension_loaded('intl')) {
-            return '$' . number_format((float)$number, 2, '.', ',');
+        $c = self::CURRENCY;
+
+        if (extension_loaded('intl')) {
+            static $fmt = null;
+            if (null === $fmt) {
+                $fmt = new \NumberFormatter($c['locale'], \NumberFormatter::CURRENCY);
+            }
+            $result = $fmt->formatCurrency((float) $number, $c['code']);
+            if ($result !== false) {
+                return $result;
+            }
         }
 
-        static $fmt = null;
-        if (null === $fmt) {
-            $fmt = new \NumberFormatter('en_US', \NumberFormatter::CURRENCY);
-        }
+        $amount = $this->number_format($number);
 
-        $result = $fmt->formatCurrency((float)$number, 'USD');
-
-        return $result !== false ? $result : '$' . number_format((float)$number, 2, '.', ',');
+        return sprintf($c['pattern'], $amount, $c['symbol']);
     }
 }
