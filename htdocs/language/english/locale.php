@@ -47,25 +47,27 @@ if (!class_exists('XoopsLocalAbstract')) {
  */
 class XoopsLocal extends XoopsLocalAbstract
 {
-        private const CURRENCY = ['locale' => 'en_US', 'code' => 'USD', 'symbol' => '$',  'decimals' => 2, 'decSep' => '.', 'thouSep' => ',', 'pattern' => '%s%s'];
+    /** Per-locale currency formatting data. Pattern uses positional placeholders: %1$s = amount, %2$s = symbol. */
+    private const CURRENCY = ['locale' => 'en_US', 'code' => 'USD', 'symbol' => '$',  'decimals' => 2, 'decSep' => '.', 'thouSep' => ',', 'pattern' => '%2$s%1$s'];
 
     /**
      * Number Formats
      *
-     * @param int|float   $number
-     * @param int|null    $decimals
-     * @param string|null $decSep  Override decimal separator (defaults to locale)
-     * @param string|null $thouSep Override thousands separator (defaults to locale)
+     * @param  int|float   $number
+     * @param  int|null    $decimals
+     * @param  string|null $decSep  Override decimal separator (defaults to locale)
+     * @param  string|null $thouSep Override thousands separator (defaults to locale)
      * @return string
      */
-    public function number_format($number, $decimals = null, $decSep = null, $thouSep = null)
+    public function number_format($number, $decimals = null, $decSep = null, $thouSep = null): string
     {
         $decimals ??= self::CURRENCY['decimals'];
-        $decSep ??= self::CURRENCY['decSep'];
-        $thouSep ??= self::CURRENCY['thouSep'];
+        $decSep   ??= self::CURRENCY['decSep'];
+        $thouSep  ??= self::CURRENCY['thouSep'];
 
-        return number_format((float)$number, $decimals, $decSep, $thouSep);
+        return number_format((float) $number, $decimals, $decSep, $thouSep);
     }
+
     /**
      * Money Format
      *
@@ -80,8 +82,8 @@ class XoopsLocal extends XoopsLocalAbstract
         $c = self::CURRENCY;
 
         if (extension_loaded('intl')) {
-        static $fmt = null;
-        if (null === $fmt) {
+            static $fmt = null;
+            if (null === $fmt) {
                 $fmt = new \NumberFormatter($c['locale'], \NumberFormatter::CURRENCY);
             }
             $result = $fmt->formatCurrency((float) $number, $c['code']);
