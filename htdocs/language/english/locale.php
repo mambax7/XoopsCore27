@@ -53,19 +53,12 @@ class XoopsLocal extends XoopsLocalAbstract
     /**
      * Number Formats
      *
-     * @param  int|float   $number
-     * @param  int|null    $decimals
-     * @param  string|null $decSep  Override decimal separator (defaults to locale)
-     * @param  string|null $thouSep Override thousands separator (defaults to locale)
+     * @param  int|float|string $number
      * @return string
      */
-    public function number_format($number, $decimals = null, $decSep = null, $thouSep = null): string
+    public function number_format($number)
     {
-        $decimals ??= self::CURRENCY['decimals'];
-        $decSep   ??= self::CURRENCY['decSep'];
-        $thouSep  ??= self::CURRENCY['thouSep'];
-
-        return number_format((float) $number, $decimals, $decSep, $thouSep);
+        return number_format($number, self::CURRENCY['decimals'], self::CURRENCY['decSep'], self::CURRENCY['thouSep']);
     }
 
     /**
@@ -92,7 +85,7 @@ class XoopsLocal extends XoopsLocalAbstract
             }
         }
 
-        $amount = number_format((float) $number, $c['decimals'], $c['decSep'], $c['thouSep']);
+        $amount = $this->number_format($number);
 
         return sprintf($c['pattern'], $amount, $c['symbol']);
     }
