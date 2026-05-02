@@ -47,17 +47,25 @@ if (!class_exists('XoopsLocalAbstract')) {
  */
 class XoopsLocal extends XoopsLocalAbstract
 {
+        private const CURRENCY = ['locale' => 'en_US', 'code' => 'USD', 'symbol' => '$',  'decimals' => 2, 'decSep' => '.', 'thouSep' => ',', 'pattern' => '%s%s'];
+
     /**
      * Number Formats
      *
-     * @param  unknown_type $number
-     * @return mixed
+     * @param int|float   $number
+     * @param int|null    $decimals
+     * @param string|null $decSep  Override decimal separator (defaults to locale)
+     * @param string|null $thouSep Override thousands separator (defaults to locale)
+     * @return string
      */
-    public function number_format($number)
+    public function number_format($number, $decimals = null, $decSep = null, $thouSep = null)
     {
-        return number_format($number, 2, '.', ',');
-    }
+        $decimals ??= self::CURRENCY['decimals'];
+        $decSep ??= self::CURRENCY['decSep'];
+        $thouSep ??= self::CURRENCY['thouSep'];
 
+        return number_format((float)$number, $decimals, $decSep, $thouSep);
+    }
     /**
      * Money Format
      *
@@ -69,17 +77,21 @@ class XoopsLocal extends XoopsLocalAbstract
      */
     public function money_format($format, $number)
     {
-        if (!extension_loaded('intl')) {
-            return '$' . number_format((float)$number, 2, '.', ',');
-        }
+        $c = self::CURRENCY;
 
+        if (extension_loaded('intl')) {
         static $fmt = null;
         if (null === $fmt) {
-            $fmt = new \NumberFormatter('en_US', \NumberFormatter::CURRENCY);
+                $fmt = new \NumberFormatter($c['locale'], \NumberFormatter::CURRENCY);
+            }
+            $result = $fmt->formatCurrency((float) $number, $c['code']);
+            if ($result !== false) {
+                return $result;
+            }
         }
 
-        $result = $fmt->formatCurrency((float)$number, 'USD');
+        $amount = number_format((float) $number, $c['decimals'], $c['decSep'], $c['thouSep']);
 
-        return $result !== false ? $result : '$' . number_format((float)$number, 2, '.', ',');
+        return sprintf($c['pattern'], $amount, $c['symbol']);
     }
 }
