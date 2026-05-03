@@ -9,15 +9,15 @@ return [
      *
      * Developer and user guide:
      *   For run-time settings per call
-     *   - To use an editor pre-configured by XoopsEditor, e.g. 'fckeditor':
-     *       $options['editor'] = 'fckeditor';
+     *   - To use an editor pre-configured by XoopsEditor, e.g. 'tinymce7':
+     *       $options['editor'] = 'tinymce7';
      *   - To use a custom editor, e.g. 'MyEditor' class located in "/modules/myeditor/myeditor.php":
      *       $options['editor'] = array('MyEditor', XOOPS_ROOT_PATH . "/modules/myeditor/myeditor.php");
      *
      *   For pre-configured settings, which will force to use an editor if no specific editor is set for call
      *     - Set up custom configs: in XOOPS_VAR_PATH . '/configs/xoopsconfig.php'
-     *     - set an editor as default, e.g. a pre-configured editor 'fckeditor':
-     *         'editor' => 'fckeditor',
+     *     - set an editor as default, e.g. a pre-configured editor 'tinymce7':
+     *         'editor' => 'tinymce7',
      *     - set a custom editor 'MyEditor' class located in "/modules/myeditor/myeditor.php":
      *         'editor' => array('MyEditor', XOOPS_ROOT_PATH . "/modules/myeditor/myeditor.php"),
      *
@@ -27,8 +27,8 @@ return [
      *   To disable the default editor for a specific call:
      *         $options['editor'] = 'dhtmltextarea';
      */
-    //"editor"    => "fckeditor",
-    //"editor"    => "dhtmlext",
+    //"editor"    => "tinymce7",
+    //"editor"    => "tinymce5",
 
     /**
      * Debug level for XOOPS
