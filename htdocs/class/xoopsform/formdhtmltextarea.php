@@ -38,12 +38,12 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
      *
      * <ul>Developer and user guide:
      *                         <li><ul>For run-time settings per call
-     *                                 <li>To use an editor pre-configured by {@link XoopsEditor}, e.g. 'fckeditor': <code>$options['editor'] = 'fckeditor';</code></li>
+     *                                 <li>To use an editor pre-configured by {@link XoopsEditor}, e.g. 'tinymce7': <code>$options['editor'] = 'tinymce7';</code></li>
      *                                 <li>To use a custom editor, e.g. 'MyEditor' class located in "/modules/myeditor/myeditor.php": <code>$options['editor'] = array('MyEditor', XOOPS_ROOT_PATH . "/modules/myeditor/myeditor.php");</code></li>
      *                             </ul></li>
      *                         <li><ul>For pre-configured settings, which will force to use an editor if no specific editor is set for call
      *                                 <li><ul>Set up custom configs: in XOOPS_VAR_PATH . '/configs/xoopsconfig.php' set an editor as default, e.g.
-     *                                         <li>a pre-configured editor 'fckeditor': <code>return array('editor' => 'fckeditor');</code></li>
+     *                                         <li>a pre-configured editor 'tinymce7': <code>return array('editor' => 'tinymce7');</code></li>
      *                                         <li>a custom editor 'MyEditor' class located in "/modules/myeditor/myeditor.php": <code>return array('editor' => array('MyEditor', XOOPS_ROOT_PATH . "/modules/myeditor/myeditor.php");</code></li>
      *                                     </ul></li>
      *                                 <li>To disable the default editor, in XOOPS_VAR_PATH . '/configs/xoopsconfig.php': <code>return array();</code></li>
