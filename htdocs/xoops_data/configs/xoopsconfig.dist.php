@@ -31,6 +31,17 @@ return [
     //"editor"    => "tinymce5",
 
     /**
+     * XML-RPC endpoint (xmlrpc.php)
+     *
+     * Disabled by default for security. The XML-RPC endpoint exposes posting
+     * functionality to Blogger, MetaWeblog, MovableType, and XOOPS API clients
+     * via the news module.
+     *
+     * To enable, uncomment this line in XOOPS_VAR_PATH . '/configs/xoopsconfig.php':
+     */
+    //'xmlrpc_enabled' => true,
+
+    /**
      * Debug level for XOOPS
      *
      * Displaying debug information to different level(s) of users:
