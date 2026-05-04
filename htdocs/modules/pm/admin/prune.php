@@ -37,7 +37,10 @@ switch ($op) {
 
     case 'prune':
         if (!$GLOBALS['xoopsSecurity']->check()) {
-            redirect_header('prune.php', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            redirect_header('prune.php', 2, implode('<br>', array_map(
+                static fn($e) => htmlspecialchars((string) $e, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                $GLOBALS['xoopsSecurity']->getErrors()
+            )));
         }
 
         $criteria = new CriteriaCompo();
