@@ -53,12 +53,16 @@ class XoopsLocal extends XoopsLocalAbstract
     /**
      * Number Formats
      *
+     * The @param annotation accepts string for backward compatibility with
+     * callers that still pass numeric strings, but PHP's number_format()
+     * requires float, so we cast at the boundary.
+     *
      * @param  int|float|string $number
      * @return string
      */
     public function number_format($number)
     {
-        return number_format($number, self::CURRENCY['decimals'], self::CURRENCY['decSep'], self::CURRENCY['thouSep']);
+        return number_format((float) $number, self::CURRENCY['decimals'], self::CURRENCY['decSep'], self::CURRENCY['thouSep']);
     }
 
     /**
