@@ -22,6 +22,43 @@ if ( !is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin(
 */
 
 /**
+ * Validate a single module config-entry definition.
+ *
+ * On a malformed entry (non-array, or missing one of the required keys
+ * name/title/formtype/valuetype) appends a single visible error row to
+ * $msgs and returns false. On a valid entry returns true with $msgs
+ * untouched. Used by both install and update paths to skip bad entries
+ * rather than failing on array_keys() or spraying N undefined-key
+ * warnings per entry.
+ *
+ * @param mixed             $config Entry from $module->getInfo('config').
+ * @param array<int,string> $msgs   Admin log buffer (appended to on failure).
+ *
+ * @return bool True when $config is a usable array of config metadata.
+ */
+function xoops_module_validate_config_entry($config, array &$msgs): bool
+{
+    if (!is_array($config)) {
+        $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+            . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID, '<strong>?</strong> (non-array entry)')
+            . '</span>';
+        return false;
+    }
+    $missing = array_diff(['name', 'title', 'formtype', 'valuetype'], array_keys($config));
+    if ([] !== $missing) {
+        $name = htmlspecialchars((string) ($config['name'] ?? '?'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+            . sprintf(
+                _AM_SYSTEM_MODULES_CONFIG_DATA_INVALID,
+                '<strong>' . $name . '</strong> (missing required keys: ' . implode(', ', $missing) . ')'
+            )
+            . '</span>';
+        return false;
+    }
+    return true;
+}
+
+/**
  * @param $dirname
  *
  * @return string
@@ -313,6 +350,16 @@ function xoops_module_install($dirname)
                     unset($blocks);
                 }
                 $configs = $module->getInfo('config');
+                // The validation helper guards individual entries; the top-level
+                // container also needs a type guard so a malformed manifest
+                // (e.g. config: "invalid") cannot TypeError on the array_push /
+                // [] writes below.
+                if (false !== $configs && !is_array($configs)) {
+                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+                        . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID, '<strong>?</strong> (config section is not an array)')
+                        . '</span>';
+                    $configs = [];
+                }
                 if ($configs !== false) {
                     if ($module->getVar('hascomments') != 0) {
                         include_once XOOPS_ROOT_PATH . '/include/comment_constants.php';
@@ -424,6 +471,9 @@ function xoops_module_install($dirname)
                     $config_handler = xoops_getHandler('config');
                     $order          = 0;
                     foreach ($configs as $config) {
+                        if (!xoops_module_validate_config_entry($config, $msgs)) {
+                            continue;
+                        }
                         $confobj = $config_handler->createConfig();
                         $confobj->setVar('conf_modid', $newmid);
                         $confobj->setVar('conf_catid', 0);
@@ -432,7 +482,9 @@ function xoops_module_install($dirname)
                         $confobj->setVar('conf_desc', $config['description'] ?? '', true);
                         $confobj->setVar('conf_formtype', $config['formtype']);
                         $confobj->setVar('conf_valuetype', $config['valuetype']);
-                        $confobj->setConfValueForInput($config['default'], true);
+                        // setConfValueForInput() takes its first arg by reference, so a `??` expression cannot be passed inline.
+                        $defaultValue = $config['default'] ?? '';
+                        $confobj->setConfValueForInput($defaultValue, true);
                         $confobj->setVar('conf_order', $order);
                         $confop_msgs = '';
                         if (isset($config['options']) && \is_array($config['options'])) {
@@ -834,6 +886,37 @@ function xoops_module_update($dirname)
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');
     $module         = $module_handler->getByDirname($dirname);
+
+    // ============================================================
+    // SAFETY GUARDS — protect xoops_config from writes against the
+    // wrong mid.
+    //
+    // Capture the persisted mid once and keep it as the update identity.
+    // loadInfoAsVar() below refreshes manifest-backed fields (name,
+    // version, dirname, has*) but the DB-assigned mid must remain the
+    // single source of truth for module, block, template, and config
+    // writes. Refuse to proceed if the module is missing or has an
+    // invalid mid — the alternative is a `WHERE conf_modid = 0` write
+    // that would corrupt xoops_config across the whole site.
+    // ============================================================
+    if (!is_object($module) || !($module instanceof XoopsModule)) {
+        return '<p style="color:#ff0000;">Could not find module "'
+            . htmlspecialchars($dirname, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . '" — update aborted.</p>'
+            . '<div class="center"><a href="admin.php?fct=modulesadmin">' . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
+    }
+    $targetMid = (int) $module->getVar('mid');
+    if ($targetMid <= 0) {
+        trigger_error(
+            sprintf('modulesadmin: refusing to update "%s" with mid=%d (would corrupt xoops_config)', $dirname, $targetMid),
+            E_USER_WARNING
+        );
+        return '<p style="color:#ff0000;">Module "'
+            . htmlspecialchars($dirname, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . '" has invalid mid=' . $targetMid . '; update aborted to protect xoops_config.</p>'
+            . '<div class="center"><a href="admin.php?fct=modulesadmin">' . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
+    }
+
     // Save current version for use in the update function
     $prev_version = $module->getVar('version');
     $clearTpl     = new XoopsTpl();
@@ -843,6 +926,11 @@ function xoops_module_update($dirname)
     $temp_name = $module->getVar('name');
     $module->loadInfoAsVar($dirname);
     $module->setVar('name', $temp_name);
+    // Defensive restore: loadInfoAsVar() does not currently touch mid
+    // or the new-record flag, but re-asserting them keeps this code
+    // resilient against subclass overrides or future kernel changes.
+    $module->setVar('mid', $targetMid);
+    $module->unsetNew();
     $module->setVar('last_update', time());
     /*
         // Call Header
@@ -860,10 +948,19 @@ function xoops_module_update($dirname)
 
         */
     if (!$module_handler->insert($module)) {
-        echo '<p>Could not update ' . $module->getVar('name') . '</p>';
-        echo "<br><div class='center'><a href='admin.php?fct=modulesadmin'>" . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
+        // Return early so the trailing implode($msgs) below does not fire on
+        // an undefined variable. The success branch is the only path that
+        // initialises $msgs; on failure we hand the caller a self-contained
+        // error string (matching the early-return pattern used by the
+        // safety-guard checks at the top of this function).
+        return '<p style="color:#ff0000;">Could not update '
+            . htmlspecialchars((string) $module->getVar('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . '</p>'
+            . "<div class='center'><a href='admin.php?fct=modulesadmin'>" . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
     } else {
-        $newmid = $module->getVar('mid');
+        // $newmid is the captured $targetMid — never re-derived from
+        // $module->getVar('mid'), to keep DELETE and INSERT in sync.
+        $newmid = $targetMid;
         $msgs   = [];
         $msgs[] = '<div id="xo-module-log"><div class="header">';
         $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_UPDATING . $module->getInfo('name', 's') . '</h4>';
@@ -1138,30 +1235,46 @@ function xoops_module_update($dirname)
         //        $GLOBALS['xoopsTpl']->setCompileId();
         //        $xoopsTpl->setCompileId();
 
-        // first delete all config entries
+        // first delete all config entries — using the captured $newmid (= $targetMid)
         /** @var XoopsConfigHandler $config_handler */
         $config_handler = xoops_getHandler('config');
-        $configs        = $config_handler->getConfigs(new Criteria('conf_modid', $module->getVar('mid')));
+        $configs        = $config_handler->getConfigs(new Criteria('conf_modid', $newmid));
         $confcount      = count($configs);
         $config_delng   = [];
+        $config_old     = [];
         if ($confcount > 0) {
             $msgs[] = _AM_SYSTEM_MODULES_MODULE_DATA_DELETE;
             for ($i = 0; $i < $confcount; $i++) {
                 if (!$config_handler->deleteConfig($configs[$i])) {
-                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">' . _AM_SYSTEM_MODULES_CONFIG_DATA_DELETE_ERROR . sprintf(_AM_SYSTEM_MODULES_GONFIG_ID, '<strong>' . $configs[$i]->getvar('conf_id') . '</strong>') . '</span>';
+                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">' . _AM_SYSTEM_MODULES_CONFIG_DATA_DELETE_ERROR . sprintf(_AM_SYSTEM_MODULES_GONFIG_ID, '<strong>' . $configs[$i]->getVar('conf_id') . '</strong>') . '</span>';
                     // save the name of config failed to delete for later use
-                    $config_delng[] = $configs[$i]->getvar('conf_name');
+                    $config_delng[] = $configs[$i]->getVar('conf_name');
                 } else {
-                    $config_old[$configs[$i]->getvar('conf_name')]['value']     = $configs[$i]->getvar('conf_value', 'N');
-                    $config_old[$configs[$i]->getvar('conf_name')]['formtype']  = $configs[$i]->getvar('conf_formtype');
-                    $config_old[$configs[$i]->getvar('conf_name')]['valuetype'] = $configs[$i]->getvar('conf_valuetype');
-                    $msgs[]                                                     = '&nbsp;&nbsp;' . _AM_SYSTEM_MODULES_GONFIG_DATA_DELETE . sprintf(_AM_SYSTEM_MODULES_GONFIG_ID, '<strong>' . $configs[$i]->getVar('conf_id') . '</strong>');
+                    // Capture old value AND old catid. Preserving catid lets a
+                    // System-module update keep its general/mailer/censor groupings;
+                    // hardcoding catid=0 below moved every system config row out of
+                    // its category and made getConfigsByCat(XOOPS_CONF) return empty.
+                    $config_old[$configs[$i]->getVar('conf_name')] = [
+                        'value'     => $configs[$i]->getVar('conf_value', 'N'),
+                        'formtype'  => $configs[$i]->getVar('conf_formtype'),
+                        'valuetype' => $configs[$i]->getVar('conf_valuetype'),
+                        'catid'     => (int) $configs[$i]->getVar('conf_catid'),
+                    ];
+                    $msgs[] = '&nbsp;&nbsp;' . _AM_SYSTEM_MODULES_GONFIG_DATA_DELETE . sprintf(_AM_SYSTEM_MODULES_GONFIG_ID, '<strong>' . $configs[$i]->getVar('conf_id') . '</strong>');
                 }
             }
         }
 
         // now reinsert them with the new settings
         $configs = $module->getInfo('config');
+        // Same top-level guard as the install path — protect array_push /
+        // [] writes below from a non-array, non-false manifest value.
+        if (false !== $configs && !is_array($configs)) {
+            $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+                . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID, '<strong>?</strong> (config section is not an array)')
+                . '</span>';
+            $configs = [];
+        }
         if ($configs !== false) {
             if ($module->getVar('hascomments') != 0) {
                 include_once XOOPS_ROOT_PATH . '/include/comment_constants.php';
@@ -1280,26 +1393,46 @@ function xoops_module_update($dirname)
             $config_handler = xoops_getHandler('config');
             $order          = 0;
             foreach ($configs as $config) {
+                if (!xoops_module_validate_config_entry($config, $msgs)) {
+                    continue;
+                }
                 // only insert ones that have been deleted previously with success
                 if (!in_array($config['name'], $config_delng)) {
+                    // Resolve catid:
+                    //   1. manifest-declared 'category' or 'catid', if > 0
+                    //   2. else preserve the catid from the row we just deleted
+                    //      (system general settings = 1, mailer = 2, censor = 3, ...)
+                    //   3. else 0 (historical module behaviour)
+                    $catid = 0;
+                    if (isset($config['category']) && (int) $config['category'] > 0) {
+                        $catid = (int) $config['category'];
+                    } elseif (isset($config['catid']) && (int) $config['catid'] > 0) {
+                        $catid = (int) $config['catid'];
+                    } elseif (isset($config_old[$config['name']]['catid'])) {
+                        $catid = (int) $config_old[$config['name']]['catid'];
+                    }
+
                     $confobj = $config_handler->createConfig();
                     $confobj->setVar('conf_modid', $newmid);
-                    $confobj->setVar('conf_catid', 0);
+                    $confobj->setVar('conf_catid', $catid);
                     $confobj->setVar('conf_name', $config['name']);
                     $confobj->setVar('conf_title', $config['title'], true);
-                    $confobj->setVar('conf_desc', $config['description'], true);
+                    $confobj->setVar('conf_desc', $config['description'] ?? '', true);
                     $confobj->setVar('conf_formtype', $config['formtype']);
-                    if (isset($config['valuetype'])) {
-                        $confobj->setVar('conf_valuetype', $config['valuetype']);
-                    }
-                    if (isset($config_old[$config['name']]['value']) && $config_old[$config['name']]['formtype'] == $config['formtype'] && $config_old[$config['name']]['valuetype'] == $config['valuetype']) {
-                        // preserver the old value if any
-                        // form type and value type must be the same
-                        $confobj->setVar('conf_value', $config_old[$config['name']]['value'], true);
+                    $confobj->setVar('conf_valuetype', $config['valuetype']);
+                    $oldEntry = $config_old[$config['name']] ?? [];
+                    if (
+                        isset($oldEntry['value'])
+                        && ($oldEntry['formtype'] ?? null) === $config['formtype']
+                        && ($oldEntry['valuetype'] ?? null) === $config['valuetype']
+                    ) {
+                        // preserve the old value if any — form/value type must match
+                        $confobj->setVar('conf_value', $oldEntry['value'], true);
                     } else {
-                        $confobj->setConfValueForInput($config['default'], true);
-
-                        //$confobj->setVar('conf_value', $config['default'], true);
+                        // setConfValueForInput() takes its first arg by reference,
+                        // so a `??` expression cannot be passed inline.
+                        $defaultValue = $config['default'] ?? '';
+                        $confobj->setConfValueForInput($defaultValue, true);
                     }
                     $confobj->setVar('conf_order', $order);
                     $confop_msgs = '';

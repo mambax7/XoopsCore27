@@ -220,8 +220,16 @@ function form_user($add_or_edit, $user = '')
 }
 
 /**
- * @param $uid
- * @param $type
+ * Synchronize one user (or all users) — recompute posts count.
+ *
+ * Failure paths invoke redirect_header(), which terminates the request
+ * via exit(); control does not return to the caller on failure. The
+ * trailing `return;` statements after each redirect are kept as
+ * defensive markers in case a custom preload handler ever short-circuits
+ * the redirect.
+ *
+ * @param int|string $uid  User id (ignored when $type === 'all users').
+ * @param string     $type 'user' | 'all users'
  */
 function synchronize($uid, $type)
 {
@@ -251,6 +259,7 @@ function synchronize($uid, $type)
     switch ($type) {
         case 'user':
             $total_posts = 0;
+            $countFailed = false;
             foreach ($tables as $table) {
                 $criteria = new CriteriaCompo();
                 $criteria->add(new Criteria($table['uid_column'], $uid));
@@ -259,31 +268,43 @@ function synchronize($uid, $type)
                 }
                 $sql = 'SELECT COUNT(*) AS total FROM ' . $xoopsDB->prefix($table['table_name']) . ' ' . $criteria->renderWhere();
                 $result = $xoopsDB->query($sql);
-                if ($xoopsDB->isResultSet($result)) {
-                    if ($row = $xoopsDB->fetchArray($result)) {
-                        $total_posts += $row['total'];
-                    }
+                if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                    $countFailed = true;
+                    break;
                 }
+                $row = $xoopsDB->fetchArray($result);
+                if (!is_array($row) || !array_key_exists('total', $row)) {
+                    $countFailed = true;
+                    break;
+                }
+                $total_posts += (int) $row['total'];
+            }
+            if ($countFailed) {
+                // Refuse to overwrite users.posts with a partial total.
+                redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_USERS_CNUUSER);
+                return;
             }
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET posts = '" . $total_posts . "' WHERE uid = '" . $uid . "'";
             $result = $xoopsDB->exec($sql);
-            if (!$xoopsDB->isResultSet($result)) {
+            if (false === $result) {
                 redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_USERS_CNUUSER);
+                return;
             }
             break;
 
         case 'all users':
             $sql = 'SELECT uid FROM ' . $xoopsDB->prefix('users') . '';
             $result = $xoopsDB->query($sql);
-            if (!$xoopsDB->isResultSet($result)) {
+            if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
                 redirect_header('admin.php?fct=users', 1, sprintf(_AM_SYSTEM_USERS_CNGUSERID, $uid));
+                return;
             }
 
             while (false !== ($data = $xoopsDB->fetchArray($result))) {
+                // synchronize() either succeeds or terminates the request via
+                // redirect_header()->exit(); no per-call return-value check needed.
                 synchronize($data['uid'], 'user');
             }
             break;
     }
-
-    // exit();
 }
