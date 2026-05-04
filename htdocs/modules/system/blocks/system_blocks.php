@@ -657,11 +657,6 @@ function b_system_info_edit($options)
 }
 
 /**
- * @param $options
- *
- * @return array
- */
-/**
  * Validate a theme directory name against the safe character set XOOPS
  * uses for theme directories — letters, digits, underscore, hyphen, dot.
  * Reject names with path separators, null bytes, '..' segments, or a
@@ -671,7 +666,7 @@ function b_system_info_edit($options)
  *
  * @internal Used by b_system_themes_show.
  */
-function _b_system_themes_normalize_name(string $name): string
+function systemNormalizeThemeName(string $name): string
 {
     $name = trim($name);
     if (
@@ -692,7 +687,7 @@ function _b_system_themes_normalize_name(string $name): string
 /**
  * Resolve the (current, allowed) theme pair from $xoopsConfig defensively.
  *
- * - Casts and validates each value through _b_system_themes_normalize_name.
+ * - Casts and validates each value through systemNormalizeThemeName.
  * - Treats a string `theme_set_allowed` as pipe-separated (defends against
  *   manual overrides in mainfile.php / xoopsconfig.php).
  * - Skips non-scalar entries (object/array/null/resource) without casting,
@@ -707,10 +702,10 @@ function _b_system_themes_normalize_name(string $name): string
  *
  * @internal Used by b_system_themes_show.
  */
-function _b_system_themes_resolve_config(array $xoopsConfig): array
+function systemThemesResolveConfig(array $xoopsConfig): array
 {
     $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
-    $currentTheme    = is_string($rawCurrentTheme) ? _b_system_themes_normalize_name($rawCurrentTheme) : '';
+    $currentTheme    = is_string($rawCurrentTheme) ? systemNormalizeThemeName($rawCurrentTheme) : '';
     if ('' === $currentTheme) {
         $currentTheme = 'default';
     }
@@ -732,7 +727,7 @@ function _b_system_themes_resolve_config(array $xoopsConfig): array
     }
     $allowedThemes = array_values(array_filter(
         array_map(
-            static fn($name): string => is_scalar($name) ? _b_system_themes_normalize_name((string) $name) : '',
+            static fn($name): string => is_scalar($name) ? systemNormalizeThemeName((string) $name) : '',
             $rawAllowedThemes
         ),
         static fn(string $name): bool => '' !== $name
@@ -768,7 +763,7 @@ function b_system_themes_show($options)
     // should fatal. The helper returns safe (current, allowed) locals
     // so the rest of this function can render a usable select even
     // when the config is partially corrupted.
-    [$currentTheme, $allowedThemes] = _b_system_themes_resolve_config($xoopsConfig);
+    [$currentTheme, $allowedThemes] = systemThemesResolveConfig($xoopsConfig);
 
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
