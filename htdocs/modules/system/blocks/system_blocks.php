@@ -661,60 +661,68 @@ function b_system_info_edit($options)
  *
  * @return array
  */
-function b_system_themes_show($options)
+/**
+ * Validate a theme directory name against the safe character set XOOPS
+ * uses for theme directories — letters, digits, underscore, hyphen, dot.
+ * Reject names with path separators, null bytes, '..' segments, or a
+ * leading dot (hidden files). Names that fail validation return ''.
+ * Surviving names are trimmed but otherwise not rewritten, so a valid
+ * `my.theme` directory keeps its dot.
+ *
+ * @internal Used by b_system_themes_show.
+ */
+function _b_system_themes_normalize_name(string $name): string
 {
-    global $xoopsConfig;
-    $block = [];
-
-    if (!isset($options[2])) {
-        $options[2] = 6; // default visible theme rows
+    $name = trim($name);
+    if (
+        '' === $name
+        || str_starts_with($name, '.')
+        || str_contains($name, '/')
+        || str_contains($name, '\\')
+        || str_contains($name, "\0")
+        || str_contains($name, '..')
+        || !preg_match('/^[A-Za-z0-9_.-]+$/', $name)
+    ) {
+        return '';
     }
 
-    // Defensive: if the xoops_config rows for theme_set / theme_set_allowed
-    // are missing, unreadable, or contain unexpected values, neither this
-    // block nor the theme rendering chain that triggered it should fatal.
-    // Validate each theme name against the directory-safe character set
-    // XOOPS theme directories actually use — letters, digits, underscore,
-    // hyphen, and dot — and reject names with path separators, null
-    // bytes, '..' segments, or a leading dot (hidden files). Names that
-    // fail validation are returned as '' and dropped by the array_filter
-    // below. Surviving names are returned trimmed but otherwise not
-    // rewritten — a valid `my.theme` directory keeps its dot.
-    $normalizeTheme = static function (string $name): string {
-        $name = trim($name);
-        if (
-            '' === $name
-            || str_starts_with($name, '.')
-            || str_contains($name, '/')
-            || str_contains($name, '\\')
-            || str_contains($name, "\0")
-            || str_contains($name, '..')
-            || !preg_match('/^[A-Za-z0-9_.-]+$/', $name)
-        ) {
-            return '';
-        }
+    return $name;
+}
 
-        return $name;
-    };
-
-    // Same defence as the allowed-themes loop below: avoid casting a
-    // non-string (e.g. an object or array left in xoops_config by a
-    // corrupted override) directly to string, which would TypeError on
-    // an object without __toString or render an array as "Array".
+/**
+ * Resolve the (current, allowed) theme pair from $xoopsConfig defensively.
+ *
+ * - Casts and validates each value through _b_system_themes_normalize_name.
+ * - Treats a string `theme_set_allowed` as pipe-separated (defends against
+ *   manual overrides in mainfile.php / xoopsconfig.php).
+ * - Skips non-scalar entries (object/array/null/resource) without casting,
+ *   so a corrupted xoops_config row cannot trigger an Error or a
+ *   string-conversion Warning.
+ * - Falls back to 'default' if no usable current theme survived.
+ * - Falls back to [$currentTheme] if no usable allowed theme survived.
+ * - Ensures $currentTheme is in the allowed list (otherwise the rendered
+ *   <select> would be selected on a value that is not one of its options).
+ *
+ * @return array{0: string, 1: list<string>} [$currentTheme, $allowedThemes]
+ *
+ * @internal Used by b_system_themes_show.
+ */
+function _b_system_themes_resolve_config(array $xoopsConfig): array
+{
     $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
-    $currentTheme    = is_string($rawCurrentTheme) ? $normalizeTheme($rawCurrentTheme) : '';
+    $currentTheme    = is_string($rawCurrentTheme) ? _b_system_themes_normalize_name($rawCurrentTheme) : '';
     if ('' === $currentTheme) {
         $currentTheme = 'default';
     }
 
-    // theme_set_allowed is normally a PHP array (xoops_config 'array' type
-    // decodes via unserialize). Defend against direct overrides in
-    // mainfile.php / xoopsconfig.php that may set it as a pipe-separated
-    // string; anything else falls through to an empty list.
+    // theme_set_allowed is normally a PHP array (xoops_config 'array'
+    // type decodes via unserialize). Defend against direct overrides
+    // setting it as a pipe-separated string; anything else falls
+    // through to an empty list.
     $rawAllowedThemes = $xoopsConfig['theme_set_allowed'] ?? [];
     if (is_string($rawAllowedThemes)) {
-        // Filter on empty-string explicitly — a default array_filter() drops
-        // any falsy entry, including a theme directory literally named "0".
+        // Filter on empty-string explicitly — default array_filter()
+        // drops any falsy entry, including a theme literally named "0".
         $rawAllowedThemes = array_filter(
             array_map('trim', explode('|', $rawAllowedThemes)),
             static fn(string $theme): bool => '' !== $theme
@@ -724,10 +732,7 @@ function b_system_themes_show($options)
     }
     $allowedThemes = array_values(array_filter(
         array_map(
-            // Skip non-scalar entries (objects without __toString, resources,
-            // arrays, null) without casting — `(string)` on those would
-            // raise a TypeError on PHP 8.
-            static fn($name): string => is_scalar($name) ? $normalizeTheme((string) $name) : '',
+            static fn($name): string => is_scalar($name) ? _b_system_themes_normalize_name((string) $name) : '',
             $rawAllowedThemes
         ),
         static fn(string $name): bool => '' !== $name
@@ -735,14 +740,35 @@ function b_system_themes_show($options)
     if ([] === $allowedThemes) {
         $allowedThemes = [$currentTheme];
     }
-    // Keep the selected option and screenshot aligned: if the allowed
-    // list does not include the active theme (partial / corrupted
-    // config), prepend it so the rendered <select> has an option that
-    // matches its `selected` value.
     if (!in_array($currentTheme, $allowedThemes, true)) {
         array_unshift($allowedThemes, $currentTheme);
     }
     $allowedThemes = array_values(array_unique($allowedThemes));
+
+    return [$currentTheme, $allowedThemes];
+}
+
+/**
+ * @param $options
+ *
+ * @return array
+ */
+function b_system_themes_show($options)
+{
+    global $xoopsConfig;
+    $block = [];
+
+    if (!isset($options[2])) {
+        $options[2] = 6; // default visible theme rows
+    }
+
+    // Defensive: if xoops_config rows for theme_set / theme_set_allowed
+    // are missing, unreadable, or contain unexpected values, neither
+    // this block nor the theme rendering chain that triggered it
+    // should fatal. The helper returns safe (current, allowed) locals
+    // so the rest of this function can render a usable select even
+    // when the config is partially corrupted.
+    [$currentTheme, $allowedThemes] = _b_system_themes_resolve_config($xoopsConfig);
 
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
