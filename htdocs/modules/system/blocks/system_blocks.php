@@ -657,13 +657,20 @@ function b_system_info_edit($options)
 }
 
 /**
- * Validate a theme directory name against the safe character set XOOPS
- * uses for theme directories — letters, digits, underscore, hyphen, dot.
- * Reject names with path separators, null bytes, any `..` sequence
- * (anywhere in the name, not just as a path segment, so e.g. `my..theme`
- * is also rejected), or a leading dot (hidden files). Names that fail
- * validation return ''. Surviving names are trimmed but otherwise not
- * rewritten, so a valid `my.theme` directory keeps its dot.
+ * Validate a theme directory name for *path safety* only.
+ *
+ * XOOPS theme discovery (XoopsLists::getDirListAsArray) and the theme
+ * factory accept arbitrary directory names — including spaces, non-ASCII
+ * characters, etc. This validator therefore enforces the minimum needed
+ * to prevent path traversal: reject empty names, leading dot (hidden
+ * files), path separators, null bytes, and `..` appearing as a path
+ * segment. Output safety (HTML / URL contexts) is the caller's job —
+ * see the option-label escape and rawurlencode/htmlspecialchars on the
+ * screenshot URL below.
+ *
+ * Names that fail validation return ''. Surviving names are trimmed but
+ * otherwise not rewritten, so an existing theme directory like
+ * `My Theme` (space) or a non-ASCII name keeps its original form.
  *
  * @internal Used by b_system_themes_show.
  */
@@ -676,8 +683,7 @@ function systemValidateThemeName(string $name): string
         || str_contains($name, '/')
         || str_contains($name, '\\')
         || str_contains($name, "\0")
-        || str_contains($name, '..')
-        || !preg_match('/^[A-Za-z0-9_.-]+$/', $name)
+        || preg_match('~(?:^|[\\\\/])\.\.(?:[\\\\/]|$)~', $name)
     ) {
         return '';
     }
@@ -769,16 +775,21 @@ function b_system_themes_show($options)
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
     foreach ($allowedThemes as $theme) {
-        $select->addOption($theme, $theme);
+        // XoopsFormSelect escapes option *values* but not option *labels*;
+        // since the validator only enforces path safety, a legitimate
+        // theme directory may still contain HTML-significant characters
+        // (e.g. an `&` in the directory name). Escape the label here so
+        // it's safe in HTML body context.
+        $select->addOption($theme, htmlspecialchars($theme, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     if ($options[0] == 1) {
-        // Belt-and-suspenders: $currentTheme has already passed the
-        // validator above (letters, digits, underscore, hyphen, dot —
-        // all in RFC 3986 unreserved set), so rawurlencode() preserves
-        // it as-is and htmlspecialchars() has nothing to escape. The
-        // explicit encode + escape stays correct if the validator is
-        // ever loosened.
+        // Encode + escape the screenshot URL. $currentTheme has passed
+        // the path-safety validator above, but the validator deliberately
+        // allows any character XOOPS theme discovery would accept —
+        // including spaces and non-ASCII — so rawurlencode is needed to
+        // produce a valid URL component, and htmlspecialchars is needed
+        // to make the result safe inside the src="..." attribute.
         $themeShotUrl = htmlspecialchars(
             XOOPS_THEME_URL . '/' . rawurlencode($currentTheme) . '/shot.gif',
             ENT_QUOTES | ENT_SUBSTITUTE,
