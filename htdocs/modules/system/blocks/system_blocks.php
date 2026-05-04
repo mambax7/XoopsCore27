@@ -667,7 +667,7 @@ function b_system_info_edit($options)
  *
  * @internal Used by b_system_themes_show.
  */
-function systemNormalizeThemeName(string $name): string
+function systemValidateThemeName(string $name): string
 {
     $name = trim($name);
     if (
@@ -688,7 +688,7 @@ function systemNormalizeThemeName(string $name): string
 /**
  * Resolve the (current, allowed) theme pair from $xoopsConfig defensively.
  *
- * - Casts and validates each value through systemNormalizeThemeName.
+ * - Casts and validates each value through systemValidateThemeName.
  * - Treats a string `theme_set_allowed` as pipe-separated (defends against
  *   manual overrides in mainfile.php / xoopsconfig.php).
  * - Skips non-scalar entries (object/array/null/resource) without casting,
@@ -706,7 +706,7 @@ function systemNormalizeThemeName(string $name): string
 function systemThemesResolveConfig(array $xoopsConfig): array
 {
     $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
-    $currentTheme    = is_string($rawCurrentTheme) ? systemNormalizeThemeName($rawCurrentTheme) : '';
+    $currentTheme    = is_string($rawCurrentTheme) ? systemValidateThemeName($rawCurrentTheme) : '';
     if ('' === $currentTheme) {
         $currentTheme = 'default';
     }
@@ -728,7 +728,7 @@ function systemThemesResolveConfig(array $xoopsConfig): array
     }
     $allowedThemes = array_values(array_filter(
         array_map(
-            static fn($name): string => is_scalar($name) ? systemNormalizeThemeName((string) $name) : '',
+            static fn($name): string => is_scalar($name) ? systemValidateThemeName((string) $name) : '',
             $rawAllowedThemes
         ),
         static fn(string $name): bool => '' !== $name
