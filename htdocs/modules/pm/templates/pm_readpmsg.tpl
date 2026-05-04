@@ -14,7 +14,7 @@
 
 <{if !empty($message)}>
     <span class='bold'>&raquo;</span>
-    &nbsp;<{$message.subject}>
+    &nbsp;<{$message.subject|escape}>
     <br>
     <form name="<{$pmform.name}>" id="<{$pmform.name}>" action="<{$pmform.action}>" method="<{$pmform.method}>" <{$pmform.extra}> >
         <table cellpadding='4' cellspacing='1' class='outer bnone width100'>
@@ -24,14 +24,14 @@
             <tr class='even'>
                 <td class='aligntop'>
                     <{if isset($poster) && $poster != false}>
-                        <a href='<{$xoops_url}>/userinfo.php?uid=<{$poster->getVar("uid")}>'><{$poster->getVar("uname")}></a>
+                        <a href='<{$xoops_url}>/userinfo.php?uid=<{$poster->getVar("uid")|escape}>'><{$poster->getVar("uname", "n")|escape}></a>
                         <br>
                         <{if ( $poster->getVar("user_avatar") != "" ) }>
-                            <img src='<{$xoops_url}>/uploads/<{$poster->getVar("user_avatar")}>' alt=''/>
+                            <img src='<{$xoops_url}>/uploads/<{$poster->getVar("user_avatar", "n")|escape:'url'}>' alt=''/>
                             <br>
                         <{/if}>
                         <{if ( $poster->getVar("user_from") != "" ) }>
-                            <{$smarty.const._PM_FROMC}><{$poster->getVar("user_from")}>
+                            <{$smarty.const._PM_FROMC}><{$poster->getVar("user_from", "n")|escape}>
                             <br>
                             <br>
                         <{/if}>
@@ -41,16 +41,16 @@
                             <br>
                         <{/if}>
                     <{else}>
-                        <{$anonymous}>
+                        <{$anonymous|escape}>
                     <{/if}>
                 </td>
                 <td>
                     <{if !empty($message.msg_image)}>
-                        <img src='<{$xoops_url}>/images/subject/<{$message.msg_image}>' alt=''/>
+                        <img src='<{$xoops_url}>/images/subject/<{$message.msg_image|escape:'url'}>' alt=''/>
                     <{/if}>
-                    <{$smarty.const._PM_SENTC}><{$message.msg_time}><br>
+                    <{$smarty.const._PM_SENTC}><{$message.msg_time|escape}><br>
                     <hr/>
-                    <strong><{$message.subject}></strong><br>
+                    <strong><{$message.subject|escape}></strong><br>
                     <br>
                     <{$message.msg_text}><br>
                     <br>
@@ -66,7 +66,7 @@
             <tr>
                 <td class='txtright' colspan='2'>
                     <{if ( $previous >= 0 ) }>
-                        <a href='readpmsg.php?start=<{$previous}>&amp;total_messages=<{$total_messages}>&amp;op=<{$op}>'
+                        <a href='readpmsg.php?start=<{$previous|escape}>&amp;total_messages=<{$total_messages|escape}>&amp;op=<{$op|escape:'url'}>'
                            title='<{$smarty.const._PM_PREVIOUS}>'>
                             <{$smarty.const._PM_PREVIOUS}>
                         </a>
@@ -75,7 +75,7 @@
                         <{$smarty.const._PM_PREVIOUS}>&nbsp;|&nbsp;
                     <{/if}>
                     <{if ( $next < $total_messages ) }>
-                        <a href='readpmsg.php?start=<{$next}>&amp;total_messages=<{$total_messages}>&amp;op=<{$op}>'
+                        <a href='readpmsg.php?start=<{$next|escape}>&amp;total_messages=<{$total_messages|escape}>&amp;op=<{$op|escape:'url'}>'
                            title='<{$smarty.const._PM_NEXT}>'>
                             <{$smarty.const._PM_NEXT}>
                         </a>

@@ -36,17 +36,21 @@ switch ($op) {
         break;
 
     case 'prune':
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            redirect_header('prune.php', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        }
+
         $criteria = new CriteriaCompo();
         $after  = Request::getArray('after', [], 'POST');
         $before = Request::getArray('before', [], 'POST');
         if (!empty($after['date']) && $after['date'] !== 'YYYY/MM/DD') {
-            $afterTime = strtotime($after['date']);
+            $afterTime = strtotime((string) $after['date']);
             if (false !== $afterTime) {
                 $criteria->add(new Criteria('msg_time', $afterTime + (int)($after['time'] ?? 0), '>'));
             }
         }
         if (!empty($before['date']) && $before['date'] !== 'YYYY/MM/DD') {
-            $beforeTime = strtotime($before['date']);
+            $beforeTime = strtotime((string) $before['date']);
             if (false !== $beforeTime) {
                 $criteria->add(new Criteria('msg_time', $beforeTime + (int)($before['time'] ?? 0), '<'));
             }
@@ -60,6 +64,7 @@ switch ($op) {
             $criteria->add($savecriteria);
         }
         $notifyusers = Request::getInt('notifyusers', 0, 'POST') === 1;
+        $uids        = [];
         if ($notifyusers) {
             $notifycriteria = $criteria;
             $notifycriteria->add(new Criteria('to_delete', 0));
@@ -72,7 +77,8 @@ switch ($op) {
             redirect_header('prune.php', 2, _PM_AM_ERRORWHILEPRUNING);
         }
         if ($notifyusers) {
-            $errors = false;
+            $errors   = false;
+            $errormsg = [];
             foreach ($uids as $uid => $messagecount) {
                 $pm = $pm_handler->create();
                 $pm->setVar('subject', $GLOBALS['xoopsModuleConfig']['prunesubject']);
