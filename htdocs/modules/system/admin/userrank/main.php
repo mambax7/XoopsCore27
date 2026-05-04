@@ -163,7 +163,7 @@ switch ($op) {
                 $uploader_rank_img->setPrefix('rank');
                 $uploader_rank_img->fetchMedia('rank_image');
                 if (!$uploader_rank_img->upload()) {
-                    $err[] = & $uploader_rank_img->getErrors();
+                    $err[] = $uploader_rank_img->getErrors();
                 } else {
                     $obj->setVar('rank_image', 'ranks/' . $uploader_rank_img->getSavedFileName());
                     if (!$userrank_Handler->insert($obj)) {

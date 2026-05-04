@@ -171,7 +171,7 @@ switch ($op) {
                 $uploader_smilies_img->setPrefix('smil');
                 $uploader_smilies_img->fetchMedia('smile_url');
                 if (!$uploader_smilies_img->upload()) {
-                    $err[] = & $uploader_smilies_img->getErrors();
+                    $err[] = $uploader_smilies_img->getErrors();
                 } else {
                     $obj->setVar('smile_url', 'smilies/' . $uploader_smilies_img->getSavedFileName());
                     if (!$smilies_Handler->insert($obj)) {

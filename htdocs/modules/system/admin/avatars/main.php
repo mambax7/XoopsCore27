@@ -203,7 +203,7 @@ switch ($op) {
             if ($uploader->fetchMedia('avatar_file')) {
                 $uploader->setPrefix('savt');
                 if (!$uploader->upload()) {
-                    $err[] = & $uploader->getErrors();
+                    $err[] = $uploader->getErrors();
                 } else {
                     $avatar->setVar('avatar_name', Request::getString('avatar_name', '', 'POST'));
                     $avatar->setVar('avatar_display', Request::getBool('avatar_display', false, 'POST'));
