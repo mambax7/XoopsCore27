@@ -32,21 +32,22 @@ $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'day', 24 * 60 * 60);
 $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'hour', 60 * 60);
-$result = $xoopsDB->query($sql);
-if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
-    throw new \RuntimeException(
-        \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
-        E_USER_ERROR,
-    );
-}
+// Initialise $rawStats up-front so a failed query degrades gracefully
+// to an empty chart rather than fataling out of the admin page. The
+// concrete result-set type is left to XoopsDatabase / isResultSet()
+// because Protector supports XOOPS_DB_ALTERNATIVE (see preloads/core.php),
+// which can return non-mysqli result objects.
+$rawStats = [
+    '' => ['month' => 0, 'week' => 0, 'day' => 0, 'hour' => 0],
+];
 
-$rawStats = [];
-$rawStats['']['month'] = 0;
-$rawStats['']['week'] = 0;
-$rawStats['']['day'] = 0;
-$rawStats['']['hour'] = 0;
-while (false !== ($row = $xoopsDB->fetchArray($result))) {
-    $rawStats[$row['type']][$row['age']] = $row['count'];
+$result = $xoopsDB->query($sql);
+if (!$xoopsDB->isResultSet($result)) {
+    trigger_error(\sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_WARNING);
+} else {
+    while (false !== ($row = $xoopsDB->fetchArray($result))) {
+        $rawStats[$row['type']][$row['age']] = $row['count'];
+    }
 }
 $ages = ['month', 'week', 'day', 'hour'];
 $stats = [];
@@ -80,16 +81,19 @@ for ($i = 0; $i < 4; ++$i) {
 // the chart script is well-formed JS regardless of label content. The
 // JSON_HEX_* flags keep the payload safe inside an HTML <script> block;
 // JSON_THROW_ON_ERROR converts any encoding failure (e.g. invalid UTF-8
-// in a label) into a \JsonException, which we rewrap with a clear
-// message so the page surfaces a meaningful error instead of silently
-// emitting broken JS.
+// in a label) into a catchable \JsonException. On failure we degrade
+// gracefully to an empty chart and log a warning rather than fataling
+// the entire admin stats page.
 $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
 try {
     $labelsJson = json_encode(array_keys($stats), $jsonFlags);
     $seriesJson = json_encode(array_reverse($seriesData), $jsonFlags);
     $heightJson = json_encode($height, $jsonFlags);
 } catch (\JsonException $e) {
-    throw new \RuntimeException('Unable to encode Protector stats chart data.', 0, $e);
+    trigger_error('Unable to encode Protector stats chart data: ' . $e->getMessage(), E_USER_WARNING);
+    $labelsJson = '[]';
+    $seriesJson = '[]';
+    $heightJson = '24';
 }
 
 $script = <<<EOS
