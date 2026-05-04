@@ -33,7 +33,7 @@ $sql .= sprintf($queryFormat, 'day', 24 * 60 * 60);
 $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'hour', 60 * 60);
 // Initialise $rawStats up-front so a failed query degrades gracefully
-// to an empty chart rather than fataling out of the admin page.
+// to an empty chart rather than causing a fatal error in the admin page.
 $rawStats = [
     '' => ['month' => 0, 'week' => 0, 'day' => 0, 'hour' => 0],
 ];
@@ -79,8 +79,8 @@ for ($i = 0; $i < 4; ++$i) {
 // JSON_HEX_* flags keep the payload safe inside an HTML <script> block;
 // JSON_THROW_ON_ERROR converts any encoding failure (e.g. invalid UTF-8
 // in a label) into a catchable \JsonException. On failure we degrade
-// gracefully to an empty chart and log a warning rather than fataling
-// the entire admin stats page.
+// gracefully to an empty chart and log a warning rather than causing
+// a fatal error in the admin stats page.
 $jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
 try {
     $labelsJson = json_encode(array_keys($stats), $jsonFlags);
