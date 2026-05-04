@@ -424,9 +424,16 @@ function xoops_module_install($dirname)
                     $config_handler = xoops_getHandler('config');
                     $order          = 0;
                     foreach ($configs as $config) {
-                        // A malformed config entry (missing one of the four required keys)
-                        // is unrecoverable — emit a single visible warning row and continue,
-                        // rather than spraying four "Undefined array key" warnings per entry.
+                        // A malformed config entry (non-array, or missing one of the four
+                        // required keys) is unrecoverable — emit a single visible warning
+                        // row and continue, rather than fataling on array_keys() or spraying
+                        // four "Undefined array key" warnings per entry.
+                        if (!is_array($config)) {
+                            $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+                                . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR, '<strong>?</strong>')
+                                . ' (invalid config entry type)</span>';
+                            continue;
+                        }
                         $missing = array_diff(['name', 'title', 'formtype', 'valuetype'], array_keys($config));
                         if ([] !== $missing) {
                             $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
@@ -852,13 +859,16 @@ function xoops_module_update($dirname)
     $module         = $module_handler->getByDirname($dirname);
 
     // ============================================================
-    // SAFETY GUARDS — protect xoops_config from "writes to modid=0".
+    // SAFETY GUARDS — protect xoops_config from writes against the
+    // wrong mid.
     //
-    // Capture the mid ONCE here. $module->loadInfoAsVar() below
-    // overwrites the module's vars from xoops_version.php (which does
-    // NOT declare 'mid', because mid is a DB-assigned identity), so
-    // without an explicit restore every config row gets re-inserted
-    // at conf_modid=0, corrupting xoops_config across the whole site.
+    // Capture the persisted mid once and keep it as the update identity.
+    // loadInfoAsVar() below refreshes manifest-backed fields (name,
+    // version, dirname, has*) but the DB-assigned mid must remain the
+    // single source of truth for module, block, template, and config
+    // writes. Refuse to proceed if the module is missing or has an
+    // invalid mid — the alternative is a `WHERE conf_modid = 0` write
+    // that would corrupt xoops_config across the whole site.
     // ============================================================
     if (!is_object($module) || !($module instanceof XoopsModule)) {
         return '<p style="color:#ff0000;">Could not find module "'
@@ -887,7 +897,9 @@ function xoops_module_update($dirname)
     $temp_name = $module->getVar('name');
     $module->loadInfoAsVar($dirname);
     $module->setVar('name', $temp_name);
-    // Re-assert mid AFTER loadInfoAsVar() — see safety-guard comment above.
+    // Defensive restore: loadInfoAsVar() does not currently touch mid
+    // or the new-record flag, but re-asserting them keeps this code
+    // resilient against subclass overrides or future kernel changes.
     $module->setVar('mid', $targetMid);
     $module->unsetNew();
     $module->setVar('last_update', time());
@@ -1338,7 +1350,14 @@ function xoops_module_update($dirname)
             $order          = 0;
             foreach ($configs as $config) {
                 // Same defense as the install path: skip malformed entries
-                // with one visible row instead of N undefined-key warnings.
+                // (non-array, or missing required keys) with one visible row
+                // instead of fataling on array_keys() or N undefined-key warnings.
+                if (!is_array($config)) {
+                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+                        . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR, '<strong>?</strong>')
+                        . ' (invalid config entry type)</span>';
+                    continue;
+                }
                 $missing = array_diff(['name', 'title', 'formtype', 'valuetype'], array_keys($config));
                 if ([] !== $missing) {
                     $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'

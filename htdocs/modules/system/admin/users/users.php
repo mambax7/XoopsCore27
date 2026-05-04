@@ -251,6 +251,7 @@ function synchronize($uid, $type)
     switch ($type) {
         case 'user':
             $total_posts = 0;
+            $countFailed = false;
             foreach ($tables as $table) {
                 $criteria = new CriteriaCompo();
                 $criteria->add(new Criteria($table['uid_column'], $uid));
@@ -260,11 +261,20 @@ function synchronize($uid, $type)
                 $sql = 'SELECT COUNT(*) AS total FROM ' . $xoopsDB->prefix($table['table_name']) . ' ' . $criteria->renderWhere();
                 $result = $xoopsDB->query($sql);
                 if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
-                    continue;
+                    $countFailed = true;
+                    break;
                 }
-                if ($row = $xoopsDB->fetchArray($result)) {
-                    $total_posts += $row['total'];
+                $row = $xoopsDB->fetchArray($result);
+                if (!is_array($row) || !array_key_exists('total', $row)) {
+                    $countFailed = true;
+                    break;
                 }
+                $total_posts += (int) $row['total'];
+            }
+            if ($countFailed) {
+                // Refuse to overwrite users.posts with a partial total.
+                redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_USERS_CNUUSER);
+                return;
             }
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET posts = '" . $total_posts . "' WHERE uid = '" . $uid . "'";
             $result = $xoopsDB->exec($sql);
