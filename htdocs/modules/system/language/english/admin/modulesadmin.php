@@ -127,6 +127,7 @@ define('_AM_SYSTEM_MODULES_MODULE_DATA_UPDATE', 'Module data updated.');
 define('_AM_SYSTEM_MODULES_CONFIG_ADD', ' Config option added');
 define('_AM_SYSTEM_MODULES_CONFIG_DATA_ADD', ' Config %s added to the database');
 define('_AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR', ' ERROR: Could not insert config %s to the database. ');
+define('_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID', ' ERROR: Skipped malformed config entry %s. ');
 define('_AM_SYSTEM_MODULES_GONFIG_DATA_DELETE', 'Config data deleted from the database. ');
 define('_AM_SYSTEM_MODULES_CONFIG_DATA_DELETE_ERROR', 'ERROR: Could not delete config data from the database');
 // Access

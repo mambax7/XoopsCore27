@@ -10,6 +10,9 @@ Below are language differences from a version to next version.
 - added define('_AM_SYSTEM_MENUS', 'Menus');
 - added define('_AM_SYSTEM_MENUS_DESC', 'Manage site navigation menus');
 
+/htdocs/modules/system/language/english/admin/modulesadmin.php
+- added define('_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID', ' ERROR: Skipped malformed config entry %s. ');
+
 /htdocs/modules/system/language/english/modinfo.php
 - added define('_MI_SYSTEM_MENUS_ACTIVE', 'Enable Menu System');
 - added define('_MI_SYSTEM_MENUS_ACTIVE_DESC', 'Enable the built-in menu management system for site navigation');

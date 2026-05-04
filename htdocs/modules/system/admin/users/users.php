@@ -288,6 +288,7 @@ function synchronize($uid, $type)
             $result = $xoopsDB->query($sql);
             if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
                 redirect_header('admin.php?fct=users', 1, sprintf(_AM_SYSTEM_USERS_CNGUSERID, $uid));
+                return;
             }
 
             while (false !== ($data = $xoopsDB->fetchArray($result))) {

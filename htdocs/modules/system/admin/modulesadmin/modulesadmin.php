@@ -22,6 +22,43 @@ if ( !is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin(
 */
 
 /**
+ * Validate a single module config-entry definition.
+ *
+ * On a malformed entry (non-array, or missing one of the required keys
+ * name/title/formtype/valuetype) appends a single visible error row to
+ * $msgs and returns false. On a valid entry returns true with $msgs
+ * untouched. Used by both install and update paths to skip bad entries
+ * rather than fataling on array_keys() or spraying N undefined-key
+ * warnings per entry.
+ *
+ * @param mixed             $config Entry from $module->getInfo('config').
+ * @param array<int,string> $msgs   Admin log buffer (appended to on failure).
+ *
+ * @return bool True when $config is a usable array of config metadata.
+ */
+function xoops_module_validate_config_entry($config, array &$msgs): bool
+{
+    if (!is_array($config)) {
+        $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+            . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID, '<strong>?</strong> (non-array entry)')
+            . '</span>';
+        return false;
+    }
+    $missing = array_diff(['name', 'title', 'formtype', 'valuetype'], array_keys($config));
+    if ([] !== $missing) {
+        $name = htmlspecialchars((string) ($config['name'] ?? '?'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+            . sprintf(
+                _AM_SYSTEM_MODULES_CONFIG_DATA_INVALID,
+                '<strong>' . $name . '</strong> (missing required keys: ' . implode(', ', $missing) . ')'
+            )
+            . '</span>';
+        return false;
+    }
+    return true;
+}
+
+/**
  * @param $dirname
  *
  * @return string
@@ -424,25 +461,7 @@ function xoops_module_install($dirname)
                     $config_handler = xoops_getHandler('config');
                     $order          = 0;
                     foreach ($configs as $config) {
-                        // A malformed config entry (non-array, or missing one of the four
-                        // required keys) is unrecoverable — emit a single visible warning
-                        // row and continue, rather than fataling on array_keys() or spraying
-                        // four "Undefined array key" warnings per entry.
-                        if (!is_array($config)) {
-                            $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
-                                . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR, '<strong>?</strong>')
-                                . ' (invalid config entry type)</span>';
-                            continue;
-                        }
-                        $missing = array_diff(['name', 'title', 'formtype', 'valuetype'], array_keys($config));
-                        if ([] !== $missing) {
-                            $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
-                                . sprintf(
-                                    _AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR,
-                                    '<strong>' . htmlspecialchars((string) ($config['name'] ?? '?'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong>'
-                                    . ' (missing: ' . implode(', ', $missing) . ')'
-                                )
-                                . '</span>';
+                        if (!xoops_module_validate_config_entry($config, $msgs)) {
                             continue;
                         }
                         $confobj = $config_handler->createConfig();
@@ -1349,24 +1368,7 @@ function xoops_module_update($dirname)
             $config_handler = xoops_getHandler('config');
             $order          = 0;
             foreach ($configs as $config) {
-                // Same defense as the install path: skip malformed entries
-                // (non-array, or missing required keys) with one visible row
-                // instead of fataling on array_keys() or N undefined-key warnings.
-                if (!is_array($config)) {
-                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
-                        . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR, '<strong>?</strong>')
-                        . ' (invalid config entry type)</span>';
-                    continue;
-                }
-                $missing = array_diff(['name', 'title', 'formtype', 'valuetype'], array_keys($config));
-                if ([] !== $missing) {
-                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
-                        . sprintf(
-                            _AM_SYSTEM_MODULES_CONFIG_DATA_ADD_ERROR,
-                            '<strong>' . htmlspecialchars((string) ($config['name'] ?? '?'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong>'
-                            . ' (missing: ' . implode(', ', $missing) . ')'
-                        )
-                        . '</span>';
+                if (!xoops_module_validate_config_entry($config, $msgs)) {
                     continue;
                 }
                 // only insert ones that have been deleted previously with success
