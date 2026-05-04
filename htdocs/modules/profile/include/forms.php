@@ -169,7 +169,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
 
             case 'checkbox':
             case 'select_multi':
-                $def_value = $field->getVar('field_default', 'e') != null
+                $def_value = $field->getVar('field_default', 'e') !== null
                     ? (unserialize($field->getVar('field_default', 'n'), ['allowed_classes' => false]) ?: [])
                     : null;
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value, 8, true);
@@ -186,7 +186,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
 
             case 'select':
             case 'radio':
-                $def_value = $field->getVar('field_default', 'e') != null ? $field->getVar('field_default') : null;
+                $def_value = $field->getVar('field_default', 'e') !== null ? $field->getVar('field_default') : null;
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value);
                 $options   = $field->getVar('field_options');
                 asort($options);
