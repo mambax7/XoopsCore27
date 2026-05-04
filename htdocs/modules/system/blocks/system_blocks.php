@@ -657,20 +657,31 @@ function b_system_info_edit($options)
 }
 
 /**
- * Validate a theme directory name for *path safety* only.
+ * Validate a theme directory name for path AND HTML safety.
  *
  * XOOPS theme discovery (XoopsLists::getDirListAsArray) and the theme
- * factory accept arbitrary directory names — including spaces, non-ASCII
- * characters, etc. This validator therefore enforces the minimum needed
- * to prevent path traversal: reject empty names, leading dot (hidden
- * files), path separators, null bytes, and `..` appearing as a path
- * segment. Output safety (HTML / URL contexts) is the caller's job —
- * see the option-label escape and rawurlencode/htmlspecialchars on the
- * screenshot URL below.
+ * factory accept arbitrary directory names — including spaces and
+ * non-ASCII characters. This validator therefore intentionally does
+ * NOT enforce the conservative `[A-Za-z0-9_.-]` alphabet that an
+ * earlier revision used (which would have silently dropped legitimate
+ * `My Theme` or `テーマ` directories). It enforces two safety classes
+ * instead:
  *
- * Names that fail validation return ''. Surviving names are trimmed but
- * otherwise not rewritten, so an existing theme directory like
- * `My Theme` (space) or a non-ASCII name keeps its original form.
+ *  - Path safety: reject empty names, leading dot (hidden files),
+ *    path separators, null bytes, and `..` appearing as a path
+ *    segment.
+ *  - HTML safety: reject the five HTML metacharacters (< > & " ').
+ *    No legitimate theme directory contains those, and rejecting
+ *    them at the boundary lets the option label and screenshot URL
+ *    be embedded without per-renderer escaping logic. (XoopsFormSelect
+ *    renderers diverge on whether they escape labels: Bootstrap3/4/5
+ *    + Legacy render labels raw, while Tailwind escapes them — pre-
+ *    escaping in the caller would correctly handle the first four
+ *    but cause double-escape under Tailwind.)
+ *
+ * Names that fail validation return ''. Surviving names are trimmed
+ * but otherwise not rewritten — `My Theme` (space) and non-ASCII names
+ * keep their original form.
  *
  * @internal Used by b_system_themes_show.
  */
@@ -684,6 +695,7 @@ function systemValidateThemeName(string $name): string
         || str_contains($name, '\\')
         || str_contains($name, "\0")
         || preg_match('~(?:^|[\\\\/])\.\.(?:[\\\\/]|$)~', $name)
+        || preg_match('/[<>"\'&]/', $name)
     ) {
         return '';
     }
@@ -775,12 +787,13 @@ function b_system_themes_show($options)
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
     foreach ($allowedThemes as $theme) {
-        // XoopsFormSelect escapes option *values* but not option *labels*;
-        // since the validator only enforces path safety, a legitimate
-        // theme directory may still contain HTML-significant characters
-        // (e.g. an `&` in the directory name). Escape the label here so
-        // it's safe in HTML body context.
-        $select->addOption($theme, htmlspecialchars($theme, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        // The validator above rejects any theme name containing the five
+        // HTML metacharacters, so $theme is safe to embed as both option
+        // value and label without further per-call escaping. This
+        // sidesteps the divergent renderer behaviour: Bootstrap3/4/5 +
+        // Legacy render labels raw, while Tailwind escapes them — passing
+        // a value that needs no escaping at all works under both.
+        $select->addOption($theme, $theme);
     }
 
     if ($options[0] == 1) {
