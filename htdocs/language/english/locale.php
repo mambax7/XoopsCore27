@@ -53,11 +53,25 @@ class XoopsLocal extends XoopsLocalAbstract
     /**
      * Number Formats
      *
+     * The @param annotation accepts string for backward compatibility with
+     * callers that still pass numeric strings, but PHP's number_format()
+     * requires float. Cast at the boundary ONLY when the input is a
+     * numeric string — otherwise pass through unchanged so PHP's
+     * number_format() raises its own TypeError on genuinely invalid
+     * input (arrays, objects, non-numeric strings) instead of silently
+     * coercing them to 0 / 1 and returning a misleading formatted zero.
+     *
      * @param  int|float|string $number
      * @return string
+     *
+     * @throws \TypeError when $number is not int, float, or a numeric string
      */
     public function number_format($number)
     {
+        if (is_string($number) && is_numeric($number)) {
+            $number = (float) $number;
+        }
+
         return number_format($number, self::CURRENCY['decimals'], self::CURRENCY['decSep'], self::CURRENCY['thouSep']);
     }
 
@@ -79,7 +93,15 @@ class XoopsLocal extends XoopsLocalAbstract
             if (null === $fmt) {
                 $fmt = new \NumberFormatter($c['locale'], \NumberFormatter::CURRENCY);
             }
-            $result = $fmt->formatCurrency((float) $number, $c['code']);
+            // Match number_format()'s selective-cast behaviour above:
+            // accept numeric strings for BC, pass other types through so
+            // formatCurrency() raises its own TypeError on genuinely
+            // invalid input rather than silently rendering "$0.00". The
+            // intl and fallback paths now agree on what counts as valid.
+            if (is_string($number) && is_numeric($number)) {
+                $number = (float) $number;
+            }
+            $result = $fmt->formatCurrency($number, $c['code']);
             if ($result !== false) {
                 return $result;
             }
