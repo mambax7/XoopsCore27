@@ -63,6 +63,8 @@ class XoopsLocal extends XoopsLocalAbstract
      *
      * @param  int|float|string $number
      * @return string
+     *
+     * @throws \TypeError when $number is not int, float, or a numeric string
      */
     public function number_format($number)
     {
@@ -91,7 +93,15 @@ class XoopsLocal extends XoopsLocalAbstract
             if (null === $fmt) {
                 $fmt = new \NumberFormatter($c['locale'], \NumberFormatter::CURRENCY);
             }
-            $result = $fmt->formatCurrency((float) $number, $c['code']);
+            // Match number_format()'s selective-cast behaviour above:
+            // accept numeric strings for BC, pass other types through so
+            // formatCurrency() raises its own TypeError on genuinely
+            // invalid input rather than silently rendering "$0.00". The
+            // intl and fallback paths now agree on what counts as valid.
+            if (is_string($number) && is_numeric($number)) {
+                $number = (float) $number;
+            }
+            $result = $fmt->formatCurrency($number, $c['code']);
             if ($result !== false) {
                 return $result;
             }
