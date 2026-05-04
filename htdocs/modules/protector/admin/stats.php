@@ -10,7 +10,7 @@
  * @package    gwiki
  */
 
-require __DIR__ . '/../../../mainfile.php';
+require_once dirname(__DIR__, 3) . '/mainfile.php';
 defined('XOOPS_TRUST_PATH') || exit('set XOOPS_TRUST_PATH in mainfile.php');
 
 $mydirname = basename(dirname(__DIR__)) ;
@@ -78,11 +78,19 @@ for ($i = 0; $i < 4; ++$i) {
 
 // Build the inline JS payload via json_encode so any value embedded in
 // the chart script is well-formed JS regardless of label content. The
-// JSON_HEX_* flags keep the payload safe inside an HTML <script> block.
-$jsonFlags  = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
-$labelsJson = json_encode(array_keys($stats), $jsonFlags);
-$seriesJson = json_encode(array_reverse($seriesData), $jsonFlags);
-$heightJson = json_encode($height, $jsonFlags);
+// JSON_HEX_* flags keep the payload safe inside an HTML <script> block;
+// JSON_THROW_ON_ERROR converts any encoding failure (e.g. invalid UTF-8
+// in a label) into a \JsonException, which we rewrap with a clear
+// message so the page surfaces a meaningful error instead of silently
+// emitting broken JS.
+$jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
+try {
+    $labelsJson = json_encode(array_keys($stats), $jsonFlags);
+    $seriesJson = json_encode(array_reverse($seriesData), $jsonFlags);
+    $heightJson = json_encode($height, $jsonFlags);
+} catch (\JsonException $e) {
+    throw new \RuntimeException('Unable to encode Protector stats chart data.', 0, $e);
+}
 
 $script = <<<EOS
 new Chartist.Bar('.ct-chart', {
