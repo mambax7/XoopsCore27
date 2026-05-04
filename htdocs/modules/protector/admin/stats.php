@@ -33,16 +33,13 @@ $sql .= sprintf($queryFormat, 'day', 24 * 60 * 60);
 $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'hour', 60 * 60);
 // Initialise $rawStats up-front so a failed query degrades gracefully
-// to an empty chart rather than fataling out of the admin page. The
-// concrete result-set type is left to XoopsDatabase / isResultSet()
-// because Protector supports XOOPS_DB_ALTERNATIVE (see preloads/core.php),
-// which can return non-mysqli result objects.
+// to an empty chart rather than fataling out of the admin page.
 $rawStats = [
     '' => ['month' => 0, 'week' => 0, 'day' => 0, 'hour' => 0],
 ];
 
 $result = $xoopsDB->query($sql);
-if (!$xoopsDB->isResultSet($result)) {
+if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
     trigger_error(\sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_WARNING);
 } else {
     while (false !== ($row = $xoopsDB->fetchArray($result))) {
