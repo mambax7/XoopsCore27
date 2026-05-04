@@ -259,15 +259,16 @@ function synchronize($uid, $type)
                 }
                 $sql = 'SELECT COUNT(*) AS total FROM ' . $xoopsDB->prefix($table['table_name']) . ' ' . $criteria->renderWhere();
                 $result = $xoopsDB->query($sql);
-                if ($xoopsDB->isResultSet($result)) {
-                    if ($row = $xoopsDB->fetchArray($result)) {
-                        $total_posts += $row['total'];
-                    }
+                if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                    continue;
+                }
+                if ($row = $xoopsDB->fetchArray($result)) {
+                    $total_posts += $row['total'];
                 }
             }
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET posts = '" . $total_posts . "' WHERE uid = '" . $uid . "'";
             $result = $xoopsDB->exec($sql);
-            if (!$xoopsDB->isResultSet($result)) {
+            if (false === $result) {
                 redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_USERS_CNUUSER);
             }
             break;
@@ -275,7 +276,7 @@ function synchronize($uid, $type)
         case 'all users':
             $sql = 'SELECT uid FROM ' . $xoopsDB->prefix('users') . '';
             $result = $xoopsDB->query($sql);
-            if (!$xoopsDB->isResultSet($result)) {
+            if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
                 redirect_header('admin.php?fct=users', 1, sprintf(_AM_SYSTEM_USERS_CNGUSERID, $uid));
             }
 
