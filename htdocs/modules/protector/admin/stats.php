@@ -10,7 +10,9 @@
  * @package    gwiki
  */
 
-include __DIR__ . '/../../../mainfile.php';
+require_once dirname(__DIR__, 3) . '/mainfile.php';
+defined('XOOPS_TRUST_PATH') || exit('set XOOPS_TRUST_PATH in mainfile.php');
+
 $mydirname = basename(dirname(__DIR__)) ;
 $mydirpath = dirname(__DIR__) ;
 require $mydirpath . '/mytrustdirname.php' ; // set $mytrustdirname
@@ -18,20 +20,6 @@ require $mydirpath . '/mytrustdirname.php' ; // set $mytrustdirname
 require XOOPS_TRUST_PATH . '/modules/' . $mytrustdirname . '/admin/admin_header.php';
 
 xoops_cp_header();
-
-function dumpArray($array, $wrap = null)
-{
-    $firstTime = true;
-    $string = '[';
-    foreach ($array as $value) {
-        $string .= (!$firstTime) ? ', ' : '';
-        $firstTime = false;
-        $wrap ??= (is_int($value)) ? '' : '\'';
-        $string .= $wrap . $value . $wrap;
-    }
-    $string .= ']';
-    return $string;
-}
 
 $queryFormat = "SELECT `type`, '%s' as age, COUNT(*) as count FROM `" . $xoopsDB->prefix($mydirname . "_log")
     . "` WHERE `timestamp` > NOW() - INTERVAL %d SECOND GROUP BY `type`, 2 ";
@@ -44,21 +32,17 @@ $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'day', 24 * 60 * 60);
 $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'hour', 60 * 60);
-$result = $xoopsDB->query($sql);
-if (!$xoopsDB->isResultSet($result)) {
-    throw new \RuntimeException(
-        \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
-        E_USER_ERROR,
-    );
-}
-
+// Initialise $rawStats up-front so a failed query degrades gracefully
+// to an empty chart rather than causing a fatal error in the admin page.
 $rawStats = [];
-$rawStats['']['month'] = 0;
-$rawStats['']['week'] = 0;
-$rawStats['']['day'] = 0;
-$rawStats['']['hour'] = 0;
-while (false !== ($row = $xoopsDB->fetchArray($result))) {
-    $rawStats[$row['type']][$row['age']] = $row['count'];
+
+$result = $xoopsDB->query($sql);
+if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
+    trigger_error(\sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(), E_USER_WARNING);
+} else {
+    while (false !== ($row = $xoopsDB->fetchArray($result))) {
+        $rawStats[$row['type']][$row['age']] = $row['count'];
+    }
 }
 $ages = ['month', 'week', 'day', 'hour'];
 $stats = [];
@@ -79,28 +63,50 @@ $height = (count($keys) + 1) * 24;
 
 //
 // http://gionkunz.github.io/chartist-js/examples.html#example-bar-horizontal
-$script = "new Chartist.Bar('.ct-chart', {\n";
-$script .= '  labels: ' . dumpArray(array_keys($stats)) . ",\n";
-$script .= '  series: ';
-$allSets = [];
-for ($i = 0; $i < 4; ++$i) {
-    $newSet = [];
-    foreach ($stats as $set) {
-        $newSet[] = $set[$i] - (($i < 3) ? $set[$i + 1] : 0);
+// When $stats is empty we leave $seriesData empty as well, so the
+// payload is `labels: [], series: []` — a genuinely empty chart
+// rather than a chart with empty labels but four [[],[],[],[]] series.
+$seriesData = [];
+if (!empty($stats)) {
+    for ($i = 0; $i < 4; ++$i) {
+        $newSet = [];
+        foreach ($stats as $set) {
+            $newSet[] = $set[$i] - (($i < 3) ? $set[$i + 1] : 0);
+        }
+        $seriesData[] = $newSet;
     }
-    $allSets[] = dumpArray($newSet);
 }
-$series = dumpArray(array_reverse($allSets), '') . "\n";
-$script .= $series;
-//Xmf\Debug::dump($stats, $series);
 
-$script .= <<<EOS
+// Build the inline JS payload via json_encode so any value embedded in
+// the chart script is well-formed JS regardless of label content. The
+// JSON_HEX_* flags keep the payload safe inside an HTML <script> block;
+// JSON_THROW_ON_ERROR converts any encoding failure (e.g. invalid UTF-8
+// in a label) into a catchable \JsonException. On failure we degrade
+// gracefully to an empty chart and log a warning rather than causing
+// a fatal error in the admin stats page.
+$jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
+try {
+    $labelsJson = json_encode(array_keys($stats), $jsonFlags);
+    $seriesJson = json_encode(array_reverse($seriesData), $jsonFlags);
+    $heightJson = json_encode($height, $jsonFlags);
+} catch (\JsonException $e) {
+    trigger_error('Unable to encode Protector stats chart data: ' . $e->getMessage(), E_USER_WARNING);
+    $labelsJson = '[]';
+    $seriesJson = '[]';
+    $heightJson = '24';
+}
+
+$script = <<<EOS
+new Chartist.Bar('.ct-chart', {
+  labels: {$labelsJson},
+  series: {$seriesJson}
+
 }, {
   seriesBarDistance: 10,
   reverseData: true,
   horizontalBars: true,
   stackBars: true,
-  height: $height,
+  height: {$heightJson},
   axisY: {
         offset: 120
   },

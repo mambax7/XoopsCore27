@@ -16,9 +16,8 @@
  * @author              trabis <lusopoemas@gmail.com>
  */
 
-//if (!defined('XOOPS_ROOT_PATH')) {
-//    throw new \RuntimeException('XOOPS root path not defined');
-//}
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+defined('XOOPS_TRUST_PATH') || exit('set XOOPS_TRUST_PATH in mainfile.php');
 
 /**
  * Protector core preloads

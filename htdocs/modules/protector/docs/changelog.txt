@@ -1,5 +1,8 @@
 = CHANGES =
 
+3.63-dev (2026/05/04)
+- General hardening pass on admin output and module entry-point checks (mamba)
+
 3.63 (2025/01/19)
 - updated HTML Purifier to 4.18.0 (mamba)
 - moved HTML Purifier to /xoops_lib/vendor/ (ezyang/htmlpurifier)  (mamba)
