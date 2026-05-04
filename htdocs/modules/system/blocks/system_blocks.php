@@ -697,7 +697,12 @@ function b_system_themes_show($options)
         return $name;
     };
 
-    $currentTheme = $normalizeTheme((string) ($xoopsConfig['theme_set'] ?? 'default'));
+    // Same defence as the allowed-themes loop below: avoid casting a
+    // non-string (e.g. an object or array left in xoops_config by a
+    // corrupted override) directly to string, which would TypeError on
+    // an object without __toString or render an array as "Array".
+    $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
+    $currentTheme    = is_string($rawCurrentTheme) ? $normalizeTheme($rawCurrentTheme) : '';
     if ('' === $currentTheme) {
         $currentTheme = 'default';
     }
@@ -719,7 +724,10 @@ function b_system_themes_show($options)
     }
     $allowedThemes = array_values(array_filter(
         array_map(
-            static fn($name): string => $normalizeTheme((string) $name),
+            // Skip non-scalar entries (objects without __toString, resources,
+            // arrays, null) without casting — `(string)` on those would
+            // raise a TypeError on PHP 8.
+            static fn($name): string => is_scalar($name) ? $normalizeTheme((string) $name) : '',
             $rawAllowedThemes
         ),
         static fn(string $name): bool => '' !== $name
