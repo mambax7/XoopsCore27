@@ -193,7 +193,13 @@ function showImgSelected(imgId, selectId, imgDir, extra, xoopsUrl) {
     imgDom = xoopsGetElementById(imgId);
     selectDom = xoopsGetElementById(selectId);
     if (selectDom.options[selectDom.selectedIndex].value != "") {
-        imgDom.src = xoopsUrl + "/" + imgDir + "/" + selectDom.options[selectDom.selectedIndex].value + extra;
+        // encodeURIComponent on the selected value: the theme-switch
+        // selector now allows spaces and non-ASCII directory names, and
+        // avatar / rank / smiley selectors can also legitimately contain
+        // characters that need URL-encoding. encodeURIComponent is a
+        // no-op for [A-Za-z0-9_.-~] (RFC 3986 unreserved), so it does
+        // not change the URL for callers using ASCII-only filenames.
+        imgDom.src = xoopsUrl + "/" + imgDir + "/" + encodeURIComponent(selectDom.options[selectDom.selectedIndex].value) + extra;
     } else {
         imgDom.src = xoopsUrl + "/images/blank.gif";
     }
