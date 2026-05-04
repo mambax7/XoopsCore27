@@ -669,15 +669,27 @@ function b_system_themes_show($options)
     if (!isset($options[2])) {
         $options[2] = 6; // default visible theme rows
     }
+
+    // Defensive: if the xoops_config rows for theme_set / theme_set_allowed
+    // are missing or unreadable, neither this block nor the theme rendering
+    // chain that triggered it should fatal. Fall back to the current theme
+    // (or 'default') as a single-entry allowed list so the block renders
+    // something useful instead of producing a PHP warning + blank output.
+    $currentTheme  = (string) ($xoopsConfig['theme_set'] ?? 'default');
+    $allowedThemes = (array)  ($xoopsConfig['theme_set_allowed'] ?? []);
+    if ([] === $allowedThemes) {
+        $allowedThemes = [$currentTheme];
+    }
+
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
-    $select = new XoopsFormSelect('', 'xoops_theme_select', $xoopsConfig['theme_set'], $selectSize);
-    foreach ($xoopsConfig['theme_set_allowed'] as $theme) {
+    $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
+    foreach ($allowedThemes as $theme) {
         $select->addOption($theme, $theme);
     }
 
     if ($options[0] == 1) {
         $themeSelect = '<img vspace="2" id="xoops_theme_img" src="'
-            . XOOPS_THEME_URL . '/' . $xoopsConfig['theme_set'] . '/shot.gif" '
+            . XOOPS_THEME_URL . '/' . $currentTheme . '/shot.gif" '
             . ' alt="screenshot" width="' . (int)$options[1] . '" />'
             . '<br>';
         $select->setExtra(' onchange="showImgSelected(\'xoops_theme_img\', \'xoops_theme_select\', \'themes\', \'/shot.gif\', '
