@@ -685,16 +685,34 @@ function b_system_themes_show($options)
         $currentTheme = 'default';
     }
 
+    // theme_set_allowed is normally a PHP array (xoops_config 'array' type
+    // decodes via unserialize). Defend against direct overrides in
+    // mainfile.php / xoopsconfig.php that may set it as a pipe-separated
+    // string; anything else falls through to an empty list.
+    $rawAllowedThemes = $xoopsConfig['theme_set_allowed'] ?? [];
+    if (is_string($rawAllowedThemes)) {
+        $rawAllowedThemes = array_filter(array_map('trim', explode('|', $rawAllowedThemes)));
+    } elseif (!is_array($rawAllowedThemes)) {
+        $rawAllowedThemes = [];
+    }
     $allowedThemes = array_values(array_filter(
         array_map(
             static fn($name): string => $normalizeTheme((string) $name),
-            (array) ($xoopsConfig['theme_set_allowed'] ?? [])
+            $rawAllowedThemes
         ),
         static fn(string $name): bool => '' !== $name
     ));
     if ([] === $allowedThemes) {
         $allowedThemes = [$currentTheme];
     }
+    // Keep the selected option and screenshot aligned: if the allowed
+    // list does not include the active theme (partial / corrupted
+    // config), prepend it so the rendered <select> has an option that
+    // matches its `selected` value.
+    if (!in_array($currentTheme, $allowedThemes, true)) {
+        array_unshift($allowedThemes, $currentTheme);
+    }
+    $allowedThemes = array_values(array_unique($allowedThemes));
 
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
