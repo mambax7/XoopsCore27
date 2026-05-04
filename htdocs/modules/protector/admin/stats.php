@@ -10,7 +10,9 @@
  * @package    gwiki
  */
 
-include __DIR__ . '/../../../mainfile.php';
+require __DIR__ . '/../../../mainfile.php';
+defined('XOOPS_TRUST_PATH') || exit('set XOOPS_TRUST_PATH in mainfile.php');
+
 $mydirname = basename(dirname(__DIR__)) ;
 $mydirpath = dirname(__DIR__) ;
 require $mydirpath . '/mytrustdirname.php' ; // set $mytrustdirname
@@ -18,20 +20,6 @@ require $mydirpath . '/mytrustdirname.php' ; // set $mytrustdirname
 require XOOPS_TRUST_PATH . '/modules/' . $mytrustdirname . '/admin/admin_header.php';
 
 xoops_cp_header();
-
-function dumpArray($array, $wrap = null)
-{
-    $firstTime = true;
-    $string = '[';
-    foreach ($array as $value) {
-        $string .= (!$firstTime) ? ', ' : '';
-        $firstTime = false;
-        $wrap ??= (is_int($value)) ? '' : '\'';
-        $string .= $wrap . $value . $wrap;
-    }
-    $string .= ']';
-    return $string;
-}
 
 $queryFormat = "SELECT `type`, '%s' as age, COUNT(*) as count FROM `" . $xoopsDB->prefix($mydirname . "_log")
     . "` WHERE `timestamp` > NOW() - INTERVAL %d SECOND GROUP BY `type`, 2 ";
@@ -45,7 +33,7 @@ $sql .= sprintf($queryFormat, 'day', 24 * 60 * 60);
 $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'hour', 60 * 60);
 $result = $xoopsDB->query($sql);
-if (!$xoopsDB->isResultSet($result)) {
+if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
     throw new \RuntimeException(
         \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
         E_USER_ERROR,
@@ -79,28 +67,34 @@ $height = (count($keys) + 1) * 24;
 
 //
 // http://gionkunz.github.io/chartist-js/examples.html#example-bar-horizontal
-$script = "new Chartist.Bar('.ct-chart', {\n";
-$script .= '  labels: ' . dumpArray(array_keys($stats)) . ",\n";
-$script .= '  series: ';
-$allSets = [];
+$seriesData = [];
 for ($i = 0; $i < 4; ++$i) {
     $newSet = [];
     foreach ($stats as $set) {
         $newSet[] = $set[$i] - (($i < 3) ? $set[$i + 1] : 0);
     }
-    $allSets[] = dumpArray($newSet);
+    $seriesData[] = $newSet;
 }
-$series = dumpArray(array_reverse($allSets), '') . "\n";
-$script .= $series;
-//Xmf\Debug::dump($stats, $series);
 
-$script .= <<<EOS
+// Build the inline JS payload via json_encode so any value embedded in
+// the chart script is well-formed JS regardless of label content. The
+// JSON_HEX_* flags keep the payload safe inside an HTML <script> block.
+$jsonFlags  = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
+$labelsJson = json_encode(array_keys($stats), $jsonFlags);
+$seriesJson = json_encode(array_reverse($seriesData), $jsonFlags);
+$heightJson = json_encode($height, $jsonFlags);
+
+$script = <<<EOS
+new Chartist.Bar('.ct-chart', {
+  labels: {$labelsJson},
+  series: {$seriesJson}
+
 }, {
   seriesBarDistance: 10,
   reverseData: true,
   horizontalBars: true,
   stackBars: true,
-  height: $height,
+  height: {$heightJson},
   axisY: {
         offset: 120
   },

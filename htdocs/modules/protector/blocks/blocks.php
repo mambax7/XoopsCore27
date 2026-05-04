@@ -1,5 +1,6 @@
 <?php
 
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 defined('XOOPS_TRUST_PATH') || exit('set XOOPS_TRUST_PATH in mainfile.php');
 
 $mydirname = basename(dirname(__DIR__));
