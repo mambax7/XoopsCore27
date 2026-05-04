@@ -28,7 +28,7 @@ if ( !is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin(
  * name/title/formtype/valuetype) appends a single visible error row to
  * $msgs and returns false. On a valid entry returns true with $msgs
  * untouched. Used by both install and update paths to skip bad entries
- * rather than fataling on array_keys() or spraying N undefined-key
+ * rather than failing on array_keys() or spraying N undefined-key
  * warnings per entry.
  *
  * @param mixed             $config Entry from $module->getInfo('config').
@@ -938,8 +938,15 @@ function xoops_module_update($dirname)
 
         */
     if (!$module_handler->insert($module)) {
-        echo '<p>Could not update ' . $module->getVar('name') . '</p>';
-        echo "<br><div class='center'><a href='admin.php?fct=modulesadmin'>" . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
+        // Return early so the trailing implode($msgs) below does not fire on
+        // an undefined variable. The success branch is the only path that
+        // initialises $msgs; on failure we hand the caller a self-contained
+        // error string (matching the early-return pattern used by the
+        // safety-guard checks at the top of this function).
+        return '<p style="color:#ff0000;">Could not update '
+            . htmlspecialchars((string) $module->getVar('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            . '</p>'
+            . "<div class='center'><a href='admin.php?fct=modulesadmin'>" . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
     } else {
         // $newmid is the captured $targetMid — never re-derived from
         // $module->getVar('mid'), to keep DELETE and INSERT in sync.
