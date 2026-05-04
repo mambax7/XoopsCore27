@@ -659,10 +659,11 @@ function b_system_info_edit($options)
 /**
  * Validate a theme directory name against the safe character set XOOPS
  * uses for theme directories — letters, digits, underscore, hyphen, dot.
- * Reject names with path separators, null bytes, '..' segments, or a
- * leading dot (hidden files). Names that fail validation return ''.
- * Surviving names are trimmed but otherwise not rewritten, so a valid
- * `my.theme` directory keeps its dot.
+ * Reject names with path separators, null bytes, any `..` sequence
+ * (anywhere in the name, not just as a path segment, so e.g. `my..theme`
+ * is also rejected), or a leading dot (hidden files). Names that fail
+ * validation return ''. Surviving names are trimmed but otherwise not
+ * rewritten, so a valid `my.theme` directory keeps its dot.
  *
  * @internal Used by b_system_themes_show.
  */
