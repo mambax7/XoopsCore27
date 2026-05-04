@@ -671,12 +671,27 @@ function b_system_themes_show($options)
     }
 
     // Defensive: if the xoops_config rows for theme_set / theme_set_allowed
-    // are missing or unreadable, neither this block nor the theme rendering
-    // chain that triggered it should fatal. Fall back to the current theme
-    // (or 'default') as a single-entry allowed list so the block renders
+    // are missing, unreadable, or contain unexpected values, neither this
+    // block nor the theme rendering chain that triggered it should fatal.
+    // Normalise each theme name to the filesystem-safe character set used
+    // for actual theme directories ([A-Za-z0-9_-]); anything else is
+    // treated as corruption and dropped. After normalisation, fall back to
+    // 'default' / [$currentTheme] as needed so the block always renders
     // something useful instead of producing a PHP warning + blank output.
-    $currentTheme  = (string) ($xoopsConfig['theme_set'] ?? 'default');
-    $allowedThemes = (array)  ($xoopsConfig['theme_set_allowed'] ?? []);
+    $normalizeTheme = static fn(string $name): string => (string) preg_replace('/[^A-Za-z0-9_-]/', '', $name);
+
+    $currentTheme = $normalizeTheme((string) ($xoopsConfig['theme_set'] ?? 'default'));
+    if ('' === $currentTheme) {
+        $currentTheme = 'default';
+    }
+
+    $allowedThemes = array_values(array_filter(
+        array_map(
+            static fn($name): string => $normalizeTheme((string) $name),
+            (array) ($xoopsConfig['theme_set_allowed'] ?? [])
+        ),
+        static fn(string $name): bool => '' !== $name
+    ));
     if ([] === $allowedThemes) {
         $allowedThemes = [$currentTheme];
     }
@@ -688,8 +703,17 @@ function b_system_themes_show($options)
     }
 
     if ($options[0] == 1) {
+        // Belt-and-suspenders: $currentTheme is already normalised to
+        // [A-Za-z0-9_-] above, so rawurlencode() is a no-op for valid
+        // input. The encode + htmlspecialchars stays correct even if
+        // the validator above is ever loosened.
+        $themeShotUrl = htmlspecialchars(
+            XOOPS_THEME_URL . '/' . rawurlencode($currentTheme) . '/shot.gif',
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8'
+        );
         $themeSelect = '<img vspace="2" id="xoops_theme_img" src="'
-            . XOOPS_THEME_URL . '/' . $currentTheme . '/shot.gif" '
+            . $themeShotUrl . '" '
             . ' alt="screenshot" width="' . (int)$options[1] . '" />'
             . '<br>';
         $select->setExtra(' onchange="showImgSelected(\'xoops_theme_img\', \'xoops_theme_select\', \'themes\', \'/shot.gif\', '
@@ -712,7 +736,7 @@ function b_system_themes_show($options)
     }
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
-            . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
+            . count($allowedThemes) . '</strong>') . ')<br>';
     // Note: the rendered `xoops_theme_redirect` hidden field is intentionally
     // emitted with an empty value="" by the templates. Do NOT add a server-side
     // seed here from REQUEST_URI — when bcachetime > 0 the cache-warming
