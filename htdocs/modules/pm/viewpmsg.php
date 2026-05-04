@@ -40,7 +40,10 @@ $pm_handler = xoops_getModuleHandler('message');
 
 if (Request::hasVar('delete_messages', 'POST') && (Request::hasVar('msg_id', 'POST') || Request::hasVar('msg_ids', 'POST'))) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
-        $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', array_map(
+            static fn($e) => htmlspecialchars((string) $e, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            $GLOBALS['xoopsSecurity']->getErrors()
+        )));
     } elseif (Request::getInt('ok', 0, 'POST') === 0) {
         $postedIds  = array_values(array_unique(array_map('intval', Request::getArray('msg_id', [], 'POST'))));
         $currentUid = (int) $xoopsUser->getVar('uid');
@@ -103,7 +106,10 @@ if (Request::hasVar('delete_messages', 'POST') && (Request::hasVar('msg_id', 'PO
 }
 if (Request::hasVar('move_messages', 'POST') && Request::hasVar('msg_id', 'POST')) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
-        $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', array_map(
+            static fn($e) => htmlspecialchars((string) $e, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            $GLOBALS['xoopsSecurity']->getErrors()
+        )));
     } else {
         $msg  = array_map('intval', Request::getArray('msg_id', [], 'POST'));
         $size = count($msg);
@@ -143,7 +149,10 @@ if (Request::hasVar('move_messages', 'POST') && Request::hasVar('msg_id', 'POST'
 }
 if (Request::hasVar('empty_messages', 'POST')) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
-        $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        $GLOBALS['xoopsTpl']->assign('errormsg', implode('<br>', array_map(
+            static fn($e) => htmlspecialchars((string) $e, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            $GLOBALS['xoopsSecurity']->getErrors()
+        )));
     } elseif (Request::getInt('ok', 0, 'POST') === 0) {
         xoops_confirm(['ok' => 1, 'empty_messages' => 1, 'op' => $op], $_SERVER['REQUEST_URI'], _PM_RUSUREEMPTY);
         include $GLOBALS['xoops']->path('footer.php');
@@ -245,7 +254,9 @@ if (count($pm_arr) > 0) {
     $senders        = $member_handler->getUserList(new Criteria('uid', '(' . implode(', ', array_unique($uids)) . ')', 'IN'));
     foreach (array_keys($pm_arr) as $i) {
         $message              = $pm_arr[$i];
-        $message['msg_image'] = htmlspecialchars((string) $message['msg_image'], ENT_QUOTES | ENT_HTML5);
+        // Pass the raw filename — the template applies `|escape:'url'` since
+        // the value is rendered into an <img src="..."> attribute (URL context).
+        $message['msg_image'] = (string) $message['msg_image'];
         $message['msg_time']  = formatTimestamp($message['msg_time']);
         if ($op === 'out') {
             $message['postername'] = $senders[$pm_arr[$i]['to_userid']];

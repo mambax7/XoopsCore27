@@ -165,7 +165,9 @@ if (is_object($pm) && !empty($pm)) {
 
     $message              = $pm->getValues();
     $message['msg_time']  = formatTimestamp($pm->getVar('msg_time'));
-    $message['msg_image'] = htmlspecialchars((string)$message['msg_image'], ENT_QUOTES | ENT_HTML5);
+    // Pass the raw filename — the template applies `|escape:'url'` since the
+    // value is rendered into an <img src="..."> attribute (URL context).
+    $message['msg_image'] = (string) $message['msg_image'];
 }
 $GLOBALS['xoopsTpl']->assign('message', $message);
 $GLOBALS['xoopsTpl']->assign('op', $op);

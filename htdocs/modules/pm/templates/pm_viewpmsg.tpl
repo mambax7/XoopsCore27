@@ -29,7 +29,7 @@
     <br>
     <br>
     <{if !empty($msg)}>
-        <div class="confirmMsg"><{$msg}></div>
+        <div class="confirmMsg"><{$msg|escape}></div>
     <{/if}>
     <{if !empty($errormsg)}>
         <div class="errorMsg"><{$errormsg}></div>
@@ -65,7 +65,7 @@
             <{foreach item=message from=$messages|default:null}>
                 <tr class='<{cycle values="odd, even"}> txtleft'>
                     <td class='aligntop txtcenter width2'>
-                        <input type='checkbox' id='msg_id_<{$message.msg_id}>' name='msg_id[]' value='<{$message.msg_id}>'/>
+                        <input type='checkbox' id='msg_id_<{$message.msg_id|escape}>' name='msg_id[]' value='<{$message.msg_id|escape}>'/>
                     </td>
                     <{if $message.read_msg == 1}>
                         <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_read.png'}>' alt='<{$smarty.const._PM_READ}>'title='<{$smarty.const._PM_READ}>'/></td>
@@ -74,23 +74,23 @@
                     <{/if}>
                     <td class='aligntop width5 txtcenter'>
                         <{if !empty($message.msg_image)}>
-                            <img src='<{$xoops_url}>/images/subject/<{$message.msg_image}>' alt=''/>
+                            <img src='<{$xoops_url}>/images/subject/<{$message.msg_image|escape:'url'}>' alt=''/>
                         <{/if}>
                     </td>
                     <td class='alignmiddle width10'>
                         <{if !empty($message.postername)}>
-                            <a href='<{$xoops_url}>/userinfo.php?uid=<{$message.posteruid}>' title=''><{$message.postername}></a>
+                            <a href='<{$xoops_url}>/userinfo.php?uid=<{$message.posteruid|escape}>' title=''><{$message.postername}></a>
                         <{else}>
-                            <{$anonymous}>
+                            <{$anonymous|escape}>
                         <{/if}>
                     </td>
                     <td class='alignmiddle'>
-                        <a href='readpmsg.php?msg_id=<{$message.msg_id}>&amp;start=<{$message.msg_no}>&amp;total_messages=<{$total_messages}>&amp;op=<{$op}>'title=''>
+                        <a href='readpmsg.php?msg_id=<{$message.msg_id|escape}>&amp;start=<{$message.msg_no|escape}>&amp;total_messages=<{$total_messages|escape}>&amp;op=<{$op|escape:'url'}>' title=''>
                             <{$message.subject}>
                         </a>
                     </td>
                     <td class='alignmiddle txtcenter width20'>
-                        <{$message.msg_time}>
+                        <{$message.msg_time|escape}>
                     </td>
                 </tr>
             <{/foreach}>
