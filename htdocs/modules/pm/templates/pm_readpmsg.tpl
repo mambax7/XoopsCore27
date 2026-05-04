@@ -14,7 +14,7 @@
 
 <{if !empty($message)}>
     <span class='bold'>&raquo;</span>
-    &nbsp;<{$message.subject|escape}>
+    &nbsp;<{$message.subject}>
     <br>
     <form name="<{$pmform.name}>" id="<{$pmform.name}>" action="<{$pmform.action}>" method="<{$pmform.method}>" <{$pmform.extra}> >
         <table cellpadding='4' cellspacing='1' class='outer bnone width100'>
@@ -50,7 +50,7 @@
                     <{/if}>
                     <{$smarty.const._PM_SENTC}><{$message.msg_time|escape}><br>
                     <hr/>
-                    <strong><{$message.subject|escape}></strong><br>
+                    <strong><{$message.subject}></strong><br>
                     <br>
                     <{$message.msg_text}><br>
                     <br>

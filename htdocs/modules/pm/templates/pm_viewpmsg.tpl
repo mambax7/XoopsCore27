@@ -32,7 +32,7 @@
         <div class="confirmMsg"><{$msg|escape}></div>
     <{/if}>
     <{if !empty($errormsg)}>
-        <div class="errorMsg"><{$errormsg|escape}></div>
+        <div class="errorMsg"><{$errormsg}></div>
     <{/if}>
 
     <{if !empty($pagenav)}>
@@ -79,14 +79,14 @@
                     </td>
                     <td class='alignmiddle width10'>
                         <{if !empty($message.postername)}>
-                            <a href='<{$xoops_url}>/userinfo.php?uid=<{$message.posteruid|escape}>' title=''><{$message.postername|escape}></a>
+                            <a href='<{$xoops_url}>/userinfo.php?uid=<{$message.posteruid|escape}>' title=''><{$message.postername}></a>
                         <{else}>
                             <{$anonymous|escape}>
                         <{/if}>
                     </td>
                     <td class='alignmiddle'>
-                        <a href='readpmsg.php?msg_id=<{$message.msg_id|escape}>&amp;start=<{$message.msg_no|escape}>&amp;total_messages=<{$total_messages|escape}>&amp;op=<{$op|escape:'url'}>'title=''>
-                            <{$message.subject|escape}>
+                        <a href='readpmsg.php?msg_id=<{$message.msg_id|escape}>&amp;start=<{$message.msg_no|escape}>&amp;total_messages=<{$total_messages|escape}>&amp;op=<{$op|escape:'url'}>' title=''>
+                            <{$message.subject}>
                         </a>
                     </td>
                     <td class='alignmiddle txtcenter width20'>

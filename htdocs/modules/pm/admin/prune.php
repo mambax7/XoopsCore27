@@ -66,7 +66,10 @@ switch ($op) {
         $notifyusers = Request::getInt('notifyusers', 0, 'POST') === 1;
         $uids        = [];
         if ($notifyusers) {
-            $notifycriteria = $criteria;
+            // Clone — `$notifycriteria = $criteria;` would alias the same
+            // CriteriaCompo and the to_delete=0 / GroupBy below would then
+            // leak into the deleteAll($criteria) call further down.
+            $notifycriteria = clone $criteria;
             $notifycriteria->add(new Criteria('to_delete', 0));
             $notifycriteria->setGroupBy('to_userid');
             // Get array of uid => number of deleted messages
