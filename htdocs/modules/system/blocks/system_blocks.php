@@ -673,12 +673,29 @@ function b_system_themes_show($options)
     // Defensive: if the xoops_config rows for theme_set / theme_set_allowed
     // are missing, unreadable, or contain unexpected values, neither this
     // block nor the theme rendering chain that triggered it should fatal.
-    // Normalise each theme name to the filesystem-safe character set used
-    // for actual theme directories ([A-Za-z0-9_-]); anything else is
-    // treated as corruption and dropped. After normalisation, fall back to
-    // 'default' / [$currentTheme] as needed so the block always renders
-    // something useful instead of producing a PHP warning + blank output.
-    $normalizeTheme = static fn(string $name): string => (string) preg_replace('/[^A-Za-z0-9_-]/', '', $name);
+    // Validate (do NOT rewrite) each theme name against the directory-safe
+    // character set XOOPS theme directories actually use — letters, digits,
+    // underscore, hyphen, and dot — and reject names with path separators,
+    // null bytes, '..' segments, or a leading dot (hidden files). Names
+    // that fail validation are returned as '' and dropped by the
+    // array_filter below; anything that survives is the original name
+    // unmodified, so a valid `my.theme` directory keeps its dot.
+    $normalizeTheme = static function (string $name): string {
+        $name = trim($name);
+        if (
+            '' === $name
+            || str_starts_with($name, '.')
+            || str_contains($name, '/')
+            || str_contains($name, '\\')
+            || str_contains($name, "\0")
+            || str_contains($name, '..')
+            || !preg_match('/^[A-Za-z0-9_.-]+$/', $name)
+        ) {
+            return '';
+        }
+
+        return $name;
+    };
 
     $currentTheme = $normalizeTheme((string) ($xoopsConfig['theme_set'] ?? 'default'));
     if ('' === $currentTheme) {
@@ -721,10 +738,12 @@ function b_system_themes_show($options)
     }
 
     if ($options[0] == 1) {
-        // Belt-and-suspenders: $currentTheme is already normalised to
-        // [A-Za-z0-9_-] above, so rawurlencode() is a no-op for valid
-        // input. The encode + htmlspecialchars stays correct even if
-        // the validator above is ever loosened.
+        // Belt-and-suspenders: $currentTheme has already passed the
+        // validator above (letters, digits, underscore, hyphen, dot —
+        // all in RFC 3986 unreserved set), so rawurlencode() preserves
+        // it as-is and htmlspecialchars() has nothing to escape. The
+        // explicit encode + escape stays correct if the validator is
+        // ever loosened.
         $themeShotUrl = htmlspecialchars(
             XOOPS_THEME_URL . '/' . rawurlencode($currentTheme) . '/shot.gif',
             ENT_QUOTES | ENT_SUBSTITUTE,
