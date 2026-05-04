@@ -220,8 +220,17 @@ function form_user($add_or_edit, $user = '')
 }
 
 /**
- * @param $uid
- * @param $type
+ * Synchronize one user (or all users) — recompute posts count.
+ *
+ * Returns false on failure (followed by a redirect_header to the admin
+ * users page) so callers iterating in 'all users' mode can stop short
+ * instead of looping past a redirect that does not actually halt
+ * execution.
+ *
+ * @param int|string $uid  User id (ignored when $type === 'all users').
+ * @param string     $type 'user' | 'all users'
+ *
+ * @return bool True on success, false on any failure.
  */
 function synchronize($uid, $type)
 {
@@ -274,12 +283,13 @@ function synchronize($uid, $type)
             if ($countFailed) {
                 // Refuse to overwrite users.posts with a partial total.
                 redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_USERS_CNUUSER);
-                return;
+                return false;
             }
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET posts = '" . $total_posts . "' WHERE uid = '" . $uid . "'";
             $result = $xoopsDB->exec($sql);
             if (false === $result) {
                 redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_USERS_CNUUSER);
+                return false;
             }
             break;
 
@@ -288,14 +298,18 @@ function synchronize($uid, $type)
             $result = $xoopsDB->query($sql);
             if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
                 redirect_header('admin.php?fct=users', 1, sprintf(_AM_SYSTEM_USERS_CNGUSERID, $uid));
-                return;
+                return false;
             }
 
             while (false !== ($data = $xoopsDB->fetchArray($result))) {
-                synchronize($data['uid'], 'user');
+                if (false === synchronize($data['uid'], 'user')) {
+                    // Stop the bulk sync — synchronize() already issued its
+                    // own redirect_header for this user's failure.
+                    return false;
+                }
             }
             break;
     }
 
-    // exit();
+    return true;
 }

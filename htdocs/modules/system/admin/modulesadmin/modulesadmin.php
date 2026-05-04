@@ -350,6 +350,16 @@ function xoops_module_install($dirname)
                     unset($blocks);
                 }
                 $configs = $module->getInfo('config');
+                // The validation helper guards individual entries; the top-level
+                // container also needs a type guard so a malformed manifest
+                // (e.g. config: "invalid") cannot TypeError on the array_push /
+                // [] writes below.
+                if (false !== $configs && !is_array($configs)) {
+                    $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+                        . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID, '<strong>?</strong> (config section is not an array)')
+                        . '</span>';
+                    $configs = [];
+                }
                 if ($configs !== false) {
                     if ($module->getVar('hascomments') != 0) {
                         include_once XOOPS_ROOT_PATH . '/include/comment_constants.php';
@@ -1257,6 +1267,14 @@ function xoops_module_update($dirname)
 
         // now reinsert them with the new settings
         $configs = $module->getInfo('config');
+        // Same top-level guard as the install path — protect array_push /
+        // [] writes below from a non-array, non-false manifest value.
+        if (false !== $configs && !is_array($configs)) {
+            $msgs[] = '&nbsp;&nbsp;<span style="color:#ff0000;">'
+                . sprintf(_AM_SYSTEM_MODULES_CONFIG_DATA_INVALID, '<strong>?</strong> (config section is not an array)')
+                . '</span>';
+            $configs = [];
+        }
         if ($configs !== false) {
             if ($module->getVar('hascomments') != 0) {
                 include_once XOOPS_ROOT_PATH . '/include/comment_constants.php';
