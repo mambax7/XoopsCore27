@@ -34,9 +34,7 @@ $sql .= 'UNION ALL ';
 $sql .= sprintf($queryFormat, 'hour', 60 * 60);
 // Initialise $rawStats up-front so a failed query degrades gracefully
 // to an empty chart rather than causing a fatal error in the admin page.
-$rawStats = [
-    '' => ['month' => 0, 'week' => 0, 'day' => 0, 'hour' => 0],
-];
+$rawStats = [];
 
 $result = $xoopsDB->query($sql);
 if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
@@ -65,13 +63,18 @@ $height = (count($keys) + 1) * 24;
 
 //
 // http://gionkunz.github.io/chartist-js/examples.html#example-bar-horizontal
+// When $stats is empty we leave $seriesData empty as well, so the
+// payload is `labels: [], series: []` — a genuinely empty chart
+// rather than a chart with empty labels but four [[],[],[],[]] series.
 $seriesData = [];
-for ($i = 0; $i < 4; ++$i) {
-    $newSet = [];
-    foreach ($stats as $set) {
-        $newSet[] = $set[$i] - (($i < 3) ? $set[$i + 1] : 0);
+if (!empty($stats)) {
+    for ($i = 0; $i < 4; ++$i) {
+        $newSet = [];
+        foreach ($stats as $set) {
+            $newSet[] = $set[$i] - (($i < 3) ? $set[$i + 1] : 0);
+        }
+        $seriesData[] = $newSet;
     }
-    $seriesData[] = $newSet;
 }
 
 // Build the inline JS payload via json_encode so any value embedded in
