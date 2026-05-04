@@ -673,13 +673,13 @@ function b_system_themes_show($options)
     // Defensive: if the xoops_config rows for theme_set / theme_set_allowed
     // are missing, unreadable, or contain unexpected values, neither this
     // block nor the theme rendering chain that triggered it should fatal.
-    // Validate (do NOT rewrite) each theme name against the directory-safe
-    // character set XOOPS theme directories actually use — letters, digits,
-    // underscore, hyphen, and dot — and reject names with path separators,
-    // null bytes, '..' segments, or a leading dot (hidden files). Names
-    // that fail validation are returned as '' and dropped by the
-    // array_filter below; anything that survives is the original name
-    // unmodified, so a valid `my.theme` directory keeps its dot.
+    // Validate each theme name against the directory-safe character set
+    // XOOPS theme directories actually use — letters, digits, underscore,
+    // hyphen, and dot — and reject names with path separators, null
+    // bytes, '..' segments, or a leading dot (hidden files). Names that
+    // fail validation are returned as '' and dropped by the array_filter
+    // below. Surviving names are returned trimmed but otherwise not
+    // rewritten — a valid `my.theme` directory keeps its dot.
     $normalizeTheme = static function (string $name): string {
         $name = trim($name);
         if (
@@ -708,7 +708,12 @@ function b_system_themes_show($options)
     // string; anything else falls through to an empty list.
     $rawAllowedThemes = $xoopsConfig['theme_set_allowed'] ?? [];
     if (is_string($rawAllowedThemes)) {
-        $rawAllowedThemes = array_filter(array_map('trim', explode('|', $rawAllowedThemes)));
+        // Filter on empty-string explicitly — a default array_filter() drops
+        // any falsy entry, including a theme directory literally named "0".
+        $rawAllowedThemes = array_filter(
+            array_map('trim', explode('|', $rawAllowedThemes)),
+            static fn(string $theme): bool => '' !== $theme
+        );
     } elseif (!is_array($rawAllowedThemes)) {
         $rawAllowedThemes = [];
     }
