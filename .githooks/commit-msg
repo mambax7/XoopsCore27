@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg — XOOPS commit message hygiene
+#
+# Refuses commits whose message includes:
+#   - Mentions of Claude / Claude Code / Anthropic / "Generated with"
+#   - Co-Authored-By lines for AI assistants
+#
+# Bypass (only when explicitly intentional):
+#   git commit --no-verify
+#
+# Authorship privacy is a project-wide rule documented in CLAUDE.md
+# (~/.claude/CLAUDE.md "PR and Commit Privacy") and ~/.claude/CLAUDE.md
+# project-level XOOPS git-privacy skill. This hook makes it mechanical.
+
+set -u
+
+msg_file="$1"
+[ -z "$msg_file" ] && exit 0
+[ ! -f "$msg_file" ] && exit 0
+
+violations=0
+report() {
+    printf '\n[commit-msg] %s\n' "$1" >&2
+    printf '%s\n' "$2" >&2
+    violations=$((violations + 1))
+}
+
+content=$(cat "$msg_file")
+
+hits=$(printf '%s\n' "$content" | grep -niE '\bclaude([[:space:]]code)?\b' || true)
+[ -n "$hits" ] && report "commit message mentions Claude — strip per CLAUDE.md privacy rule" "$hits"
+
+hits=$(printf '%s\n' "$content" | grep -niE '\banthropic\b' || true)
+[ -n "$hits" ] && report "commit message mentions Anthropic — strip per CLAUDE.md privacy rule" "$hits"
+
+hits=$(printf '%s\n' "$content" | grep -niE 'generated with[[:space:]]*\[?(claude|ai)' || true)
+[ -n "$hits" ] && report "commit message contains 'Generated with...' tag — remove" "$hits"
+
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(claude|anthropic|gpt|copilot|codex)' || true)
+[ -n "$hits" ] && report "Co-Authored-By line names an AI assistant — remove" "$hits"
+
+if [ "$violations" -gt 0 ]; then
+    printf '\n[commit-msg] %d privacy violation(s) in commit message.\n' "$violations" >&2
+    printf '            Fix the message, or bypass with `git commit --no-verify` (only when intentional).\n' >&2
+    exit 1
+fi
+
+exit 0
