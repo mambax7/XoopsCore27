@@ -156,7 +156,10 @@ if ($op === 'avatarupload') {
     }
     if ($GLOBALS['xoopsConfigUser']['avatar_allow_upload'] == 1 && $GLOBALS['xoopsUser']->getVar('posts') >= $GLOBALS['xoopsConfigUser']['avatar_minposts']) {
         include_once $GLOBALS['xoops']->path('class/uploader.php');
-        $uploader = new XoopsMediaUploader(XOOPS_UPLOAD_PATH . '/avatars', [
+        // Sonar S1192: this redirect target was duplicated three times
+        // in the avatar-upload flow; capture once.
+        $avatarFormUrl = 'edituser.php?op=avatarform';
+        $uploader      = new XoopsMediaUploader(XOOPS_UPLOAD_PATH . '/avatars', [
             'image/gif',
             'image/jpeg',
             'image/pjpeg',
@@ -165,7 +168,7 @@ if ($op === 'avatarupload') {
         ], $GLOBALS['xoopsConfigUser']['avatar_maxsize'], $GLOBALS['xoopsConfigUser']['avatar_width'], $GLOBALS['xoopsConfigUser']['avatar_height']);
         $uploadField = $xoops_upload_file[0] ?? '';
         if ($uploadField === '') {
-            redirect_header('edituser.php?op=avatarform', 3, _ER_UP_FILENOTFOUND);
+            redirect_header($avatarFormUrl, 3, _ER_UP_FILENOTFOUND);
         }
         if ($uploader->fetchMedia($uploadField)) {
             $uploader->setPrefix('cavt');
@@ -181,6 +184,30 @@ if ($op === 'avatarupload') {
                 if (!$avt_handler->insert($avatar)) {
                     @unlink($uploader->getSavedDestination());
                 } else {
+                    // Order matters: write the users.user_avatar column FIRST,
+                    // then clean up the previous custom avatar only after the
+                    // UPDATE has succeeded. The earlier flow deleted the old
+                    // avatar (DB row + file) before the UPDATE, so a failing
+                    // UPDATE would leave the user pointing at a deleted file.
+                    $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $GLOBALS['xoopsDB']->prefix('users'), $GLOBALS['xoopsDB']->quote('avatars/' . $uploader->getSavedFileName()), $GLOBALS['xoopsUser']->getVar('uid'));
+                    if (false === $GLOBALS['xoopsDB']->exec($sql)) {
+                        // Roll back: drop the just-inserted avatar row and
+                        // remove the uploaded file. The previous custom
+                        // avatar is still intact because we no longer
+                        // delete it before the UPDATE.
+                        $avt_handler->delete($avatar);
+                        @unlink($uploader->getSavedDestination());
+                        redirect_header($avatarFormUrl, 3, _PROFILE_MA_ERRORDURINGSAVE);
+                        // redirect_header() calls exit() internally, but a
+                        // custom preload could intercept it; the explicit
+                        // exit is defensive belt-and-suspenders so the
+                        // success-path cleanup below cannot run on the
+                        // failure branch.
+                        exit;
+                    }
+
+                    // UPDATE succeeded — safe to clean up the previous
+                    // custom avatar (record + file).
                     $oldavatar = $GLOBALS['xoopsUser']->getVar('user_avatar');
                     if (!empty($oldavatar) && false !== strpos(strtolower($oldavatar), 'cavt')) {
                         $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
@@ -192,21 +219,13 @@ if ($op === 'avatarupload') {
                             }
                         }
                     }
-                    $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $GLOBALS['xoopsDB']->prefix('users'), $GLOBALS['xoopsDB']->quote('avatars/' . $uploader->getSavedFileName()), $GLOBALS['xoopsUser']->getVar('uid'));
-                    if (false === $GLOBALS['xoopsDB']->exec($sql)) {
-                        // Avatar UPDATE failed — abort before
-                        // addUser/redirect, otherwise the user gets a
-                        // "profile updated" confirmation while the
-                        // users.user_avatar column is left stale.
-                        @unlink($uploader->getSavedDestination());
-                        redirect_header('edituser.php?op=avatarform', 3, _PROFILE_MA_ERRORDURINGSAVE);
-                    }
+
                     $avt_handler->addUser($avatar->getVar('avatar_id'), $GLOBALS['xoopsUser']->getVar('uid'));
                     redirect_header('userinfo.php?t=' . time() . '&amp;uid=' . $GLOBALS['xoopsUser']->getVar('uid'), 3, _US_PROFUPDATED);
                 }
             }
         }
-        redirect_header('edituser.php?op=avatarform', 3, $uploader->getErrors());
+        redirect_header($avatarFormUrl, 3, $uploader->getErrors());
     }
 }
 
