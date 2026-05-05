@@ -193,7 +193,14 @@ if ($op === 'avatarupload') {
                         }
                     }
                     $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $GLOBALS['xoopsDB']->prefix('users'), $GLOBALS['xoopsDB']->quote('avatars/' . $uploader->getSavedFileName()), $GLOBALS['xoopsUser']->getVar('uid'));
-                    $GLOBALS['xoopsDB']->exec($sql);
+                    if (false === $GLOBALS['xoopsDB']->exec($sql)) {
+                        // Avatar UPDATE failed — abort before
+                        // addUser/redirect, otherwise the user gets a
+                        // "profile updated" confirmation while the
+                        // users.user_avatar column is left stale.
+                        @unlink($uploader->getSavedDestination());
+                        redirect_header('edituser.php?op=avatarform', 3, _PROFILE_MA_ERRORDURINGSAVE);
+                    }
                     $avt_handler->addUser($avatar->getVar('avatar_id'), $GLOBALS['xoopsUser']->getVar('uid'));
                     redirect_header('userinfo.php?t=' . time() . '&amp;uid=' . $GLOBALS['xoopsUser']->getVar('uid'), 3, _US_PROFUPDATED);
                 }

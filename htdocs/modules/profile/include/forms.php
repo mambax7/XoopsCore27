@@ -176,9 +176,10 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 //   TypeError on PHP 8+. Also reject '' explicitly so the
                 //   branch only runs when there is serialized payload.
                 $rawDefault = $field->getVar('field_default', 'n');
-                $def_value  = (null !== $rawDefault && '' !== $rawDefault)
-                    ? (unserialize($rawDefault, ['allowed_classes' => false]) ?: [])
-                    : null;
+                $def_value  = null;
+                if (null !== $rawDefault && '' !== $rawDefault) {
+                    $def_value = unserialize($rawDefault, ['allowed_classes' => false]) ?: [];
+                }
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value, 8, true);
                 $options   = $field->getVar('field_options');
                 asort($options);
@@ -193,11 +194,14 @@ function profile_getFieldForm(ProfileField $field, $action = false)
 
             case 'select':
             case 'radio':
-                // Same defence as the select_multi branch above: guard via
-                // the RAW ('n') value so a DB NULL doesn't become '' and
-                // then escape the !== null check.
-                $rawDefault = $field->getVar('field_default', 'n');
-                $def_value  = null !== $rawDefault ? $field->getVar('field_default') : null;
+                // Use the RAW ('n') value directly — getVar returns null
+                // for a NULL DB row, the actual string for any other value,
+                // and is the correct format for matching raw option keys
+                // in $field_options. Calling $field->getVar('field_default')
+                // again without a format would return the 's' (HTML-escaped)
+                // form, which would not match raw keys containing '&', '<',
+                // '>', or '"'.
+                $def_value = $field->getVar('field_default', 'n');
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value);
                 $options   = $field->getVar('field_options');
                 asort($options);
@@ -239,7 +243,15 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 break;
 
             case 'group_multi':
-                $groupDefault = unserialize($field->getVar('field_default', 'n'), ['allowed_classes' => false]) ?: [];
+                // Same null/'' guard as the checkbox/select_multi branch
+                // above — a DB NULL or empty default would otherwise feed
+                // the unserialize call below a real NULL or '', raising
+                // TypeError on PHP 8+.
+                $rawGroupDefault = $field->getVar('field_default', 'n');
+                $groupDefault    = [];
+                if (null !== $rawGroupDefault && '' !== $rawGroupDefault) {
+                    $groupDefault = unserialize($rawGroupDefault, ['allowed_classes' => false]) ?: [];
+                }
                 $form->addElement(new XoopsFormSelectGroup(_PROFILE_AM_DEFAULT, 'field_default', true, $groupDefault, 5, true));
                 break;
 
