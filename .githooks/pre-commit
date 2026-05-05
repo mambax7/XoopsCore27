@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # .githooks/pre-commit — XOOPS antipattern sniffs
 #
-# Refuses commits that introduce known-bad shapes documented in CLAUDE.md.
-# Each rule corresponds to a real, post-hoc-caught bug in this repo's history.
-# Prose rules in CLAUDE.md are insufficient — patterns that have been
-# violated more than once must be mechanized here.
+# Refuses commits that introduce known-bad shapes documented in the
+# project's conventions doc. Each rule corresponds to a real,
+# post-hoc-caught bug in this repo's history. Prose rules are
+# insufficient — patterns that have been violated more than once
+# must be mechanized here.
 #
 # Bypass (only when justified, document in commit body):
 #   git commit --no-verify
@@ -19,15 +20,21 @@
 
 set -u
 
-# Get added/modified PHP lines (only `+` lines from staged diff, header rows excluded)
+# Pull added lines for a given pathspec. Filters ACMR (added, copied,
+# modified, renamed) so edits inside `git mv` don't bypass the sniffs.
 diff_added() {
-    git diff --cached --diff-filter=AM -U0 -- '*.php' \
+    git diff --cached --diff-filter=AMR -U0 -- "$@" \
         | grep -E '^\+' \
         | grep -Ev '^\+\+\+ '
 }
 
-added=$(diff_added)
-[ -z "$added" ] && exit 0
+added=$(diff_added '*.php')
+tpl_added=$(diff_added '*.tpl')
+
+# Exit fast only when there is nothing for either pass to look at.
+if [ -z "$added" ] && [ -z "$tpl_added" ]; then
+    exit 0
+fi
 
 violations=0
 report() {
@@ -36,62 +43,70 @@ report() {
     violations=$((violations + 1))
 }
 
-# 1. !$var instanceof ClassName  (parses wrong: ! binds tighter than instanceof)
-hits=$(printf '%s\n' "$added" | grep -nE '!\$[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]+instanceof\b' || true)
-[ -n "$hits" ] && report "instanceof after ! needs parens — write !(\$var instanceof Class)" "$hits"
+# --- PHP pass -------------------------------------------------------
+if [ -n "$added" ]; then
 
-# 2. Raw HTTP status header — prefer http_response_code()
-hits=$(printf '%s\n' "$added" | grep -nE "header\([\"']HTTP/[0-9]\.[0-9]" || true)
-[ -n "$hits" ] && report "raw HTTP status header — use http_response_code(NNN) instead" "$hits"
+    # 1. !<expr> instanceof Class — broadened beyond bare $var: matches
+    #    $var, $this->prop, $obj->prop, $arr[k], Class::CONST, etc.
+    #    The expression body excludes ; & | ) so a same-line boolean
+    #    sequence like `if (!$enabled && $obj instanceof Foo)` does not
+    #    falsely look like `!$enabled instanceof Foo`.
+    hits=$(printf '%s\n' "$added" | grep -nE '![[:space:]]*[^[:space:](][^;&|)]*[[:space:]]+instanceof\b' || true)
+    [ -n "$hits" ] && report "instanceof after ! needs parens — write !(\$expr instanceof Class)" "$hits"
 
-# 3. unserialize() with no allowed_classes restriction
-hits=$(printf '%s\n' "$added" | grep -nE 'unserialize\([^,)]*\)[^,]' || true)
-[ -n "$hits" ] && report "unserialize() must pass allowed_classes — see CLAUDE.md PHP anti-patterns" "$hits"
+    # 2. Raw HTTP status header — prefer http_response_code()
+    hits=$(printf '%s\n' "$added" | grep -nE "header\([\"']HTTP/[0-9]\.[0-9]" || true)
+    [ -n "$hits" ] && report "raw HTTP status header — use http_response_code(NNN) instead" "$hits"
 
-# 4. extract() — banned in new code (use array keys explicitly)
-hits=$(printf '%s\n' "$added" | grep -nE '\bextract[[:space:]]*\(' || true)
-[ -n "$hits" ] && report "extract() is banned — access array keys explicitly" "$hits"
+    # 3. unserialize() without allowed_classes restriction.
+    #    \b excludes the magic method __unserialize() because '_' is a
+    #    word character. Reject when the SAME diff line contains
+    #    `unserialize(` but not `allowed_classes`. Multi-line calls
+    #    where allowed_classes is on a different line will false-fire;
+    #    bypass with --no-verify and inline reason in those rare cases.
+    hits=$(printf '%s\n' "$added" | grep -nE '\bunserialize[[:space:]]*\(' | grep -vE 'allowed_classes' || true)
+    [ -n "$hits" ] && report "unserialize() must pass allowed_classes — see PHP anti-patterns in conventions doc" "$hits"
 
-# 5. eval() — banned, no exceptions
-hits=$(printf '%s\n' "$added" | grep -nE '\beval[[:space:]]*\(' || true)
-[ -n "$hits" ] && report "eval() is banned — no exceptions" "$hits"
+    # 4. extract() — banned in new code
+    hits=$(printf '%s\n' "$added" | grep -nE '\bextract[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "extract() is banned — access array keys explicitly" "$hits"
 
-# 6. error_log() — use Monolog PSR-3 logger in new code
-hits=$(printf '%s\n' "$added" | grep -nE '\berror_log[[:space:]]*\(' || true)
-[ -n "$hits" ] && report "error_log() — use the PSR-3 logger instead in new code" "$hits"
+    # 5. eval() — banned
+    hits=$(printf '%s\n' "$added" | grep -nE '\beval[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "eval() is banned — no exceptions" "$hits"
 
-# 7. queryF() — deprecated in 2.7 (PR #1644: bypassed Protector)
-hits=$(printf '%s\n' "$added" | grep -nE -- '->queryF[[:space:]]*\(' || true)
-[ -n "$hits" ] && report "queryF() is deprecated — exec() for writes/DDL, query() for SELECTs" "$hits"
+    # 6. error_log() — use the PSR-3 logger in new code
+    hits=$(printf '%s\n' "$added" | grep -nE '\berror_log[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "error_log() — use the PSR-3 logger instead in new code" "$hits"
 
-# 8. quoteString() — deprecated in 2.7
-hits=$(printf '%s\n' "$added" | grep -nE -- '->quoteString[[:space:]]*\(' || true)
-[ -n "$hits" ] && report "quoteString() is deprecated — use quote()" "$hits"
+    # 7. queryF() — deprecated in 2.7
+    hits=$(printf '%s\n' "$added" | grep -nE -- '->queryF[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "queryF() is deprecated — exec() for writes/DDL, query() for SELECTs" "$hits"
 
-# 9. // removed — BC-shim antipattern (CLAUDE.md universal rule)
-hits=$(printf '%s\n' "$added" | grep -nE '//[[:space:]]*removed\b' || true)
-[ -n "$hits" ] && report "leftover '// removed' marker — delete the code, do not annotate it" "$hits"
+    # 8. quoteString() — deprecated in 2.7
+    hits=$(printf '%s\n' "$added" | grep -nE -- '->quoteString[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "quoteString() is deprecated — use quote()" "$hits"
 
-# 10. JSON_UNESCAPED_SLASHES inside HTML — </script> breakout risk
-hits=$(printf '%s\n' "$added" | grep -nE 'JSON_UNESCAPED_SLASHES' || true)
-[ -n "$hits" ] && report "JSON_UNESCAPED_SLASHES — use JSON_HEX_TAG inside <script> contexts" "$hits"
+    # 9. `// removed` marker — BC-shim antipattern
+    hits=$(printf '%s\n' "$added" | grep -nE '//[[:space:]]*removed\b' || true)
+    [ -n "$hits" ] && report "leftover '// removed' marker — delete the code, do not annotate it" "$hits"
 
-# 11. Standard Smarty delimiters in .tpl files (XOOPS uses <{ }>) — see SmartyDelimiterCheck below
-# (handled by the .tpl pass)
+    # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
+    # the </script> breakout concern only applies inside HTML <script>
+    # contexts, and the repo legitimately uses the flag elsewhere
+    # (logging, plain JSON APIs). False positives outweighed catches.
+fi
 
-# 12. Co-author / authorship leak in non-PHP — handled by commit-msg hook (see .githooks/commit-msg)
-
-# --- Smarty .tpl pass ----------------------------------------------------
-tpl_added=$(git diff --cached --diff-filter=AM -U0 -- '*.tpl' \
-    | grep -E '^\+' \
-    | grep -Ev '^\+\+\+ ')
-
+# --- Smarty .tpl pass -----------------------------------------------
 if [ -n "$tpl_added" ]; then
-    # XOOPS Smarty uses <{ }> delimiters — flag standard {{ }} or single {var} forms
-    hits=$(printf '%s\n' "$tpl_added" | grep -nE '\{\$[a-zA-Z_]' | grep -v '<{\$' || true)
+    # XOOPS Smarty uses <{ }> delimiters — flag standard {$var} forms.
+    # The negative class `[^<]` anchors the match to a `{$` NOT preceded
+    # by `<` so the valid `<{$var}>` form is excluded even when it
+    # appears on the same line as a violation. The leading `(^|[^<])`
+    # also lets the violation match at the very start of the line.
+    hits=$(printf '%s\n' "$tpl_added" | grep -nE '(^|[^<])\{\$[a-zA-Z_]' || true)
     [ -n "$hits" ] && report "standard Smarty delimiter in .tpl — XOOPS uses <{ }> not { }" "$hits"
 fi
-# -------------------------------------------------------------------------
 
 if [ "$violations" -gt 0 ]; then
     printf '\n[pre-commit] %d antipattern(s) found in staged changes.\n' "$violations" >&2

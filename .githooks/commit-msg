@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 # .githooks/commit-msg — XOOPS commit message hygiene
 #
-# Refuses commits whose message includes:
-#   - Mentions of Claude / Claude Code / Anthropic / "Generated with"
-#   - Co-Authored-By lines for AI assistants
+# Refuses commits whose message contains AI-authorship leak patterns:
+#   - Any "Generated with ..." trailer (vendor-agnostic)
+#   - Co-Authored-By trailers naming common AI assistants
+#
+# The earlier version of this hook also rejected any bare mention of
+# the words "Claude" or "Anthropic" anywhere in the message, which
+# false-fired on legitimate file references like
+#   docs: update CLAUDE.md
+# and forced --no-verify for normal maintenance commits. The current
+# rules target the actual leak shapes (trailers and "generated with"
+# attribution lines) instead.
 #
 # Bypass (only when explicitly intentional):
 #   git commit --no-verify
 #
-# Authorship privacy is a project-wide rule documented in CLAUDE.md
-# (~/.claude/CLAUDE.md "PR and Commit Privacy") and ~/.claude/CLAUDE.md
-# project-level XOOPS git-privacy skill. This hook makes it mechanical.
+# Authorship privacy is documented in the project's conventions doc.
+# This hook makes the trailer-shape part mechanical.
 
 set -u
 
@@ -27,17 +34,16 @@ report() {
 
 content=$(cat "$msg_file")
 
-hits=$(printf '%s\n' "$content" | grep -niE '\bclaude([[:space:]]code)?\b' || true)
-[ -n "$hits" ] && report "commit message mentions Claude — strip per CLAUDE.md privacy rule" "$hits"
+# 1. "Generated with ..." attribution line — vendor-agnostic.
+#    Catches "Generated with Claude Code", "Generated with GitHub
+#    Copilot", "Generated with ChatGPT", etc. Stripping the vendor
+#    name keeps the rule simple and future-proof.
+hits=$(printf '%s\n' "$content" | grep -niE 'generated with' || true)
+[ -n "$hits" ] && report "commit message contains a 'Generated with ...' attribution — strip per privacy convention" "$hits"
 
-hits=$(printf '%s\n' "$content" | grep -niE '\banthropic\b' || true)
-[ -n "$hits" ] && report "commit message mentions Anthropic — strip per CLAUDE.md privacy rule" "$hits"
-
-hits=$(printf '%s\n' "$content" | grep -niE 'generated with[[:space:]]*\[?(claude|ai)' || true)
-[ -n "$hits" ] && report "commit message contains 'Generated with...' tag — remove" "$hits"
-
-hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(claude|anthropic|gpt|copilot|codex)' || true)
-[ -n "$hits" ] && report "Co-Authored-By line names an AI assistant — remove" "$hits"
+# 2. Co-Authored-By trailer naming an AI assistant.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(claude|anthropic|gpt|copilot|codex|gemini|bard)' || true)
+[ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
 
 if [ "$violations" -gt 0 ]; then
     printf '\n[commit-msg] %d privacy violation(s) in commit message.\n' "$violations" >&2
