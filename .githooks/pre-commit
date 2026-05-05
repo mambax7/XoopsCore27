@@ -32,6 +32,7 @@ diff_added() {
         ':(exclude)htdocs/xoops_lib/vendor/**' \
         ':(exclude)htdocs/class/libraries/vendor/**' \
         ':(exclude)tests/**' \
+        ':(exclude)**/tests/**' \
         | grep -E '^\+' \
         | grep -Ev '^\+\+\+ '
 }
