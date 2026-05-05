@@ -184,17 +184,25 @@ if ($op === 'avatarupload') {
                 if (!$avt_handler->insert($avatar)) {
                     @unlink($uploader->getSavedDestination());
                 } else {
-                    // Order matters: write the users.user_avatar column FIRST,
-                    // then clean up the previous custom avatar only after the
-                    // UPDATE has succeeded. The earlier flow deleted the old
-                    // avatar (DB row + file) before the UPDATE, so a failing
-                    // UPDATE would leave the user pointing at a deleted file.
-                    $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $GLOBALS['xoopsDB']->prefix('users'), $GLOBALS['xoopsDB']->quote('avatars/' . $uploader->getSavedFileName()), $GLOBALS['xoopsUser']->getVar('uid'));
-                    if (false === $GLOBALS['xoopsDB']->exec($sql)) {
-                        // Roll back: drop the just-inserted avatar row and
-                        // remove the uploaded file. The previous custom
-                        // avatar is still intact because we no longer
-                        // delete it before the UPDATE.
+                    // Order matters: persist the user's new avatar via the
+                    // member handler FIRST, then clean up the previous
+                    // custom avatar only after that save has succeeded.
+                    // Mirrors the canonical pattern used by the
+                    // avatarchoose op below (member_handler->insertUser),
+                    // and avoids hand-rolled SQL for the same column write.
+                    $oldavatar = $GLOBALS['xoopsUser']->getVar('user_avatar', 'n');
+                    $newAvatar = 'avatars/' . $uploader->getSavedFileName();
+                    $GLOBALS['xoopsUser']->setVar('user_avatar', $newAvatar);
+
+                    /** @var XoopsMemberHandler $member_handler */
+                    $member_handler = xoops_getHandler('member');
+                    if (!$member_handler->insertUser($GLOBALS['xoopsUser'])) {
+                        // Roll back: drop the just-inserted avatar row,
+                        // restore the prior user_avatar value on the user
+                        // object, and remove the uploaded file. The
+                        // previous custom avatar (DB + file) is untouched
+                        // because cleanup is deferred to the success path.
+                        $GLOBALS['xoopsUser']->setVar('user_avatar', $oldavatar);
                         $avt_handler->delete($avatar);
                         @unlink($uploader->getSavedDestination());
                         redirect_header($avatarFormUrl, 3, _PROFILE_MA_ERRORDURINGSAVE);
@@ -206,9 +214,8 @@ if ($op === 'avatarupload') {
                         exit;
                     }
 
-                    // UPDATE succeeded — safe to clean up the previous
+                    // Save succeeded — safe to clean up the previous
                     // custom avatar (record + file).
-                    $oldavatar = $GLOBALS['xoopsUser']->getVar('user_avatar');
                     if (!empty($oldavatar) && false !== strpos(strtolower($oldavatar), 'cavt')) {
                         $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
                         if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
