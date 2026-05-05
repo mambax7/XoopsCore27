@@ -63,23 +63,31 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 }
                 break;
             case 'save':
+                // Collect each operation's result into an array instead of
+                // assigning to $res1 / $res2 conditionally. The previous form
+                // only initialised $res1 / $res2 when one of the inner if
+                // branches actually fired, then computed `$res = $res1 && $res2`
+                // unconditionally — which raised "Undefined variable" warnings
+                // (and a wrong $res value) whenever a sender or recipient
+                // branch was skipped.
+                $saveResults = [];
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
-                        $res1 = $pm_handler->setTodelete($pm);
-                        $res1 = $res1 ? $pm_handler->setTosave($pm, 0) : false;
+                        $res1          = $pm_handler->setTodelete($pm);
+                        $saveResults[] = $res1 ? $pm_handler->setTosave($pm, 0) : false;
                     } elseif (Request::hasVar('move_message', 'POST')) {
-                        $res1 = $pm_handler->setTosave($pm, 0);
+                        $saveResults[] = $pm_handler->setTosave($pm, 0);
                     }
                 }
                 if ($pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
-                        $res2 = $pm_handler->setFromdelete($pm);
-                        $res2 = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
+                        $res2          = $pm_handler->setFromdelete($pm);
+                        $saveResults[] = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
                     } elseif (Request::hasVar('move_message', 'POST')) {
-                        $res2 = $pm_handler->setFromsave($pm, 0);
+                        $saveResults[] = $pm_handler->setFromsave($pm, 0);
                     }
                 }
-                $res = $res1 && $res2;
+                $res = !empty($saveResults) && !in_array(false, $saveResults, true);
                 break;
 
             case 'in':
@@ -127,12 +135,18 @@ if (!is_object($pm)) {
     $criteria->setStart($start);
     $criteria->setSort('msg_time');
     $criteria->setOrder('DESC');
-    [$pm] = $pm_handler->getObjects($criteria);
+    // Avoid destructuring the result directly — getObjects() can return
+    // an empty array, in which case `[$pm] = []` raises "Undefined array
+    // key 0" on PHP 8 and leaves $pm undefined. The explicit fallback
+    // keeps $pm at null so the `is_object($pm)` guard below handles it.
+    $pmObjects = $pm_handler->getObjects($criteria);
+    $pm        = $pmObjects[0] ?? null;
 }
 
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');
 
-$pmform = new XoopsForm('', 'pmform', 'readpmsg.php', 'post', true);
+$pmform  = new XoopsForm('', 'pmform', 'readpmsg.php', 'post', true);
+$message = null;
 if (is_object($pm) && !empty($pm)) {
     if ($pm->getVar('from_userid') != $GLOBALS['xoopsUser']->getVar('uid')) {
         $reply_button = new XoopsFormButton('', 'send', _PM_REPLY);
