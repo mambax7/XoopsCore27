@@ -21,9 +21,10 @@
 set -u
 
 # Pull added lines for a given pathspec. Filters ACMR (added, copied,
-# modified, renamed) so edits inside `git mv` don't bypass the sniffs.
+# modified, renamed) so edits inside `git mv` or `git cp` don't bypass
+# the sniffs.
 diff_added() {
-    git diff --cached --diff-filter=AMR -U0 -- "$@" \
+    git diff --cached --diff-filter=ACMR -U0 -- "$@" \
         | grep -E '^\+' \
         | grep -Ev '^\+\+\+ '
 }
@@ -51,11 +52,11 @@ if [ -n "$added" ]; then
     #    The expression body excludes ; & | ) so a same-line boolean
     #    sequence like `if (!$enabled && $obj instanceof Foo)` does not
     #    falsely look like `!$enabled instanceof Foo`.
-    hits=$(printf '%s\n' "$added" | grep -nE '![[:space:]]*[^[:space:](][^;&|)]*[[:space:]]+instanceof\b' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](][^;&|)]*[[:space:]]+instanceof\b' || true)
     [ -n "$hits" ] && report "instanceof after ! needs parens — write !(\$expr instanceof Class)" "$hits"
 
     # 2. Raw HTTP status header — prefer http_response_code()
-    hits=$(printf '%s\n' "$added" | grep -nE "header\([\"']HTTP/[0-9]\.[0-9]" || true)
+    hits=$(printf '%s\n' "$added" | grep -E "header\([\"']HTTP/[0-9]\.[0-9]" || true)
     [ -n "$hits" ] && report "raw HTTP status header — use http_response_code(NNN) instead" "$hits"
 
     # 3. unserialize() without allowed_classes restriction.
@@ -64,31 +65,31 @@ if [ -n "$added" ]; then
     #    `unserialize(` but not `allowed_classes`. Multi-line calls
     #    where allowed_classes is on a different line will false-fire;
     #    bypass with --no-verify and inline reason in those rare cases.
-    hits=$(printf '%s\n' "$added" | grep -nE '\bunserialize[[:space:]]*\(' | grep -vE 'allowed_classes' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE 'allowed_classes' || true)
     [ -n "$hits" ] && report "unserialize() must pass allowed_classes — see PHP anti-patterns in conventions doc" "$hits"
 
     # 4. extract() — banned in new code
-    hits=$(printf '%s\n' "$added" | grep -nE '\bextract[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '\bextract[[:space:]]*\(' || true)
     [ -n "$hits" ] && report "extract() is banned — access array keys explicitly" "$hits"
 
     # 5. eval() — banned
-    hits=$(printf '%s\n' "$added" | grep -nE '\beval[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '\beval[[:space:]]*\(' || true)
     [ -n "$hits" ] && report "eval() is banned — no exceptions" "$hits"
 
     # 6. error_log() — use the PSR-3 logger in new code
-    hits=$(printf '%s\n' "$added" | grep -nE '\berror_log[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '\berror_log[[:space:]]*\(' || true)
     [ -n "$hits" ] && report "error_log() — use the PSR-3 logger instead in new code" "$hits"
 
     # 7. queryF() — deprecated in 2.7
-    hits=$(printf '%s\n' "$added" | grep -nE -- '->queryF[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E -- '->queryF[[:space:]]*\(' || true)
     [ -n "$hits" ] && report "queryF() is deprecated — exec() for writes/DDL, query() for SELECTs" "$hits"
 
     # 8. quoteString() — deprecated in 2.7
-    hits=$(printf '%s\n' "$added" | grep -nE -- '->quoteString[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E -- '->quoteString[[:space:]]*\(' || true)
     [ -n "$hits" ] && report "quoteString() is deprecated — use quote()" "$hits"
 
     # 9. `// removed` marker — BC-shim antipattern
-    hits=$(printf '%s\n' "$added" | grep -nE '//[[:space:]]*removed\b' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '//[[:space:]]*removed\b' || true)
     [ -n "$hits" ] && report "leftover '// removed' marker — delete the code, do not annotate it" "$hits"
 
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
@@ -104,7 +105,7 @@ if [ -n "$tpl_added" ]; then
     # by `<` so the valid `<{$var}>` form is excluded even when it
     # appears on the same line as a violation. The leading `(^|[^<])`
     # also lets the violation match at the very start of the line.
-    hits=$(printf '%s\n' "$tpl_added" | grep -nE '(^|[^<])\{\$[a-zA-Z_]' || true)
+    hits=$(printf '%s\n' "$tpl_added" | grep -E '(^|[^<])\{\$[a-zA-Z_]' || true)
     [ -n "$hits" ] && report "standard Smarty delimiter in .tpl — XOOPS uses <{ }> not { }" "$hits"
 fi
 

@@ -17,9 +17,9 @@
 *.sql text eol=lf
 
 # Git hook scripts must stay LF-only — they run under bash on every
-# platform, and a CRLF conversion on Windows would break them on Linux/macOS.
-.githooks/pre-commit text eol=lf
-.githooks/commit-msg text eol=lf
+# platform, and a CRLF conversion on Windows would break them on
+# Linux/macOS. Glob covers any future hook file (pre-push, post-merge, …).
+.githooks/* text eol=lf
 
 # Export ignores (not included in dist packages)
 /_archive/** export-ignore

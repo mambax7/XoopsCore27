@@ -34,12 +34,13 @@ report() {
 
 content=$(cat "$msg_file")
 
-# 1. "Generated with ..." attribution line — vendor-agnostic.
-#    Catches "Generated with Claude Code", "Generated with GitHub
-#    Copilot", "Generated with ChatGPT", etc. Stripping the vendor
-#    name keeps the rule simple and future-proof.
-hits=$(printf '%s\n' "$content" | grep -niE 'generated with' || true)
-[ -n "$hits" ] && report "commit message contains a 'Generated with ...' attribution — strip per privacy convention" "$hits"
+# 1. Attribution trailer line — vendor-agnostic.
+#    Anchored to the start of a line (after optional whitespace) so a
+#    quoted mention inside body prose — e.g. a commit that documents
+#    the rule itself — does not false-fire. Real attribution trailers
+#    are virtually always alone on their own line.
+hits=$(printf '%s\n' "$content" | grep -niE '^[[:space:]]*generated with' || true)
+[ -n "$hits" ] && report "commit message contains an attribution trailer — strip per privacy convention" "$hits"
 
 # 2. Co-Authored-By trailer naming an AI assistant.
 hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(claude|anthropic|gpt|copilot|codex|gemini|bard)' || true)
