@@ -169,8 +169,15 @@ function profile_getFieldForm(ProfileField $field, $action = false)
 
             case 'checkbox':
             case 'select_multi':
-                $def_value = $field->getVar('field_default', 'e') !== null
-                    ? (unserialize($field->getVar('field_default', 'n'), ['allowed_classes' => false]) ?: [])
+                // Use the RAW ('n') value for the null guard:
+                //   getVar(..., 'e') for a TXTAREA returns '' when the DB
+                //   value is NULL, which would make `!== null` always true
+                //   and feed the unserialize call below a real NULL —
+                //   TypeError on PHP 8+. Also reject '' explicitly so the
+                //   branch only runs when there is serialized payload.
+                $rawDefault = $field->getVar('field_default', 'n');
+                $def_value  = (null !== $rawDefault && '' !== $rawDefault)
+                    ? (unserialize($rawDefault, ['allowed_classes' => false]) ?: [])
                     : null;
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value, 8, true);
                 $options   = $field->getVar('field_options');
@@ -186,7 +193,11 @@ function profile_getFieldForm(ProfileField $field, $action = false)
 
             case 'select':
             case 'radio':
-                $def_value = $field->getVar('field_default', 'e') !== null ? $field->getVar('field_default') : null;
+                // Same defence as the select_multi branch above: guard via
+                // the RAW ('n') value so a DB NULL doesn't become '' and
+                // then escape the !== null check.
+                $rawDefault = $field->getVar('field_default', 'n');
+                $def_value  = null !== $rawDefault ? $field->getVar('field_default') : null;
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value);
                 $options   = $field->getVar('field_options');
                 asort($options);
