@@ -54,14 +54,17 @@ report() {
 # --- PHP pass -------------------------------------------------------
 if [ -n "$added" ]; then
 
-    # 1. !<expr> instanceof Class — matches $var, $this->prop, $arr[k],
-    #    Class::CONST, etc. The expression body is now a SINGLE token
-    #    (no whitespace, no ;&|()), so multi-token boolean sequences
-    #    like `!$enabled && $obj instanceof Foo` and `!$x and $y
-    #    instanceof Foo` (textual operators) are not mistakenly read
-    #    as `!$enabled instanceof Foo`.
+    # 1. !<expr> instanceof Class — two patterns:
+    #    (a) Plain token: $var, $this->prop, $arr[k], Class::CONST.
+    #        Body excludes whitespace + ;&|() so multi-token boolean
+    #        sequences `!$enabled && $obj instanceof Foo` and the
+    #        textual `!$x and $y instanceof Foo` don't false-fire.
+    #    (b) Method/function call: !$factory->make() instanceof Foo.
+    #        Same precedence bug; the body is `<token>(<args>)`.
     hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](][^[:space:];&|)]*[[:space:]]+instanceof\b' || true)
     [ -n "$hits" ] && report "instanceof after ! needs parens — write !(\$expr instanceof Class)" "$hits"
+    hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](]+\([^)]*\)[[:space:]]+instanceof\b' || true)
+    [ -n "$hits" ] && report "instanceof after !<call>() needs parens — write !(\$expr() instanceof Class)" "$hits"
 
     # 2. Raw HTTP status header — prefer http_response_code()
     hits=$(printf '%s\n' "$added" | grep -E "header\([\"']HTTP/[0-9]\.[0-9]" || true)
@@ -72,10 +75,14 @@ if [ -n "$added" ]; then
     #    word character. Require the literal `allowed_classes' => false`
     #    or `allowed_classes" => false` on the same line — accepting
     #    just the keyword would let `=> true` through (which allows ALL
-    #    classes — exactly the unsafe shape this rule catches). Multi-
-    #    line calls and rare allowlist usages need --no-verify; document
-    #    the reason in the commit body.
-    hits=$(printf '%s\n' "$added" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE "allowed_classes['\"]?[[:space:]]*=>[[:space:]]*false" || true)
+    #    classes — exactly the unsafe shape this rule catches).
+    #    Strip `//` line-comments before the check so a hint-only
+    #    comment like `// TODO add allowed_classes => false` doesn't
+    #    falsely satisfy the rule for an actually-unsafe call.
+    #    Multi-line calls, block comments, and rare allowlist usages
+    #    need --no-verify; document the reason in the commit body.
+    stripped=$(printf '%s\n' "$added" | sed 's|//.*$||')
+    hits=$(printf '%s\n' "$stripped" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE "allowed_classes['\"]?[[:space:]]*=>[[:space:]]*false" || true)
     [ -n "$hits" ] && report "unserialize() must pass 'allowed_classes' => false — see PHP anti-patterns in conventions doc" "$hits"
 
     # 4. extract() — banned in new code

@@ -46,12 +46,24 @@ content=$(cat "$msg_file")
 hits=$(printf '%s\n' "$content" | grep -nE '^Generated with [A-Z]' || true)
 [ -n "$hits" ] && report "commit message contains an attribution trailer — strip per privacy convention" "$hits"
 
-# 2. Co-Authored-By trailer naming an AI assistant. Each vendor token
-#    is wrapped in word boundaries so a real human name or email like
-#    `Claudia`, `Bardosa`, or `gpts@example.com` doesn't false-fire on
-#    a substring of the vendor list.
-hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*\b(claude|anthropic|gpt|copilot|codex|gemini|bard)\b' || true)
+# 2a. Co-Authored-By trailer with an unambiguous AI vendor / product
+#     name. These tokens have no realistic human-name overlap.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(\b(anthropic|copilot|codex)\b|chatgpt)' || true)
 [ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
+
+# 2b. Co-Authored-By trailer with an ambiguous-with-human-names token
+#     (Claude / Bard / Gemini / GPT) followed by an AI qualifier
+#     (Code / Bot / Assistant / AI). Catches `Claude Code`,
+#     `Bard Bot`, `Gemini AI`, `GPT-4 Assistant`, etc., while leaving
+#     legitimate human authors with first names like Claude/Bard alone.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*\b(claude|bard|gemini|gpt[0-9]*)([[:space:]]+|-)(code|bot|ai|assistant)\b' || true)
+[ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
+
+# 2c. Co-Authored-By trailer with a known AI-vendor email domain.
+#     Catches the "Claude <noreply@anthropic.com>" / "Codex
+#     <noreply@openai.com>" shape regardless of the displayed name.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*@(anthropic|openai)\.(com|ai)\b' || true)
+[ -n "$hits" ] && report "Co-Authored-By trailer uses an AI-vendor email domain — remove" "$hits"
 
 if [ "$violations" -gt 0 ]; then
     printf '\n[commit-msg] %d privacy violation(s) in commit message.\n' "$violations" >&2
