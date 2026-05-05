@@ -42,8 +42,11 @@ content=$(cat "$msg_file")
 hits=$(printf '%s\n' "$content" | grep -niE '^[[:space:]]*generated with' || true)
 [ -n "$hits" ] && report "commit message contains an attribution trailer — strip per privacy convention" "$hits"
 
-# 2. Co-Authored-By trailer naming an AI assistant.
-hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(claude|anthropic|gpt|copilot|codex|gemini|bard)' || true)
+# 2. Co-Authored-By trailer naming an AI assistant. Each vendor token
+#    is wrapped in word boundaries so a real human name or email like
+#    `Claudia`, `Bardosa`, or `gpts@example.com` doesn't false-fire on
+#    a substring of the vendor list.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*\b(claude|anthropic|gpt|copilot|codex|gemini|bard)\b' || true)
 [ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
 
 if [ "$violations" -gt 0 ]; then
