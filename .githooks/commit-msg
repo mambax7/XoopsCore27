@@ -34,12 +34,16 @@ report() {
 
 content=$(cat "$msg_file")
 
-# 1. Attribution trailer line — vendor-agnostic.
-#    Anchored to the start of a line (after optional whitespace) so a
-#    quoted mention inside body prose — e.g. a commit that documents
-#    the rule itself — does not false-fire. Real attribution trailers
-#    are virtually always alone on their own line.
-hits=$(printf '%s\n' "$content" | grep -niE '^[[:space:]]*generated with' || true)
+# 1. Attribution trailer line — vendor-agnostic, capitalised.
+#    Anchored to the start of a line and requires the next token to
+#    start with an uppercase letter (i.e. a proper-noun vendor name)
+#    so the rule fires on real attribution lines like
+#    `Generated with Claude Code` or `Generated with GitHub Copilot`
+#    while leaving lowercase prose like `Generated with care...` and
+#    quoted mentions of the rule name alone.
+#    Note: case-sensitive on purpose here (no -i) — real attribution
+#    trailers from AI tools all use proper capitalisation.
+hits=$(printf '%s\n' "$content" | grep -nE '^Generated with [A-Z]' || true)
 [ -n "$hits" ] && report "commit message contains an attribution trailer — strip per privacy convention" "$hits"
 
 # 2. Co-Authored-By trailer naming an AI assistant. Each vendor token

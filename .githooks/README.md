@@ -24,7 +24,7 @@ Sniffs staged PHP and `.tpl` changes for known-bad shapes:
 |---|---------|-----|
 | 1 | `!$x instanceof Y` (no parens) | PHP precedence: `!` binds tighter than `instanceof`, so the unparenthesized form is always `false` |
 | 2 | `header('HTTP/1.x ...')` | Use `http_response_code(NNN)` for SAPI portability |
-| 3 | `unserialize($x)` (no `allowed_classes`) | Object-injection risk |
+| 3 | `unserialize($x)` without `'allowed_classes' => false` | Object-injection risk; the rule requires `=> false` literally so `=> true` (allows ANY class) and ambiguous variable-options forms don't slip through |
 | 4 | `extract(` | Banned — access keys explicitly |
 | 5 | `eval(` | Banned, no exceptions |
 | 6 | `error_log(` | Use the PSR-3 logger in new code |
@@ -33,8 +33,12 @@ Sniffs staged PHP and `.tpl` changes for known-bad shapes:
 | 9 | `// removed` | BC-shim antipattern — delete the code instead |
 | 10 | Standard Smarty `{$var}` in `.tpl` | XOOPS uses `<{$var}>` delimiters |
 
-The diff is scanned with `--diff-filter=ACMR` so edits inside `git mv`
-or `git cp` are also covered.
+The diff is scanned with `--diff-filter=ACMR` so edits to renamed
+files (`git mv`) and copies that Git's copy-detection finds are also
+covered. Vendored trees (`htdocs/xoops_lib/vendor/**`,
+`htdocs/class/libraries/vendor/**`) and the `tests/**` tree are
+excluded from the scan so dependency updates and test fixtures
+containing pattern literals do not false-fire.
 
 ### `commit-msg`
 

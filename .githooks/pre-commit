@@ -21,10 +21,17 @@
 set -u
 
 # Pull added lines for a given pathspec. Filters ACMR (added, copied,
-# modified, renamed) so edits inside `git mv` or `git cp` don't bypass
-# the sniffs.
+# modified, renamed) so edits that show up via Git's rename or copy
+# detection are still scanned. Excluded paths:
+#   - `htdocs/xoops_lib/vendor/**` and `htdocs/class/libraries/vendor/**`
+#     (third-party code; contributors can't rewrite it)
+#   - `tests/**` (test files legitimately contain pattern literals like
+#     `queryF` / `quoteString` to assert that production code does not)
 diff_added() {
     git diff --cached --diff-filter=ACMR -U0 -- "$@" \
+        ':(exclude)htdocs/xoops_lib/vendor/**' \
+        ':(exclude)htdocs/class/libraries/vendor/**' \
+        ':(exclude)tests/**' \
         | grep -E '^\+' \
         | grep -Ev '^\+\+\+ '
 }
@@ -47,26 +54,29 @@ report() {
 # --- PHP pass -------------------------------------------------------
 if [ -n "$added" ]; then
 
-    # 1. !<expr> instanceof Class — broadened beyond bare $var: matches
-    #    $var, $this->prop, $obj->prop, $arr[k], Class::CONST, etc.
-    #    The expression body excludes ; & | ) so a same-line boolean
-    #    sequence like `if (!$enabled && $obj instanceof Foo)` does not
-    #    falsely look like `!$enabled instanceof Foo`.
-    hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](][^;&|)]*[[:space:]]+instanceof\b' || true)
+    # 1. !<expr> instanceof Class — matches $var, $this->prop, $arr[k],
+    #    Class::CONST, etc. The expression body is now a SINGLE token
+    #    (no whitespace, no ;&|()), so multi-token boolean sequences
+    #    like `!$enabled && $obj instanceof Foo` and `!$x and $y
+    #    instanceof Foo` (textual operators) are not mistakenly read
+    #    as `!$enabled instanceof Foo`.
+    hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](][^[:space:];&|)]*[[:space:]]+instanceof\b' || true)
     [ -n "$hits" ] && report "instanceof after ! needs parens — write !(\$expr instanceof Class)" "$hits"
 
     # 2. Raw HTTP status header — prefer http_response_code()
     hits=$(printf '%s\n' "$added" | grep -E "header\([\"']HTTP/[0-9]\.[0-9]" || true)
     [ -n "$hits" ] && report "raw HTTP status header — use http_response_code(NNN) instead" "$hits"
 
-    # 3. unserialize() without allowed_classes restriction.
+    # 3. unserialize() must pass `'allowed_classes' => false`.
     #    \b excludes the magic method __unserialize() because '_' is a
-    #    word character. Reject when the SAME diff line contains
-    #    `unserialize(` but not `allowed_classes`. Multi-line calls
-    #    where allowed_classes is on a different line will false-fire;
-    #    bypass with --no-verify and inline reason in those rare cases.
-    hits=$(printf '%s\n' "$added" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE 'allowed_classes' || true)
-    [ -n "$hits" ] && report "unserialize() must pass allowed_classes — see PHP anti-patterns in conventions doc" "$hits"
+    #    word character. Require the literal `allowed_classes' => false`
+    #    or `allowed_classes" => false` on the same line — accepting
+    #    just the keyword would let `=> true` through (which allows ALL
+    #    classes — exactly the unsafe shape this rule catches). Multi-
+    #    line calls and rare allowlist usages need --no-verify; document
+    #    the reason in the commit body.
+    hits=$(printf '%s\n' "$added" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE "allowed_classes['\"]?[[:space:]]*=>[[:space:]]*false" || true)
+    [ -n "$hits" ] && report "unserialize() must pass 'allowed_classes' => false — see PHP anti-patterns in conventions doc" "$hits"
 
     # 4. extract() — banned in new code
     hits=$(printf '%s\n' "$added" | grep -E '\bextract[[:space:]]*\(' || true)
