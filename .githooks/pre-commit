@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — XOOPS antipattern sniffs
+#
+# Refuses commits that introduce known-bad shapes documented in the
+# project's conventions doc. Each rule corresponds to a real,
+# post-hoc-caught bug in this repo's history. Prose rules are
+# insufficient — patterns that have been violated more than once
+# must be mechanized here.
+#
+# Bypass (only when justified, document in commit body):
+#   git commit --no-verify
+#
+# Activation (one-time, per-clone):
+#   git config core.hooksPath .githooks
+#
+# Adding a new sniff:
+#   - Each block: extract `hits`, call `report` with a short label + sample lines
+#   - Match against staged ADDED lines only (so legacy code doesn't false-fire)
+#   - Prefer egrep -E syntax for portability across BSD/GNU grep
+
+set -u
+
+# Pull added lines for a given pathspec. Filters ACMR (added, copied,
+# modified, renamed) so edits that show up via Git's rename or copy
+# detection are still scanned. Excluded paths:
+#   - `htdocs/xoops_lib/vendor/**` and `htdocs/class/libraries/vendor/**`
+#     (third-party code; contributors can't rewrite it)
+#   - `tests/**` (test files legitimately contain pattern literals like
+#     `queryF` / `quoteString` to assert that production code does not)
+diff_added() {
+    git diff --cached --diff-filter=ACMR -U0 -- "$@" \
+        ':(exclude)htdocs/xoops_lib/vendor/**' \
+        ':(exclude)htdocs/class/libraries/vendor/**' \
+        ':(exclude)tests/**' \
+        ':(exclude)**/tests/**' \
+        | grep -E '^\+' \
+        | grep -Ev '^\+\+\+ '
+}
+
+added=$(diff_added '*.php')
+tpl_added=$(diff_added '*.tpl')
+
+# Exit fast only when there is nothing for either pass to look at.
+if [ -z "$added" ] && [ -z "$tpl_added" ]; then
+    exit 0
+fi
+
+violations=0
+report() {
+    printf '\n[pre-commit] %s\n' "$1" >&2
+    printf '%s\n' "$2" | head -10 >&2
+    violations=$((violations + 1))
+}
+
+# --- PHP pass -------------------------------------------------------
+if [ -n "$added" ]; then
+
+    # 1. !<expr> instanceof Class — two patterns:
+    #    (a) Plain token: $var, $this->prop, $arr[k], Class::CONST.
+    #        Body excludes whitespace + ;&|() so multi-token boolean
+    #        sequences `!$enabled && $obj instanceof Foo` and the
+    #        textual `!$x and $y instanceof Foo` don't false-fire.
+    #    (b) Method/function call: !$factory->make() instanceof Foo.
+    #        Same precedence bug; the body is `<token>(<args>)`.
+    hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](][^[:space:];&|)]*[[:space:]]+instanceof\b' || true)
+    [ -n "$hits" ] && report "instanceof after ! needs parens — write !(\$expr instanceof Class)" "$hits"
+    hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](]+\([^)]*\)[[:space:]]+instanceof\b' || true)
+    [ -n "$hits" ] && report "instanceof after !<call>() needs parens — write !(\$expr() instanceof Class)" "$hits"
+
+    # 2. Raw HTTP status header — prefer http_response_code().
+    #    Allow whitespace between `(` and the opening quote so
+    #    `header( 'HTTP/1.1 404 Not Found')` (whitespace-formatted) is
+    #    also caught.
+    hits=$(printf '%s\n' "$added" | grep -E "header\([[:space:]]*[\"']HTTP/[0-9]\.[0-9]" || true)
+    [ -n "$hits" ] && report "raw HTTP status header — use http_response_code(NNN) instead" "$hits"
+
+    # 3. unserialize() must pass `'allowed_classes' => false`.
+    #    \b excludes the magic method __unserialize() because '_' is a
+    #    word character. Require the literal `allowed_classes' => false`
+    #    or `allowed_classes" => false` on the same line — accepting
+    #    just the keyword would let `=> true` through (which allows ALL
+    #    classes — exactly the unsafe shape this rule catches).
+    #    Strip `//` line-comments before the check so a hint-only
+    #    comment like `// TODO add allowed_classes => false` doesn't
+    #    falsely satisfy the rule for an actually-unsafe call.
+    #    Multi-line calls, block comments, and rare allowlist usages
+    #    need --no-verify; document the reason in the commit body.
+    stripped=$(printf '%s\n' "$added" | sed 's|//.*$||')
+    hits=$(printf '%s\n' "$stripped" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE "allowed_classes['\"]?[[:space:]]*=>[[:space:]]*false" || true)
+    [ -n "$hits" ] && report "unserialize() must pass 'allowed_classes' => false — see PHP anti-patterns in conventions doc" "$hits"
+
+    # 4-6. Banned global functions: extract, eval, error_log.
+    #    The exclude pattern drops method calls (`$obj->extract(`) and
+    #    static calls (`Class::extract(`) — those are legitimate
+    #    user-defined methods that happen to share a name with a
+    #    banned global. Only the global-function form is rejected.
+    hits=$(printf '%s\n' "$added" | grep -E '\bextract[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*extract' || true)
+    [ -n "$hits" ] && report "extract() is banned — access array keys explicitly" "$hits"
+
+    hits=$(printf '%s\n' "$added" | grep -E '\beval[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*eval' || true)
+    [ -n "$hits" ] && report "eval() is banned — no exceptions" "$hits"
+
+    hits=$(printf '%s\n' "$added" | grep -E '\berror_log[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*error_log' || true)
+    [ -n "$hits" ] && report "error_log() — use the PSR-3 logger instead in new code" "$hits"
+
+    # 7. queryF() — deprecated in 2.7
+    hits=$(printf '%s\n' "$added" | grep -E -- '->queryF[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "queryF() is deprecated — exec() for writes/DDL, query() for SELECTs" "$hits"
+
+    # 8. quoteString() — deprecated in 2.7
+    hits=$(printf '%s\n' "$added" | grep -E -- '->quoteString[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "quoteString() is deprecated — use quote()" "$hits"
+
+    # 9. `// removed` marker — BC-shim antipattern
+    hits=$(printf '%s\n' "$added" | grep -E '//[[:space:]]*removed\b' || true)
+    [ -n "$hits" ] && report "leftover '// removed' marker — delete the code, do not annotate it" "$hits"
+
+    # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
+    # the </script> breakout concern only applies inside HTML <script>
+    # contexts, and the repo legitimately uses the flag elsewhere
+    # (logging, plain JSON APIs). False positives outweighed catches.
+fi
+
+# --- Smarty .tpl pass -----------------------------------------------
+if [ -n "$tpl_added" ]; then
+    # XOOPS Smarty uses <{ }> delimiters — flag standard {$var} forms.
+    # The negative class `[^<]` anchors the match to a `{$` NOT preceded
+    # by `<` so the valid `<{$var}>` form is excluded even when it
+    # appears on the same line as a violation. The leading `(^|[^<])`
+    # also lets the violation match at the very start of the line.
+    hits=$(printf '%s\n' "$tpl_added" | grep -E '(^|[^<])\{\$[a-zA-Z_]' || true)
+    [ -n "$hits" ] && report "standard Smarty delimiter in .tpl — XOOPS uses <{ }> not { }" "$hits"
+fi
+
+if [ "$violations" -gt 0 ]; then
+    printf '\n[pre-commit] %d antipattern(s) found in staged changes.\n' "$violations" >&2
+    printf '            Fix the code, or bypass with `git commit --no-verify` (and document why in the commit body).\n' >&2
+    exit 1
+fi
+
+exit 0

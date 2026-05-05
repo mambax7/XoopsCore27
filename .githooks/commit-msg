@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg — XOOPS commit message hygiene
+#
+# Refuses commits whose message contains AI-authorship leak patterns:
+#   - Any "Generated with ..." trailer (vendor-agnostic)
+#   - Co-Authored-By trailers naming common AI assistants
+#
+# The earlier version of this hook also rejected any bare mention of
+# the words "Claude" or "Anthropic" anywhere in the message, which
+# false-fired on legitimate file references like
+#   docs: update CLAUDE.md
+# and forced --no-verify for normal maintenance commits. The current
+# rules target the actual leak shapes (trailers and "generated with"
+# attribution lines) instead.
+#
+# Bypass (only when explicitly intentional):
+#   git commit --no-verify
+#
+# Authorship privacy is documented in the project's conventions doc.
+# This hook makes the trailer-shape part mechanical.
+
+set -u
+
+msg_file="$1"
+[ -z "$msg_file" ] && exit 0
+[ ! -f "$msg_file" ] && exit 0
+
+violations=0
+report() {
+    printf '\n[commit-msg] %s\n' "$1" >&2
+    printf '%s\n' "$2" >&2
+    violations=$((violations + 1))
+}
+
+content=$(cat "$msg_file")
+
+# Extract the trailer block — everything after the LAST blank line.
+# Strip `^#` Git editor comment lines first; without that, when the
+# message is composed via `git commit` (no -m), the trailer block
+# would otherwise be just Git's editor instructions and miss the
+# real trailers above them.
+content_no_comments=$(printf '%s\n' "$content" | grep -v '^#')
+trailer_block=$(printf '%s\n' "$content_no_comments" \
+    | awk '/^$/ {n=NR} {lines[NR]=$0} END {for(i=n+1;i<=NR;i++) print lines[i]}')
+
+# 1. Attribution trailer line — vendor-agnostic, scoped to the
+#    trailer block. Real attribution trailers virtually always
+#    appear there (alone on a line, after the body's final blank
+#    line); body prose mentioning the phrase no longer triggers.
+hits=$(printf '%s\n' "$trailer_block" | grep -niE '^[[:space:]]*generated with' || true)
+[ -n "$hits" ] && report "commit message contains an attribution trailer — strip per privacy convention" "$hits"
+
+# 2a. Co-Authored-By trailer with an unambiguous AI vendor / product
+#     name. These tokens have no realistic human-name overlap. `gpt`
+#     is included here (word-bounded) — `\bgpt\b` matches the exact
+#     three-letter word, not the substring of `gpts@example.com`.
+hits=$(printf '%s\n' "$trailer_block" | grep -niE '^Co-Authored-By:.*(\b(anthropic|copilot|codex|gpt)\b|chatgpt)' || true)
+[ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
+
+# 2b. Co-Authored-By trailer with an ambiguous-with-human-names token
+#     (Claude / Bard / Gemini) followed by an AI qualifier (Code /
+#     Bot / Assistant / AI). Catches `Claude Code`, `Bard Bot`,
+#     `Gemini AI`, `GPT-4 Assistant`, etc., while leaving legitimate
+#     human authors with first names like Claude/Bard alone.
+#     `gpt(-?[0-9]*)?` covers `GPT-4`, `GPT4`, and bare `GPT`.
+hits=$(printf '%s\n' "$trailer_block" | grep -niE '^Co-Authored-By:.*\b(claude|bard|gemini|gpt-?[0-9]*)([[:space:]]+|-)(code|bot|ai|assistant)\b' || true)
+[ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
+
+# 2c. Co-Authored-By trailer with a known AI-vendor email domain.
+#     Catches the "Claude <noreply@anthropic.com>" / "Codex
+#     <noreply@openai.com>" shape regardless of the displayed name.
+hits=$(printf '%s\n' "$trailer_block" | grep -niE '^Co-Authored-By:.*@(anthropic|openai)\.(com|ai)\b' || true)
+[ -n "$hits" ] && report "Co-Authored-By trailer uses an AI-vendor email domain — remove" "$hits"
+
+if [ "$violations" -gt 0 ]; then
+    printf '\n[commit-msg] %d privacy violation(s) in commit message.\n' "$violations" >&2
+    printf '            Fix the message, or bypass with `git commit --no-verify` (only when intentional).\n' >&2
+    exit 1
+fi
+
+exit 0
