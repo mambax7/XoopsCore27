@@ -669,15 +669,133 @@ function b_system_themes_show($options)
     if (!isset($options[2])) {
         $options[2] = 6; // default visible theme rows
     }
+
+    // Defensive: if xoops_config rows for theme_set / theme_set_allowed
+    // are missing, unreadable, or contain unexpected values, neither
+    // this block nor the theme rendering chain that triggered it
+    // should fatal. The two helpers below are defined as local closures
+    // so they don't pollute the global namespace (the previous extraction
+    // to top-level system* functions risked collisions in a codebase that
+    // already uses several `system_*` and `system*` helper names) while
+    // still keeping the per-function cognitive complexity low (Sonar
+    // treats closures as separate units, so their bodies don't bubble
+    // back into the parent's complexity score).
+
+    // Validate a theme directory name for path AND HTML safety.
+    //
+    // XOOPS theme discovery (XoopsLists::getDirListAsArray) and the theme
+    // factory accept arbitrary directory names — including spaces and
+    // non-ASCII characters. The validator therefore intentionally does
+    // NOT enforce a conservative `[A-Za-z0-9_.-]` alphabet (which would
+    // silently drop legitimate `My Theme` / `テーマ` directories) and
+    // enforces two safety classes instead:
+    //
+    //  - Path safety: reject empty, leading dot, path separators (/, \),
+    //    null bytes, and `..` appearing as a path segment.
+    //  - HTML safety: reject the five HTML metacharacters (< > & " ').
+    //    No legitimate theme directory contains those, and rejecting
+    //    them at the boundary lets the option label and screenshot URL
+    //    be embedded without per-renderer escaping logic (XoopsFormSelect
+    //    renderers diverge: Bootstrap3/4/5 + Legacy render labels raw,
+    //    Tailwind escapes them — pre-escaping in the caller would
+    //    double-escape under Tailwind).
+    //
+    // Names that fail validation return ''. Surviving names are trimmed
+    // but otherwise not rewritten — `My Theme` and non-ASCII names keep
+    // their original form.
+    $validateThemeName = static function (string $name): string {
+        $name = trim($name);
+        if (
+            '' === $name
+            || str_starts_with($name, '.')
+            || str_contains($name, '/')
+            || str_contains($name, '\\')
+            || str_contains($name, "\0")
+            || preg_match('~(?:^|[\\\\/])\.\.(?:[\\\\/]|$)~', $name)
+            || preg_match('/[<>"\'&]/', $name)
+        ) {
+            return '';
+        }
+
+        return $name;
+    };
+
+    // Resolve the safe (current, allowed) theme pair from $xoopsConfig.
+    //
+    // - Casts and validates each value through $validateThemeName.
+    // - Treats a string theme_set_allowed as pipe-separated (defends
+    //   against direct overrides in mainfile.php / xoopsconfig.php).
+    // - Skips non-scalar entries (object / array / null / resource)
+    //   without casting, so a corrupted xoops_config row cannot trigger
+    //   an Error or string-conversion Warning.
+    // - Falls back to 'default' if no usable current theme survived.
+    // - Falls back to [$currentTheme] if no usable allowed theme survived.
+    // - Ensures $currentTheme is in the allowed list (otherwise the
+    //   rendered <select>'s `selected` value would not match any of
+    //   its <option>s).
+    $resolveConfig = static function (array $xoopsConfig) use ($validateThemeName): array {
+        $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
+        $currentTheme    = is_string($rawCurrentTheme) ? $validateThemeName($rawCurrentTheme) : '';
+        if ('' === $currentTheme) {
+            $currentTheme = 'default';
+        }
+
+        $rawAllowedThemes = $xoopsConfig['theme_set_allowed'] ?? [];
+        if (is_string($rawAllowedThemes)) {
+            // Filter on empty-string explicitly — default array_filter()
+            // drops any falsy entry, including a theme literally named "0".
+            $rawAllowedThemes = array_filter(
+                array_map('trim', explode('|', $rawAllowedThemes)),
+                static fn(string $theme): bool => '' !== $theme
+            );
+        } elseif (!is_array($rawAllowedThemes)) {
+            $rawAllowedThemes = [];
+        }
+        $allowedThemes = array_values(array_filter(
+            array_map(
+                static fn($name): string => is_scalar($name) ? $validateThemeName((string) $name) : '',
+                $rawAllowedThemes
+            ),
+            static fn(string $name): bool => '' !== $name
+        ));
+        if ([] === $allowedThemes) {
+            $allowedThemes = [$currentTheme];
+        }
+        if (!in_array($currentTheme, $allowedThemes, true)) {
+            array_unshift($allowedThemes, $currentTheme);
+        }
+
+        return [$currentTheme, array_values(array_unique($allowedThemes))];
+    };
+
+    [$currentTheme, $allowedThemes] = $resolveConfig($xoopsConfig);
+
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
-    $select = new XoopsFormSelect('', 'xoops_theme_select', $xoopsConfig['theme_set'], $selectSize);
-    foreach ($xoopsConfig['theme_set_allowed'] as $theme) {
+    $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);
+    foreach ($allowedThemes as $theme) {
+        // The validator above rejects any theme name containing the five
+        // HTML metacharacters, so $theme is safe to embed as both option
+        // value and label without further per-call escaping. This
+        // sidesteps the divergent renderer behaviour: Bootstrap3/4/5 +
+        // Legacy render labels raw, while Tailwind escapes them — passing
+        // a value that needs no escaping at all works under both.
         $select->addOption($theme, $theme);
     }
 
     if ($options[0] == 1) {
+        // Encode + escape the screenshot URL. $currentTheme has passed
+        // the path-safety validator above, but the validator deliberately
+        // allows any character XOOPS theme discovery would accept —
+        // including spaces and non-ASCII — so rawurlencode is needed to
+        // produce a valid URL component, and htmlspecialchars is needed
+        // to make the result safe inside the src="..." attribute.
+        $themeShotUrl = htmlspecialchars(
+            XOOPS_THEME_URL . '/' . rawurlencode($currentTheme) . '/shot.gif',
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8'
+        );
         $themeSelect = '<img vspace="2" id="xoops_theme_img" src="'
-            . XOOPS_THEME_URL . '/' . $xoopsConfig['theme_set'] . '/shot.gif" '
+            . $themeShotUrl . '" '
             . ' alt="screenshot" width="' . (int)$options[1] . '" />'
             . '<br>';
         $select->setExtra(' onchange="showImgSelected(\'xoops_theme_img\', \'xoops_theme_select\', \'themes\', \'/shot.gif\', '
@@ -700,7 +818,7 @@ function b_system_themes_show($options)
     }
 
     $block['theme_select'] = $themeSelect . '<br>(' . sprintf(_MB_SYSTEM_NUMTHEME, '<strong>'
-            . count($xoopsConfig['theme_set_allowed']) . '</strong>') . ')<br>';
+            . count($allowedThemes) . '</strong>') . ')<br>';
     // Note: the rendered `xoops_theme_redirect` hidden field is intentionally
     // emitted with an empty value="" by the templates. Do NOT add a server-side
     // seed here from REQUEST_URI — when bcachetime > 0 the cache-warming
