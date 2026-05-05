@@ -35,7 +35,10 @@ if (!is_object($pm_handler)) {
     // xoops_getModuleHandler() returns false when the PM module/handler
     // can't be loaded. Bail out before any method call would fatal.
     trigger_error('PM module handler unavailable', E_USER_WARNING);
-    redirect_header(XOOPS_URL, 2, 'Private message handler is unavailable.');
+    redirect_header(XOOPS_URL, 2, _NOPERM);
+    // redirect_header() calls exit() internally, but the explicit exit
+    // is defensive against custom preloads that might intercept it.
+    exit();
 }
 $pm                = null;
 if ($msg_id > 0) {
@@ -84,14 +87,16 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 // and the UPDATE would affect 0 rows — which the handler
                 // reports as failure. Treat a successful delete as
                 // success and skip the save-flag follow-up entirely.
-                $msgId       = (int) $pm->getVar('msg_id');
-                $saveResults = [];
+                $msgId         = (int) $pm->getVar('msg_id');
+                $saveResults   = [];
+                $messageDeleted = false;
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
                         $res1 = $pm_handler->setTodelete($pm);
                         if ($res1 && !is_object($pm_handler->get($msgId))) {
                             // Row gone — delete succeeded, save-flag is moot.
-                            $saveResults[] = true;
+                            $saveResults[]  = true;
+                            $messageDeleted = true;
                         } else {
                             $saveResults[] = $res1 ? $pm_handler->setTosave($pm, 0) : false;
                         }
@@ -99,11 +104,17 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                         $saveResults[] = $pm_handler->setTosave($pm, 0);
                     }
                 }
-                if ($pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
+                // Self-message safety: if from_userid == to_userid == current uid,
+                // the recipient branch above may already have deleted the row.
+                // The sender branch's setFromdelete/setFromsave would then
+                // affect 0 rows and updateAll() reports that as failure
+                // even though the delete actually succeeded. Skip it.
+                if (!$messageDeleted && $pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
                         $res2 = $pm_handler->setFromdelete($pm);
                         if ($res2 && !is_object($pm_handler->get($msgId))) {
-                            $saveResults[] = true;
+                            $saveResults[]  = true;
+                            $messageDeleted = true;
                         } else {
                             $saveResults[] = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
                         }
