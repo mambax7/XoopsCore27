@@ -66,8 +66,11 @@ if [ -n "$added" ]; then
     hits=$(printf '%s\n' "$added" | grep -E '![[:space:]]*[^[:space:](]+\([^)]*\)[[:space:]]+instanceof\b' || true)
     [ -n "$hits" ] && report "instanceof after !<call>() needs parens — write !(\$expr() instanceof Class)" "$hits"
 
-    # 2. Raw HTTP status header — prefer http_response_code()
-    hits=$(printf '%s\n' "$added" | grep -E "header\([\"']HTTP/[0-9]\.[0-9]" || true)
+    # 2. Raw HTTP status header — prefer http_response_code().
+    #    Allow whitespace between `(` and the opening quote so
+    #    `header( 'HTTP/1.1 404 Not Found')` (whitespace-formatted) is
+    #    also caught.
+    hits=$(printf '%s\n' "$added" | grep -E "header\([[:space:]]*[\"']HTTP/[0-9]\.[0-9]" || true)
     [ -n "$hits" ] && report "raw HTTP status header — use http_response_code(NNN) instead" "$hits"
 
     # 3. unserialize() must pass `'allowed_classes' => false`.
@@ -85,16 +88,18 @@ if [ -n "$added" ]; then
     hits=$(printf '%s\n' "$stripped" | grep -E '\bunserialize[[:space:]]*\(' | grep -vE "allowed_classes['\"]?[[:space:]]*=>[[:space:]]*false" || true)
     [ -n "$hits" ] && report "unserialize() must pass 'allowed_classes' => false — see PHP anti-patterns in conventions doc" "$hits"
 
-    # 4. extract() — banned in new code
-    hits=$(printf '%s\n' "$added" | grep -E '\bextract[[:space:]]*\(' || true)
+    # 4-6. Banned global functions: extract, eval, error_log.
+    #    The exclude pattern drops method calls (`$obj->extract(`) and
+    #    static calls (`Class::extract(`) — those are legitimate
+    #    user-defined methods that happen to share a name with a
+    #    banned global. Only the global-function form is rejected.
+    hits=$(printf '%s\n' "$added" | grep -E '\bextract[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*extract' || true)
     [ -n "$hits" ] && report "extract() is banned — access array keys explicitly" "$hits"
 
-    # 5. eval() — banned
-    hits=$(printf '%s\n' "$added" | grep -E '\beval[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '\beval[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*eval' || true)
     [ -n "$hits" ] && report "eval() is banned — no exceptions" "$hits"
 
-    # 6. error_log() — use the PSR-3 logger in new code
-    hits=$(printf '%s\n' "$added" | grep -E '\berror_log[[:space:]]*\(' || true)
+    hits=$(printf '%s\n' "$added" | grep -E '\berror_log[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*error_log' || true)
     [ -n "$hits" ] && report "error_log() — use the PSR-3 logger instead in new code" "$hits"
 
     # 7. queryF() — deprecated in 2.7

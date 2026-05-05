@@ -34,29 +34,35 @@ report() {
 
 content=$(cat "$msg_file")
 
-# 1. Attribution trailer line — vendor-agnostic, capitalised.
-#    Anchored to the start of a line and requires the next token to
-#    start with an uppercase letter (i.e. a proper-noun vendor name)
-#    so the rule fires on real attribution lines like
-#    `Generated with Claude Code` or `Generated with GitHub Copilot`
-#    while leaving lowercase prose like `Generated with care...` and
-#    quoted mentions of the rule name alone.
-#    Note: case-sensitive on purpose here (no -i) — real attribution
-#    trailers from AI tools all use proper capitalisation.
-hits=$(printf '%s\n' "$content" | grep -nE '^Generated with [A-Z]' || true)
+# Extract the trailer block — everything after the LAST blank line.
+# This is the conventional location for `Co-Authored-By:` and
+# attribution trailers; scoping the "Generated with" rule to this
+# block lets a body paragraph or list item that happens to mention
+# the phrase pass without false-firing.
+trailer_block=$(printf '%s\n' "$content" \
+    | awk '/^$/ {n=NR} {lines[NR]=$0} END {for(i=n+1;i<=NR;i++) print lines[i]}')
+
+# 1. Attribution trailer line — vendor-agnostic, scoped to the
+#    trailer block. Real attribution trailers virtually always
+#    appear there (alone on a line, after the body's final blank
+#    line); body prose mentioning the phrase no longer triggers.
+hits=$(printf '%s\n' "$trailer_block" | grep -niE '^[[:space:]]*generated with' || true)
 [ -n "$hits" ] && report "commit message contains an attribution trailer — strip per privacy convention" "$hits"
 
 # 2a. Co-Authored-By trailer with an unambiguous AI vendor / product
-#     name. These tokens have no realistic human-name overlap.
-hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(\b(anthropic|copilot|codex)\b|chatgpt)' || true)
+#     name. These tokens have no realistic human-name overlap. `gpt`
+#     is included here (word-bounded) — `\bgpt\b` matches the exact
+#     three-letter word, not the substring of `gpts@example.com`.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*(\b(anthropic|copilot|codex|gpt)\b|chatgpt)' || true)
 [ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
 
 # 2b. Co-Authored-By trailer with an ambiguous-with-human-names token
-#     (Claude / Bard / Gemini / GPT) followed by an AI qualifier
-#     (Code / Bot / Assistant / AI). Catches `Claude Code`,
-#     `Bard Bot`, `Gemini AI`, `GPT-4 Assistant`, etc., while leaving
-#     legitimate human authors with first names like Claude/Bard alone.
-hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*\b(claude|bard|gemini|gpt[0-9]*)([[:space:]]+|-)(code|bot|ai|assistant)\b' || true)
+#     (Claude / Bard / Gemini) followed by an AI qualifier (Code /
+#     Bot / Assistant / AI). Catches `Claude Code`, `Bard Bot`,
+#     `Gemini AI`, `GPT-4 Assistant`, etc., while leaving legitimate
+#     human authors with first names like Claude/Bard alone.
+#     `gpt(-?[0-9]*)?` covers `GPT-4`, `GPT4`, and bare `GPT`.
+hits=$(printf '%s\n' "$content" | grep -niE '^Co-Authored-By:.*\b(claude|bard|gemini|gpt-?[0-9]*)([[:space:]]+|-)(code|bot|ai|assistant)\b' || true)
 [ -n "$hits" ] && report "Co-Authored-By trailer names an AI assistant — remove" "$hits"
 
 # 2c. Co-Authored-By trailer with a known AI-vendor email domain.
