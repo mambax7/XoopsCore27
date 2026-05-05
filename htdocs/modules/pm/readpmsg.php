@@ -31,6 +31,12 @@ if (!in_array($op, $valid_op_requests)) {
 }
 $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id', 0, 'POST') : Request::getInt('msg_id', 0, 'GET');
 $pm_handler        = xoops_getModuleHandler('message');
+if (!is_object($pm_handler)) {
+    // xoops_getModuleHandler() returns false when the PM module/handler
+    // can't be loaded. Bail out before any method call would fatal.
+    trigger_error('PM module handler unavailable', E_USER_WARNING);
+    redirect_header(XOOPS_URL, 2, 'Private message handler is unavailable.');
+}
 $pm                = null;
 if ($msg_id > 0) {
     $pm = $pm_handler->get($msg_id);
@@ -64,25 +70,43 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 break;
             case 'save':
                 // Collect each operation's result into an array instead of
-                // assigning to $res1 / $res2 conditionally. The previous form
-                // only initialised $res1 / $res2 when one of the inner if
-                // branches actually fired, then computed `$res = $res1 && $res2`
-                // unconditionally — which raised "Undefined variable" warnings
+                // assigning to $res1 / $res2 conditionally. The previous
+                // form only initialised those vars when an inner branch
+                // fired, then computed `$res = $res1 && $res2`
+                // unconditionally — raising "Undefined variable" warnings
                 // (and a wrong $res value) whenever a sender or recipient
                 // branch was skipped.
+                //
+                // Delete-vs-save sequencing: setTodelete() / setFromdelete()
+                // call parent::delete($pm) (real row removal) when the
+                // OTHER party has already deleted; in that case the row no
+                // longer exists by the time we'd call setTosave($pm, 0)
+                // and the UPDATE would affect 0 rows — which the handler
+                // reports as failure. Treat a successful delete as
+                // success and skip the save-flag follow-up entirely.
+                $msgId       = (int) $pm->getVar('msg_id');
                 $saveResults = [];
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
-                        $res1          = $pm_handler->setTodelete($pm);
-                        $saveResults[] = $res1 ? $pm_handler->setTosave($pm, 0) : false;
+                        $res1 = $pm_handler->setTodelete($pm);
+                        if ($res1 && !is_object($pm_handler->get($msgId))) {
+                            // Row gone — delete succeeded, save-flag is moot.
+                            $saveResults[] = true;
+                        } else {
+                            $saveResults[] = $res1 ? $pm_handler->setTosave($pm, 0) : false;
+                        }
                     } elseif (Request::hasVar('move_message', 'POST')) {
                         $saveResults[] = $pm_handler->setTosave($pm, 0);
                     }
                 }
                 if ($pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
-                        $res2          = $pm_handler->setFromdelete($pm);
-                        $saveResults[] = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
+                        $res2 = $pm_handler->setFromdelete($pm);
+                        if ($res2 && !is_object($pm_handler->get($msgId))) {
+                            $saveResults[] = true;
+                        } else {
+                            $saveResults[] = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
+                        }
                     } elseif (Request::hasVar('move_message', 'POST')) {
                         $saveResults[] = $pm_handler->setFromsave($pm, 0);
                     }
