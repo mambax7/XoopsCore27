@@ -30,20 +30,31 @@ if (!in_array($op, $valid_op_requests)) {
     $op = 'in';
 }
 $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id', 0, 'POST') : Request::getInt('msg_id', 0, 'GET');
-/** @var PmMessageHandler $pm_handler */
-$pm_handler        = xoops_getModuleHandler('message');
-if (!($pm_handler instanceof PmMessageHandler)) {
-    // xoops_getModuleHandler() returns false when the PM module/handler
-    // can't be loaded. The instanceof guard (rather than plain is_object)
-    // also gives static analysers like PHPStan the type narrowing they
-    // need to recognise the PM-specific methods (setTodelete etc.) used
-    // below. _PM_ACTION_ERROR is a PM module language constant; using a
-    // generic error message here rather than _NOPERM, since this is an
-    // internal load failure, not an authorisation failure.
-    trigger_error('PM module handler unavailable', E_USER_WARNING);
+// xoops_getModuleHandler() has two failure modes (htdocs/include/functions.php):
+//   - throws \Exception("No Module is loaded") when no $module_dir is passed
+//     and there is no $xoopsModule context (e.g. direct script entry without
+//     normal module bootstrap)
+//   - throws \Exception("Handler does not exist") when the handler class
+//     can't be resolved (unless $optional = true, which we don't pass)
+// Wrap in try/catch so neither path produces an uncaught exception. Then
+// keep the instanceof PmMessageHandler check for static-analysis type
+// narrowing of the PM-specific methods (setTodelete etc.) used below.
+try {
+    /** @var PmMessageHandler $pm_handler */
+    $pm_handler = xoops_getModuleHandler('message');
+} catch (\Throwable $e) {
+    trigger_error('PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
     redirect_header(XOOPS_URL, 2, _PM_ACTION_ERROR);
     // redirect_header() calls exit() internally, but the explicit exit
     // is defensive against custom preloads that might intercept it.
+    exit();
+}
+if (!($pm_handler instanceof PmMessageHandler)) {
+    // _PM_ACTION_ERROR is a PM module language constant; using a generic
+    // error message here rather than _NOPERM, since this is an internal
+    // load failure, not an authorisation failure.
+    trigger_error('PM module handler unavailable', E_USER_WARNING);
+    redirect_header(XOOPS_URL, 2, _PM_ACTION_ERROR);
     exit();
 }
 $pm                = null;
