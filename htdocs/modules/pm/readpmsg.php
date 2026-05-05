@@ -30,12 +30,18 @@ if (!in_array($op, $valid_op_requests)) {
     $op = 'in';
 }
 $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id', 0, 'POST') : Request::getInt('msg_id', 0, 'GET');
+/** @var PmMessageHandler $pm_handler */
 $pm_handler        = xoops_getModuleHandler('message');
-if (!is_object($pm_handler)) {
+if (!($pm_handler instanceof PmMessageHandler)) {
     // xoops_getModuleHandler() returns false when the PM module/handler
-    // can't be loaded. Bail out before any method call would fatal.
+    // can't be loaded. The instanceof guard (rather than plain is_object)
+    // also gives static analysers like PHPStan the type narrowing they
+    // need to recognise the PM-specific methods (setTodelete etc.) used
+    // below. _PM_ACTION_ERROR is a PM module language constant; using a
+    // generic error message here rather than _NOPERM, since this is an
+    // internal load failure, not an authorisation failure.
     trigger_error('PM module handler unavailable', E_USER_WARNING);
-    redirect_header(XOOPS_URL, 2, _NOPERM);
+    redirect_header(XOOPS_URL, 2, _PM_ACTION_ERROR);
     // redirect_header() calls exit() internally, but the explicit exit
     // is defensive against custom preloads that might intercept it.
     exit();
@@ -87,14 +93,23 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 // and the UPDATE would affect 0 rows — which the handler
                 // reports as failure. Treat a successful delete as
                 // success and skip the save-flag follow-up entirely.
-                $msgId         = (int) $pm->getVar('msg_id');
-                $saveResults   = [];
+                // Predict whether each setTodelete / setFromdelete will hard-
+                // delete the row vs. just toggle a flag, based on the SAME
+                // predicates the handler itself uses (pm/class/message.php).
+                // This avoids a follow-up SELECT after the delete to detect
+                // row removal — and avoids conflating "row gone" with
+                // "SELECT failed" (get() returns null in both cases).
+                //   setTodelete  hard-deletes when (from_delete != 0 && from_userid != 0)
+                //   setFromdelete hard-deletes when (to_delete   != 0)
+                $saveResults    = [];
                 $messageDeleted = false;
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
+                        $willHardDelete = ((int) $pm->getVar('from_delete') !== 0)
+                            && ((int) $pm->getVar('from_userid') !== 0);
                         $res1 = $pm_handler->setTodelete($pm);
-                        if ($res1 && !is_object($pm_handler->get($msgId))) {
-                            // Row gone — delete succeeded, save-flag is moot.
+                        if ($res1 && $willHardDelete) {
+                            // Row removed — save-flag follow-up is moot.
                             $saveResults[]  = true;
                             $messageDeleted = true;
                         } else {
@@ -105,14 +120,17 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                     }
                 }
                 // Self-message safety: if from_userid == to_userid == current uid,
-                // the recipient branch above may already have deleted the row.
-                // The sender branch's setFromdelete/setFromsave would then
-                // affect 0 rows and updateAll() reports that as failure
-                // even though the delete actually succeeded. Skip it.
+                // the recipient branch above may already have deleted the row
+                // (or set to_delete=1, which makes the sender branch's
+                // setFromdelete then hard-delete). Skip the sender branch
+                // entirely once we know the row is gone, otherwise its
+                // setFromsave UPDATE would affect 0 rows and updateAll()
+                // would report that as failure.
                 if (!$messageDeleted && $pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
+                        $willHardDelete = ((int) $pm->getVar('to_delete') !== 0);
                         $res2 = $pm_handler->setFromdelete($pm);
-                        if ($res2 && !is_object($pm_handler->get($msgId))) {
+                        if ($res2 && $willHardDelete) {
                             $saveResults[]  = true;
                             $messageDeleted = true;
                         } else {
