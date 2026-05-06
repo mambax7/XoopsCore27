@@ -147,26 +147,83 @@ class XoopsMultiMailer extends PHPMailer
         /** @var XoopsConfigHandler $config_handler */
         $config_handler    = xoops_getHandler('config');
         $xoopsMailerConfig = $config_handler->getConfigsByCat(XOOPS_CONF_MAILER);
-        $this->From        = $xoopsMailerConfig['from'];
-        if ('' == $this->From) {
-            $this->From = $GLOBALS['xoopsConfig']['adminmail'];
+        // Core XoopsConfigHandler::getConfigsByCat() returns an array
+        // (possibly empty), but keep this guard defensive for custom
+        // handlers, mocked/test bootstraps, or unexpected states. The
+        // null-coalescing below then covers the case where rows for
+        // individual keys are missing (mid-upgrade, fresh install before
+        // first save, partial config), which would otherwise blank every
+        // mail-touching request (notifications, password reset, contact
+        // form).
+        if (!is_array($xoopsMailerConfig)) {
+            $xoopsMailerConfig = [];
+        }
+
+        $this->From = (string) ($xoopsMailerConfig['from'] ?? '');
+        if ('' === $this->From) {
+            $this->From = (string) ($GLOBALS['xoopsConfig']['adminmail'] ?? '');
         }
         $this->Sender = $this->From;
-        if ('smtpauth' === $xoopsMailerConfig['mailmethod']) {
+
+        // ?? alone doesn't catch an empty-string mailmethod (existing key,
+        // blank value), which would set $this->Mailer = '' and PHPMailer
+        // rejects that. Normalise null/missing/empty to 'mail'.
+        $mailMethod = trim((string) ($xoopsMailerConfig['mailmethod'] ?? ''));
+        if ('' === $mailMethod) {
+            $mailMethod = 'mail';
+        }
+        // smtphost has historically been stored as either a flat string,
+        // a separator-joined string, or an array (the underlying schema
+        // inconsistency is still unresolved — see TODO below). Plain
+        // (array) on a separated string yields one bogus host element,
+        // so split string forms first. The split set covers all three
+        // delimiters seen in the wild:
+        //   - '|' is XOOPS' canonical array-form input delimiter; see
+        //     XoopsConfigItem::setConfValueForInput in
+        //     htdocs/kernel/configitem.php (explode('|', ...) before
+        //     serialize). It can persist in 'text'-valuetype rows or in
+        //     manually-edited config_value strings.
+        //   - ';' / ',' are common admin-typed delimiters when the value
+        //     was stored as text rather than an array.
+        // (array) on the already-array form is a no-op.
+        $smtpHosts = $xoopsMailerConfig['smtphost'] ?? [];
+        if (is_string($smtpHosts)) {
+            $smtpHosts = preg_split('/[|;,]+/', $smtpHosts, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        }
+        // Cast each element to string before trim — a corrupted stored
+        // array could contain null or non-string elements, and trim(null)
+        // is deprecated in PHP 8.1+.
+        $smtpHosts = array_filter(
+            array_map(static fn ($host) => trim((string) $host), (array) $smtpHosts),
+            'strlen'
+        );
+
+        if ('smtpauth' === $mailMethod) {
             $this->Mailer   = 'smtp';
             $this->SMTPAuth = true;
-            // TODO: change value type of xoopsConfig 'smtphost' from array to text
-            $this->Host     = implode(';', $xoopsMailerConfig['smtphost']);
-            $this->Username = $xoopsMailerConfig['smtpuser'];
-            $this->Password = $xoopsMailerConfig['smtppass'];
+            // TODO: normalise xoopsConfig 'smtphost' storage type
+            //       (currently mixed string/array; see $smtpHosts above).
+            $this->Host     = implode(';', $smtpHosts);
+            $this->Username = (string) ($xoopsMailerConfig['smtpuser'] ?? '');
+            $this->Password = (string) ($xoopsMailerConfig['smtppass'] ?? '');
         } else {
-            $this->Mailer   = $xoopsMailerConfig['mailmethod'];
+            $this->Mailer   = $mailMethod;
             $this->SMTPAuth = false;
-            $this->Sendmail = $xoopsMailerConfig['sendmailpath'];
-            $this->Host     = implode(';', $xoopsMailerConfig['smtphost']);
+            // Preserve the class-default $Sendmail ('/usr/sbin/sendmail')
+            // when the config value is missing OR an empty/whitespace
+            // string. ?? alone only catches null/missing — the existing-
+            // but-blank case (admin cleared the field, or a partial save
+            // left an empty string) would still overwrite with '' and
+            // break sendmail delivery. Same shape as the mailmethod
+            // normalisation above.
+            $sendmailPath = trim((string) ($xoopsMailerConfig['sendmailpath'] ?? ''));
+            if ('' !== $sendmailPath) {
+                $this->Sendmail = $sendmailPath;
+            }
+            $this->Host     = implode(';', $smtpHosts);
         }
         $this->CharSet = strtolower(_CHARSET);
-        $xoopsLanguage = preg_replace('/[^a-zA-Z0-9_-]/', '', $GLOBALS['xoopsConfig']['language']);
+        $xoopsLanguage = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($GLOBALS['xoopsConfig']['language'] ?? 'english'));
         if (file_exists(XOOPS_ROOT_PATH . '/language/' . $xoopsLanguage . '/phpmailer.php')) {
             include XOOPS_ROOT_PATH . '/language/' . $xoopsLanguage . '/phpmailer.php';
             $this->language = $PHPMAILER_LANG;
