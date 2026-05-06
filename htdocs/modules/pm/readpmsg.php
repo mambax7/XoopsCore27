@@ -30,7 +30,39 @@ if (!in_array($op, $valid_op_requests)) {
     $op = 'in';
 }
 $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id', 0, 'POST') : Request::getInt('msg_id', 0, 'GET');
-$pm_handler        = xoops_getModuleHandler('message');
+// xoops_getModuleHandler() has two failure modes (htdocs/include/functions.php):
+//   - throws \Exception("No Module is loaded") when no $module_dir is passed
+//     and there is no $xoopsModule context (e.g. direct script entry without
+//     normal module bootstrap)
+//   - throws \Exception("Handler does not exist") when the handler class
+//     can't be resolved (unless $optional = true, which we don't pass)
+// Wrap in try/catch so neither path produces an uncaught exception. Then
+// keep the instanceof PmMessageHandler check for static-analysis type
+// narrowing of the PM-specific methods (setTodelete etc.) used below.
+//
+// In the "No Module is loaded" case the PM language file may not be loaded
+// yet, so _PM_ACTION_ERROR can itself fatal as an undefined constant on
+// PHP 8+. Try to load the PM main language file, then resolve a safe
+// fallback BEFORE the try/catch so both redirect paths can rely on it.
+if (!defined('_PM_ACTION_ERROR')) {
+    xoops_loadLanguage('main', 'pm');
+}
+$pmActionError = defined('_PM_ACTION_ERROR') ? constant('_PM_ACTION_ERROR') : 'Operation failed';
+try {
+    /** @var PmMessageHandler $pm_handler */
+    $pm_handler = xoops_getModuleHandler('message');
+} catch (\Throwable $e) {
+    // Prefix with basename(__FILE__) so the log line is traceable without
+    // exposing the absolute server path.
+    trigger_error(basename(__FILE__) . ': PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
+    redirect_header(XOOPS_URL, 2, $pmActionError);
+}
+if (!($pm_handler instanceof PmMessageHandler)) {
+    // Internal load failure (not an authorisation failure), so use the
+    // PM action-error message rather than _NOPERM.
+    trigger_error(basename(__FILE__) . ': PM module handler unavailable', E_USER_WARNING);
+    redirect_header(XOOPS_URL, 2, $pmActionError);
+}
 $pm                = null;
 if ($msg_id > 0) {
     $pm = $pm_handler->get($msg_id);
@@ -63,23 +95,88 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 }
                 break;
             case 'save':
+                // Collect each operation's result into an array instead of
+                // assigning to $res1 / $res2 conditionally. The previous
+                // form only initialised those vars when an inner branch
+                // fired, then computed `$res = $res1 && $res2`
+                // unconditionally — raising "Undefined variable" warnings
+                // (and a wrong $res value) whenever a sender or recipient
+                // branch was skipped.
+                //
+                // Delete-vs-save sequencing: setTodelete() / setFromdelete()
+                // call parent::delete($pm) (real row removal) when the
+                // OTHER party has already deleted; in that case the row no
+                // longer exists by the time we'd call setTosave($pm, 0)
+                // and the UPDATE would affect 0 rows — which the handler
+                // reports as failure. Treat a successful delete as
+                // success and skip the save-flag follow-up entirely.
+                // Predict whether each setTodelete / setFromdelete will hard-
+                // delete the row vs. just toggle a flag, based on the SAME
+                // predicates the handler itself uses (pm/class/message.php).
+                // This avoids a follow-up SELECT after the delete to detect
+                // row removal — and avoids conflating "row gone" with
+                // "SELECT failed" (get() returns null in both cases).
+                //   setTodelete  hard-deletes when (from_delete != 0 && from_userid != 0)
+                //   setFromdelete hard-deletes when (to_delete   != 0)
+                // No-op-as-success for save-flag clears: updateAll() returns
+                // false for 0 affected rows, so calling setTosave($pm, 0)
+                // when to_save is already 0 (or setFromsave($pm, 0) when
+                // from_save is already 0) reports failure for what is
+                // really a no-op. This bites self-messages and any PM
+                // that's in the savebox only because of the OTHER side's
+                // save flag. Treat the already-zero case as success.
+                $saveResults    = [];
+                $messageDeleted = false;
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
+                        $willHardDelete = ((int) $pm->getVar('from_delete') !== 0)
+                            && ((int) $pm->getVar('from_userid') !== 0);
                         $res1 = $pm_handler->setTodelete($pm);
-                        $res1 = $res1 ? $pm_handler->setTosave($pm, 0) : false;
+                        if ($res1 && $willHardDelete) {
+                            // Row removed — save-flag follow-up is moot.
+                            $saveResults[]  = true;
+                            $messageDeleted = true;
+                        } elseif ($res1) {
+                            $saveResults[] = ((int) $pm->getVar('to_save') === 0)
+                                ? true
+                                : (bool) $pm_handler->setTosave($pm, 0);
+                        } else {
+                            $saveResults[] = false;
+                        }
                     } elseif (Request::hasVar('move_message', 'POST')) {
-                        $res1 = $pm_handler->setTosave($pm, 0);
+                        $saveResults[] = ((int) $pm->getVar('to_save') === 0)
+                            ? true
+                            : (bool) $pm_handler->setTosave($pm, 0);
                     }
                 }
-                if ($pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
+                // Self-message safety: if from_userid == to_userid == current uid,
+                // the recipient branch above may already have deleted the row
+                // (or set to_delete=1, which makes the sender branch's
+                // setFromdelete then hard-delete). Skip the sender branch
+                // entirely once we know the row is gone, otherwise its
+                // setFromsave UPDATE would affect 0 rows and updateAll()
+                // would report that as failure.
+                if (!$messageDeleted && $pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     if (Request::hasVar('delete_message', 'POST')) {
+                        $willHardDelete = ((int) $pm->getVar('to_delete') !== 0);
                         $res2 = $pm_handler->setFromdelete($pm);
-                        $res2 = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
+                        if ($res2 && $willHardDelete) {
+                            $saveResults[]  = true;
+                            $messageDeleted = true;
+                        } elseif ($res2) {
+                            $saveResults[] = ((int) $pm->getVar('from_save') === 0)
+                                ? true
+                                : (bool) $pm_handler->setFromsave($pm, 0);
+                        } else {
+                            $saveResults[] = false;
+                        }
                     } elseif (Request::hasVar('move_message', 'POST')) {
-                        $res2 = $pm_handler->setFromsave($pm, 0);
+                        $saveResults[] = ((int) $pm->getVar('from_save') === 0)
+                            ? true
+                            : (bool) $pm_handler->setFromsave($pm, 0);
                     }
                 }
-                $res = $res1 && $res2;
+                $res = !empty($saveResults) && !in_array(false, $saveResults, true);
                 break;
 
             case 'in':
@@ -127,12 +224,18 @@ if (!is_object($pm)) {
     $criteria->setStart($start);
     $criteria->setSort('msg_time');
     $criteria->setOrder('DESC');
-    [$pm] = $pm_handler->getObjects($criteria);
+    // Avoid destructuring the result directly — getObjects() can return
+    // an empty array, in which case `[$pm] = []` raises "Undefined array
+    // key 0" on PHP 8 and leaves $pm undefined. The explicit fallback
+    // keeps $pm at null so the `is_object($pm)` guard below handles it.
+    $pmObjects = $pm_handler->getObjects($criteria);
+    $pm        = $pmObjects[0] ?? null;
 }
 
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');
 
-$pmform = new XoopsForm('', 'pmform', 'readpmsg.php', 'post', true);
+$pmform  = new XoopsForm('', 'pmform', 'readpmsg.php', 'post', true);
+$message = null;
 if (is_object($pm) && !empty($pm)) {
     if ($pm->getVar('from_userid') != $GLOBALS['xoopsUser']->getVar('uid')) {
         $reply_button = new XoopsFormButton('', 'send', _PM_REPLY);
