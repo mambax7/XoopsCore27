@@ -15,9 +15,26 @@
  * @package             system
  */
 
-//if (!defined('XOOPS_ROOT_PATH')) {
-//    throw new \RuntimeException('XOOPS root path not defined');
-//}
+// Direct-access guard: this file is module/admin-only and must never
+// execute outside a bootstrapped XOOPS context. Without this, the
+// require_once below would fail with an "undefined constant" fatal
+// when the file is hit via a direct URL, leaking server path details
+// in the error message. Uses the project-standard one-liner shape
+// for consistency with the rest of the codebase.
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+
+// xoops_remove_file_quietly() and friends live in include/file_safety.php
+// — a deliberately side-effect-free file. Earlier revisions required
+// include/cp_functions.php here, which defines XOOPS_CPFUNC_LOADED;
+// include/functions.php keys off that constant to force redirect_header()
+// into the 'default' theme. SystemMaintenance is also instantiated from
+// upgrade/upd_2.5.10-to-2.5.11/index.php and upgrade/upd_2.5.11-to-2.7.0/
+// index.php, so loading cp_functions.php at class-file-load time was
+// silently overriding the configured theme during upgrades. Loading just
+// the helpers avoids that side effect; CP and admin callers still see
+// XOOPS_CPFUNC_LOADED via their own cp_header.php / page_moduleinstaller.php
+// load paths.
+require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
 
 /**
  * System Maintenance
@@ -153,7 +170,9 @@ class SystemMaintenance
      *
      * @author slider84 of Team FrXoops
      *
-     * @return boolean
+     * @return bool
+     *
+     * @throws \RuntimeException If the avatar table query fails.
      */
     public function CleanAvatar()
     {
@@ -166,17 +185,90 @@ class SystemMaintenance
             );
         }
 
+        // Resolve the avatars subdirectory once for the whole sweep.
+        // Custom avatars live under XOOPS_UPLOAD_PATH/avatars/ (see
+        // kernel/avatar.php and the various admin/edituser writers, all
+        // of which prepend 'avatars/' to the stored filename). Narrowing
+        // the containment check to this subtree is defence-in-depth: an
+        // avatar_file value that points elsewhere under uploads/ —
+        // legacy data, custom-module write, or accidental insertion —
+        // is now skipped instead of silently deleting an unrelated
+        // upload. realpath() is constant for the run, so per-row
+        // resolution would just be wasted filesystem work on
+        // installations with large orphaned-avatar tables.
+        $avatarRoot       = realpath(XOOPS_UPLOAD_PATH . '/avatars');
+        $avatarRootPrefix = is_string($avatarRoot)
+            ? rtrim($avatarRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+            : null;
+
+        // Track whether every DELETE in the sweep succeeded. The method
+        // contract is `@return bool`, but the previous implementation
+        // unconditionally returned true even if a DELETE failed and an
+        // orphaned row was left behind. Callers can now distinguish a
+        // clean sweep from a partial one.
+        $deleteOk = true;
+
         /** @var array $myrow */
         while (false !== ($myrow = $this->db->fetchArray($result))) {
-            //delete file
-            @unlink(XOOPS_UPLOAD_PATH . '/' . $myrow['avatar_file']);
+            // Avatar files are stored as 'avatars/<filename>'
+            // (kernel/avatar.php and 14 admin/edituser writers), so
+            // basename() would silently bypass cleanup. Instead:
+            //   - normalise backslashes to '/' (Windows-historic data)
+            //   - strip leading slashes (defends against absolute paths
+            //     accidentally or maliciously stored in the column)
+            //   - resolve the parent directory via realpath() so any
+            //     '../' segments collapse, and confirm the parent is
+            //     inside the resolved avatars/ subdir (trailing-
+            //     separator prefix so 'avatarsX/...' doesn't satisfy
+            //     'avatars')
+            //   - confirm the candidate is a regular file OR a symlink
+            //     before removal.
+            // Then invoke the cleanup helper on the ORIGINAL candidate
+            // path (not the realpath result). This matters when the
+            // avatar entry is a symlink: realpath() resolves to the
+            // symlink target, so unlinking the resolved path would
+            // delete the target file (potentially another avatar)
+            // instead of the symlink itself. Resolving the PARENT only
+            // keeps the containment check honest without following the
+            // symlink into the wrong file.
+            //
+            // (int) cast on avatar_id is defence-in-depth: the value is
+            // DB-origin so SQL injection is implausible, but the project
+            // convention is to never concatenate non-cast values into
+            // SQL strings. The cast also silences SonarCloud's
+            // concatenation warning on these DELETE statements.
+            $avatarId   = (int) ($myrow['avatar_id'] ?? 0);
+            $avatarFile = ltrim(str_replace('\\', '/', (string) ($myrow['avatar_file'] ?? '')), '/');
+            // Reject null-byte payloads BEFORE any filesystem call:
+            // dirname(), realpath(), is_file(), and is_link() all raise
+            // ValueError on PHP 8+ when the argument contains "\0".
+            // Letting that propagate would abort the sweep mid-loop and
+            // skip the avatar_user_link cleanup that follows. The DB
+            // row is still deleted unconditionally below — a malformed
+            // path should never block reclaiming the orphaned row.
+            if ('' !== $avatarFile && !str_contains($avatarFile, "\0")) {
+                $avatarCandidate = XOOPS_UPLOAD_PATH . '/' . $avatarFile;
+                $avatarParent    = realpath(dirname($avatarCandidate));
+                if (
+                    is_string($avatarParent)
+                    && is_string($avatarRootPrefix)
+                    && str_starts_with(rtrim($avatarParent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR, $avatarRootPrefix)
+                    && (is_file($avatarCandidate) || is_link($avatarCandidate))
+                ) {
+                    xoops_remove_file_quietly($avatarCandidate, 'orphaned avatar');
+                }
+            }
             //clean avatar table
-            $result1 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $myrow['avatar_id']);
+            if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId)) {
+                $deleteOk = false;
+            }
         }
         //clean any deleted users from avatar_user_link table
-        $result2 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar_user_link') . ' WHERE user_id NOT IN (SELECT uid FROM ' . $this->db->prefix('users') . ')');
+        if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar_user_link') . ' WHERE user_id NOT IN (SELECT uid FROM ' . $this->db->prefix('users') . ')')) {
+            $deleteOk = false;
+        }
 
-        return true;
+        return $deleteOk;
     }
 
     /**
@@ -221,10 +313,10 @@ class SystemMaintenance
         $result = file_put_contents($tempFile, $content, LOCK_EX);
 
         if ($result === false) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temp guard');
             trigger_error(sprintf('Failed to write guard file: %s', $label), E_USER_WARNING);
         } elseif ($result !== $expected) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temp guard');
             trigger_error(
                 sprintf(
                     'Short write for guard file %s: wrote %d of %d bytes',
@@ -242,20 +334,31 @@ class SystemMaintenance
                     $targetPerms = $currentPerms & 0777;
                 }
             }
-            @chmod($tempFile, $targetPerms);
+            // Non-fatal: content is written, only the perms may not
+            // take. Continue with the rename rather than aborting. The
+            // helper suppresses the native PHP warning so a single
+            // failure produces a single project-standard log line.
+            xoops_chmod_quietly($tempFile, $targetPerms, 'temp guard');
 
+            // The @rename(...) calls below are inside `if (!...)` checks —
+            // failure is detected by the boolean return and reported via
+            // trigger_error(). The `@` is retained to suppress PHP's
+            // native warning, which would otherwise double-report
+            // alongside our own diagnostic.
             $backupFile = null;
             if (file_exists($filename)) {
                 $backupFile = tempnam(dirname($filename), 'mtb');
                 if ($backupFile === false) {
-                    @unlink($tempFile);
+                    xoops_remove_file_quietly($tempFile, 'temp guard');
                     trigger_error(sprintf('Failed to create backup file for %s', $label), E_USER_WARNING);
 
                     return;
                 }
-                @unlink($backupFile);
+                // tempnam() created a 0-byte placeholder; remove it so
+                // the rename below can take its slot.
+                xoops_remove_file_quietly($backupFile, 'backup guard');
                 if (!@rename($filename, $backupFile)) {
-                    @unlink($tempFile);
+                    xoops_remove_file_quietly($tempFile, 'temp guard');
                     trigger_error(sprintf('Failed to back up guard file: %s', $label), E_USER_WARNING);
 
                     return;
@@ -263,16 +366,31 @@ class SystemMaintenance
             }
 
             if (!@rename($tempFile, $filename)) {
-                @unlink($tempFile);
+                xoops_remove_file_quietly($tempFile, 'temp guard');
+                // Track whether the backup-restore step succeeded so the
+                // composite failure warning can communicate that the
+                // original guard file is intact (vs. the worse case
+                // where both replace and restore failed and manual
+                // intervention may be required).
+                $restoredBackup = false;
                 if ($backupFile !== null) {
                     if (!@rename($backupFile, $filename)) {
                         trigger_error(sprintf('Failed to restore original guard file: %s', $label), E_USER_WARNING);
+                    } else {
+                        $restoredBackup = true;
                     }
                 }
 
-                trigger_error(sprintf('Failed to replace guard file: %s', $label), E_USER_WARNING);
-            } elseif ($backupFile !== null && file_exists($backupFile) && !@unlink($backupFile)) {
-                trigger_error(sprintf('Failed to remove backup guard file: %s', $label), E_USER_WARNING);
+                trigger_error(
+                    sprintf(
+                        'Failed to replace guard file: %s%s',
+                        $label,
+                        $restoredBackup ? ' (original restored)' : ''
+                    ),
+                    E_USER_WARNING
+                );
+            } elseif ($backupFile !== null) {
+                xoops_remove_file_quietly($backupFile, 'backup guard');
             }
         }
     }
