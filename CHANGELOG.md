@@ -1,0 +1,4381 @@
+# Changelog
+
+All notable changes to XOOPS Core. This file is generated from the commit
+history by git-cliff — **do not edit it by hand**. For curated, narrative
+release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
+[`docs/lang_diff.txt`](docs/lang_diff.txt).
+
+## [Unreleased]
+
+### Bug Fixes
+- Changelog workflow must open a PR, not push to protected master (#68)
+- Actually commit a newly generated CHANGELOG.md
+- Guard optional function calls that fatal on PHP 8.2
+- Harden constructor for missing mailer config (#50)
+- Harden readpmsg save/delete flow (#49)
+- Defensive fallback when theme_set config rows are missing (#44)
+- Handler-based avatar save with rollback; null guards; strip_tags cast (#47)
+- Document @throws; align money_format intl branch with fail-fast
+- Only cast numeric strings; let other types fail fast
+- Cast $number to float before passing to PHP's number_format()
+- Drop deprecated by-reference form on uploader error fetches
+- Tighten admin output and module entry-point checks (#42)
+- Fix(pm): tighten admin form handling and template output (#41)
+- Fix(system): module update preserves mid + catid; users.php exec/isResultSet bug (#40)
+- Number_format() defaults now come from locale, not hardc… (#37)
+- Fix(system): preserve theme switch context safely (#33)
+
+### Documentation
+- Record installer extension-guard fixes for 2.7.0 Final
+
+### Miscellaneous
+- Bump actions/checkout to v6 (Node 24) in changelog workflow
+- Set up git-cliff for a generated CHANGELOG.md (#66)
+- Add .githooks/ pre-commit + commit-msg sniffs for documented antipatterns (#48)
+
+### Other
+- Merge pull request #67 from mambax7/chore/bump-checkout-node24
+- Merge pull request #65 from mambax7/docs/changelog-270-installer
+- Merge pull request #64 from mambax7/feature/translations_info
+- Translation info
+- Fix/installer required extensions gate (#62)
+- Merge pull request #61 from mambax7/feature/update_debugbar_version
+- Update Debugbar version
+- Update readme.txt
+- Final updates for XOOPS 2.7.0 (#54)
+- Helper-based atomic-write cleanup; replace @unlink/@chmod (#52)
+- Merge pull request #51 from mambax7/fix/upgrade-language-leading-byte
+- Strip leading space before <?php in language index files
+- Merge pull request #46 from mambax7/fix/locale-number-format-cast
+- Merge pull request #43 from mambax7/feature/system-uploader-by-ref-fix
+- Remove Qodana, disable XML-RPC (#39)
+- Update examples
+- TinyMCE 3.x removed due to unpatched security vulnerabilities
+- Non-expand section System in the menu (#34)
+- Update XOOPS version to 2.7.0-RC5 (#32)
+
+### Styling
+- Drop redundant @ now guarded by function_exists
+
+### Testing
+- Cover required-extension helpers (stacked on #62) (#63)
+- Pin null-byte contract for cleanup helpers (#53)
+
+## [v2.7.0-RC5] - 2026-04-22
+
+### Bug Fixes
+- Load runtime scripts in the right order (#31)
+- Fix for skipping index normalisation on profile_field.field_name, if column is wider than 64 chars.
+- Add menusitems FK during fresh install for schema parity (#9) (#27)
+
+### Other
+- Setting utf8mb4 as a default (#30)
+- RC-scoped 3.6.4 fixes for PHP 8, dblayertrap, and filter loading (#28)
+- SonarQube settings update (#26)
+- The /install folder is deleted after installation, so we can't call d… (#25)
+- TinyMCE default config was not actually loading the full plugin set. (#24)
+- Normalize profile and session indexes for 2.7.0 (#23)
+- Show section for system services always, after controlpanel (#21)
+- Merge pull request #22 from XOOPS/dependabot/github_actions/actions/cache-5.0.5
+
+## [v2.7.0-RC4] - 2026-04-14
+
+### Bug Fixes
+- Remove XMF dependency from all pre-autoloader install… (#19)
+
+### Other
+- Update XOOPS version to 2.7.0-RC4
+
+## [v2.7.0-RC3] - 2026-04-14
+
+### Bug Fixes
+- Skip stale patch directories and fix System module update URL (#17)
+- Prevent column-shift corruption and autoloader failure on fresh install (#16)
+
+### Other
+- Update modern theme (#14)
+
+## [v2.7.0-RC2] - 2026-04-13
+
+### Bug Fixes
+- Fix for missing htdocs/modules/system/constants.php
+
+### Other
+- Revise note in README for XOOPS Core 2.7.x
+
+## [v2.7.0-RC1] - 2026-04-12
+
+### Bug Fixes
+- Create and seed menu tables during fresh install (#8)
+- Add CSRF token to module admin AJAX requests (#1685)
+- Delete confirmation UX, centered popups, xbootstrap5 templates (#1684)
+- Serve source maps for proxied JS/CSS files (#805) (#1682)
+- Filter recipients by PM module access permission (#831) (#1680)
+- Menu table creation and xbootstrap5 dropdown styling (#1676)
+- Fixed problems with * for required (#1673)
+- Fix broken Next button on non-form pages (#1668)
+- Fix for xoopsutility
+- Fix smarty variable error
+- Fix for modules\system\language\english\admin\modulesadmin.php
+- Fix for XoopsCache::delete() casting
+- Fix for potential "Cannot use a scalar value as an array" error
+- Fix Using null as an array offset is deprecated, use an empty string instead
+- Fix bug when running upgrade
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1588
+- Fix for Cannot use bool as array
+- Restore Legacy IN Behavior in Criteria and Add Safe Array-Based Handling
+- Fix for xoops_setcookie()
+- Fix the N+1 query pattern issue reported by Copilot
+- Fix for XOOPS_COOKIE_DOMAIN
+- Fixes
+- Fixes
+- Fix for empty $modversion['adminmenu'] = '';
+- Fix for Admin users search
+- Fix Admin help toggle
+- Fix for PathController, cosmetics
+- Fix for waiting block deprecated messages
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1519
+- Fix for Admin themes icons
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1515
+- Fix in xbootstrap5 is system_siteclosed.tpl
+- Fix https://github.com/XOOPS/XoopsCore25/issues/1335
+- Https://github.com/XOOPS/XoopsCore25/issues/1464
+- Fix workflows/pr_tests.yml
+- Fix workflows/pr_tests.yml
+- Fix for folder location
+- Fix for Smarty deprecated strtime()
+- Fixed bug in search tpl
+- Fixing bug with button cancel
+- Fix for theme conf file
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1468 and https://github.com/XOOPS/XoopsCore25/issues/1470
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1468
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1259
+- Fix for Search of users in Admin
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1451
+- Fix dropdown in XoopsFormRendererBootstrap5
+- Fix typo
+- Fix for multi-image upload
+- Fix for email templates in Notifications
+- Fix for prepared statement result
+- Fix for installation issues
+- Fix templates
+- Fix for template
+- Fixes, language
+- Fix for search
+- Fix for wrong user variable naming
+- Fixed wrong quotation mark
+- Fix for <{xoUserInfo
+- Fix silly bugs, Scrutinizer
+- Fix for multiple varname cases is one file
+- Fix for missing system_confirm.tpl
+- Fix empty quotation marks
+- Fixes
+- Fix for {$wizard->language}/english/global.php"
+- Fix smarty 3
+- Fixed smarty default errors for module extcal
+- Fix installation and update of the modules with smarty3
+- Fix for a wrong parenthesis
+- Fix for Break in Install #1318
+- Https://github.com/XOOPS/XoopsCore25/issues/1315
+- Fix php8.2 error
+- Setcookie(): Passing null to parameter #2 ($value) of type string is deprecated
+- Fix error by ref.
+- Fix "preg_split(): Passing null to parameter #3 ($limit) of type int is deprecated" error in php 8.1
+- Fixing conflicts
+- Fix in template
+- Fix install table modules (version)
+- Fix in XoopsOnlineHandler
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1284
+- Fix https://github.com/XOOPS/XoopsCore25/issues/1269
+- Fix for accidently deleted line
+- Fixed type error
+- Https://github.com/XOOPS/XoopsCore25/issues/1144
+- Fix for function.block.php
+- Fix path to new XoopsBlock
+- Fixe height
+- Fix display image
+- Fixes for Scrutinizer
+- Fix for  "array to string conversion error"
+- Fix for version number as string
+- Fix php8 (Warning: Undefined array key "blocks" in file /xoops_data/caches/smarty_compile/ca10e9d0-system-xbootstrap-default^%%F7^F76^F76DDF41%%db%3Asystem_blocks.tpl.php line 64)
+- Fix errors with xmsocial
+- Fix xmdoc
+- Fix search
+- Fix calandar
+- Fix https://github.com/XOOPS/XoopsCore25/issues/719
+- Fix $op
+- Fix Xbootstrap and xswatch notification display
+- Fix error with getimagesize and allow_url_fopen =
+- Fix error by ref
+- Fix system_images.html
+- Fixes for Publisher:
+- Fixes
+- Fix for pre-uninstall
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/90#issuecomment-216917263
+- Fix for mailer
+- Fixing tabs
+- Fix profile/search (cesag/slider84)
+- Fix for class name in function definition
+- Fixed bug in __construct
+- Fixing name problem
+- Fixed
+- Fixed bug in install, uninstall, update
+- Fix "setExtra" in moduleadmin.php, Admin buttons can now use "onClick" assignments (mamba)
+- Fixing wrong directory
+- Fixed small error
+- Fixed huge amount of small bugs
+- Fixes for Footer blocks, incl. Default theme
+- Fix for mismatched parameters in -moz-linear-gradient(
+- Fixing table names (missing underscore)
+- Fixed bug when updating from xNewsletter to xnewsletter on linux/unix servers
+- Fixed bug in var names, standardize var names
+- Fixing a bug (wrong name of Criteria)
+- Fixed bugs
+- Fixed bug
+- Fixing links to module after its installation
+- Fixing Help issues
+- Fixed bugs: wrong url for images folder, renamed html links to tpl links, replacing (!result) with (!$result), deleting obsolete bookmarks (cesag)
+- Fix folder error,
+- Fix for Update setting Template import date to 0
+- Fix for array issue in pm/viempmsg.php (Roby73/mamba)
+- Fixed disappearing link when edited
+- Fixed bug to create a new logo because moving images folder and js folder in assets
+
+### Compatibility
+- Compatibility for Apache 2.2 and 2.4
+
+### Features
+- Add renderFooterInfo and displayFooterInfo methods… (#1679)
+
+### Miscellaneous
+- Update TinyMCE 7 from 7.7.2 to 7.9.2
+- Add jquery.jgrowl source map (#805)
+
+### Other
+- Add theme screenshots for installation (#7)
+- Add theme screenshots for installation
+- Feature/upgrade 270 (#5)
+- Update htdocs/class/xoopseditor/tinymce7/js/tinymce/CHANGELOG.md
+- Update htdocs/class/xoopseditor/tinymce7/js/tinymce/CHANGELOG.md
+- Update htdocs/class/xoopseditor/tinymce7/js/tinymce/CHANGELOG.md
+- Add xtailwind and xtailwind2 themes
+- Delete xbootstrap and xswatch4
+- Merge pull request #1 from XOOPS/dependabot/github_actions/actions/checkout-6.0.2
+- Bump actions/checkout from 5.0.0 to 6.0.2
+- Merge pull request #2 from mambax7/master
+- Update README for XOOPS Core version change to 2.7.x
+- Files required for Tailwind CSS based themes (#1687)
+- Xswatch5 (#1686)
+- Bump SonarSource/sonarqube-scan-action from 7.0.0 to 7.1.0
+- [ImgBot] Optimize images (#1678)
+- Feature/change order for all modules (#1677)
+- Delete obsolety pda.php (#1675)
+- Bump codecov/codecov-action from 5.5.3 to 6.0.0 (#1674)
+- Bump codecov/codecov-action from 5.5.2 to 5.5.3 (#1672)
+- Bump JetBrains/qodana-action from 2025.2.4 to 2025.3.2 (#1671)
+- Bump actions/cache from 4.3.0 to 5.0.4 (#1670)
+- Bump shivammathur/setup-php from 2.36.0 to 2.37.0 (#1669)
+- Clean-room system menu administration (#1666)
+- Fix CI to run real XOOPS test suite instead of placeholder, enable Co… (#1664)
+- Add system menu management (downport from XOOPS 2.7.0)
+- Merge pull request #1663 from mambax7/fix/deferred-quick-wins
+- Fixes two issues on PR #1663:
+- Addresses feedback on PR #1663:
+- Addresses 4 deferred items from the RC review:
+- Merge pull request #1662 from mambax7/fix/sonarcloud-security-blockers
+- Fixes two issues on PR #1662:
+- Fix SonarCloud blocker XSS vulnerabilities: escape all reflected user data
+- Merge pull request #1661 from mambax7/fix/protector-badips-and-validateprefix
+- Fix unserialize trailing newline, require Protector class in oninstall, catch prefix exceptions
+- Fix Protector badips file handling, replace die() with exception in validatePrefix
+- Merge pull request #1660 from mambax7/fix/session-samesite-preference
+- Remove dead $secure assignment, harden upgrade with scoped queries and duplicate prevention
+- Fix Secure flag regression, make upgrade task idempotent with error handling
+- Add configurable session cookie SameSite and Secure preferences (#1501)
+- Merge pull request #1659 from mambax7/fix/formdateselect-empty-value
+- Render blank date as empty field when value is 0 in all four renderers
+- Allow empty/blank dates in XoopsFormTextDateSelect (#1163)
+- Merge pull request #1658 from mambax7/fix/dhtml-image-default-width
+- Use strict regex for image width validation instead of parseInt
+- Fix DHTML editor image width defaulting to 300px
+- Merge pull request #1655 from mambax7/fix/composite-logger-and-protector-icon
+- Dispatch raw messages to sub-loggers, let consumers format from context
+- Addresses Copilot and CodeRabbit review feedback on PR #1655:
+- Add fallback to default icon when requested PNG does not exist
+- Sanitize errfile path before storing and dispatching to sub-loggers
+- Address review feedback: activation gating, message format, type safety
+- Add composite logger pattern to XoopsLogger and fix Protector module icon
+- Merge pull request #1657 from mambax7/fix/blocksadmin-ctype-case
+- Fix custom block c_type lowercase regression from getCmd()
+- Merge pull request #1649 from mambax7/fix/rc-admin-correctness
+- Use strict comparison for passwords, pin uname Request to POST
+- Validate prefix input instead of silently rewriting to prevent wrong-table targeting
+- Use PREFIX_INVALID_CHAR_PATTERN constant in sanitization to avoid regex drift
+- Fix prefix sanitization to allow hyphens, matching PREFIX_INVALID_CHAR_PATTERN
+- Fix admin page correctness: null guards, password validation, multi-select, prefix case
+- Merge pull request #1650 from mambax7/fix/rc-request-hash-pinning
+- Fix AJAX toggle handlers to read IDs from POST, not GET
+- Clamp search limit to prevent unbounded queries, harden test file reads
+- Pin explicit hash argument on all remaining Request::getXxx() calls
+- Merge pull request #1651 from mambax7/fix/rc-code-quality
+- Remove legacy @package/@subpackage/@category tags per PSR-12, update tests to assert absence
+- Abort avatar delete on failed UID query, restore @category/@package in proxy docblock
+- Flatten nested if statements in avatar delete with short-circuit evaluation
+- Fix reversed assertions, align docblock conventions, fix compensating restore scope
+- Fix avatar delete restore to target exact UIDs instead of all blank.gif users;
+- Updates
+- Fix avatar delete atomicity, localize FK error strings, complete proxy PHPDoc
+- Merge pull request #1644 from mambax7/fix/rc-protector-exec-hardening
+- Remove unused $previousHandler variable in exec() tests
+- Fix test warnings, add error logging, clean up imports and PHPDoc
+- Harden Protector exec() against dblayertrap bypass and check delete failures
+- Merge pull request #1646 from mambax7/fix/rc-database-query-modernization
+- Consolidate convention tests into single method to fix SonarCloud duplication gate
+- Reduce test duplication for SonarCloud gate, remove legacy @package tags per PSR-12
+- Fix instanceof operator precedence in isResultSet guards
+- Fix instanceof precedence bug, broaden suppression check, update test patterns
+- Consolidate module script convention tests into single data-driven class
+- Fix missing isResultSet() guard and remove @ error suppression in module update scripts
+- Merge pull request #1653 from mambax7/fix/rc-eval-removal-legacy-cleanup
+- Rate-limit legacy block log to once per request, fix missing return after markTestSkipped
+- Fix static warning state, scope error handlers, add T_EVAL assertions and require_once
+- Downgrade trigger_error to E_USER_DEPRECATED, trap in tests with error handler
+- Fix test section header and docblock to match actual implementation
+- Restore eval() in Protector lifecycle for D3-clone compatibility
+- Use regex for near-miss detection to handle whitespace and case variants
+- Remove eval() from protector lifecycle files, use literal function names
+- Clarify near-miss warning: differentiate filename vs function_name rules
+- Fix near-miss detection, add trigger_error warnings, add test docblock tags
+- Address Scrutinizer, CodeRabbit, and Copilot review feedback
+- Restore eval() for D3 clone support, fix docblocks and test assertions
+- Address reviewer feedback: registry dirname, fix warning text, use tokenizer
+- Remove eval() from PHP blocks and protector lifecycle callbacks
+- Merge pull request #1652 from mambax7/fix/rc-activation-hardening
+- Tighten hash_equals assertions to target actkey comparison specifically
+- Remove dead generateSecureToken() and broaden no-regeneration assertions
+- Use whitespace-tolerant regexes in activation hardening tests
+- Fix activation tests: align with cleared actkey and address review feedback
+- Clear actkey after activation for one-time-use tokens
+- Merge pull request #1654 from mambax7/fix/rc-instanceof-precedence
+- Fix instanceof operator precedence in result set guards
+- Merge pull request #1645 from mambax7/fix/rc-banners-security
+- Fix instanceof operator precedence in result set guards
+- Address reviewer feedback: fix test metadata, assertion order, and IDOR messages
+- Add column-length guard to admin save, fix algo check for PHP 8.2+
+- Fix banner password schema, session fixation, and admin hash exposure
+- Fix banner client password storage and XSS vulnerabilities
+- Merge pull request #1647 from mambax7/fix/rc-sql-injection-csrf
+- Add type guard, readSourceFile helper, and try/finally test isolation
+- Guard displayTables return type for static analysis
+- Tighten CSRF test, extract constants helper, add type guard
+- Fix delete UI, harden prefix validation, and improve test coverage
+- Fix SQL injection in maintenance dump and add CSRF protection to profile visibility
+- Merge pull request #1648 from mambax7/master
+- Move null guard before handler type checks in XoopsUtility::recursive
+- Merge pull request #1630 from mambax7/feature/debugbar
+- Match default query log mode to config and fix mail click bubbling
+- Fix invalid multiple thead in SQL widget, add openhandler guard
+- Fix missing valueTd append in SQL widget and add legacy asset paths
+- Fix clear-storage CSRF, mail preview remote loading, and template XSS
+- Disable dist bundle and fix SQL filter composability bug
+- Fix XSS, falsy-value bug, and spurious return values in debugbar JS
+- Fix method filter placeholder and remove dead code in openhandler
+- Replace require/include with require_once/include_once in debugbar admin
+- Fix JS bugs in debugbar widgets flagged by reviewers
+- Update debugbar module assets and admin files
+- Fix bugs found in PR review comments
+- Merge master into feature/debugbar
+- Updates #2
+- Fix critical review issues in debugbar JS: XSS, null crashes, missing event param
+- Debugbar updates
+- Merge pull request #1637 from mambax7/refactor/safe-php-blocks
+- Address review feedback: headers, docblock, and legacy warning method
+- Assert all remaining file_put_contents calls in tests
+- Assert spoof file write, guard removeTempBlockFile with is_writable
+- Improve error diagnostics, harden test filesystem ops, remove test eval()
+- Fix stale docblock, soften direct SQL wording in tutorial
+- Reduce runtime noise, isolate tests, harden examples
+- Harden file-based block validation and refine pipe guard
+- Promote handler-first patterns, add getCustomBlocksDir(), document eval deprecation roadmap
+- Apply reviewer feedback: markdownlint fixes, PSR-12 imports, BC docblock
+- Fix double-encoding in example blocks, add trigger_error to block warnings
+- Reduce complexity: extract helpers, add caching, fix PHP 8.x trim() warning
+- Strengthen routing tests, add function-origin regression test, fix style
+- Address PR review round 3: fix BC regression, harden security, add docstrings
+- Updates
+- Harden file-based PHP blocks: realpath validation, OB safety, comment handler
+- Address PR review: type casts, HTML escaping, output buffering, test cleanup
+- Add tests for file-based PHP blocks and fix logger/type issues
+- Add file-based PHP custom blocks (no eval) with backward compatibility
+- Merge pull request #1641 from mambax7/fix/install_ok_undefined_module
+- Use existing language constants for invalid module error messages
+- Use redirect_header for invalid module guards, validate uninstall/update against installed modules
+- Validate module dirname against installed modules list
+- Fix undefined variable $module in install_ok case
+- Merge pull request #1643 from mambax7/feature/XMF_Update2
+- Regenerate composer artifacts with --no-dev for production
+- Downgrade symfony/var-dumper v8.0.6 to v7.4.6 for PHP 8.2 compatibility
+- Updating XMF and  vendor/composer/library
+- Merge pull request #1642 from mambax7/fix/xoopsutility-function-exists-type
+- Fix function_exists() type strictness in XoopsUtility::recursive()
+- Merge pull request #1640 from mambax7/feature/upgrade_fixForeachVarnames
+- Require valid identifiers to prevent PCRE backreference corruption
+- Use strict fwrite comparison, rename short variable for clarity
+- Fix nested scope detection to handle any foreach attribute order
+- Broaden foreach varname scanner/repair to handle all valid Smarty syntax
+- Widen replacement boundary, skip malformed blocks, respect nested scope
+- Fix foreach varname repair to handle all Smarty variable forms
+- Add autofix for Smarty's foreach() with identical varnames
+- Merge pull request #1639 from mambax7/hotfix/updates_fixes
+- Fix syntax error from missing if-condition parentheses in banners.php
+- Fix proxy method docblock, clean up banners.php redundancies
+- Abort avatar delete on reset failure, use raw getVar, fix proxy docblock
+- Reorder avatar delete flow, update proxy docblocks, charset consistency
+- Guard avatar realpath failure, add explicit instanceof parentheses
+- Fix avatar path traversal check, init created_tables, clean unused vars
+- Harden avatar deletion, protector log cleanup, and misc review fixes
+- Add explicit UTF-8 charset to htmlspecialchars calls in modulesadmin
+- Normalize 0 to null in proxy query() to preserve legacy pagination semantics
+- Remove unsafe WITH CTE allowlist from proxy, escape remaining raw db error
+- Tighten proxy WITH rule, escape db error output in admin HTML
+- Guard remaining fetchRow() calls in banners.php before destructuring
+- Use hash_equals() for timing-safe banner credential comparisons
+- Fix predictable actkey fallback, guard fetchRow, append DB errors
+- Append db error to FK messages, fail-closed actkey, complete FK logging
+- Fix SESSION bug, curly quotes, FK logging, actkey fallback strength
+- Fix smart-quote regression, guard fetchRow, improve error logging
+- Merge branch 'master' into hotfix/updates_fixes
+- Merge pull request #1638 from mambax7/fix/security-audit-phase2
+- Trigger CI review
+- Clarify eval() comments in protector lifecycle files
+- Enable SSL verification in Snoopy, clean up test warnings
+- Propagate _httpsrequest failure to fetch/submit, add .html template migration on upgrade
+- Address PR review: restore eval with var_export for protector clone support, fix Snoopy curl_exec type safety and SSL comments
+- Address PR review feedback: fix Snoopy, Zipfile, unserialize, tests
+- Add comprehensive tests for security audit phase 2 changes
+- Remove security remediation doc from repository
+- Remove eval() from Snoopy, zipfile, art framework, and protector lifecycle
+- Remove legacy .html template registrations containing {php} blocks
+- Harden activation keys (CSPRNG + strict compare) and fix unserialize
+- Polish review feedback: charset consistency, path disclosure, FK logging
+- Harden upgrader error handling, fix avatar deletion, improve security
+- Fix proxy regression, upgrader logic errors, and security issues from PR review
+- Replace deprecated queryF() with query()/exec(), fix runtime errors and @ suppression
+- Merge pull request #1636 from mambax7/fix/security-audit-remediation
+- Improve remediation doc: add finding counts, full paths, generic cache path
+- Mark remediation record as final
+- Add password reset caveat to upgrade notes
+- Address latest Copilot review feedback
+- Updates #2
+- Updates #1
+- Use defined/constant pattern for XOOPS_ALLOW_PHP_BLOCKS
+- Fix 13 security and correctness issues from audit
+- Merge pull request #1635 from mambax7/feature/imagemanager-improvements
+- Add explicit GET source to Request::getCmd('op') in imagemanager
+- Updates #1
+- Improve imagemanager: deduplicate stylesheet lookup, sanitize path, add empty-state message
+- Merge pull request #1634 from GregMage/fix_imagemanager
+- Fix Smarty variable error if there are no categories
+- <php> tags are no longer supported by Smarty for security reasons.
+- Merge pull request #1633 from mambax7/feature/superglobal-to-XmfRequest_migration
+- Toggle from stored value, use $obj->getVar() for delete confirm IDs
+- Use raw+no-trim getVar() for password fields in profile/admin/user.php
+- Updates #24
+- Use getText() for password fields, add test docstrings
+- Rename step toggle params to camelCase with type hints
+- Add explicit POST hashes in edituser.php, fix groups null guards
+- Updates #23
+- Add null guard after getGroup()/get() in groups edit case
+- Updates #22
+- Updates #21
+- Updates #20
+- Update #19
+- Update #18
+- Updates #17
+- Update # 16
+- Fix getCmd lowercasing, explicit hashes, and zero-valid ?: patterns
+- Fix ?: operator for zero-valid values and mids GET/POST handling
+- Updates #15
+- Updates #14
+- Updates #13
+- Fix CodeRabbit review issues: fatal errors, null checks, fopen handling
+- Updates #12
+- Updates #11
+- Fix PR #1633 review issues: security, functional bugs, and incomplete migration
+- Updates #10
+- Updates #9
+- Updates #8
+- Updates #7
+- Updates #6
+- Updates #5
+- Updates #4
+- Updates #3
+- Updates 2
+- Updates
+- Superglobal Migration to Xmf\Request
+- Merge pull request #1627 from mambax7/feature/generic-token-handler
+- Updates #3
+- Updates #2
+- Updates
+- Fix uid enumeration on GET and use exec() for mutating SQL
+- Reverting actkey back to VARCHAR(8)
+- Apply Kevin's feedback: UNIQUE KEY, countRecent index, success message, reword expandactkey
+- Address CodeRabbit, Copilot, and SonarQube review findings on PR #1627
+- Apply remaining Kevin review suggestions
+- Fix camelCase naming in RFC (ActKey, LostPass per Kevin's review)
+- Add XoopsTokenHandler, refactor lostpass to use token table
+- Add RFC: Generic Token Handler for XOOPS
+- Merge pull request #1631 from ggoffy/master
+- Coderabbitai fixed wrong colspan
+- Removed unused code
+- Merge pull request #1632 from mambax7/master
+- Guard file_get_contents() return before assigning to typed property
+- Address CodeRabbit review feedback on test files
+- Extract shared setUp() into SourceFileTestTrait to fix SonarQube duplication
+- Add unit tests for module admin controller and confirm template
+- Clarify !important usage policy in xoops.css header comment
+- Merge pull request #1629 from mambax7/feature/fix_for_install_folder_not_being_renamed_after_installation_on_Windows
+- Fix remaining review nits: markdown heading order, CSS button spacing, logger sidebar
+- Address remaining review comments on PR #1629
+- Address CodeRabbit and Copilot review feedback on PR #1629
+- Address CodeRabbit review: use Xmf\Request for cookie, fix DB query conventions
+- Fix SonarCloud issues: commented-out code and contrast ratio
+- Suppress SonarQube include_once false positive in menu.php
+- Fix review issues in Modern theme: critical bugs + docs cleanup
+- Added customization of Modern theme
+- Merge pull request #1626 from mambax7/feature/add-easymde-editor
+- Address remaining CodeRabbit review items
+- Address CodeRabbit review feedback
+- Add EasyMDE Markdown editor to XoopsEditor
+- Merge pull request #1624 from mambax7/feature/harden-lostpass
+- Add class PHPDoc tags and assert storePayload return value
+- Add XOOPS copyright header to LostpassSecurityTest
+- Fix test mocks for instanceof guard, add @throws tag
+- Add instanceof guard on fetchArray to satisfy static analysis
+- Fix SonarCloud quality gate: duplication and reliability
+- Extract lostpass form rendering to Smarty template
+- Address CodeRabbit review feedback
+- Use $result naming and guard fetchArray with isResultSet
+- Fix static analysis issues flagged by SonarCloud
+- Fix SonarCloud quality gate issues
+- Update install schema: actkey varchar(8) to varchar(100)
+- Harden lostpass.php: secure token-based password recovery
+- Merge pull request #1625 from mambax7/feature/update_year
+- Update copyright year to 2026
+- Merge pull request #1623 from mambax7/fix/protector-unserialize-trim
+- Fix unserialize() extra data warning in Protector
+- Merge pull request #1621 from mambax7/feature/fix_english_modulesadmin
+- Merge pull request #1619 from mambax7/chore/update-php-minimum-82
+- Fix first-class callable syntax attribution and add type hints
+- Address CodeRabbit review feedback
+- Update all PHP version references from 7.4 to 8.2 minimum
+- Merge pull request #1620 from mambax7/fix/scrutinizer-xoopscache-issues
+- Make engine() $name parameter nullable to preserve backward compatibility
+- Fix Scrutinizer issues in XoopsCache
+- Merge pull request #1596 from mambax7/feature/fix_xoopscache
+- Check init() return value in prepareEngine(), handle uninitialized engine in config re-init
+- Add @deprecated tag to XoopsCacheEngineInterface
+- Extract prepareEngine() helper to reduce code duplication
+- Address review feedback: fix clear() init order, validate engine config, harden loadEngine
+- Merge branch 'master' into feature/fix_xoopscache
+- Remove extra blank lines in xoopscache.php
+- Updates
+- Updates (Round 8)
+- Updates (Round 6)
+- Updates (Round 5)
+- More updates
+- Updates
+- Updates
+- Adding XoopsCacheEngineInterface, improvements, cosmetics
+- Minor improvements
+- Cleanup
+- Merge pull request #1608 from mambax7/fix/387-prevent-password-equals-username
+- Use mb_strtolower() for password/username comparison
+- Gate password!=username check on pass2 being non-empty
+- Address review feedback: admin language constant, strict empty check
+- Add password!=username check to admin user create/edit, fix PSR-12 cast spacing
+- Address review feedback for #387 password validation
+- Fix #387: Prevent password from matching username
+- Merge pull request #1598 from mambax7/feature/improve_installer
+- Address CodeRabbit review: fix column type mismatch and unused vars
+- Clean up write model: remove dead code and $queryFunc indirection
+- Increase primary key columns from smallint to int
+- Improve installation
+- Merge pull request #1611 from mambax7/fix/1134-image-name-field-size
+- Fix #1134: Increase image_name field from varchar(30) to varchar(191)
+- Merge pull request #1617 from mambax7/feature/update_xbootstrap5
+- Update htdocs/themes/xbootstrap5/theme.ini
+- Update xBootstrap
+- Merge pull request #1616 from ggoffy/master
+- Added case list
+- Added case list
+- Inlined nested if
+- Moved xoops_cp_header to top
+- Go back on step
+- Sonarqube
+- Replaced deprecated xoops_getModuleOption
+- Coderabbitai
+- Breadcrumbs in system administration adjusted and standardized
+- Merge pull request #1618 from mambax7/feature/sync_XMF
+- Update changelog for PHP 8.2 minimum version changes
+- Raise minimum PHP version to 8.2 across CI, analysis tools, and runtime checks
+- Update XMF
+- Merge pull request #1615 from mambax7/feature/adjust_defined(XOOPS_ROOT_PATH)
+- Adjusting defined('XOOPS_ROOT_PATH')
+- Merge pull request #1610 from mambax7/feature/529-formaturl-secure-parameter
+- Feature #529: Add $secure parameter to formatURL()
+- Merge pull request #1609 from mambax7/fix/1291-deprecated-code-php8x
+- Address review feedback for #1291 deprecated code fix
+- Fix #1291: Remove PHP 8.x deprecated functions
+- Merge pull request #1607 from mambax7/fix/1215-money-format-php8
+- Address review feedback for #1215 money_format fix
+- Fix #1215: Replace removed money_format() with NumberFormatter
+- Merge pull request #1614 from mambax7/feature/RTL
+- RTL improvements
+- Add _TEXT_DIRECTION and _RTL
+- Merge pull request #1613 from mambax7/master
+- Fix Copilot round 2 review comments on PR #1613
+- Add browser requirements FAQ entry to User Guide
+- Fix CodeRabbit and Copilot review comments on PR #1613
+- Add 10 new Mermaid diagrams to Developer Guide
+- Add component interaction sequence diagram to Developer Guide
+- Replace ASCII diagrams with Mermaid in Developer Guide
+- Add user guide and developer/designer guide for Modern theme
+- Merge pull request #1612 from mambax7/feature/modern_admin_theme
+- Use include_once instead of include per SonarQube rule
+- Harden menu.php include path and fix chart rebuild after empty selection
+- Fix Scrutinizer, CodeRabbit, and Copilot round 2 review issues
+- Address PR #1612 review comments from Copilot and CodeRabbit
+- Modern Admin Theme
+- Merge pull request #1605 from mambax7/feature/phpunit-tests
+- Address review feedback: regex fix, dead code, test cleanup
+- Comprehensive PHPUnit test suite for XOOPS 2.5.x
+- Merge pull request #1606 from kevinpetit/master
+- Update user notifications in lang_diff.txt
+- Update htdocs/language/english/user.php
+- Revise user-related language definitions
+- Refactor email confirmation message output
+- Refactor email confirmation message output
+- Update user error messages for clarity
+- Update htdocs/language/english/user.php
+- Update htdocs/language/english/user.php
+- Modified lostpass.php and user.php to avoid a username leak when using the reset password function.
+- Merge pull request #1604 from mambax7/feature/DebugbarMonolog
+- Address CodeRabbit review: vendor paths, path leak, XSS hardening, tabnab
+- Use HTML table for admin Module Status two-column layout
+- Use information type for admin info box lines to preserve HTML
+- Fix two-column layout in admin Module Status panel
+- Use two-column layout for admin Module Status panel
+- Extract hardcoded English strings into language constants
+- Improve error messages in install.php and fix PSR-12 variable naming
+- Address CodeRabbit review: paths, naming, caching, and docs
+- Address CodeRabbit review: security, XSS, and hardening fixes
+- Use require_once/include_once for consistency and double-include safety
+- Refactor ray_context Smarty plugin to reduce cognitive complexity
+- Add generic font family fallback to PhpDebugbarFontAwesome declarations
+- Fix nonstandard CSS gradient direction in debugbar.css
+- Address CodeRabbit review feedback (round 3)
+- Address CodeRabbit review feedback (round 2)
+- Address CodeRabbit review and Scrutinizer issues for Debugbar/Monolog
+- Add Debugbar and Monolog
+- Merge pull request #1599 from mambax7/feature/update_XMF_and_RegDom
+- Merge upstream/master into feature/update_XMF_and_RegDom
+- Merge pull request #1600 from mambax7/feature/modernize-ci-config
+- Address CodeRabbit review feedback (round 4)
+- Fix SemVer URL to use HTTPS
+- Fix PHP matrix, remove duplicate workflow, pin runners, add vendor exclusions
+- Consolidate CONTRIBUTING.md into single source of truth
+- Add concurrency control and timeout to sonarcloud.yml
+- Address CodeRabbit review feedback (round 3)
+- Address Copilot and CodeRabbit review feedback
+- Modernize CI/CD config files and add .github/ infrastructure
+- XMF & RegDom update
+- Merge pull request #1595 from mambax7/feature/improve_versionCompare()
+- Simplification
+- Updates
+- Improve versionCompare()
+- Merge pull request #1594 from mambax7/feature/FontAwesome7
+- Add Font Awesome 7.1.0
+- Merge pull request #1597 from ggoffy/master
+- Merge pull request #1589 from mambax7/feature/session_for_PHP8.4
+- Update htdocs/kernel/session80.php
+- Update htdocs/kernel/session80.php
+- Update htdocs/kernel/session80.php
+- Update htdocs/kernel/session80.php
+- Update htdocs/kernel/session.php
+- Update htdocs/kernel/session74.php
+- Update htdocs/kernel/session74.php
+- Merge branch 'master' into feature/session_for_PHP8.4
+- Update htdocs/kernel/session74.php
+- Update htdocs/kernel/session74.php
+- Update htdocs/kernel/session74.php
+- Remove trans-SID (url SID appending)
+- Merge pull request #1592 from mambax7/feature/cosmetics2
+- Update htdocs/include/functions.legacy.php
+- Update htdocs/include/functions.legacy.php
+- Update htdocs/include/cp_functions.php
+- Update htdocs/class/xoopscomments.php
+- Scrutinizer
+- Co-pilot cosmetics
+- Apply suggestion from @Copilot
+- Add PhpDoc @deprecated
+- Merge pull request #1586 from mambax7/feature/Cannot_use_bool_as_array
+- Merge branch 'master' of https://github.com/xoops/XoopsCore25 into feature/Cannot_use_bool_as_array
+- Reverting the condition logic $db->isResultSet($result)
+- Merge pull request #1587 from mambax7/feature/RTL
+- Update docs/lang_diff.txt
+- Rearranging
+- Remove hardcoded language constants
+- Merge pull request #1558 from mambax7/feature/updates2
+- Update htdocs/class/auth/auth_ldap.php
+- Update htdocs/class/auth/auth_provisionning.php
+- Update htdocs/themes/xbootstrap5/theme_autorun.php
+- Merge branch 'master' into feature/updates2
+- Merge pull request #1593 from mambax7/feature/fix_criteria_compatibility
+- Update htdocs/class/criteria.php
+- Update htdocs/class/criteria.php
+- Cosmetics
+- Merge branch 'XOOPS:master' into feature/fix_criteria_compatibility
+- Merge pull request #1591 from mambax7/feature/update_min_MySQL
+- Update min MySQL
+- Merge pull request #1590 from mambax7/feature/bootstrap5.3.8
+- Bootstrap 5.3.8
+- Update htdocs/class/criteria.php
+- Update htdocs/class/criteria.php
+- Update htdocs/class/criteria.php
+- More updates
+- More updates
+- Add XOOPS_DEBUG and XOOPS_DB_LEGACY_LOG
+- Few extra changes
+- Merge pull request #1585 from mambax7/feature/fix_xoops_setcookie()
+- Set $domain to string
+- Merge pull request #1583 from mambax7/feature/remove_exit()
+- Remove exit()
+- Merge pull request #1582 from mambax7/feature/remove_dulpicat_code
+- GitHub didn't properly remove the extra code
+- Merge pull request #1577 from ggoffy/master
+- Update htdocs/modules/system/templates/admin/system_users.tpl
+- Apply suggestion from @Copilot
+- Update htdocs/modules/system/admin/users/main.php
+- Updates concerning suggestion ihackcode
+- Numeric/associative indexing
+- Handle null cases
+- Get handler only on time
+- Added break
+- Added group list to member information
+- Merge pull request #1 from XOOPS/master
+- Merge pull request #1580 from mambax7/feature/replace_query(),_queryF()_with_exec()
+- Reverse back to query()
+- Merge branch 'feature/replace_query(),_queryF()_with_exec()' of https://github.com/mambax7/XoopsCore25 into feature/replace_query(),_queryF()_with_exec()
+- Update htdocs/class/database/mysqldatabase.php
+- Update htdocs/class/logger/xoopslogger.php
+- Update htdocs/class/logger/xoopslogger.php
+- Update htdocs/class/database/mysqldatabase.php
+- Merge branch 'master' of https://github.com/xoops/XoopsCore25 into feature/replace_query(),_queryF()_with_exec()
+- Replace query() & queryF() with exec()
+- Replace quote() and quoteF() with exec()
+- Merge pull request #1578 from mambax7/feature/update_setcookie
+- Update htdocs/include/xoopssetcookie.php
+- Improve Validating $_SERVER['HTTP_HOST']
+- RegDom 2.0.2 Beta 2
+- Merge pull request #1581 from mambax7/feature/2.5.12_Beta9
+- Beta 9
+- Merge pull request #1579 from mambax7/feature/_AM_SYSTEM_USERS_UNKNOWN_GROUP
+- Add _AM_SYSTEM_USERS_UNKNOWN_GROUP
+- Merge pull request #1575 from mambax7/feature/2.5.12-Beta8
+- 2.5.12 Beta 8
+- Merge pull request #1573 from mambax7/feature/update_XMF
+- Update XMF
+- Merge pull request #1574 from mambax7/feature/cleanup_mailer
+- Update htdocs/class/mail/phpmailerException.php
+- Update htdocs/class/mail/xoopsmultimailer.php
+- Cleanup mailer
+- Merge pull request #1572 from mambax7/feature/cleanup_Criteria
+- Updates
+- Simplifying
+- Replace deprecated quoteString()
+- Copilot fixes
+- Add quote() to XoopsDatabase
+- Criteria cleanup
+- Merge pull request #1570 from mambax7/feature/cosmetics
+- Cosmetics
+- Merge pull request #1571 from mambax7/feature/add_abstract_methodes_error_errorno_query_to_XoopsDatabase
+- Scrutinizer
+- Copilot suggestions
+- Add abstract queryF() and exec()
+- Add abstract methods for error(), errorno(), query() to XoopsDatabase
+- Merge pull request #1560 from mambax7/feature/User_Search_Issue1559
+- Scrutinizer suggestions
+- Copilot suggestion
+- Update
+- Updates
+- Update htdocs/kernel/member.php
+- Update htdocs/kernel/member.php
+- Update htdocs/kernel/member.php
+- Updates
+- Updates
+- Updates
+- Updates
+- Updates
+- //github.com/XOOPS/XoopsCore25/issues/1559
+- Updates
+- Update htdocs/kernel/member.php
+- Update htdocs/kernel/member.php
+- Update htdocs/kernel/member.php
+- Updates
+- Updates
+- Updates
+- Updates
+- Updates
+- //github.com/XOOPS/XoopsCore25/issues/1559
+- Merge pull request #1568 from GregMage/empty_userinfo
+- Hide empty userinfo value (Fix:https://github.com/XOOPS/XoopsCore25/issues/1561)
+- Deprecate addSlashes method in module.textsanitizer
+- Merge pull request #1565 from GregMage/addSlashes
+- Update htdocs/class/module.textsanitizer.php
+- Fix: https://github.com/XOOPS/XoopsCore25/issues/1564
+- Merge pull request #1566 from GregMage/Deprecated_addSlashes
+- Fix Deprecated addSlashes
+- Xbootstrap5 and templates
+- (string)
+- TinyMCE
+- Set version to 'XOOPS 2.5.12-Beta8'
+- Rename to blockHandler
+- Remove Debug
+- Convert defined('XOOPS_ROOT_PATH') || exit('Restricted access'); to throw RuntimeException
+- Scrutinizer:
+- Tabs
+- PhpDoc
+- Merge pull request #1555 from mambax7/feature/updates
+- Bootstrap5 for TinyMCE7
+- Cleanup of TinyMCE 5 and 7
+- Keeping original API
+- TinyMCE 7
+- TinyMCE 5 updates
+- TinyMCE 5 updates
+- PhpDocs
+- Themes cosmetics
+- Renamed _OXYGEN_Server_API to _OXYGEN_SERVER_API
+- Require_once for mainfile.php
+- Replace null with 0 in getInt()
+- Cosmetics
+- Improve render() in Criteria
+- Register the `file_exists` function as a custom modifier
+- Language diff
+- Merge pull request #1557 from mambax7/feature/bootstrap5.3.7
+- Bootstrap 5.3.7
+- Merge pull request #1554 from mambax7/feature/fix_admin_users
+- Update main.php
+- More cleanup
+- Replace more addSlashes() and $_REQUEST and $_GET with Request
+- Extra parentheses
+- Merge branch 'feature/fix_admin_users' of https://github.com/mambax7/XoopsCore25 into feature/fix_admin_users
+- Update htdocs/modules/system/admin/users/main.php
+- Convert more addSlashes()
+- Merge pull request #1553 from mambax7/feature/fix_admin_help_toggle
+- Updates based on Copilot feedback
+- Merge pull request #1551 from mambax7/feature/copyright
+- Copyright update
+- Merge pull request #1550 from mambax7/feature/language
+- Language fixes
+- Merge pull request #1547 from mambax7/feature/beta7_updates
+- Cosmetics, updates
+- Beta7 updates
+- Merge pull request #1545 from mambax7/feature/Tinymce_5.10.9
+- TinyMCE 5.10.9
+- Merge pull request #1544 from mambax7/feature/install_min_requirements_update
+- Update welcome.php
+- Updating minimum requirements
+- Merge pull request #1542 from mambax7/feature/menu_icons_id
+- Adding "id" to sublinks for custom menu icons
+- Merge pull request #1538 from mambax7/feature/menu_icons
+- New feature: menu icons for modules
+- Merge pull request #1539 from mambax7/feature/missing_forward_slash
+- Missing forward slash.
+- Merge pull request #1537 from mambax7/feature/Bootstrap_5.3.4
+- Bootstrap 5.3.4
+- Merge pull request #1536 from mambax7/feature/Bootstrap_5.3.4
+- Bootstrap 5.3.4
+- Merge pull request #1535 from mambax7/feature/fix_PathStuffController
+- Merge pull request #1532 from mambax7/feature/fix_font_awesome_icons
+- Extracting module CSS
+- Merge pull request #1526 from mambax7/feature/remove_flash2
+- Remove flash
+- Merge pull request #1529 from mambax7/feature/fix_font_awesome_icons
+- Bootstrap 5.3.3 in xBootstrap 5, refactoring
+- Merge branch 'master' into feature/fix_font_awesome_icons
+- Merge pull request #1531 from mambax7/feature/install
+- $ctrl renamed to $pathController, updates
+- Updated install, Bootstrap 5.3.3
+- Merge pull request #1527 from mambax7/feature/fix_for_waiting_block
+- Remove $index (not used anymore)
+- Improvements from Goffy
+- Merge pull request #1525 from mambax7/feature/fix_for_PR1511
+- PR#1511 introduced a new bug: when calling: ```$GLOBALS['xoopsSecurity']->check()```
+- Missed conversion to fa-solid
+- Upgrade
+- Removing all.min.css, updating icon names
+- Updates for Font Awesome 6
+- Merge pull request #1524 from mambax7/feature/version_updates2
+- Version updates
+- Merge pull request #1523 from mambax7/feature/composer_updates
+- Composer updates
+- Merge pull request #1522 from mambax7/feature/template_cosmetics
+- Template cosmetics
+- Merge pull request #1521 from mambax7/feature/#1519
+- Merge pull request #1520 from koreus/patch_https
+- Http is default
+- Merge pull request #1517 from CHCCD/patch-16
+- Update main.php
+- Merge pull request #1505 from mambax7/feature/font_awesome6.7.2
+- Updates to Font Awesome 6.7.2
+- Adding Font Awesome 6.7.2
+- Merge pull request #1516 from mambax7/feature/fix_#1515
+- Update bug-report.yml
+- Update bug-report.yml
+- Update bug-report.yml
+- Merge pull request #1511 from koreus/session
+- Update ComposerInfo.php
+- Fix problem with admin save preference
+- Merge pull request #1513 from koreus/patch1
+- Fix Theme change after editing profile
+- Update newbb_index.tpl
+- Fix subforum not expanding
+- Removed Warning: Undefined array key "subforum"
+- Merge pull request #1510 from koreus/patchtag
+- Fix tag.tpl always loading in modules/news
+- Merge pull request #1506 from mambax7/feature/fix_xbootstrap5
+- Merge pull request #1504 from koreus/patch
+- New path for composer files in install file
+- Merge pull request #1498 from mambax7/feature/upgrade2.5.12
+- Legacy placeholder for backward compatibility with PHPMailer < 6.x
+- Typo
+- Changelog update
+- Move composer files to /xoops_lib, move phpmailer and HTML Purifier to composer
+- Merge pull request #1499 from mambax7/feature/xbootstrap5
+- XBootstrap5 theme
+- Merge pull request #1494 from mambax7/feature/js_plugins
+- JQuery plugins update
+- Merge pull request #1496 from mambax7/feature/jQueryUI1.14.1
+- JQuery UI 1.14.1
+- Merge pull request #1493 from mambax7/feature/issue1335
+- Merge pull request #1471 from GregMage/update_criteria
+- Added explanation to new variable
+- Merge pull request #1495 from mambax7/feature/version_update
+- Version update
+- Merge pull request #1492 from mambax7/feature/HTMLpurifier_4.18.0
+- HTMLPurifier 4.18.0
+- Merge pull request #1489 from mambax7/feature/various2
+- Add type
+- Cosmetics
+- Replace addSlashes() with escape()
+- 'SID' deprecated
+- Protector changes
+- Smarty
+- Merge pull request #1488 from mambax7/feature/Lax
+- Lax
+- Change samesite to Lax
+- Merge pull request #1487 from mambax7/feature/trigger_error
+- Replace trigger_error with \Exception
+- Wideimage
+- Merge pull request #1486 from mambax7/XMF-1.2.31
+- Kint
+- Merge pull request #1485 from mambax7/XMF-1.2.31
+- XMF 1.2.31
+- Merge pull request #1477 from mambax7/master
+- Remove qodana_code_quality.yml
+- Qodana
+- Update workflows/pr_tests.yml
+- Workflows/pr_tests.yml
+- Templates for bug reporting and feature requests
+- Reverse change in Criteria
+- Cleanup
+- Upgrade changes for Smarty4
+- Cosmetics
+- Prepared statements with placeholders
+- Set default to https://
+- Break lines in trace
+- Merge pull request #1482 from ggoffy/master
+- Suggestion mamba
+- Merge pull request #1481 from ggoffy/master
+- Merge pull request #1475 from mambax7/master
+- Beta 3
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25
+- Vendor updates
+- Smarty 4.5.4
+- Merge pull request #1467 from mambax7/feature/2512
+- Delete composer.lock
+- Update composer.dist.lock
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer update
+- Scrutinizer updates
+- HTMLPurifier updates
+- HTMLPurifier updates
+- Update .scrutinizer.yml
+- Removing files
+- Libraries
+- Update changelog.250.txt
+- Delete \xoops_lib\modules\protector\library\README.md
+- Composer updates
+- Use $sess_handler in session_set_save_handler()
+- Scrutinizer adding PHP versions
+- Type casting
+- Change from \Geekwright\RegDom to \Xoops\RegDom
+- Missing parenthesis
+- Smarty 4: Register the count and strstr functions
+- Implement SessionHandlerInterface
+- PHP 8.4 Implicitly nullable parameter declarations deprecated
+- Update MyTextSanitizerExtensionTest.php
+- Updates for ComposerInfo
+- Remove extra "<"
+- Page coding
+- Updates to makeClickable()
+- HTML Purifier 4.17
+- Updates, Yoda, short arrays, cosmetics
+- .travis.yml
+- Updates .gitignore, .scrutinizer.yml, qodana.yaml
+- Pass parameter by reference
+- Yoda
+- Unnecessary double quotes
+- Static method called as dynamic
+- Unsupported string offset operations
+- Only variables can be passed/returned by reference
+- Type casting
+- Short list syntax
+- Null coalescing operator
+- Cascading dirname(...) calls
+- Remove extra comma
+- :class
+- PER-CS formatting
+- PSR-12 Else if
+- Obsolete rand(), use random_int()
+- Unreachable statement
+- The assignment to $myts is dead and can be removed.
+- Removing stripSlashesGPC(), magic_quotes
+- 'isset' can be replaced with coalesce
+- Double quotes
+- Short array
+- Composer Info: remove obsolete functions
+- Docs updates
+- Composer info refactoring
+- Scrutinizer update
+- More refactoring
+- Composer Package info refactoring
+- Adding in Admin overview of Composer packages
+- Update XOOPS version
+- Update for XOOPS 2.5.12
+- Merge pull request #1465 from mambax7/feature/fix_typed_property
+- See https://github.com/XOOPS/XoopsCore25/issues/1463
+- Merge pull request #1461 from mambax7/feature/add_Smarty_version
+- Add Smarty version
+- Merge pull request #1459 from mambax7/feature/fix_textsanitizer_preg_replace_for_color_size
+- Fix for https://github.com/XOOPS/XoopsCore25/issues/1458
+- Merge pull request #1460 from mambax7/feature/lang_php_vesion
+- Typo in lang_php_vesion
+- Merge pull request #1455 from g10082ts/master
+- Merge pull request #1453 from ggoffy/master
+- Updates for wggallery in theme xswatch4
+- Merge pull request #1452 from mambax7/feature/Smarty3_updates
+- Replace obsolete <{year}>
+- Merge pull request #1454 from mambax7/feature/issue_1451_wrong_variable_name
+- Merge pull request #1448 from mambax7/feature/release_updates
+- Release updates
+- Merge pull request #1447 from mambax7/feature/update_templates
+- Template updates
+- Merge pull request #1446 from mambax7/feature/set_false_to_uniqid
+- Set false to uniqid()
+- Merge pull request #1444 from mambax7/feature/fix_Bootstrap5_Renderer
+- More Bootstrap5 tweaks
+- Merge pull request #1445 from mambax7/feature/update_makeClickable
+- Update for makeClickableCallbackEmailAddress()
+- Update regex for makeClickable($text)
+- Merge pull request #1440 from mambax7/feature/cosmetics_template_updates
+- Cosmetics
+- Smarty 4 compatibility (backticks)
+- Cosmetics, template updates
+- Cosmetics, template updates
+- Merge pull request #1441 from mambax7/feature/ENT_HTML5
+- Add ENT_HTML5
+- Merge pull request #1442 from mambax7/feature/fix_fineuploader_multiimage
+- Making sure that $cached_image is array
+- Missing $temp
+- Cosmetics
+- Merge pull request #1443 from mambax7/feature/fix_email_templates_in_Notifications
+- @ggoffy's feedback
+- Update
+- Merge pull request #1436 from geekwright/patch_tablesfill
+- Patch for loadLanguage issue
+- Merge pull request #1437 from mambax7/feature/fix_for_prepared_statement_result
+- Tabs to spaces
+- Merge pull request #1425 from mambax7/feature/path_traversal
+- Merge branch 'master' into feature/path_traversal
+- Merge pull request #1411 from mambax7/feature/Fix_rendering_caption_required_icon2
+- Fix rendering caption required icon2
+- Merge pull request #1434 from geekwright/fscase
+- Case insensitive path check
+- Merge pull request #1435 from geekwright/xmf-v1.2.29
+- Update to xmf v1.2.29
+- Merge pull request #1419 from mambax7/feature/Parameterized_Queries
+- Parameterized Query
+- Merge pull request #1422 from mambax7/feature/make__$addtoken_=_true
+- Make  $addtoken = true
+- Merge pull request #1426 from mambax7/feature/check_for_PHP_version_get_magic_quotes_gpc()
+- Eliminating error notices in PHP 7.4+
+- Merge pull request #1433 from mambax7/feature/replace_is_array_modifier
+- Replace |is_array modifier
+- Merge pull request #1427 from mambax7/feature/version_updates
+- Updating versions, fix for versionCompare()
+- Merge pull request #1424 from mambax7/feature/load_modinfo_language_after_upgrade
+- Load modinfo language in /system/xoops_version.php, after upgrade
+- Merge pull request #1428 from mambax7/feature/fix_installation_problems
+- Merge pull request #1421 from mambax7/feature/fixes_for_templates
+- Missing quotations
+- Fixes for templates
+- Merge pull request #1429 from mambax7/feature/add_variable
+- Set  variable
+- Merge pull request #1430 from mambax7/feature/dynamic_fields_not_allowed_in_PHP_8.2
+- Dynamic fields are not allowed in PHP 8.2
+- No message
+- Path traversal
+- Merge pull request #1420 from mambax7/feature/reverse_image_uniqid
+- Change to bool
+- Reverse adding more entropy (image_name field size in DB is too small
+- Merge pull request #1418 from mambax7/feature/fix_typo_in_users_main.php
+- Typo in \modules\system\admin\users\main.php
+- Merge pull request #1417 from geekwright/pfrepair-errors
+- Correct error handling in rewriting template
+- Merge pull request #1416 from geekwright/req-version
+- Bug Fix - incorrect lower PHP version specified
+- Merge pull request #1415 from mambax7/feature/modification_pm_pmlite.tpl
+- Updated version to 2.1.7
+- Reverse quotations
+- Merge pull request #1414 from geekwright/upgrade-ignore
+- Fix issues with upd-2.0.18-to-2.3.0 step
+- Merge pull request #1413 from geekwright/pfcleanup
+- Clean up upgrade/preflight.php
+- Merge pull request #1412 from mambax7/feature/delete_duplicate_function_in_Upgrade
+- Remove duplicated code
+- Merge pull request #1408 from mambax7/feature/1196
+- PhpDoc updates
+- Merge pull request #1242 from Andrew-Staves-Activ/default_notification_method_option
+- Merge branch 'master' into default_notification_method_option
+- Language updates
+- Language changes
+- Add entries to Install and Upgrade
+- Added an option to set the default notification method for users.
+- Merge pull request #1410 from geekwright/xmf1.2.28
+- Xmf to 1.2.28
+- Merge pull request #1409 from mambax7/feature/update_deprecated
+- PhpDocs
+- PHpDocs
+- Update deprecated is_cached()
+- Merge pull request #1401 from mambax7/1400
+- Few more cosmetics
+- Formatting
+- Delete duplicate closedir($handler);
+- Merge pull request #1407 from mambax7/feature/fix_wrong_variable_naming
+- Typecasting to integer
+- No need to check for isResultSet()
+- Merge pull request #1404 from GregMage/update_maintenance
+- Update maintenance
+- Merge pull request #1405 from mambax7/feature/delete_double_renderer_property_in_dhtmltextarea
+- Delete duplicate $renderer
+- Merge pull request #1402 from mambax7/feature/profile_version
+- Version update
+- Merge pull request #1400 from geekwright/replace-1399
+- Fix protector oninstall issue
+- Merge pull request #1396 from luciorota/patch-9
+- Update uploader.php
+- Merge pull request #1397 from luciorota/patch-10
+- Update mimetypes.inc.php
+- Merge pull request #1398 from luciorota/patch-11
+- Update image.php
+- Merge pull request #1374 from mambax7/feature/add_exception_trace
+- HandleException() adds trace when calling handleError()
+- Merge pull request #1394 from mambax7/feature/check_template_variables_are_set
+- Checking if template variables are set
+- Merge pull request #1390 from mambax7/feature/various_updates
+- Replace @ for PHP 8
+- Lang_diff.txt
+- Revert "Only the first call returns the proper/expected result. Subsequent calls will return 'true'."
+- Scrutinizer
+- Standardization on addDeprecated()
+- Unreachable statement
+- Undefined variable
+- Undefined variable
+- Only variables can be passed by reference
+- Only the first call returns the proper/expected result. Subsequent calls will return 'true'.
+- Array and string offset validity
+- Making sure that it is integer
+- Reduce repetitive calls
+- Merge pull request #1391 from mambax7/feature/greedy_array_merge
+- 'array_merge(...)' is used in a loop and is a resources greedy construction.
+- Merge pull request #1395 from mambax7/feature/accept_token_for_valid_users_only
+- Accept token for valid users only
+- Merge pull request #1389 from luciorota/patch-7
+- Update image.php
+- Merge pull request #1393 from mambax7/feature/fix_for_xoUserInfo
+- Merge pull request #1323 from mambax7/feature/remove_error_suppression_operator
+- Template fixes
+- Types, exceptions
+- Scrutinizer
+- Adding POST to Request
+- Merge branch 'feature/remove_error_suppression_operator' of https://github.com/mambax7/XoopsCore25 into feature/remove_error_suppression_operator
+- Merge branch 'master' into feature/remove_error_suppression_operator
+- Merge branch 'master' into feature/remove_error_suppression_operator
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/remove_error_suppression_operator
+- Merge pull request #1388 from mambax7/feature/array_merge_resources_greedy_construction
+- 'array_merge(...)' is used in a loop and is a resources greedy construction.
+- Merge pull request #1274 from mambax7/feature/undefined_array_key_plus_others
+- Isset()
+- More convert |default:  to !empty() check
+- More convert |default:false to !empty() check
+- Convert |default:false to !empty() check
+- Isset
+- Templates cleanup
+- Update system_block_mainmenu.tpl
+- Update system_block_mainmenu.tpl
+- Update system_block_mainmenu.tpl
+- Update system_block_mainmenu.tpl
+- Update xo_page.tpl
+- Update xo_metas.tpl
+- Update xo_page.tpl
+- Update xo_metas.tpl
+- Update system_modules.tpl
+- Update system_header.tpl
+- Update system_header.tpl
+- Update system_header.tpl
+- Update gui.php
+- Update xo_metas.tpl
+- Update xo_globalnav.tpl
+- Merge branch 'master' into feature/undefined_array_key_plus_others
+- Merge branch 'feature/undefined_array_key_plus_others' of https://github.com/mambax7/XoopsCore25 into feature/undefined_array_key_plus_others
+- Update compiler.xoAppUrl.php
+- Synch with current changes in Core
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/undefined_array_key_plus_others
+- Outdated Inline.php for PHP 8.2
+- Config file doesn't exist.
+- Isset()
+- English
+- Passing null to parameter #2 ($value) of type string is deprecated
+- Undefined array key 1, if separator not found
+- Check if file_exists() before unlink
+- Isset()
+- PHP 8.2 creation of dynamic property
+- Undefined array key 1
+- Merge pull request #1386 from CHCCD/patch-6
+- Update media.js
+- Merge pull request #1239 from Andrew-Staves-Activ/notificationhandler_subscribe_success
+- Made XoopsNotificationHandler::subscribe() return true rather than null.
+- Merge pull request #1384 from mambax7/feature/improve_check_for_renderWhere()
+- Better check for renderWhere()
+- Merge pull request #1387 from mambax7/feature/reverting_footer_and_styles.css
+- Reverting footer.php
+- Revert "Reverting footer.php"
+- Reverting styles.css and footer.php
+- Reverting footer.php
+- Merge pull request #1385 from mambax7/feature/deprecated_utf8_decode()
+- More checks of the return value
+- Check for integer
+- Check for XOOPS_USE_MULTIBYTES
+- Merge pull request #1363 from mambax7/feature/deprecated_utf8_decode()
+- Consistency in dealing with deprecated in PHP 8.2 utf8_encode() and utf8_decode()
+- Merge pull request #1223 from mambax7/feature/cosmetics_phpdocs
+- Merge branch 'feature/cosmetics_phpdocs' of https://github.com/mambax7/XoopsCore25 into feature/cosmetics_phpdocs
+- Merge branch 'master' into feature/cosmetics_phpdocs
+- Merge branch 'master' into feature/cosmetics_phpdocs
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/cosmetics_phpdocs
+- Updates
+- Updates
+- Delete files
+- Updates
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/cosmetics_phpdocs
+- Https, single quotes, PhpDocs
+- Cosmetics
+- Fix incompatible return
+- The safe_mode directive was deprecated in PHP 5.3 and removed in PHP 5.4.
+- Scrutinizer fixes
+- Scrutinizer fixes
+- The variable $var seems to never exist and therefore isset should always be false.
+- It seems like $value can also be of type array and array; however, parameter $value of XoopsFormRadio::__construct() does only seem to accept null|string
+- Scrutinizer
+- The variable $rev_ip does not seem to be defined for all execution paths leading up to this point.
+- Scrutinizer fix
+- Scrutinizer fixes:
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/remove_error_suppression_operator
+- Merge pull request #1342 from mambax7/feature/ENT_QUOTES_ENT_HTML5
+- Scrutinizer fixes
+- Merge branch 'feature/ENT_QUOTES_ENT_HTML5' of https://github.com/mambax7/XoopsCore25 into feature/ENT_QUOTES_ENT_HTML5
+- Merge branch 'master' into feature/ENT_QUOTES_ENT_HTML5
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/ENT_QUOTES_ENT_HTML5
+- PHP 5.3.9 compatibility
+- Single quotes handling is not specified
+- Single quotes handling is not specified
+- Merge pull request #1383 from mambax7/feature/Move_MAX_FILE_SIZE_in_XoopsFormRendererBootstrap
+- Moving MAX_FILE_SIZE up
+- Merge pull request #1379 from CHCCD/patch-3
+- Update XoopsFormRendererBootstrap5.php
+- Merge pull request #1378 from mambax7/feature/fix_upgrade_autoincrement
+- Add admin .tpl templates
+- Add missing  AUTO_INCREMENT
+- Merge pull request #1377 from mambax7/feature/fix_preflight_regex
+- Regex updates for "="
+- Regex adjustments, PHP8
+- Merge pull request #1380 from mambax7/feature/fixhtacces_in_xbootstrap_theme
+- Update .htaccess
+- Merge pull request #1381 from mambax7/feature/Scrutinizer_check_for_empty_array
+- Scrutinizer check for empty array
+- Merge pull request #1370 from mambax7/feature/fixes_xoops_website
+- Update system_block_mainmenu.tpl
+- Update system_block_mainmenu.tpl
+- Update system_siteclosed.tpl
+- Update system_siteclosed.html
+- Update system_block_mainmenu.tpl
+- Merge branch 'master' into feature/fixes_xoops_website
+- Merge pull request #1369 from mambax7/feature/Installation_Fixes
+- Scrutinizer
+- Cosmetics
+- Obsolete code
+- Various fixes
+- Language Constants  already defined
+- Merge pull request #1371 from mambax7/feature/fix_paths
+- Fixing paths in Protector
+- Merge pull request #1368 from mambax7/feature/Undefined_array_key_in_xoopskernel
+- //github.com/XOOPS/XoopsCore25/issues/1367
+- Merge pull request #1177 from mambax7/feature/Xmf_Request
+- Merge branch 'master' into feature/Xmf_Request
+- Update main.php
+- Update main.php
+- Update image.php
+- Update xoopsemotions.php
+- Update lostpass.php
+- Scrutinizer fixes
+- Conversion to Xmf\Request
+- Merge pull request #1345 from mambax7/feature/css_fixes
+- Mismatched parameters
+- More updates
+- Updates with https://github.com/postcss/
+- CSS and template issues
+- Merge pull request #1341 from mambax7/feature/regex_delimiter
+- Proper preg_quote(...) usage
+- Merge pull request #1343 from mambax7/feature/entropy
+- Update postcommon_register_insert_js_check.php
+- Update postcommon_register_insert_js_check.php
+- Insufficient Entropy Vulnerability with 'uniqid(...)' usage
+- Insufficient entropy for security
+- Merge pull request #1229 from mambax7/feature/Scrutinizer2022-4-17
+- Merge branch 'master' into feature/Scrutinizer2022-4-17
+- Merge branch 'master' into feature/Scrutinizer2022-4-17
+- Zero Width Unicode Character
+- The expression return bool returns the type true which is incompatible with the documented return type array.
+- The expression return $imgcat returns the type false which is incompatible with the documented return type XoopsImageCategory.
+- The expression return false returns the type false which is incompatible with the documented return type XoopsObjectHandler.
+- The expression return false returns the type false which is incompatible with the documented return type null.
+- The expression return false returns the type false which is incompatible with the documented return type null.
+- The method getObjects() does not exist on XoopsObjectHandler.
+- The method loadConfig() does not exist on XoopsObjectHandler.
+- The constant _FAILGETIMG was not found.
+- The method getObjects() does not exist on XoopsObjectHandler
+- The expression return mysqli_affected_rows($this->conn) also could return the type string which is incompatible with the documented return type integer.
+- The expression return @mysqli_num_rows($result) also could return the type string which is incompatible with the documented return type integer.
+- The method getByDirname() does not exist on XoopsObjectHandler.
+- Merge pull request #1372 from mambax7/feature/fix_SSL_issue
+- XOOPS_URL was hardcoded with "http://"
+- Merge pull request #1376 from mambax7/feature/RC-3_Version
+- Changed to RC3
+- Merge pull request #1373 from mambax7/feature/fix_upgrade_system_confirm
+- Delete obsolete Smarty files
+- Merge pull request #1375 from geekwright/preflight
+- Smarty 3 Preflight in Upgrade
+- Merge pull request #1361 from mambax7/feature/jQuery_3.7.0
+- JQuery 3.7.1
+- JQuery to 3.7.0
+- JQuery to 3.7.1  #1361
+- Placeholders in <{xoAppUrl ''}>
+- Undefined_array_key_in_xoopskernel #1368
+- Standardized check for array
+- Add |default:null to <{foreach
+- PHP 8.0: @ Error Suppression operator does not silent, fatal errors
+- Wrong tag
+- Merge branch 'feature/remove_error_suppression_operator' of https://github.com/mambax7/XoopsCore25 into feature/remove_error_suppression_operator
+- Update jquery.php
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/remove_error_suppression_operator
+- Merge pull request #1366 from GregMage/issues_1365
+- Fix 1365 and php8
+- Merge pull request #1360 from geekwright/upgrade-issues
+- Fix uncaught exception during upgrade login
+- Add core language/*/user.php for login
+- Merge pull request #1359 from mambax7/feature/smarty3_quotes
+- Update system_siteclosed.tpl
+- Update system_siteclosed.tpl
+- Missing quotes
+- Merge pull request #1358 from mambax7/feature/wizard_language
+- Merge pull request #1357 from geekwright/smarty3plugins
+- Adjust sanitization on exception
+- Replace smarty/xoops_plugins with smarty3_plugins
+- Merge pull request #1356 from GregMage/Fix_smarty3
+- Merge pull request #1355 from geekwright/install-lang
+- Incorrect language checking in install tablesfill step
+- Merge pull request #1353 from geekwright/xoops2.5.11-RC2
+- Release Prep
+- Merge pull request #1352 from geekwright/fatal-sec
+- Sanitize fatal exception message
+- Merge pull request #1351 from geekwright/dir-install-upgrade
+- Correcting paths in upgrade
+- Correcting paths in install
+- Merge pull request #1350 from geekwright/updatelibs
+- Update libraries encore
+- Merge pull request #1348 from geekwright/freshen-libraries
+- Freshen libraries
+- Merge pull request #1347 from geekwright/fileinc-install
+- Fix include paths in install
+- Merge pull request #1346 from geekwright/add-makeSet
+- Add makeSet()
+- Merge pull request #1344 from mambax7/feature/Untrusted_files_inclusion
+- Fixes to bugs reported by Geekwright
+- Untrusted files inclusion, not guaranteed to load the right file, using __DIR__
+- Merge pull request #1324 from mambax7/feature/empty_check_in_tpl
+- Using empty check instead of default
+- Merge pull request #1336 from mambax7/feature/PHP_8.2_Dynamic_Properties_deprecated
+- PHP 8.2: Dynamic Properties are deprecated
+- Merge pull request #1338 from mambax7/feature/int_return_xoops_getUserTimestamp
+- Xoops_getUserTimestamp has to return integer
+- Merge pull request #1339 from mambax7/feature/string_in_rawurlencode
+- Rawurlencode requires string
+- Merge pull request #1331 from ggoffy/master
+- Removed xm-modules
+- Removed temporary theme
+- Merge pull request #1325 from GregMage/compatibility_smarty3
+- Added a warning message for obsolete smarty functions.
+- Get_template_vars() becomes getTemplateVars()
+- Template_exists() becomes templateExists()
+- Clear_compiled_tpl() becomes clearCompiledTemplate()
+- Is_cached() becomes isCached()
+- Clear_cache() becomes clearCache()
+- Assign_by_ref() becomes assignByRef()
+- Append_by_ref() becomes appendByRef()
+- Merge pull request #1337 from mambax7/feature/lang_diff.txt_updates
+- Updating lang_diff.txt
+- Merge pull request #1334 from mambax7/feature/system_module_template_quotations
+- Reversing wrong changes
+- More updates
+- System_module.tpl wrong quotations
+- Merge pull request #1332 from mambax7/feature/missing_paypal_image_in_renderAbout
+- //github.com/XOOPS/XoopsCore25/issues/1330
+- Merge pull request #1328 from mambax7/feature/issue1327
+- //github.com/XOOPS/XoopsCore25/issues/1327
+- Merge pull request #1326 from geekwright/xoops2.5.11-RC1
+- 2.5.11 RC1 prep
+- Merge pull request #1322 from geekwright/merge_smarty3
+- Update libraries
+- Update build to fix yaml
+- Sync html templates with tpl
+- Correct form action
+- Remove debug code
+- Undeprecate getByModule
+- Function name error
+- Smarty 3 compatibility
+- Remove XOOPS specific foreachq and includeq compiler plugins
+- Remove Smarty2
+- Update xswatch4 to use Smarty3 configuration files
+- Update XoopsTpl to Smarty3
+- Updated templates for Smarty3
+- Update custom plugins for Smarty3
+- Add Smarty3
+- Quote smarty custom plugin arguments
+- Convert and cleanup Smarty securityToken plugin
+- Replace XOOPS specific block function plugin with xoBlock
+- Update to a base-requires with Smarty
+- Remove all Smarty php tags from core
+- Additional suppression operators
+- PHP 8.0: @ Error Suppression operator does not silent fatal errors
+- Merge pull request #1320 from mambax7/feature/wrong_parenthesis_in_strlen()
+- Merge pull request #1319 from mambax7/feature/Break_in_Install_#1318
+- Merge pull request #1317 from GregMage/issue_1315
+- Merge pull request #1314 from mambax7/feature/isResultSet_3
+- Reverse isResultSet() changes to XMF
+- Merge pull request #1301 from mambax7/feature/isResultSet_2
+- Merge branch 'master' into feature/isResultSet_2
+- Merge pull request #1237 from mambax7/feature/Unsupported_string_offset_operations
+- Could provoke a PHP 7 Fatal error ([] operator not supported for strings).
+- Merge pull request #1238 from mambax7/feature/Php82_dynamic_fields
+- Merge branch 'master' into feature/Php82_dynamic_fields
+- Merge pull request #1295 from GregMage/issue_1293
+- Merge pull request #1311 from GregMage/fix_setcookie
+- Update visibility.php
+- Update profile.php
+- Php8.2 dynamic_fields
+- Php8.2 dynamic_fields
+- Php8.2 dynamic_fields
+- Removing commented code
+- Upgrade adjustmetns
+- Add _DB_QUERY_ERROR, replace trigger with exception
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/isResultSet_2
+- Merge pull request #1313 from mambax7/feature/missing_pm_fields
+- Remove duplicate
+- Add missing fields in PM
+- Merge pull request #1310 from GregMage/issue_1299
+- Https://github.com/XOOPS/XoopsCore25/issues/1299
+- Merge pull request #1309 from GregMage/Fix_help
+- Error in help.php
+- Merge pull request #1308 from GregMage/update_lang_diff
+- Update docs/lang_diff.txt
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/isResultSet_2
+- Merge pull request #1212 from mambax7/feature/typos
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/typos
+- Merge pull request #1287 from GregMage/byRef
+- Merge pull request #1288 from mambax7/feature/xoopscaptcha_arrays
+- Small adjustments to arrays in xoopscaptcha
+- Merge pull request #1292 from GregMage/Fix_preg_split
+- Merge pull request #1302 from alain01/master
+- Update system_block_siteinfo.tpl
+- Update system_block_siteinfo.tpl
+- Update system_block_siteinfo.tpl
+- Update system_block_siteinfo.tpl
+- Update siteinfo bloc and 1 question
+- Merge pull request #1300 from mambax7/feature/jquery3.6.3
+- JQuery 3.6.3, jQuery UI 1.13.2
+- Merge pull request #1245 from Andrew-Staves-Activ/1243_user_info_buttons
+- Updated user info buttons to use recognised op values.
+- Removed unused admin system users constants.
+- Merge pull request #1244 from Andrew-Staves-Activ/only_notify_activated_users
+- Set to only send notifications to activated users.
+- Merge pull request #1241 from Andrew-Staves-Activ/pronouns_typos_and_wording
+- Wording tweaks based on mambax7's feedback.
+- Changed to use gender-neutral pronouns
+- Merge pull request #1240 from Andrew-Staves-Activ/notification_constants_in_user
+- Used notification_constants in XoopsUser
+- Merge pull request #1306 from GregMage/issue_1304
+- Https://github.com/XOOPS/XoopsCore25/issues/1304
+- Typos
+- Scrutinizer
+- Scrutinizer
+- Updates
+- $this->db doesn't exist
+- The @ operator no longer silences fatal errors
+- Template defaults
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/isResultSet_2
+- Merge pull request #1298 from GregMage/fix_install
+- Merge pull request #1294 from GregMage/removeTplXModules
+- Removal of templates from XM modules
+- Merge pull request #1290 from GregMage/cleanUpOldCode
+- Update date
+- Cleaning up old code, this fixes the issue here: https://github.com/XOOPS/XoopsCore25/pull/1289
+- Merge pull request #1297 from GregMage/warnig_admin
+- Https://github.com/XOOPS/XoopsCore25/pull/1297#issuecomment-1384354195
+- Added security with the "install" folder.
+- Merge pull request #1273 from mambax7/feature/Partially-supported_callable_are_deprecated
+- PHP 8.2 Partially Supported Callables are deprecated
+- Merge pull request #1272 from mambax7/feature/install_utf8mb4
+- Change utf8 to utf8mb4
+- Merge pull request #1278 from mambax7/feature/template_defaults
+- Update main.php
+- Updates
+- Template defaults
+- Merge pull request #1275 from mambax7/feature/myts_name_consistency
+- Merge branch 'master' into feature/myts_name_consistency
+- Merge pull request #1276 from mambax7/feature/XoopsGroupPermHandler_createPhpDoc
+- Wrong return
+- Merge pull request #1277 from geekwright/upgrade2511
+- Fix issues in moving captcha configuration files
+- Merge pull request #1279 from GregMage/getUnameFromId
+- Adding the link on the name as in (XoopsUserUtility::getUnameFromId).
+- Merge pull request #1285 from mambax7/feature/fix_getCount()_returns_string
+- Merge pull request #1283 from mambax7/feature/newbb_thread_template
+- Adding divider
+- Merge pull request #1271 from GregMage/issues_1269
+- Fix templates php 8
+- Merge pull request #1282 from geekwright/tplpathcheck
+- Restrict paths to inside XOOPS_THEME_PATH
+- Merge pull request #1281 from mambax7/feature/censorString2
+- Remove "deprecated" for censorString()
+- $myts name consistencies, cleanup
+- Updates
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/isResultSet_2
+- Merge pull request #1268 from mambax7/feature/mysqli_result_for_fetchObject()
+- Update mysqldatabase.php
+- Mysqli_fetch_object() requires mysqli_result
+- Merge pull request #1267 from mambax7/feature/HTML_Purifier_4.15.0
+- Merge branch 'master' into feature/HTML_Purifier_4.15.0
+- Merge pull request #1262 from mambax7/feature/installation_directories_order1248b
+- - change folder sorting in Installation Issue #1248 (alain01/mamba)
+- Merge pull request #1258 from mambax7/feature/PHP_8.2_Dynamic_Properties_are_deprecated_2
+- PHP 8.2: Dynamic Properties are deprecated
+- Merge pull request #1255 from mambax7/feature/isResultSet_1
+- Protector isResultSet()
+- Check isResultSet()
+- Merge pull request #1253 from mambax7/feature/Php82_Creation_of_dynamic_property
+- PHP 8.2: Dynamic Properties are deprecated
+- Merge pull request #1252 from mambax7/feature/Protector_Undefined_array_key_0
+- Undefined array key 0 in file protector.php
+- HTML Purifier 4.15
+- Improvements, logic fixes
+- Variable name consistency
+- FreeRecordSet()
+- GetRowsNum()
+- FetchRow()
+- FetchArray()
+- Merge pull request #1266 from geekwright/cache-deserialize
+- Disallow classes in unserialize
+- Merge pull request #1265 from geekwright/fix-ts-clickable
+- Correct \MyTextSanitizer::makeClickable()
+- Merge pull request #1263 from geekwright/rm-xswatch
+- Remove xswatch theme
+- Merge pull request #1257 from mambax7/feature/utf8mb4
+- Changes requested by Geekwright
+- Index column size too large for utf8mb4_unicode_ci
+- Merge pull request #1053 from ForXoops/tinymce5
+- Merge branch 'tinymce5' of https://github.com/ForXoops/XoopsCore25 into tinymce5
+- Merge branch 'XOOPS:master' into tinymce5
+- Add prism library for XoopsCode plugin
+- Add prism plugin for display code
+- Update Mage version to the lastest version 5.8.2
+- Merge pull request #1256 from mambax7/feature/check_$_REQUEST_modules
+- Check if $_REQUEST['modules'] is set and if it's an array
+- Merge pull request #1233 from mambax7/feature/jqueryUI1.13.1
+- JQuery UI 1.13.1
+- Merge pull request #1254 from mambax7/feature/jQuery_3.6.1_install
+- JQuery 3.6.1
+- Merge pull request #1250 from geekwright/issue_1247
+- Add logging
+- Add phar wrapper check to protector
+- Merge pull request #1236 from mambax7/feature/remove_thadmin
+- Remove /thadmin
+- Merge pull request #1251 from mambax7/master
+- Update changelog.php
+- Merge pull request #1246 from mambax7/master
+- Changelog 2.5.11 Beta 2
+- Merge pull request #1228 from geekwright/patch_1227
+- Missing files from 1227
+- Merge pull request #1227 from geekwright/xmf-1-2-26
+- Update to XMF 1.2.26
+- Merge pull request #1226 from mambax7/feature/imagemanage_template_default
+- Formatting
+- Smarty defaults
+- Merge pull request #1224 from geekwright/fix_1179
+- Fix module admin breadcrumb
+- Merge pull request #1222 from geekwright/issue_1220
+- Correction
+- Implement new module version in system module install
+- Merge pull request #1225 from mambax7/feature/folder_preg_match()
+- Unknown: preg_match(): Passing null to parameter #2 ($subject) of type string is deprecated in file /class/file/folder.php line 291
+- Merge pull request #1221 from mambax7/feature/configitem_trim($value)
+- Trim() expects a string, null given
+- Merge pull request #1219 from mambax7/feature/mysqli_report_MYSQLI_REPORT_ERROR
+- Changes requested by Geekwright
+- In PHP 8.1, the default error handling is set to throw an exception
+- Merge pull request #1217 from geekwright/protector-serial
+- Fix misplaced paren
+- Review regex
+- Protector unserialize review
+- Merge pull request #1218 from geekwright/comment_post
+- Corrections after scrutinizer scan
+- Convert comment posting to use Xmf\Request
+- Merge pull request #1216 from geekwright/issue_1213
+- Patching Snoopy for PHP 8
+- Removing deprecated Cookie class
+- Merge pull request #1211 from mambax7/feature/php81_formelement
+- Passing null to parameter #1 ($string) of type string is deprecated in file /class/xoopsform/formelement.php line 160
+- Merge pull request #1209 from geekwright/avatarlist
+- Avatar display in misc.php should respect avatar_display
+- Merge pull request #1210 from geekwright/some-php8.1-fixes
+- Null is not string error in Criteria
+- Null is not string error in XoopsObject
+- Null is not string errors in messaging programs
+- Merge pull request #1206 from geekwright/smarty-other-php8.1
+- Clear PHP 8.1 error
+- Clear PHP 8.1 errors
+- Fix most encountered errors under PHP8.1
+- Add a 'year' function as Smarty plugin
+- Merge pull request #1207 from geekwright/theme-new-version-patches
+- Propagate recent default theme changes to dark and transition
+- Merge pull request #1201 from mambax7/feature/module_index_help_file
+- Add .tpl extension option for module_index help file #482
+- Merge pull request #1203 from mambax7/feature/implode_$block_options
+- Trim() expects parameter 1 to be string,
+- Merge pull request #1205 from GregMage/version_varchar32
+- Varchar(12) to varchar(32) version
+- Merge pull request #1200 from mambax7/feature/scrutinizer3
+- Parameter $string of trim() does only accept string,
+- Strpos() returns int|false
+- $tpl_id of type string is incompatible with the type integer expected by parameter $id of XoopsObjectHandler::get()
+- Merge pull request #1126 from GregMage/new-version-system
+- Merge branch 'master' into new-version-system
+- System semvar
+- Protector semvar
+- Profile semver
+- Pm semver
+- Adding the script for updating the database
+- The version was not the one registered in the database but that of xoopversion.php. It is not logical. Now the information is from the database.
+- Cosmetic
+- Update XMF and moduladmin for new version system for modules
+- New version system for modules
+- Merge pull request #1199 from mambax7/feature/int_id_in_XoopsObjectHandler
+- All modules are using 'id", and this is causing issues in PHP8.1: signatures have to be the same
+- Merge pull request #1197 from geekwright/issues_898
+- Cleanup pass
+- Mini stats Smarty plugin xoStats
+- Merge pull request #1195 from mambax7/feature/scrutinizer2
+- The method getCount() does not exist on XoopsObjectHandler (line 182)
+- The method getCount() does not exist on XoopsObjectHandler (line 56)
+- Typo
+- The condition null === $format is always false.
+- Xoops_loadLanguage() accepts only strings
+- Add /** @var \XoopsImageHandler $image_handler */
+- Merge pull request #1194 from geekwright/issue_1111
+- Null to string issue in xoAppUrl
+- Merge pull request #1193 from geekwright/issue_1091
+- Make sure \XoopsModule::$adminmenu is an array
+- Always initialize \XoopsModule::$adminmenu
+- Merge pull request #1192 from geekwright/issue_809
+- Remove reference to map file
+- Fix duplicate id errors from com_mode and com_order
+- Remove id="not_list[]" from templates
+- Merge pull request #1191 from geekwright/issue_811
+- Respect method arguments $start and $limit
+- Merge pull request #1190 from geekwright/issue_1085
+- Use string not object
+- Cleanup in \XoopsSecurity::checkBadips()
+- Merge pull request #1189 from geekwright/issue_1118
+- Passing null to parameter of type string
+- Merge pull request #1165 from mambax7/feature/strict-types-for-initvar
+- PhpDoc change to mixed
+- Merge pull request #1188 from geekwright/issue_1099
+- Add missing \XoopsConfigOptionHandler::getCount() method
+- Merge pull request #1187 from geekwright/issue_1092
+- :getByItemId() uses wrong column info
+- Merge pull request #1186 from geekwright/issue_1115
+- Fix Passing null to parameter ... of type string errors
+- Merge pull request #1185 from geekwright/issue_1151
+- Fix issues with Bad IP list in Protector Center
+- Merge pull request #1120 from GregMage/formcaptcha_Option2
+- Https://github.com/XOOPS/XoopsCore25/issues/1119
+- Merge pull request #1183 from geekwright/issue_1105
+- Fix return value in deprecated XoopsBlock::store()
+- Merge pull request #1182 from geekwright/issue_1101
+- Fix xoops_getHandler() calls flagged by corrected dockblock
+- Correct docblock for getHandler and getModuleHandler
+- Merge pull request #1181 from geekwright/sec1
+- Remove unused composer files from phpmailer directory
+- Merge pull request #1179 from geekwright/alt_1133_1
+- Fix non-conforming id elements in module menu tabs
+- Merge pull request #1180 from XOOPS/revert-1175-feature/admin_default_theme_tablesorter
+- Revert "adding sorting to default theme"
+- Merge pull request #1175 from mambax7/feature/admin_default_theme_tablesorter
+- Adding sorting to default theme
+- Merge pull request #1176 from geekwright/maint_eol
+- Add trailing end of line
+- Merge pull request #1178 from geekwright/alt_1133_3
+- Fix bug issue #1114
+- Merge pull request #1174 from mambax7/feature/Request
+- Merge pull request #1172 from geekwright/fix-clickable
+- Less agressive \MyTextSanitizer::makeClickable()
+- Merge pull request #1168 from mambax7/feature/foreachq2
+- Replacing includeq and foreachq
+- Merge pull request #1171 from geekwright/ggoffy_1050
+- Add explicit orientation declaration in XoopsFormElementTray
+- Merge branch 'master' of https://github.com/ggoffy/XoopsCore25 into ggoffy_1050
+- Added transparent images
+- Hack for proper displaying of fom element trays is bootstrap 4 and 5
+- Merge pull request #1169 from geekwright/protector_php53_patch
+- Skip prettified protector log if not supported
+- Merge pull request #1170 from mambax7/feature/delete_xcache.php
+- Delete xcache.php
+- Merge pull request #1055 from mambax7/feature/add_link_to_image_in_activated_module
+- Add link to image of an activated module
+- Merge pull request #1123 from GregMage/add_xoopsWarning
+- Add warning message in admin
+- Merge pull request #1161 from alain01/xswatch4-works
+- Update theme.tpl
+- Merge pull request #1164 from mambax7/feature/html_purifier4.14
+- HTML Purifier 4.14.0
+- Merge pull request #1162 from alain01/XS4-fix-base-css-alain
+- Xoops.css url "/image/"
+- Merge pull request #1160 from mambax7/master
+- Merge pull request #12 from DejaDingo/XS4-fix-base-css
+- Update xoops.css
+- Merge pull request #1159 from mambax7/feature/next_in_system_search.tpl
+- Undefined constant "next"
+- Merge pull request #1130 from mambax7/feature/Smarty_v2.6.32
+- Smarty v2.6.32
+- Merge pull request #1153 from geekwright/mamba-1131
+- Fix doc block
+- Review filter and escape in findusers
+- Copy of branch 'feature/request_findusers' of https://github.com/mambax7/XoopsCore25
+- Request_findusers
+- Merge pull request #1152 from mambax7/feature/module_version_in_modname
+- Add version number to module name in toolbar, similar to what we have in the Default theme
+- Merge pull request #1124 from alain01/bt4-search-v2
+- Bt4 search for xswatch4
+- Merge pull request #1127 from alain01/xswatch4-bt4.6.1
+- Bootstrap V4.6.0 to 4.6.1 for xSwatch4
+- Merge pull request #1146 from GregMage/issue_814
+- Removing extra "|"
+- Link for 'This Module Admin' after module install
+- Merge pull request #1147 from GregMage/issue_1041
+- The index.php file is deleted and created after a cache delete operation
+- Merge pull request #1135 from mambax7/feature/php81_xbootstrap
+- Update lx_rss.tpl
+- Update lexikon_rss.tpl
+- Https
+- PHP8.0 Smarty defaults
+- Double quotes
+- Merge pull request #1150 from GregMage/update_xmtemplates
+- Updated XM module templates
+- Merge pull request #1148 from GregMage/issue_1137
+- Elimination of version_compare to keep the code cleaner.
+- Change mcrypt_create_iv() to random_bytes()
+- Merge pull request #1149 from GregMage/issue_1129
+- Add missing argument
+- Merge pull request #1141 from geekwright/issue_1117
+- Add \XoopsDatabase::isResultSet()
+- Merge pull request #1142 from GregMage/issues_810
+- Change define in the system module
+- Merge pull request #1145 from GregMage/issue_1144
+- Merge pull request #1125 from GregMage/origin-of-a-block
+- Add dirname in block title
+- Merge pull request #1140 from geekwright/issue_1138
+- Remove Google Swiffy references
+- Update SECURITY.md
+- Create SECURITY.md
+- Merge pull request #1102 from geekwright/issue_1096
+- Display warning if xml extension not available
+- Merge pull request #1107 from geekwright/issue_1106
+- Add default for xo_sys_breadcrumb
+- Merge pull request #1104 from GregMage/xoops_result
+- Add admin.css
+- Merge pull request #1097 from geekwright/issue_1095
+- Replace hardcoded english text in protector stats graph
+- Merge pull request #1100 from alain01/xswatch4-options
+- Update theme.tpl
+- Dark and light/unique css customisation files
+- Customize css definitions in css/my_xoops.css
+- Check Bootstrap grid
+- Merge pull request #1094 from alain01/cosmetic-xswatch4
+- Cosmetic changes in theme.tpl - xswatch4 theme
+- Merge pull request #1075 from geekwright/issue_1074
+- Check for correct object type
+- Merge pull request #1073 from geekwright/issue_1045
+- Ensure variable is defined
+- Merge pull request #1072 from geekwright/issue_1047
+- Force array for groups XoopsMemberHandler::getUserCountByGroupLink()
+- Merge pull request #1071 from geekwright/issue_1052
+- Return of ints in XoopsModelStats::getCount() and getCounts()
+- Merge pull request #1070 from geekwright/issue_1066
+- Fix incorrect variable for GroupMembership object
+- Merge pull request #1069 from geekwright/issue_1064
+- Fix incorrect name for XoopsConfigCategory object variable
+- Merge pull request #1067 from geekwright/issue_1065
+- Ensure $ret is defined
+- Merge pull request #1068 from mambax7/feature/tablesorter_missed_file
+- Missed file
+- Merge pull request #1062 from mambax7/feature/tablesorter_theme_widgets
+- Tablesorter CSS files
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/tablesorter_theme_widgets
+- Tablesorter widgets and blue theme
+- Merge pull request #1063 from alain01/xswatch4-v46
+- Missed js file
+- Boostrap V4.5.2 to 4.6.0
+- Merge pull request #1058 from mambax7/feature/replace_foreachq
+- Replace foreachq with foreach in Smarty templates
+- Merge pull request #1059 from mambax7/feature/replace_includeq
+- Replace includeq with include in Smarty
+- Merge pull request #1054 from mambax7/feature/global
+- Updated lang_diff.txt
+- No message
+- Additional global language variables
+- Merge pull request #1049 from ggoffy/master
+- Calendar div needs z-index in order to be shown on highest level
+- Merge pull request #1048 from ggoffy/master
+- Label content should have also id (for 'label_for')
+- Merge pull request #1046 from mambax7/feature/PHP8_templates
+- Adding defaults for PHP8
+- Merge pull request #1043 from geekwright/xswatch4update
+- Dim form inputs
+- Numerous display issues, reverting to default rendered form
+- Forced pixel width wreaks havoc in timezone field display
+- Misplaced {\if}
+- Merge pull request #1042 from geekwright/issue1040
+- Fix incorrect path names
+- Merge pull request #1044 from ggoffy/master
+- New icon
+- Merge pull request #1039 from geekwright/bs5-form-loader
+- Add xoopsformrendererbootstrap5 to XoopsLoad
+- Merge pull request #1038 from alain01/bt5
+- Create XoopsFormRendererBootstrap5.php
+- Merge pull request #1037 from geekwright/xmf-1-2-25
+- Update xoops/xmf v1.2.25
+- Merge pull request #1035 from geekwright/more-dark-admin
+- Update less, css
+- Remove unused scripts
+- Override templates
+- Missing quotes on title attributes
+- Add id to xoops news panel
+- Add override template for system_users.tpl
+- Remove styleswitch.js
+- Lowercase LESS directory
+- Merge pull request #1033 from mambax7/feature/PHP8_newbb_xswatch4
+- PHP8 newbb template update
+- Merge pull request #1032 from geekwright/dark-admin-rework
+- Remove unused artifacts
+- Retesting revealed fresh fixes
+- Rebuild
+- Rebuild
+- Merge pull request #1031 from geekwright/dark-admin-update
+- Remove dead code from original hack
+- Tame bright white ui dialogs
+- Help panel readability
+- Better antialiased reload icon
+- Dark admin theme update
+- Merge pull request #1030 from GregMage/fix_php8
+- Fix php8
+- Merge pull request #1029 from geekwright/profile-cleanup
+- Handle the timezone field properly
+- Do not assign permissions for old messenger fields
+- Exit after sending location header
+- Merge pull request #1028 from geekwright/php8.1-mysqli
+- Explicitly set default mysqli_report(MYSQLI_REPORT_OFF)
+- Merge pull request #1027 from geekwright/avatartpl
+- Supply default value for variable
+- Merge pull request #1026 from geekwright/setcookie
+- Tweak php session cookie handling
+- Update bootstrap and jquery assets
+- Set appropriate options for install session cookie PHP 7.3+
+- Conform name to current interface definition
+- Small patches
+- Changes on testing fresh install on PHP 5.3
+- Updates for session cookie handling in PHP 7.3+
+- Replace cookie storage with session
+- Use xoops_setcookie instead of setcookie
+- Add xoops_setcookie() function
+- Add samesite to javascript document.cookie uses
+- Merge pull request #1024 from geekwright/upgrade-dirscan
+- Skip scan if directory is not present
+- Merge pull request #1023 from alain01/3-Bootstrap4-templates-(from-misc.php)
+- Update system_misc_avatars.tpl
+- Bootstrap4 templates from misc.php
+- Merge pull request #1022 from GregMage/template_xmdoc-1.2
+- Update template for xmdoc V1.2 final
+- Merge pull request #1021 from mambax7/feature/fix_for__XoopsBlock
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25
+- Merge pull request #1019 from mambax7/feature/class_xoopsblock.php
+- Update function.block.php
+- Reset
+- Merge pull request #1020 from mambax7/feature/$results_check
+- Check for $result
+- Merge pull request #1018 from mambax7/feature/THEME_FORUM_REPLY
+- THEME_FORUM_REPLY
+- Merge pull request #1017 from mambax7/feature/$modules_default
+- Null
+- Merge pull request #1016 from mambax7/feature/$xoops_language_default
+- Default for $xoops_language
+- Merge pull request #1015 from alain01/some-bt4-templates
+- Bootstrap 4 online templates for xswatch4
+- Merge pull request #1014 from geekwright/dark-form-entry-fields
+- Darken form entry fields
+- Merge pull request #1013 from geekwright/smilies-display
+- Respect smilies table display column
+- Merge pull request #1012 from geekwright/issue1009
+- Add uploads/files directory to writable list
+- Merge pull request #1010 from geekwright/dark-admin
+- Some adjustments based on review
+- Prototype admin dark mode theme
+- Merge pull request #1008 from geekwright/rework1005
+- Delete phantom anonymous entry in online left when user logs in
+- Merge pull request #1007 from XOOPS/revert-1005-bug_online
+- Revert "Fix bug with bloc on-line."
+- Merge pull request #1006 from geekwright/themeini
+- Show theme description in Select Theme install dialog
+- Merge pull request #1005 from GregMage/bug_online
+- Same IP
+- Fix bug with bloc on-line.
+- Merge pull request #1004 from geekwright/cleanvarmagicq
+- Remove FILTER_SANITIZE_MAGIC_QUOTES in system_CleanVars()
+- Remove FILTER_SANITIZE_MAGIC_QUOTES in system_CleanVars()
+- Merge pull request #1003 from geekwright/onemoredarkmode
+- New screenshot and thumbnails
+- Add dark mode support to system_siteclosed.tpl override
+- Merge pull request #1001 from geekwright/build-php5-3-safe
+- Library updates
+- Short array syntax regressions
+- Bump minimum recommended PHP to 7.3
+- Merge pull request #1000 from alain01/test-xswatch4-dark
+- Update theme.tpl
+- Introduce prefers-color-scheme media queries
+- Merge pull request #998 from geekwright/issue996
+- Add templates to misc.php
+- Merge pull request #995 from GregMage/newbb_templates_post_responsive
+- Now the form is responsive
+- Merge pull request #994 from GregMage/Deprecated-Waiting-Contents
+- Block 'Waiting Contents' is deprecated
+- Merge pull request #993 from geekwright/byeindexhtml
+- Remove redundant index.html files during upgrade
+- Validate directory using index.php instead of index.html
+- Stop check on index.html
+- Change xoops_write_index_file to use index.php
+- Merge pull request #992 from geekwright/protectorpagenav
+- Fix pagenav in protector center
+- Merge pull request #988 from geekwright/writecontext
+- Cannot use method return in write context error
+- Merge pull request #990 from geekwright/performantusers
+- Improve performance of admin users page
+- Merge pull request #991 from geekwright/cpcompileid
+- Cpanel aware smarty compile id's
+- Merge pull request #980 from GregMage/Template_pageNav
+- Remove .html
+- Add templates admin system_pagenav.tpl
+- Fix css
+- Add template bt3 for xswatch and xbootstrap
+- Add template bt4 for xswatch4
+- Add template for pageNav
+- Merge pull request #987 from GregMage/issue986
+- Https://github.com/XOOPS/XoopsCore25/issues/986 Comment text is now required
+- Merge pull request #985 from geekwright/issue984
+- Incorrect template specified
+- Merge pull request #981 from mambax7/feature/float_version
+- * fix for version number as string
+- Merge pull request #982 from geekwright/issue974
+- Allow for override of any template in admin themes
+- Merge pull request #979 from GregMage/template_xmcontent
+- Update templates for xmcontent 1.5
+- Merge pull request #978 from geekwright/issue977
+- Add default for $xoops_logdump
+- Merge pull request #976 from GregMage/templates_xmnews
+- Fix https://github.com/GregMage/xmnews/issues/41
+- Merge pull request #973 from geekwright/install-var-path-err
+- Errors using XOOPS_VAR_PATH early in install
+- Merge pull request #972 from mambax7/feature/jquery3.6.0
+- JQuery 3.6.0
+- Merge pull request #970 from geekwright/fix-composer-platform
+- Fix composer config platform php
+- Merge pull request #968 from geekwright/unify-xoopsblock
+- Unify XoopsBlock definition
+- Merge pull request #964 from mambax7/feature/missing_array_variable
+- Missing array in 2.5.11 upgrade
+- Merge pull request #963 from mambax7/feature/various
+- Merge branch 'feature/various' of https://github.com/mambax7/XoopsCore25 into feature/various
+- Update Zipper.php
+- Reverse changes
+- Updates
+- Typos
+- Unnecessary semicolon
+- Dynamic methods invocation via '::'
+- Order of modifiers
+- Case mismatch in method call or class usage
+- Merge pull request #960 from mambax7/feature/missing_index.php_files
+- Remove index.php files
+- Missing index.php files
+- Merge pull request #962 from mambax7/feature/add_real_name
+- It makes it easier to recognize users by their full name
+- Merge pull request #961 from alain01/testlocal
+- Responsive blocks
+- Merge pull request #959 from geekwright/issue934_935
+- Updates from testing and review
+- Updates from testing
+- Update changelog
+- Migrate config files to xoops_data/configs on upgrade
+- Install config files from .dist.php files
+- Look for config files in xoops_data/configs/captcha
+- Look for config files in xoops_data/configs/textsanitizer
+- Add define for error in installing config files
+- Create .dist.php textsanitizer config file versions
+- Fix naming of .dist.php files
+- De-HTMLize comments
+- Create xoopsconfig.php.dist
+- Create .dist versions of config files
+- PHP 8 fix for issue discovered in testing
+- Follow standard with index.html to index.php changes
+- Merge pull request #957 from mambax7/feature/extra_xoops_links
+- Extra XOOPS Links in Admin (Themes and Modules)
+- Merge pull request #958 from geekwright/fix-dot-html
+- Change a few remaining index.html to index.php
+- Merge pull request #956 from GregMage/menu_admin
+- Now the admin menu only displays useful links:
+- Merge pull request #954 from geekwright/bannerints
+- Fix failing updates to banner table
+- Merge pull request #953 from geekwright/debuglevel
+- Fix a few template errors
+- Wrong default for debugLevel configuration
+- Merge pull request #952 from geekwright/issue901
+- Make $redirect_message available in system_siteclosed.tpl
+- Merge pull request #951 from geekwright/issue914
+- Add sort on step_order, fix form
+- Merge pull request #949 from geekwright/protector_configs
+- Protector config cache for htmlpurifier written to xoops_lib
+- Merge pull request #948 from geekwright/user_standardization
+- Standardize user.php functions
+- Merge pull request #946 from geekwright/profile_userinfo_tpl
+- Bad form in profile_userinfo.tpl
+- Merge pull request #945 from mambax7/feature/scrutinizer
+- Updated docs/lang_diff.txt
+- Reversing PhpDoc in image.php
+- Reversing PhpDoc
+- Reverse self()
+- Reverse [] in list
+- Reverse [] in list
+- Scrutinizer2
+- PhpDoc
+- Merge pull request #943 from geekwright/model-read-error
+- Recognize error return from db->query()
+- Merge pull request #942 from geekwright/fix-backtrace
+- Update xmf
+- Merge pull request #941 from geekwright/new-events
+- Add core.class.template.new event
+- Add core.include.common.auth.success event
+- Merge pull request #940 from geekwright/xmfv1-2-22
+- Library refresh
+- Merge pull request #938 from mambax7/feature/float_version_number
+- Merge pull request #939 from geekwright/rm-phpthumb
+- Remove phpthumb library
+- Merge pull request #937 from mambax7/feature/simplify_read_language
+- Simplify load of modinfo
+- Merge pull request #933 from geekwright/refine-851
+- Fix unclosed comment
+- Merge pull request #932 from geekwright/refine-850
+- Add {X_SITEURL} and {X_YEAR} to site closed page
+- Merge pull request #931 from geekwright/fileinfo-ext-req
+- Require fileinfo PHP extension during install
+- Merge pull request #930 from GregMage/php8
+- Merge pull request #928 from alain01/bad-blank-links
+- Update system_images.html
+- Update system_images.tpl
+- Merge pull request #929 from geekwright/replace_927
+- Mark deleted PM as read
+- Merge pull request #926 from mambax7/feature/newbbPHP8_xbootstrap
+- NewbbPHP8_xbootstrap
+- Merge pull request #924 from geekwright/dhtmlrender
+- Fix issues in DHTMLTextArea support
+- Merge pull request #868 from alain01/master
+- Responsive xswatch4
+- Merge pull request #922 from alain01/Disabled-flash
+- Update config.php
+- Merge pull request #920 from GregMage/X_NAME
+- Update lang
+- Add {X_NAME} tag for mailusers
+- Merge pull request #917 from geekwright/906errata
+- Diff for 906 update
+- Merge pull request #916 from GregMage/captcha_profile
+- Bug with captcha
+- Merge pull request #912 from mambax7/feature/php8_foreach
+- Check if array
+- Merge pull request #908 from GregMage/Message_profil
+- Update Lang_diff
+- Define optimization
+- Add description for register form (profile)
+- Add description for register form (xoops)
+- Add alert bt3 and bt4
+- Merge pull request #909 from mambax7/feature/php8_templates
+- Defaults
+- Updates
+- Lexikon
+- Merge branch 'feature/php8_templates' of https://github.com/mambax7/XoopsCore25 into feature/php8_templates
+- Update htdocs/themes/xbootstrap/modules/system/blocks/system_block_siteinfo.tpl
+- Update htdocs/themes/xswatch4/modules/publisher/blocks/publisher_items_spot.tpl
+- Update htdocs/themes/xswatch/modules/publisher/publisher_footer.tpl
+- Update htdocs/themes/xswatch4/modules/pm/pm_readpmsg.tpl
+- Update htdocs/themes/xswatch4/modules/publisher/blocks/publisher_search_block.tpl
+- Update htdocs/themes/xswatch4/modules/publisher/publisher_footer.tpl
+- Update htdocs/themes/xswatch4/modules/system/system_comment.tpl
+- Update htdocs/themes/xswatch4/modules/publisher/publisher_item.tpl
+- Update htdocs/themes/xbootstrap/modules/publisher/blocks/publisher_search_block.tpl
+- Update htdocs/modules/system/themes/default/xotpl/xo_globalnav.tpl
+- Update htdocs/modules/system/templates/system_block_dummy.tpl
+- Update htdocs/modules/system/templates/admin/system_index.tpl
+- Update htdocs/modules/system/templates/admin/system_index.html
+- Updates
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into feature/php8_templates
+- Merge pull request #887 from mambax7/feature/https-GnuLicense
+- Merge branch 'master' into feature/https-GnuLicense
+- Https
+- Merge pull request #911 from mambax7/feature/php8_system_blocksadmis_main
+- Update main.php
+- Countable
+- Merge pull request #913 from GregMage/update_xmtemplates_php8
+- Php8 xmdoc
+- New template
+- Php8
+- Oubli
+- Add new templates
+- Update php8
+- Update xmnews templates for php8
+- Add PHP8 defaults in templates
+- Merge pull request #906 from luciorota/patch-2
+- Update preferences.php
+- Merge pull request #905 from GregMage/captcha_text_css
+- Class css for captcha text
+- Merge pull request #897 from mambax7/feature/xoModuleIcons16_index
+- Update for using index.php
+- Merge pull request #896 from geekwright/imgname-truncate
+- Clean up image manager display
+- Merge pull request #895 from geekwright/systembreadcrumbs
+- Fix system breadcrumbs
+- Merge pull request #894 from geekwright/xdataprotector
+- Restore xoops_data/protector directory
+- Merge pull request #893 from geekwright/imageman
+- Add default for undefined template variables
+- Restore some visual order in admin breadcrumb bar
+- Quiet lightBox error message
+- PHP 8 issue
+- Merge pull request #892 from geekwright/badconst
+- Malformed constant __MINWIDTHIMAGEERROR
+- Merge pull request #891 from geekwright/xdata-index
+- Restore missing xoops_data/caches direcories
+- Merge pull request #889 from geekwright/index-html-to-php
+- Exclude index.php in preload
+- Replacing index.html with index.php
+- Merge pull request #886 from XOOPS/revert-884-feature/index.html_change
+- Revert "replacing index.html with index.php"
+- Merge pull request #885 from mambax7/feature/short_array_push_syntax_on_a_string
+- Short array push syntax on a string
+- Merge pull request #884 from mambax7/feature/index.html_change
+- Replacing index.html with index.php
+- Merge pull request #882 from geekwright/smartydebug
+- Add author info
+- Customized Smarty debug.tpl
+- Merge pull request #881 from geekwright/bsmap4.5.2
+- Add map file to quiet Chrome error
+- Merge pull request #880 from geekwright/fixavatarerrors
+- Fix errors in user avatar templates
+- Merge pull request #879 from geekwright/rmdebug870
+- Remove debugging code
+- Merge pull request #878 from geekwright/bootstrap4.5.2
+- Update xswatch4 to bootswatch 4.5.2
+- Merge pull request #877 from geekwright/usrprofile-php8
+- Template fixes user and profile for php8
+- Merge pull request #875 from geekwright/php8-maint
+- Fix template errors on php8
+- Use integer for XoopsFormRadioYN value
+- Merge pull request #874 from geekwright/modadmindbg
+- Remove debug info
+- Merge pull request #871 from geekwright/issue867
+- Magic __wakeup() method must be public
+- Merge pull request #872 from geekwright/pm-templates
+- Fix errors seen in PHP 8 in pm module templates
+- Merge pull request #870 from geekwright/xmf1.2.20
+- Library updates for XMF 1.2.20
+- Merge pull request #864 from geekwright/issue848
+- Add all selected users in XoopsFormSelectUser
+- Merge pull request #863 from geekwright/php8fixes2
+- Resolve addition errors in system admin templates
+- Resolve errors in default admin theme
+- Merge branch 'php8fixes' of https://github.com/geekwright/XoopsCore25 into php8fixes2
+- Remove __autoload() from PHPMailer
+- Resolve error in Frameworks moduleadmin
+- Resolve errors in transition theme templates
+- Resolve errors in system module templates
+- Resolve errors in install
+- Merge pull request #862 from mambax7/feature/CaseMismatch
+- Case mismatch
+- Merge pull request #859 from mambax7/feature/tablesorter-2.31.3
+- Update to tablesorter-2.31.3
+- Merge pull request #858 from mambax7/feature/jQueryForm4.3
+- JQuery Form 4.3
+- Merge pull request #857 from mambax7/feature/phpmailer5.2.28
+- PHPMailer 5.2.28
+- Merge pull request #856 from mambax7/feature/changelog20200815
+- Changelog updates
+- Merge pull request #855 from mambax7/feature/HTML_Purifier_4.13.0
+- HTML Purifier 4.13.0
+- Merge pull request #854 from mambax7/feature/phpthumb_1.7.16-202008101454
+- Latest changes from https://github.com/JamesHeinrich/phpThumb
+- Merge pull request #853 from mambax7/feature/smarty__StdClass
+- Https://github.com/smarty-php/smarty/pull/544
+- Merge pull request #852 from geekwright/bootswatch-yeti-patch
+- Upstream patch for dropdown text contrast issue
+- Merge pull request #851 from geekwright/php8patch1
+- Patch a few issues when using PHP 8
+- Merge pull request #850 from geekwright/issue846
+- Restore/Add copyright meta tag to Bootstrap themes
+- Add {X_YEAR} macro in 'footer' and 'meta_copyright' on install
+- Add macro substitutions for {X_SITEURL} and {X_YEAR}
+- Update help
+- Merge pull request #849 from geekwright/issue847
+- Return proper null value for integer columns
+- Merge pull request #845 from luciorota/patch-1
+- Update user.php
+- Merge pull request #843 from GregMage/fix_countsearch
+- Avertissement: count(): Parameter must be an array or an object that implements Countable dans le fichier /search.php
+- Merge pull request #841 from geekwright/profilefieldopts
+- Add options text editing to profile field edit
+- Merge pull request #842 from geekwright/pm-alain01-liomj
+- Modal Comment Options
+- Match *box icons sizes in pm_viewpmsg.tpl
+- Incorrect responsive behavior in renderThemeForm
+- Eliminate smarty <{php}> tag use
+- Template cleanups
+- Restore confirm appearance in admin
+- Comment template tweaks
+- Expose template for use by caller
+- Fix default
+- Remove light and dark css sets
+- Rename flaty to flatly
+- Do not depend on default shortcut icon
+- Adjust templates which are not wrapped by theme.tpl
+- Add tpl/xswatchCss.tpl and document use
+- Add themePath variable to xoops_header()
+- Smarty plugin xoUserInfo
+- Avatar cleanup
+- Remove smarty php tags
+- Undo inadvertent class change
+- Bootstrap-Bootswatch-4.5.0
+- Implement pm_pmlite.tpl
+- Modify to match existing style
+- Implement Xmf\Request
+- Restore pm_pmlite.tpl
+- Merge branch 'bt4-PM-templates-for-xswatch4' of https://github.com/alain01/XoopsCore25 into pm-alain01-liomj
+- New modern templates for PM
+- Merge pull request #839 from geekwright/newbbpagenav
+- Template patches for Newbb 5.0 Final
+- Merge pull request #838 from mambax7/feature/_MEDIUMDATESTRING
+- //github.com/XOOPS/XoopsCore25/issues/837
+- Merge pull request #835 from geekwright/jquery3.5.1
+- Security update jquery 3.5.1
+- Merge pull request #834 from GregMage/update_xmmodule
+- Xmcontact
+- Add xmdocmanager
+- Update xmdoc
+- Update_xmdocs
+- Update xmnews
+- Merge pull request #824 from geekwright/phpthumb1.7.15
+- Update to official tagged phpthumb 1.7.15
+- Merge pull request #829 from geekwright/issue823
+- Admin user sync
+- Merge pull request #821 from liomj/fix-profile-index-template
+- Fix Profile Index Template
+- Merge pull request #813 from mambax7/feature/convert_to_English_comments
+- Convert to English
+- Merge pull request #808 from mambax7/feature/phpThumb_1.7.15-202002130926
+- PhpThumb 1.7.15-202002130926
+- Merge pull request #804 from alain01/bt4-cosmectic-for-xmnews
+- Some fix
+- Cosmetic bt4 modification
+- Merge pull request #803 from GregMage/update_xmmodule
+- Xmdoc remove truncatHtml
+- Update xmsocial
+- Last update xmnews
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25
+- Revert "Sourcegraph"
+- Sourcegraph
+- Merge pull request #802 from geekwright/pmtweaks
+- Match other module templates in xswatch4
+- Add meaningful default page
+- Merge pull request #801 from geekwright/bs-3.4.1
+- Js security update bootstrap 3.4.1
+- Merge pull request #800 from geekwright/emptymodules
+- Error when no modules installed
+- Merge pull request #799 from GregMage/update_xm
+- Update xmdoc
+- Update xmcontact
+- Update xmnews
+- Merge pull request #798 from alain01/cloned-xswatch4
+- Update style.css
+- Update README.md
+- Cloning of all xswatch derivatives
+- Merge pull request #790 from mambax7/feature/xswatch_updates
+- ExtCal updates
+- Merge pull request #796 from geekwright/issue794
+- Fix docblock \XoopsNotificationHandler::triggerEvent()
+- Merge pull request #795 from mambax7/feature/deprecatedSnoopyMessage
+- The message as an error was annoying  :)
+- Merge pull request #792 from geekwright/issue791
+- Remove unreferenced templates
+- Merge pull request #787 from geekwright/woodstock
+- Suggest XoopsHttpGet in deprecation notice
+- Add check for curl_init failing
+- Deprecate the Snoopy class
+- Use XoopsHttpGet to fetch rss feeds
+- Add XoopsHttpGet
+- Merge pull request #788 from GregMage/update_xm
+- Add edit btn for xmcontent
+- Allways schow cat xmdoc
+- Optimisation xmnews
+- Merge pull request #786 from GregMage/update_tpl_xmnews
+- Update tpl for bt4 and fix error author in block
+- Merge pull request #785 from geekwright/issue782
+- Tweak feeds used in XOOPS News in admin.php
+- Merge pull request #784 from GregMage/error_avatar
+- Https://github.com/XOOPS/XoopsCore25/issues/783
+- Merge pull request #780 from geekwright/issue778
+- Use mixed case constants in DHTML editor controls
+- Add missing "dropdown-item" class on list items
+- Merge pull request #779 from alain01/master
+- New clean favicon.ico
+- Merge pull request #777 from geekwright/newbbnotopic
+- Fix NEWBB_NOTOPIC error
+- Merge pull request #776 from GregMage/fix_error_tpl_xmsocial
+- Merge pull request #772 from GregMage/update_tpl_xmmodules
+- Update xmdoc and xmnews
+- Add xmsocial bt4
+- Select category is alway display
+- Add options
+- Update bt4 (blocs)
+- Merge pull request #770 from geekwright/beta1-2.5.11
+- Version 2.5.11-Beta1 prep
+- Merge pull request #769 from geekwright/updbs3
+- Tweaks to xswatch templates
+- Tweaks to xbootstrap templates
+- Merge pull request #768 from geekwright/xmf1.2.19
+- Libraries update
+- Merge pull request #767 from GregMage/update_xmnews_tpl
+- Add xmsocial rating for xmnews bt4
+- Merge pull request #766 from geekwright/addxswatch4
+- Merge xswatch4
+- Mv xswatch to new home
+- Remove unneeded important
+- Dark mode tweaks
+- Documentation review
+- Tweaking tpl's for awesome xmnews
+- Match breadcrumb style
+- Fix btn-default
+- Publisher table cleanup
+- Notification cleanup
+- PM cleanup
+- Adjust image display
+- Remove unused assets
+- Readme and images
+- Fix publisher slider for multiple images
+- Move cookie consent to separate template
+- Add vertical slide option for slider
+- Merge branch 'master' of https://github.com/geekwright/xswatch4
+- Merge pull request #21 from GregMage/cosmetic_xmnews
+- Merge branch 'master' into cosmetic_xmnews
+- Update
+- Update tag templates
+- Droping news and extgallery templates
+- Revert to previous version
+- Cleanup pagnav and assorted php errors
+- Collection templates
+- Disabled link
+- Merge pull request #20 from GregMage/cosmetic_xmnews
+- Form-control-sm
+- Modification breadcrumb
+- Fix image crop in album image
+- Fix untranslated prompt
+- As requested
+- Add wggallery
+- Tweak jumbotron
+- Cleanup pass on extcal templates
+- Replace foreachq with foreach
+- Restore intended configuration for navbar
+- Fix typo
+- Publisher template cleanup
+- Button and select cleanup
+- Adding defines
+- Add classes for media object image sizing
+- Minor layout adjustment
+- Semantic buttons
+- Minor layout adjustments
+- Remove extra # in bgcolor
+- Add event and location templates
+- Add .nav-item and directly use constants
+- Add direct navigation to debug settings
+- Incorrect Breadcrumbs
+- Handle Activate Banners? = No
+- Disable slider
+- Update cookie consent js
+- Update main theme.tpl
+- Minor template updates
+- Rework slider to use bootstrap v4.4 carousel
+- Updating tdmdownloads templates
+- Error if nothome is not defined
+- Update obituaries templates
+- Merge pull request #17 from GregMage/xmcontact
+- Add xmcontact bt4
+- Merge pull request #18 from GregMage/update_xmcontent
+- Update index
+- Main contact form
+- Delete old template unrelated to the module
+- Responsive behavior in subforum list
+- Fix onhashchange behavior
+- Standardize on badge-pill
+- Rework xoopsfaq templates
+- Adjust margins in footer blocks
+- Refine inboxAlert
+- Converting publisher templates
+- PM Alert experiment
+- Style jumpbox
+- Update js-cookie to v2.1.2
+- Match default version
+- Fix duplicate element ids
+- Reworking newbb templates
+- Tweak theme select block
+- Fix stream of error messages
+- Newbb templates
+- Misaligned Home menu item
+- Tweak responsive layout
+- Add img-fluid to logo
+- Merge pull request #16 from GregMage/update_xmnews
+- Update templates
+- Merge pull request #15 from GregMage/xmdoc
+- Xmdoc
+- Merge pull request #14 from GregMage/xmnews
+- Add xmnews
+- Merge pull request #10 from GregMage/profile_update
+- Update userform
+- Match related views with btn-info
+- Add system_confirm.tpl
+- Merge pull request #13 from GregMage/redirect
+- Change redirect with alert-primary boostrap
+- Merge pull request #7 from GregMage/profile
+- Profile bt4
+- Merge pull request #8 from GregMage/xswatch4
+- Add visible message alert to navbar
+- Update to bootstrap v4
+- Remove includeq
+- Merge pull request #4 from GregMage/modif_bt4
+- Update visible
+- Merge pull request #3 from GregMage/system
+- Bootstrap 4
+- Essais
+- Merge pull request #2 from GregMage/xmcontent
+- Best for responsive
+- Merge pull request #1 from GregMage/xmcontent
+- Xmcontent
+- WIP bootstrap v4.4.1 conversion
+- Initial commit
+- Merge pull request #765 from geekwright/issue764
+- Update class docblock
+- Remove locale specific date format for calendar.js
+- Merge pull request #763 from geekwright/blocktitledocs
+- Typo
+- Update Help page for blocks admin
+- Merge pull request #762 from geekwright/blocktitle
+- Allow comment instead of blank title
+- Merge pull request #760 from geekwright/allowfunc
+- Don't backtick a function call
+- Merge pull request #759 from geekwright/onejquery
+- Do not load jquery.js if already loaded
+- Merge pull request #757 from geekwright/esc20200103
+- Escaping issue
+- Merge pull request #756 from geekwright/issue755
+- Remove dead list type
+- Merge pull request #754 from geekwright/alt753
+- Fix ProtectorMysqlDatabase::query() return types
+- Type fixes in XoopsMySQLDatabase
+- Merge pull request #752 from mambax7/feature/include_global.php
+- Include global.php in template.php (PHP 7.4 complained about missing _LANGCODE and _CHARSET)
+- Merge pull request #751 from geekwright/sysconfirm
+- Add system_confirm.tpl to xswatch
+- Merge pull request #750 from luciorota/master
+- Use smarty in xoops_confirm()
+- Merge pull request #748 from GregMage/XoopsFormRendererBootstrap4
+- Merge pull request #747 from geekwright/issue741
+- Skip nl2Br() if html detected in MyTextSanitizer::displayTarea()
+- Merge pull request #746 from geekwright/buttoninput
+- Workaround for Bootstrap4 button classes
+- Add value attribute to rendered button
+- Merge pull request #745 from geekwright/rmdebug
+- Remove debug statement
+- Merge pull request #744 from geekwright/issue738
+- Refresh inbox count cache when using pm programs
+- Merge pull request #743 from geekwright/bootstrap4tweaks
+- Smooth some rough edges in Bootstrap v4 support
+- Merge pull request #740 from geekwright/issue739
+- Get description for edit
+- Merge pull request #737 from geekwright/mailtweaks
+- Add qmail as valid mailmethod
+- Add qmail as valid mailmethod
+- XoopsMultiMailer should call parent::__construct()
+- Merge pull request #736 from geekwright/issues735
+- Remove broken caching
+- Merge pull request #734 from geekwright/issue732
+- Handle special case of admin themes in checks
+- Merge pull request #733 from geekwright/issue730
+- Get 'sel' vars from GET explicitly
+- Merge pull request #729 from geekwright/missingtheme
+- Attempt graceful failure on missing theme
+- Merge pull request #728 from geekwright/libupdates20191201
+- Library updates
+- Merge pull request #727 from geekwright/proxyenv
+- Add docs and example of proxy_env
+- Merge pull request #726 from geekwright/silencemq
+- Silence magic quotes
+- Merge pull request #725 from geekwright/nocurliesphpthumb
+- Silence deprecation notice
+- Identify XOOPS patches
+- Patch curly array access in phpthumb
+- Merge pull request #724 from geekwright/issue723
+- Simplify tooltips
+- Merge pull request #722 from geekwright/fabuttons
+- Replace glyphicon based controls with font-awesome
+- Merge pull request #721 from mambax7/feature/PHPMailer_5.2.27
+- Phpmailer to 5.2.27
+- Merge pull request #720 from GregMage/fix_icon
+- Merge pull request #718 from GregMage/system_moduladmin
+- Fix the errors related to this modification https://github.com/XOOPS/XoopsCore25/pull/714
+- Merge pull request #717 from GregMage/New_module_page
+- Filter input
+- Merge branch 'module_page' of https://github.com/GregMage/XoopsCore25 into New_module_page
+- Add smarty "xoops_modulepage"
+- Merge pull request #712 from mambax7/feature/HTML_Purifier_4.12
+- HTML Purifier 4.12
+- Merge pull request #714 from GregMage/Array_modulesadmin
+- Fix https://github.com/XOOPS/XoopsCore25/issues/713
+- Merge pull request #711 from geekwright/xswatch2newbb5
+- Move xswatch templates to NewBB V5
+- Merge pull request #709 from geekwright/imgcattooltip
+- Incorrect tooltip in image manager category list
+- Merge pull request #707 from geekwright/issue706
+- Reset Typography Controls when focus lost
+- Merge pull request #705 from GregMage/display_formdate
+- Fix https://github.com/XOOPS/XoopsCore25/issues/704
+- Merge pull request #702 from geekwright/maint-tweak
+- Use cleaned input
+- Merge pull request #701 from geekwright/remove-zeta
+- Remove zetadigme admin theme
+- Merge pull request #700 from geekwright/im-tweak
+- Fix issue with image_display and permissions
+- Merge pull request #703 from geekwright/issue685
+- Handle negative ini sizes
+- Merge pull request #699 from geekwright/tooltipescape
+- Fix attribution
+- Remove text style in tooltips
+- Escape tooltip output
+- Merge pull request #698 from GregMage/Vulnerability
+- System_CleanVars is deprecated since XOOPS 2.5.11
+- Delete system_CleanVars users
+- Delete system_CleanVars tplsets
+- Delete system_CleanVars preferences
+- Delete system_CleanVars modulesadmin
+- Delete system_CleanVars maintenance
+- Delete system_CleanVars mailusers
+- Delete system_CleanVars groups
+- Delete system_CleanVars comments
+- Delete system_CleanVars blocksadmin
+- Banners admin Securing forms
+- Banners admin Securing forms
+- Banners admin Securing forms
+- Code optimization (image manager)
+- Vulnerability with image manager (admin) CVE-2019-16683 and CVE-2019-16684
+- Merge pull request #697 from fabou78/Fix-#695
+- Fixed #695 issue with synchronize in admin->users
+- Merge pull request #688 from mambax7/feature/2.5.11_version
+- 2.5.11 Alpha cycle
+- 2.5.11-Beta1 version
+- Merge pull request #693 from mambax7/feature/theme_missing_apostrophes
+- Templates missing apostrophes
+- Merge pull request #694 from luciorota/patch-2
+- Removed uneeded ucfirst
+- Merge pull request #692 from geekwright/killcurlies2
+- Simplify code caught in curly bracket array check
+- Fix trying to access array offset on value of type null
+- Remove array access with curly brackets
+- Merge pull request #689 from mambax7/feature/htmlpurifier-4.11.0
+- Htmlpurifier-4.11.0
+- Merge pull request #673 from poehoes/master
+- Update admin.php
+- Merge pull request #668 from tad0616/patch-3
+- Update xoopsload.php
+- Merge pull request #667 from tad0616/patch-2
+- Create XoopsFormRendererBootstrap4.php
+- Merge pull request #690 from mambax7/feature/jQuery_3.4.1
+- JQuery 3.4.1
+- Merge pull request #687 from GregMage/quote_answer_pm
+- Fix https://github.com/XOOPS/XoopsCore25/issues/686
+- Merge pull request #684 from geekwright/issue683
+- Add noopener rel attribute to external links in TextSanitizer
+- Merge pull request #681 from geekwright/mysqlansi
+- Fix upgrade error under MySQL in ANSI mode
+- Fix install error under MySQL in ANSI mode
+- Merge pull request #679 from geekwright/issue678
+- Implement Xmf\Request for input
+- Merge pull request #677 from geekwright/mailerrefs
+- Unneeded by reference
+- Unneeded by reference
+- Merge pull request #675 from geekwright/deprecate-setFormVars
+- Deprecate \XoopsObject::setFormVars()
+- Merge pull request #672 from geekwright/2.5.10-final
+- Fix date
+- Prep for 2.5.10 final
+- Merge pull request #666 from geekwright/prep2.5.10rc
+- Update changelogs for RC
+- Merge pull request #665 from geekwright/xmf-1.2.17
+- XMF 1.2.17
+- Merge pull request #664 from geekwright/fix-mambax7-phpdoc
+- Non-canonical order
+- Typo
+- :loadConfig
+- GetAll
+- Merge pull request #660 from mambax7/master
+- Merge pull request #3 from mambax7/imgbot
+- [ImgBot] Optimize images
+- Merge pull request #662 from mambax7/feature/index_files
+- Index.html files
+- Merge pull request #655 from geekwright/updgitbook
+- Update gitbook links
+- Merge pull request #658 from geekwright/issue657
+- ModuleAdmin Footer Link
+- Typo
+- Merge pull request #654 from geekwright/tweakbeta
+- Changelog and lang_diff updates
+- Bump Version
+- Update changelog
+- Add notes on SELinux and MySQL8
+- Module version bumps
+- Minor tweaks and corrections
+- Merge pull request #653 from GregMage/update_protector_changelog
+- Updating the protector changelog
+- Merge pull request #652 from GregMage/Lang_diff
+- Update lang_diff.txt
+- Merge pull request #651 from geekwright/issue532
+- Gif version of logo.png
+- Increase resolution
+- Merge pull request #642 from geekwright/denylibs
+- Deny direct access to libraries
+- Merge pull request #650 from geekwright/issue649
+- Remove unwanted space in links
+- Merge pull request #648 from GregMage/ProtectorPrefixManager
+- The prefix setting is now in secure.php
+- Merge pull request #645 from GregMage/moduladmin
+- Add strtolower()
+- Merge pull request #641 from geekwright/issue640
+- Missing space
+- Merge pull request #639 from geekwright/issue638
+- Workaround for new Criteria(1,1)
+- Merge pull request #636 from GregMage/notifyxbootstrap
+- Merge pull request #635 from geekwright/issue317-2
+- Hide ICQ, AIM, YIM, MSNM fields on new installs
+- Merge pull request #629 from geekwright/libupd20190202
+- Library updates
+- Merge pull request #630 from geekwright/relprep2510b
+- Release prep for 2.5.10 BETA
+- Merge pull request #624 from mambax7/master
+- Check for variable
+- Merge pull request #627 from geekwright/issue626
+- Remove unneeded mt_srand() calls
+- Merge pull request #619 from geekwright/minphp71
+- Add warning for old PHP versions
+- Merge pull request #623 from geekwright/imglist
+- Add getFileListByExtension() method
+- Merge pull request #622 from mambax7/master
+- Merge pull request #2 from mambax7/imgbot
+- [ImgBot] Optimize images
+- Merge pull request #620 from geekwright/jpgjpeg
+- Recognize jpeg extension in getImgListAsArray()
+- Merge pull request #614 from luciorota/patch-1
+- Update form.php
+- Merge pull request #618 from geekwright/fineupreview
+- Minor fixes
+- Minor fixes
+- Fineuploader review
+- Merge pull request #617 from geekwright/xswatch-notif
+- Tweak notifications template
+- Merge pull request #616 from mambax7/master
+- Cycle values="odd,even"
+- Update info
+- Merge pull request #615 from luciorota/patch-2
+- Update uploader.php
+- Merge pull request #613 from mambax7/feature/newbb_template_array_check
+- NewBB tpl array check
+- Merge pull request #612 from geekwright/libupd20181130
+- Revert iconv requirement
+- Update class/libraries
+- Merge pull request #609 from geekwright/remove-recaptcha
+- Remove recaptcha
+- Merge pull request #608 from geekwright/xswatch20181114
+- Tweak comment templates in xswatch
+- Merge pull request #610 from geekwright/mysql8
+- Ensure default collation is presented by default
+- Add backtick quote to criteria column name
+- Quote reserved word `rank`
+- Merge pull request #606 from mambax7/feature/phpThumb_1.7.15-201810050741
+- PhpThumb 1.7.15-201810050741
+- Merge pull request #605 from mambax7/master
+- Typo fetchRow
+- Merge pull request #607 from geekwright/tablesorter-2.31.0
+- Compile less
+- Tablesorter 1.31.0
+- Merge pull request #601 from GregMage/admin_review_comment
+- Return to the div
+- Merge branch 'admin_review_comment' of https://github.com/GregMage/XoopsCore25 into admin_review_comment
+- Fix https://github.com/XOOPS/XoopsCore25/issues/600
+- Changes css
+- Merge pull request #598 from mambax7/feature/htmlSpecialChars
+- HtmlSpecialChars
+- Merge pull request #599 from mambax7/feature/ENT_QUOTES
+- ENT_QUOTES
+- Merge pull request #596 from geekwright/xmf_v1.2.25
+- Update to XMF v1.2.25
+- Merge pull request #595 from geekwright/prep20180918
+- Catch up changelogs
+- Merge pull request #593 from luciorota/patch-8
+- Update uploader.php
+- Merge pull request #592 from luciorota/patch-9
+- Update uploader.php
+- Merge pull request #594 from geekwright/scrutinizertest
+- Add PHP checks
+- Update scrutinizer config
+- Merge pull request #591 from geekwright/issue590
+- Always redirect to user.php on no permission
+- Merge pull request #589 from geekwright/fineupvprotector
+- Protector vs. FineUploader Round 2
+- Update README.md
+- Phpstorm
+- Merge pull request #587 from mambax7/feature/CriteriaElement
+- Update name spelling CriteriaElement
+- Merge pull request #584 from geekwright/fineupnohead
+- Sync with .tpl changes
+- Pass JWT for ajaxfineupload in post, not header
+- Merge pull request #586 from geekwright/issue585
+- Properly initialize $exportString
+- Merge pull request #583 from geekwright/libupd2510
+- Library Refresh
+- Merge pull request #582 from geekwright/install2510
+- Installer updates for 2.5.10
+- Merge pull request #581 from geekwright/upgrade2510
+- Upgrade for 2.5.10
+- Merge pull request #578 from mambax7/feature/phpThumb_Update
+- PhpThumb 1.7.15-201802181529
+- Merge pull request #577 from mambax7/feature/jQuery_Plugins_Updates
+- JQuery & Plugins updates
+- Merge pull request #575 from mambax7/feature/HTML_Purifier_4.10.0
+- HTML Purifier 4.10.0
+- Merge pull request #580 from geekwright/pagenav
+- Use Request to access $_SERVER variable
+- Merge pull request #574 from geekwright/truncatehtml
+- Add Smarty modifier truncateHtml
+- Merge pull request #572 from mambax7/feature/phpmailer5.2.26
+- Phpmailer 5.2.26
+- Merge pull request #570 from zyspec/patch-3
+- Another hard coded http: to use XOOPS_PROT for URLs
+- Merge pull request #571 from mambax7/feature/version_info_in_toolbar
+- Module version in Admin toolbar
+- Merge pull request #569 from mambax7/feature/assignment_in_condition
+- Reverting
+- Assignment in Condition
+- Merge pull request #568 from zyspec/patch-2
+- Change hard coded http: to use XOOPS_PROT for URLs
+- Merge pull request #567 from geekwright/protectordata
+- Move protector data to xoops_data
+- Merge pull request #566 from mambax7/feature/missing_space
+- Missing space
+- Merge pull request #562 from geekwright/themeauto
+- Expose xoTheme and xoopsTpl for theme_autorun.php
+- Merge pull request #561 from geekwright/issue559
+- Use standard xoopsUser check
+- Merge pull request #563 from geekwright/imgmime
+- Error in error handling
+- Merge pull request #557 from geekwright/fixtrunc
+- Don't show post comment button unless you can post
+- Fix XOOPS truncate plugin
+- Merge pull request #558 from zyspec/patch-1
+- Fix uninitialized variable
+- Merge pull request #556 from geekwright/deptrace
+- Add mini-trace to addDeprecated()
+- Merge pull request #511 from mambax7/feature/deprecated
+- Not needed comma
+- Consistency
+- Consistency
+- Typo
+- Merge pull request #555 from luciorota/patch-6
+- Update image.php
+- Merge pull request #554 from geekwright/truncateutf8
+- UTF-8 ready truncate for Smarty
+- UTF-8 ready truncate for Smarty
+- Merge pull request #552 from geekwright/issue551
+- Fix purgeCookies()
+- Merge pull request #553 from geekwright/fixes20171117
+- Assign by ref error
+- Assignment not comparison
+- PHP 7.1+ non-well formed number error
+- Merge pull request #550 from geekwright/protectorstatfix
+- Visual fixes for protector overview
+- Merge pull request #549 from mambax7/feature/protector_is_set
+- Is_set
+- Merge pull request #548 from geekwright/checkassemver
+- Use semver rules to check min_xoops
+- Use semver rules to check min_xoops
+- Merge pull request #547 from geekwright/protector3.60
+- Update changelog for 3.60
+- Adding admin/stats.php
+- Tweak some diagnostics in stopforumspam calls
+- Merge pull request #546 from geekwright/xmf1.2.12
+- Library Updates
+- Merge pull request #543 from geekwright/changelog2510
+- Add TinyMCE 3.5.12
+- Bump version, changelog
+- Merge pull request #542 from geekwright/issue541
+- Move MAX_FILE_SIZE element before file element
+- Merge pull request #544 from geekwright/mambax7-tinymce3.5.12
+- Revert changelog
+- Merge branch 'feature/TinyMCE3.5.12' of https://github.com/mambax7/XoopsCore25 into mambax7-tinymce3.5.12
+- TinyMCE 3.5.12
+- Merge pull request #540 from mambax7/feature/Smarty_2.6.31
+- Smarty 2.6.31
+- Merge pull request #538 from mambax7/feature/array_check_(PHP_7.2)
+- Array check
+- Array check (PHP 5.7.2
+- Merge pull request #536 from geekwright/issue535
+- ModuleAdmin stylesheet inclusion
+- Merge pull request #534 from geekwright/tsu
+- Escaping issues
+- Merge pull request #533 from mambax7/feature/userform_template
+- Updates to *userform.tpl
+- Merge pull request #531 from geekwright/rel259
+- Release Prep XOOPS 2.5.9
+- Merge pull request #530 from geekwright/relpreprc3
+- Release Prep RC3
+- Merge pull request #528 from geekwright/randbytes
+- Update Xmf and other libraries
+- Adding paragonie/random_compat
+- Removing ircmaxell/random-lib and security-lib
+- Merge pull request #527 from geekwright/iconvreq
+- Change iconv requirement
+- Merge pull request #526 from geekwright/issue524
+- Sanitize Mime-Type
+- Merge pull request #525 from geekwright/issue523
+- External URL filtering
+- Merge pull request #520 from GregMage/Strong_tag_not_closed_Uninstall
+- Fix error with strong tag
+- Merge pull request #519 from geekwright/relprepRC2
+- Cleanup generated archives
+- Changelog and version update
+- Merge pull request #518 from geekwright/july04fix
+- Fixing issue in July 04 commits
+- Merge pull request #517 from mambax7/feature/html2tpl_in_themes
+- Replace system templates .html with .tpl
+- Merge pull request #513 from ihackcode/tooltips
+- Added missing tooltip.js
+- Merge pull request #516 from mambax7/feature/purifier4.9.3
+- HTML Purifier is 4.9.3
+- Set "transition" as default gui theme
+- Fix vertical alignment of elements inside table
+- Add id to help system table
+- Updating styles for admin help section
+- Merge pull request #515 from geekwright/issue514
+- Add missing arguments
+- Merge pull request #510 from geekwright/upgradetpl
+- Remove first time redirect
+- Handle errors accessing site-closed template
+- Merge pull request #503 from geekwright/issue502
+- Provide default value
+- Merge pull request #505 from geekwright/issue504
+- Theme template search order
+- Merge pull request #501 from geekwright/relprepRC1
+- RC1 Prep
+- Merge pull request #500 from geekwright/syscookie
+- Deprecate system module Cookie class
+- Merge pull request #497 from geekwright/issue495
+- Fix botched assignment
+- Merge pull request #496 from geekwright/issue494
+- Freshen Links
+- Merge pull request #493 from geekwright/pmfwd
+- Fix docblock
+- Error in email forward
+- Merge pull request #490 from geekwright/mh20170512
+- Escape filename
+- Validate file name
+- By ref error
+- Add nonce
+- Merge pull request #488 from geekwright/xmfissue33-34
+- Update to Xmf 1.2.9
+- Merge pull request #484 from tad0616/master
+- Replace .text-muted with .help-block
+- Add XoopsFormElementTray name for WCAG 2.0
+- Merge pull request #479 from mambax7/feature/kernel_object
+- Only variables should be assigned by reference
+- Merge pull request #481 from mambax7/feature/xbootstrap_xoopstube
+- Assets/images
+- Merge pull request #489 from geekwright/issue486
+- Return integer for XOBJ_DTYPE_INT
+- Merge pull request #477 from geekwright/fix475
+- Missing file update in XMF
+- Merge pull request #478 from geekwright/aboutlicenselinks
+- Fix broken license_url in modules
+- Merge pull request #475 from geekwright/xmfv128
+- Upstream library updates
+- Merge pull request #476 from geekwright/issue474
+- Serialize before escaping
+- Merge pull request #470 from geekwright/issue468
+- Add simple btn classes
+- Merge pull request #469 from geekwright/issue466
+- Remove stale links
+- Merge pull request #467 from geekwright/xmfseotitle
+- Library updates
+- Merge pull request #464 from GregMage/error_by_ref
+- Error by ref in class userutility.php (add user)
+- Merge pull request #465 from bleekk/master
+- Newbb bootstrap templates
+- Merge pull request #462 from geekwright/allowhtml
+- Upstream library updates
+- Merge pull request #461 from geekwright/xbissues
+- XBootstrap enable headhesive and submenu demo
+- Merge pull request #460 from geekwright/prep2.5.9Beta3
+- Release prep Beta3
+- Merge pull request #459 from geekwright/issue429
+- By ref errors
+- Merge pull request #458 from geekwright/mambax7-xbootstrap
+- Minor error noted in testing
+- Sync xswatch with recent bootstrap changes
+- Sync xbootstrap with Angelo's version
+- Merge pull request #453 from GregMage/Display_date_comment
+- Published and Updated Dates #452
+- Merge pull request #450 from geekwright/upgradegroups
+- Add group defines to rewrite data
+- Merge pull request #451 from geekwright/composerupd20170403
+- Change to kint-php/kint
+- Updates from upstream
+- Merge pull request #449 from mambax7/feature/jQuery3.2.1
+- JQuery 3.2.1
+- Merge pull request #447 from geekwright/stdusercookie
+- Remove unused define
+- Standardize usage of usercookie
+- Remove store name in cookie for a year
+- Merge pull request #446 from geekwright/zyspec-paypal
+- Updates for PayPal changes
+- Merge pull request #445 from geekwright/cacheclear
+- Clear caches on module updates
+- Merge pull request #443 from geekwright/fixedgroups
+- Use XOOPS_GROUP_* defines
+- Merge pull request #441 from geekwright/issue438
+- Include once
+- Merge pull request #440 from geekwright/issue436
+- Typo
+- Merge pull request #439 from geekwright/issue432
+- Guard against external loading
+- Merge pull request #435 from geekwright/shareaholickey
+- Typo
+- Update with shareaholic instructions
+- Clear data-app-id in shareaholic-canvas
+- Update to current API conventions
+- Merge pull request #434 from geekwright/comrefresh
+- Comment bar missing hidden elements
+- Merge pull request #431 from geekwright/issue430
+- More visibility for added user
+- Merge pull request #428 from geekwright/docreview
+- Doc update
+- Merge pull request #427 from geekwright/issue426
+- Undefined variable in some paths
+- Merge pull request #424 from geekwright/partialrevert419
+- Restore array types
+- Merge pull request #423 from geekwright/changelog20170311
+- Changelog updates
+- Merge pull request #422 from GregMage/theme_install
+- Fix #421
+- Merge pull request #420 from trabisdementia/Profile
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into ProfileModule
+- Merge pull request #419 from geekwright/issue410
+- Handle non-array, set sane defaults
+- Merge pull request #418 from trabisdementia/ProfileModule
+- Fix issue #410 for profile module: select fields not showing.
+- Merge pull request #416 from geekwright/issue415
+- Normalize paths
+- Merge pull request #414 from geekwright/forselusr2
+- Handle no theme case
+- Merge pull request #413 from geekwright/blankavatar
+- Consistent user_avatar on account creation
+- Merge pull request #411 from geekwright/formselusr
+- Remove redundant script tags
+- Merge pull request #408 from geekwright/issue397-3
+- Add user issue
+- Merge pull request #407 from geekwright/xmfassert
+- Xmf update
+- Merge pull request #406 from GregMage/Search_error_link
+- Fix error link in search.php
+- Merge pull request #404 from geekwright/upgrader
+- Fix and standardize exception handling
+- Upgrade and install tweaks
+- Merge pull request #402 from geekwright/xmfupdate
+- Library Updates
+- Merge pull request #401 from geekwright/issue399
+- Match jGrowl to theme in xswatch
+- Merge pull request #400 from geekwright/issue397-2
+- Add user button
+- Merge pull request #398 from geekwright/issue397
+- Add new user button
+- Merge pull request #395 from geekwright/issue390p2
+- Cap non-admin multi-file uploads
+- Merge pull request #394 from geekwright/issue390
+- Permit higher traffic for multi-file uploads
+- Merge pull request #388 from mambax7/master
+- Missing quotations
+- Merge pull request #393 from GregMage/fix_link
+- Fix bug with button
+- Merge pull request #392 from geekwright/issue391
+- Lock text and code on instantiation
+- Merge pull request #384 from geekwright/issues381-382
+- Issues 381 & 382
+- Merge pull request #380 from geekwright/changelog20170224
+- Change log and version
+- Merge pull request #379 from geekwright/shorttagerror
+- Fix short tag error
+- Merge pull request #378 from geekwright/modversions20170224
+- Bumping module versions
+- Merge pull request #377 from geekwright/themechange
+- Update themes
+- Merge pull request #376 from geekwright/newupgrade
+- README, remove debug code
+- Refactor and new style
+- Arg is ignored, but already set
+- Initial cleanup
+- Merge pull request #375 from geekwright/newinstall
+- Hide links in module install log
+- Add missing .noininstall
+- Typo
+- Credits
+- Cleanup
+- Recognize error condition
+- Update bootstrap.min.css
+- Mobile tweak
+- Cleanup details
+- Assets folder
+- First pass
+- Merge pull request #372 from geekwright/inboxcount
+- Smarty xoInboxCount plugin enhancement
+- Merge pull request #373 from geekwright/rmfileman
+- Remove the old filemanager from extras
+- Merge pull request #371 from geekwright/lexikonbs
+- Add lexikon templates from bleek
+- Merge pull request #370 from geekwright/formassign
+- Add rendered form to XoopsForm::assign()
+- Merge pull request #369 from myxoops/master
+- Username and avatar in userblock
+- Merge pull request #366 from geekwright/tswiki
+- Update textsanitizer Wiki imagery
+- Merge pull request #368 from geekwright/resetactkey
+- Reset actkey on activation
+- Merge pull request #364 from geekwright/sslcookies
+- Secure flag on cookies
+- Merge pull request #363 from geekwright/recptchassl
+- Use SSL by default for recaptcha
+- Merge pull request #362 from cesagonchu/master
+- Define corrections into xBootstrap for XoopsTube module
+- Merge pull request #361 from GregMage/fix_tinyMCE
+- Merge pull request #359 from GregMage/link_comment
+- Update system_comments.html
+- Fix error by ref in main.php (comments) and add a link to display comment
+- Merge pull request #354 from GregMage/Finalization_fineuploads
+- Update imagemanager
+- Merge pull request #353 from geekwright/intlext
+- Change log
+- Rebuild libraries
+- Recommend Intl extension
+- Merge pull request #352 from geekwright/noaim
+- Suppress old messenger field in profile
+- Merge pull request #351 from geekwright/php53-20170214
+- Method return value in write context
+- Merge pull request #344 from geekwright/fineupdebug
+- Debug option for fine uploader
+- Merge pull request #345 from geekwright/changelog20170213
+- New Additions
+- New Additions
+- Changelog updates
+- Merge pull request #347 from geekwright/cookiedom
+- Add cookie domain to install
+- Merge pull request #346 from geekwright/pmicon
+- Issue with subject icons
+- Merge pull request #349 from geekwright/rmgeshi
+- Text sanitizer cleanup
+- Merge pull request #350 from GregMage/multi_upload_image
+- Add fineupload for images (admin)
+- Merge pull request #348 from GregMage/multi_upload_avatar
+- Fix template name
+- Update ajaxfineupload.php
+- Add fineupload for avatar
+- Add css file for fineupload
+- Add new templates for fineupload
+- Merge pull request #341 from geekwright/issueself
+- Revise xBootstrap pm templates
+- Merge pull request #342 from GregMage/multiple_images
+- Add some language support for the fine-uploader
+- Merge pull request #2 from geekwright/multiple_images
+- Turn off retry for bad mime type or extension
+- Remove unneeded code
+- Refactor
+- Add check mimetype. does not work
+- Finalise multi images
+- Change name and mimetype
+- Update endpoint.php
+- Unset folder fine-uploader in uploads
+- Change tpl
+- Update fine-uploader
+- Merge pull request #1 from geekwright/multiple_images
+- Tweaks for issues
+- Add endpoint
+- Add uploads files
+- Changing the size of the window
+- Add fine-uploader in imagemanager
+- Add fine-uploader to Framworks
+- Merge pull request #339 from geekwright/freethis
+- Error in class management
+- Merge pull request #337 from mambax7/feature/Undefined_method
+- Merge pull request #1 from geekwright/mamba337
+- Reverting
+- Change default to use custom session
+- Undefined Methods
+- Merge pull request #336 from mambax7/feature/Missing_constants
+- Undefined constant
+- Merge pull request #335 from mambax7/feature/Strict_PHP
+- Overridden method compatibility
+- Merge pull request #334 from GregMage/imageadmin_pager
+- RenderImageNav() to renderNav(4)
+- Merge pull request #333 from mambax7/feature/testdata
+- TestData option
+- Merge pull request #330 from mambax7/feature/Updates
+- Revert "sync"
+- Naming conventions
+- Unnecessary label
+- Missing semicolon
+- Access modifiers shall be defined
+- Case mismatch
+- Sync
+- Merge pull request #329 from geekwright/miscfix20170208
+- Html5 style
+- Typo fix
+- Merge pull request #328 from geekwright/seluser
+- Select user buttons
+- Merge pull request #326 from geekwright/protectortweaks
+- Protector tweaks
+- Merge pull request #324 from geekwright/fix20160206
+- By reference error
+- Merge pull request #325 from geekwright/issue321
+- Add public suffix list support
+- Merge pull request #320 from geekwright/upgrade224
+- Cleanups
+- Merge pull request #250 from mambax7/feature/htmlpurifier480
+- HTML Purifier 4.8.0
+- HTML Purifier 4.8.0
+- Merge pull request #323 from geekwright/protver7.1
+- Add cast for version in XoopsModule
+- Error from protector in PHP 7.1
+- Merge pull request #319 from geekwright/issue317
+- Profile updates
+- Merge pull request #318 from mambax7/master
+- Updates
+- Merge pull request #315 from geekwright/themeblk310
+- Theme and Info block tweaks
+- Merge pull request #240 from mambax7/feature/version_remove
+- Remove @version
+- Merge pull request #306 from mambax7/feature/header_updates
+- File header updates
+- Merge pull request #312 from geekwright/issue308
+- Add bootstrap compatible template
+- Merge pull request #314 from geekwright/issue309
+- Supress zero post users
+- Merge pull request #305 from geekwright/subicons
+- Replacement subject icons
+- Merge pull request #304 from geekwright/popupheader
+- Add missed templates
+- Allow 128x128 avatars by default
+- Visual consistency tweaks
+- Add system_popup_header.tpl
+- Merge pull request #302 from geekwright/basereq
+- Add XOOPS\base-requires25 package
+- Merge pull request #300 from GregMage/trigger_error_tree
+- Add a trigger error if you use makeSelBox().
+- Merge pull request #299 from geekwright/hcbuttons
+- Removing graphic images with english text
+- Merge pull request #298 from geekwright/issue294
+- Do not include xoops.css on redirect
+- Merge pull request #296 from geekwright/issue292
+- Use XoopsFormSelect in XoopsObjectTree
+- Merge pull request #297 from geekwright/commenttpl
+- Add template for comment bar
+- Merge pull request #295 from geekwright/issue290c
+- Value display in checkbox and radio elements
+- Merge pull request #293 from geekwright/issue290b
+- Allow nested trays to work as expected
+- Merge pull request #291 from geekwright/cleanupxfrbs
+- Cleanup pass on bootstrap form renderer
+- Merge pull request #289 from geekwright/issue286
+- Hidden form issue
+- Merge pull request #288 from geekwright/issue285a
+- Visual issue in ModuleAdmin::renderIndex()
+- Merge pull request #283 from geekwright/issues-257-8-9
+- Fix installer notices
+- Merge pull request #281 from geekwright/rm-admin-legacy
+- Remove "legacy" admin theme
+- Merge pull request #280 from geekwright/issue275
+- Add indication on cloned blocks
+- Merge pull request #279 from geekwright/issue276
+- Block admin select color
+- Merge pull request #252 from mambax7/feature/xbootstrap_extgallery
+- Image folder update
+- Merge pull request #251 from mambax7/feature/xbootstrap_publisher
+- Image folder update
+- Merge pull request #263 from GregMage/New_search_template
+- Add template for search
+- Merge pull request #282 from GregMage/fix_bug_XoopsFormRendererLegacy
+- Fix bug with checkbox in XoopsFormRendererLegacy.php
+- Merge pull request #278 from geekwright/GregMage-Bootstrap_compatibility
+- Add themed form rendering to RendererInterface
+- Typography dhtml editor tweaks for bootstrap
+- Adapt to XoopsFormRenderer
+- Adapt to XoopsFormRenderer
+- Adapt to XoopsFormRenderer
+- Add theme_autorun.php support
+- Introduce XoopsFormRenderer
+- Add Font-Awesome
+- Merge branch 'Bootstrap_compatibility' of https://github.com/GregMage/XoopsCore25 into GregMage-Bootstrap_compatibility
+- Bug in admin
+- Improved code to improve display (formelementtray)
+- Clean code
+- Bootstrap formelementtray.php
+- Bootstrap formtextdateselect
+- Bootstrap formtextarea
+- Bootstrap formtext
+- Bootstrap formselect
+- Bootstrap formradio
+- Bootstrap formpassword
+- Bootstrap formlabel
+- Bootstrap formfile
+- Bootstrap formdhtmltextarea
+- Bootstrap formcolorpicker
+- Bootstrap formcheckbox
+- Update theme.php
+- Bootstrap formdhtmltextarea
+- Bootstrap formbutton and formbuttontray
+- Add $GLOBALS['xoopsConfig']['bootstrap']
+- Merge pull request #273 from GregMage/error_by_ref
+- Omission error by ref
+- Fix error by ref in tplsets
+- Merge pull request #270 from geekwright/phpmailer-5-2-21
+- Upstream Update
+- Merge pull request #265 from GregMage/bug_userinfo
+- Update templates
+- Error in userinfo.php
+- Merge pull request #272 from GregMage/error_admin_banner
+- Fixed bug banner in admin
+- Merge pull request #274 from GregMage/mimetypes
+- Add .csv mimetypes
+- Merge pull request #269 from geekwright/phpmailer-5-2-20
+- Upstream Update
+- Merge pull request #268 from geekwright/issue256
+- Keep consistent use of $error variable
+- Merge pull request #267 from geekwright/xmf1-2-0
+- Upstream Library Updates
+- Merge pull request #262 from geekwright/memexhaust
+- Remove glob call in \SystemMaintenance::CleanCache
+- Merge pull request #266 from geekwright/phpmailer-5-2-19
+- Upstream Updates
+- Merge pull request #260 from geekwright/transition-admin-theme
+- New Admin Theme - Transition
+- Merge pull request #248 from geekwright/upgrade-merge
+- Fix merge error in upgrade/index.php
+- Merge pull request #247 from geekwright/upgrade-session
+- Session IP address issues in upgrade
+- Merge pull request #245 from GregMage/Login_over_IPV6_fails_during_upgrade
+- Login over IPV6 fails during upgrade
+- Merge pull request #244 from mambax7/feature/jQuery3.1.1
+- JQuery3.1.1, jQueryUI 1.12.1
+- Merge pull request #243 from geekwright/protectedtree
+- BC Patch for XoopsObjectTree
+- Typos
+- Merge pull request #237 from geekwright/php71session
+- Handle possible PHP 7.1 session ids
+- Merge pull request #236 from geekwright/issue234
+- Rework curl code
+- Merge pull request #235 from GregMage/recaptcha2
+- Change recaptcha_2 to recaptcha2 in comment
+- Merge pull request #233 from GregMage/Preload
+- Removal array() in the triggerEvent() arguments
+- Add Preload for behavior code
+- Merge pull request #232 from geekwright/mambax7-feature/captcha
+- Revert to Google supplied reCAPTCHA Library for PHP - v1.11
+- Captcha cosmetics
+- Merge pull request #229 from geekwright/upgphp53
+- PHP 5.3 regression
+- Merge pull request #230 from geekwright/GregMage-reCaptcha_2
+- Drop test file
+- XoopsCaptcha should have protected __construct()
+- PSR2 update
+- UTF-8 conversion
+- Add trigger_error("recaptcha is outdated , use recaptcha_2 in \class\captcha\config.php", E_USER_WARNING);
+- Add recaptcha_2 in config.php
+- Add test_xoopscaptcha.php. It's just for test.
+- Add recaptcha 2
+- Replace xoops_load(captcha') with xoops_load('xoopscaptcha');
+- Merge pull request #223 from geekwright/bannerupdate
+- Add xoopsifyIt banner
+- Merge pull request #222 from geekwright/spamupdates
+- New Protector Filters
+- Merge pull request #221 from geekwright/themesearch
+- Conditional search box in xbootstrap, fix typo
+- Add xoops_search assign
+- Merge pull request #218 from geekwright/ref160823
+- By reference error
+- Merge pull request #214 from GregMage/XoopsFormDhtmlTextArea_preview
+- Update formdhtmltextarea.js
+- Update formdhtmltextarea_preview.php
+- Fix bug XoopsFormDhtmlTextArea preview with UTF-8
+- Merge pull request #217 from GregMage/textsanitizer
+- Update readme.txt
+- Merge pull request #210 from mambax7/feature/type_comparison
+- Safe type comparison, other cleanup
+- Merge pull request #216 from geekwright/mambax7-feature/Globals_xoopsOption
+- Conflict resolved merge of branch 'feature/Globals_xoopsOption' of https://github.com/mambax7/XoopsCore25
+- Type annotation in PhpStorm
+- Merge pull request #213 from mambax7/feature/Callable_parameter_usage_violates_definition
+- Callable parameter usage violates definition
+- Merge pull request #212 from mambax7/feature/reference_Mismatch
+- Reference mismatch
+- Merge pull request #208 from GregMage/SelectTheme
+- Fix bug with theme.html
+- Add $theme_set_allowed = false in XoopsFormSelectTheme
+- Merge pull request #207 from geekwright/instops
+- Install configuration options
+- Merge pull request #206 from geekwright/smarty-2.6.30
+- Smarty v2.6.30
+- Merge pull request #204 from geekwright/norem2
+- Update system_userform.html
+- Merge pull request #200 from geekwright/phpthump
+- PhpThumb to 1.7.14-201608101311
+- Merge pull request #196 from geekwright/fixinstsup
+- Shift toward HTML5
+- Add curl to recommended extensions
+- Localized support site issue
+- Merge pull request #199 from geekwright/fix146
+- Bad links in admin theme localsupport
+- Merge pull request #201 from geekwright/norem
+- Turn off remember me by default
+- Merge pull request #203 from GregMage/XoopsForm_PHP4
+- Compatibility in XoopsForm with php4
+- Merge pull request #198 from geekwright/fixrp197
+- Small issue with symlinks
+- Merge pull request #197 from GregMage/xoops_page
+- Add $xoops_startpage
+- Use $xoops_page
+- Add $xoops_page
+- Merge pull request #195 from mambax7/feature/xmlrpc
+- Reference mismatch
+- Name update
+- Merge pull request #187 from geekwright/jqui1.12.0
+- Fix lightbox image sizing
+- JQueryUI theme update
+- Adjust avatars display
+- JQuery UI to 1.12.0
+- Merge pull request #192 from GregMage/mimetypes
+- Update mimetypes.inc.php
+- Merge pull request #190 from geekwright/xmf113
+- Update to XMF 1.1.3
+- Merge pull request #188 from zyspec/feature/xoopsformtextdateselect-improvements
+- Check for existance of language calendar.php file and if
+- Merge pull request #186 from geekwright/zyspec-feature/compare-type-improvements
+- Reset and reapply corrected fix
+- Squashed commit of the following:
+- Merge pull request #182 from geekwright/xmf112
+- PHP min to 5.3.9
+- Update XMF to v1.1.2
+- Merge pull request #179 from mambax7/feature/Bootstrap3.7
+- Bootstrap 3.7
+- Merge pull request #178 from mambax7/feature/jQuery3.1
+- JQuery 3.1
+- Merge pull request #181 from mambax7/feature/Version_update_2.5.9_Beta1
+- Updating version to 2.5.9 and the changelog
+- Merge pull request #177 from geekwright/upgbtn
+- Highlight Update System Module in upgrade
+- Merge pull request #175 from mambax7/feature/xBobstrab_Publisher
+- Merge pull request #176 from mambax7/feature/User_Icons
+- Changing icons for consistency
+- Merge pull request #173 from mambax7/feature/HTML5_Syntax_2
+- HTML5 syntax
+- Merge pull request #172 from mambax7/feature/fixes
+- Merge pull request #171 from geekwright/html5form
+- Move to HTML5 syntax
+- Merge pull request #170 from geekwright/formtime
+- XoopsFormDateTime - time only option
+- Merge pull request #169 from geekwright/profile168
+- Bug in ProfileProfileHandler::get()
+- Merge pull request #160 from mambax7/feature/phpThumb
+- Comparison fix
+- PhpThumb 1.7.14-201607141354
+- Merge pull request #165 from geekwright/liomj-master
+- Tweaks
+- Update style.css
+- Update theme.tpl
+- Add files via upload
+- Update rightBlock.tpl
+- Update leftBlock.tpl
+- Update style.css
+- Merge pull request #167 from geekwright/xoopskernel7
+- Xos_kernel_Xoops2 reference issues
+- Merge pull request #166 from geekwright/tree7
+- XoopsObjectTree issues
+- Merge pull request #164 from geekwright/tsrefs
+- Make clean exit
+- Reference issues
+- Merge pull request #161 from mambax7/feature/typos
+- Typo
+- Merge pull request #159 from mambax7/feature/jquery-1.10.2
+- Removing jquery-1.10.2
+- Merge pull request #158 from mambax7/feature/jqueryForm
+- JQueryForm 3.51
+- Merge pull request #157 from mambax7/feature/owl.carousel
+- Owl.carousel 1.3.3
+- Merge pull request #156 from mambax7/feature/tablesorter
+- Tablesorter 2.26.6
+- Merge pull request #155 from mambax7/feature/masonry
+- Masonry 4.1
+- Merge pull request #154 from mambax7/feature/jgrowl
+- Remove jgrowl.map link
+- Jgrowl.css
+- Merge pull request #153 from geekwright/fixes071416
+- Misc fixes
+- XMF to v1.1.0
+- Merge pull request #151 from liomj/master
+- Update system_siteclosed for xbootstrap
+- Merge pull request #152 from mambax7/feature/jgrowl
+- Remove old file
+- JGrowl update
+- Merge pull request #149 from mambax7/feature/utf8-changelog
+- //github.com/XOOPS/XoopsCore25/issues/140
+- Merge pull request #144 from geekwright/helpsmi
+- Correct help/module_index in system
+- Merge pull request #145 from geekwright/issue139
+- Correct protector connection check
+- Missed files
+- Report error on database connection
+- Merge pull request #147 from cesagonchu/master
+- Update help.tpl
+- Merge pull request #142 from mambax7/feature/cosmetics
+- Missing language constants
+- Merge pull request #143 from GregMage/master
+- Fix Bug #141 for smilies
+- Little error
+- Fix Bug #141 for userrank
+- Merge branch 'master' of https://github.com/GregMage/XoopsCore25
+- Improved upload class
+- Improved upload class
+- Fix Bug #141 for avatar
+- Merge pull request #138 from geekwright/doc4handler
+- Docblock fix for getHandler functions
+- Merge pull request #135 from mambax7/feature/xml
+- Reference mismatch, cosmetics, .tpl
+- Merge pull request #134 from geekwright/fixes061616
+- Fix occasional issues using xoops_loadLanguage('locale')
+- Fix multiple issues in image.php
+- Add a table property to handlers
+- Backport Smarty securityToken plugin
+- Merge pull request #133 from ggoffy/master
+- Part 3
+- Part 2
+- Eliminate notice "Only variables should be assigned by reference...."
+- Merge pull request #128 from mambax7/feature/xml
+- Reference mismatch
+- Merge pull request #125 from mambax7/feature/preuninstallfix
+- Changelog update
+- Merge pull request #124 from luciorota/patch-3
+- Update makedata.php
+- Merge pull request #123 from mambax7/XOOPS_DB_CHARSET
+- Bug in PHP < 5.5
+- Merge pull request #122 from geekwright/xmf102
+- Update change log
+- Update xmf to version 1.0.2
+- Merge pull request #121 from geekwright/fix120
+- Change set charset behavior for mysqli
+- Merge pull request #119 from mambax7/feature/br_html
+- Replace <br /> with <br>
+- Merge pull request #118 from mambax7/master
+- Icons for Edit, Delete, Download (bleekk)
+- Merge pull request #117 from geekwright/pubcleanup
+- Doc updates
+- Assign by reference issues
+- Streamline setup for publisher with xBootstrap
+- Merge pull request #116 from geekwright/mailerlocal
+- PHP4 named constructor shim
+- Merge pull request #113 from mambax7/master
+- Tabs 1.2.7
+- Merge pull request #112 from geekwright/finalprep
+- Release prep
+- Documentation fix
+- Fix issue if $xoopsModule is set to false
+- Merge pull request #111 from mambax7/feature/jQuery_1.12.4
+- JQuery 1.12.4
+- Merge pull request #110 from geekwright/mambax7-feature/banner_fix_Bootstrap
+- Tweak to work correctly in 'default' theme
+- Merge branch 'feature/banner_fix_Bootstrap' of https://github.com/mambax7/XoopsCore25 into mambax7-feature/banner_fix_Bootstrap
+- Merge pull request #103 from mambax7/feature/phpMailer
+- //github.com/XOOPS/XoopsCore25/issues/102
+- Merge pull request #95 from geekwright/i94
+- Fix XoopsModelJoint::getCountsByLink keyName_link bug
+- Merge pull request #93 from geekwright/i92
+- Fixes issue if id column keyName is common to both tables
+- Merge pull request #100 from geekwright/mambax7-feature/extra_banners
+- Changelog update
+- Extra banners
+- Merge pull request #97 from mambax7/feature/HTML5_Banner
+- SWF banners to HTML5
+- Merge pull request #96 from mambax7/master
+- JQuery 1.12.3
+- Merge pull request #88 from geekwright/i87
+- Restore missing help
+- Module update breadcrumb
+- Merge pull request #83 from mambax7/feature/strong__in__Admin_theme
+- Making  "strong" tag visible in Admin
+- Merge pull request #82 from luciorota/master
+- Update main.php
+- Added files via upload
+- Merge pull request #81 from geekwright/i78
+- Move jGrowl button back to right corner
+- Revert change of .html to .tpl
+- Merge pull request #76 from txmodxoops/timgno
+- Added codify xoops_session
+- Merge pull request #75 from geekwright/rc3prep
+- Release prep for RC3
+- Merge pull request #74 from geekwright/logandload
+- Two small fixes
+- Merge pull request #73 from geekwright/wideimage
+- Add wideimage to library
+- Merge pull request #72 from geekwright/publink
+- Point module source links to GitHub
+- Merge pull request #70 from mambax7/master
+- Merge branch 'master' of https://github.com/XOOPS/XoopsCore25 into develop
+- Merge pull request #69 from geekwright/mbts
+- Make mb_* call conditional on function exists
+- Merge pull request #68 from geekwright/snoopy1.2.5
+- Update Snoopy to 1.2.5
+- Updating comments
+- Merge pull request #67 from geekwright/fix66
+- Missed bad constructor
+- Unacceptable curl options
+- Remove pointless PHP4 style constructors
+- Merge pull request #66 from mambax7/develop
+- PhpThumb, jGrowl update
+- Merge pull request #65 from geekwright/mambax7-feature/svn_version
+- Sync with XMF 1.0.1
+- Revert vendor changes
+- Removing @version
+- Removing SVN versioning II
+- Removing SVN versioning
+- Merge pull request #63 from geekwright/xmf1.0.0
+- Update Libraries
+- Merge pull request #62 from geekwright/docupdates
+- Documentation review and link checks
+- Merge pull request #61 from geekwright/issue55-2
+- Fix issue when posix functions not available
+- Merge pull request #60 from geekwright/issue55
+- Update installer configuration file save
+- Merge pull request #59 from geekwright/issue57
+- Assign by ref issue
+- Merge pull request #58 from geekwright/issue56
+- Change bug and code links in admin
+- Merge pull request #54 from geekwright/php7tweaks
+- Remove HTTP_RAW_POST_DATA use
+- Fixing constructors in phpthumb
+- Add comment for future reference
+- Merge pull request #53 from mambax7/feature/php7fixes
+- PHP7
+- Merge pull request #52 from mambax7/develop
+- AddNavigation(basename(__FILE__))
+- Merge pull request #51 from geekwright/fixes20160322
+- Small fixes
+- Merge pull request #50 from mambax7/feature/profile
+- Improve security by saving after 2nd registration step
+- Merge pull request #49 from mambax7/feature/jquery1.12.2
+- Updating jQuery to 1.12.2
+- Merge pull request #48 from mambax7/feature/methodsparameters
+- Small fixes
+- Merge pull request #47 from geekwright/profileop
+- Make permission op sticky
+- Merge pull request #46 from geekwright/fix43
+- Replace getAll() in ProfileVisibilityHandler
+- Merge pull request #45 from geekwright/post44
+- Fix issues noticed in review
+- Merge pull request #44 from geekwright/pr40
+- Merging review changes and conflict resolutions for PR #40
+- Merge pull request #42 from geekwright/fix41
+- Not respecting $force
+- Revert some changes which just complicated things
+- Revert changes to Smarty
+- Revert changes to XMF
+- Unnecessary Double Quotes, unnecessary Parentheses
+- Merge pull request #39 from geekwright/rc2tweaks
+- Deprecating some questionable stuff
+- Deprecating ArtObject and ArtObjectHandler
+- Minor cleanup in installer
+- Remove mysql v4 checks
+- Updated template
+- Merge pull request #38 from geekwright/relpreprc2
+- Add missing files
+- Version bump
+- Remove a couple of database setup defaults
+- Small fixes
+- Merge pull request #37 from geekwright/nginx
+- Minor verbage change in installer
+- Merge pull request #36 from geekwright/phprefs
+- Underscoring this issue
+- Fix bad constructor call
+- Clean up some stray object assign by reference
+- Merge pull request #35 from geekwright/xbfixes
+- Add missing scripts
+- Merge pull request #34 from geekwright/php4shim
+- Compatibility shim for XoopsObject
+- Merge pull request #33 from geekwright/smartypatch
+- Smarty patch
+- Merge pull request #32 from geekwright/mysqlireview
+- Review of mysqli calls
+- Merge pull request #31 from geekwright/minphp
+- Fix min_php specifications
+- Merge pull request #30 from geekwright/fetchfalse
+- Return false on end of data
+- Merge pull request #29 from geekwright/relpreprc1
+- Update change log and version
+- Merge pull request #28 from geekwright/copy2016
+- Update copyright date
+- Update copyright date
+- Update copyright date
+- Update copyright date
+- Update copyright date
+- Merge pull request #24 from geekwright/xmfrc1
+- Update to XMF RC2
+- Update to XMF RC1
+- Merge pull request #27 from mambax7/master
+- Making CONTRIBUTING.md generic
+- Merge pull request #26 from mambax7/master
+- Add CONTRIBUTING.md
+- Merge pull request #25 from mambax7/master
+- Add Scrutinizer in README.md
+- Merge pull request #23 from geekwright/relprep1
+- Remove dead code
+- Error on upgrade check
+- Add needed classes
+- Release Prep
+- Merge pull request #22 from geekwright/chmodminusx
+- Remove execute permissions - chmod -x all files
+- Merge pull request #21 from geekwright/fixes160225
+- Update Xmf and some fixes
+- Merge pull request #20 from geekwright/smartyrevert
+- Restore Smarty to vendor version 2.6.28
+- Merge pull request #19 from geekwright/userutil2
+- Fix missing paren
+- Merge pull request #18 from geekwright/ipv62
+- Fix password verify calls
+- Update password hash in profile module
+- IPv6 aware changes
+- Merge pull request #17 from geekwright/ipfixes
+- Small fix
+- Inheritance issues
+- Session IPv6
+- Ignore generated keys
+- By-reference cleanups
+- IPv6 aware for protector and online handling
+- Update XMF
+- Patch from zyspec
+- Static, object references
+- Cosmetics
+- PHPMailer 5.2.14
+- Cosmetics
+- Merge pull request #16 from geekwright/fix160212
+- Fixes for fixes
+- More assign by reference issues
+- Re-enable strict errors
+- Cleanup
+- Review of kernel classes
+- Install rename
+- Merge pull request #15 from geekwright/restoretemplates
+- Fix some type checking issues
+- Restore the .html templates in system module
+- Merge pull request #14 from geekwright/fixes14
+- Remove eregi() uses
+- Merge pull request #13 from geekwright/passwdxmf
+- XMF and other supporting libraries
+- Password updates
+- Cosmetics
+- Cosmetics
+- Merge pull request #12 from geekwright/refs
+- Small fixes
+- Eliminate reference operators
+- Merge remote-tracking branch 'upstream/master'
+- Better type-safe comparison
+- Update phpThumb
+- Cosmetics
+- Better type-safe comparison
+- Update phpThumb
+- Cosmetics
+- License link update
+- Merge pull request #10 from geekwright/upgrade
+- Upgrade Pass
+- Version adjustment
+- Cosmetics
+- Merge pull request #9 from geekwright/nophp4c
+- Eliminate PHP 4 style constructor
+- Merge pull request #8 from geekwright/jp
+- Remove debug code
+- Add token to users page
+- Cosmetics
+- Updating changelog.250.txt
+- Merge branch 'master' of https://github.com/mambax7/x258
+- Merge pull request #7 from geekwright/userform
+- Correct issue with FormSelectUser
+- Merge pull request #6 from geekwright/youtube
+- Youtube handling enhancements suggested by xd9527
+- Merge pull request #5 from geekwright/instfix
+- A few fixes to install
+- Merge pull request #4 from geekwright/ignore
+- Ignore some generated files
+- Added image sort order in TinyMCE plugin
+- Merge pull request #3 from geekwright/master
+- Line ending issues
+- Enabling both theme.tpl and theme.html
+- PSR CamelCase changes
+- Changes to enable updates in ModuleInstaller
+- Bootstrap 3.3.6
+- Updates
+- HTML Purifier 4.7.0
+- HTML Purifier 4.7.0
+- Small cleanups
+- Template updates
+- Reference mismatches
+- Sync with SVN 13166
+- Sync with SVN 13166
+- Changed minimum image sizes in Image Manager
+- Clean-up
+- PHPMailer 5.2.13
+- Name change
+- Added static
+- Invalid argument supplied for foreach
+- PhpThumb 1.7.14-201507071049
+- Switch from .html to .tpl for templates
+- .tpl extension for Help
+- Formatting
+- Formatting
+- Formatting
+- Add salt
+- Merge branch 'master' of https://github.com/mambax7/x258
+- Update README.md
+- Update README.md
+- Update
+- Logical operators
+- Logical operators
+- Remove exit()
+- Cleanup
+- Updates
+- Merge branch 'master' of https://github.com/mambax7/x258
+- Add option to set height of Themes block
+- Moved "count($tagsArray)" and "count($attrArray)" outside of FOR loop
+- Added .tpl option for module Help files
+- Adding "strong { font-weight: bold; }" to reset.css
+- JGrowl 1.4.3
+- TCPDF 6.2.11
+- New language define _AM_SYSTEM_USERS_ACTIVATE
+- XOOPS Theme Complexity - Final Release
+- XOOPS Theme Complexity - Final Release
+- XOOPS Theme Complexity - Final Release
+- Signed 2.2 Release Candidate
+- Cosmetic changes
+- Adding TDMLinks
+- Sexting XOOPS 2.5 Theme - Release Edition First Final Release Release
+- Sexting theme with Full Meta and gradient exporation version 1.2.8
+- Signed 2.1.9 Final Major - Puesdo.legal.binding.v2
+- Signed 2.1.9 Final Major - Puesdo.legal.binding.v2
+- Signed 2.1.9 Final Major - Puesdo.legal.binding.v2
+- Sexting - First Printcd ../../XoopsThemes/sexting/ Gradients Wowcd ../../XoopsThemes/sexting/
+- Signed 2.1.9 - The final signed down! Dod oodoo doood oo didoo doocd php-dev/respository/xoops-svn/XoopsModules/signed/
+- Adding release to archives for historical purposes
+- Please Email Ticketer -- Prealpa2
+- Please Email Ticketer -- Prealpa2
+- Please Email Ticketer -- Prealpa2
+- Added missing branch for archive purposes
+- Adding 2.5.7.1 to Archives
+- Adding 2.5.7 to Archives
+- Adding 2.5.7-rc1 to Archives
+- Adding 2.5.7-beta1 to Archives
+- Adding 2.5.6 to Archives
+- Adding 2.5.6-rc1 to Archives
+- Adding 2.5.5-rc to Archives
+- Adding 2.5.5 to Archives
+- Adding 2.5.5-beta to Archives
+- Adding 2.5.4 to Archives
+- Adding 2.5.4-beta to Archives
+- Adding 2.5.3 to Archives
+- Adding 2.5.2 to Archives
+- Adding 2.5.2-rc to Archives
+- Adding 2.5.1 to Archives
+- Adding 2.5.1-rc to Archives
+- Adding 2.5.1a to Archives
+- Adding 2.5.0 to Archives
+- Adding 2.5.0-rc2 to Archives
+- Adding 2.5.0-rc to Archives
+- Adding 2.5.0-beta to Archives
+- Adding 2.4.5-rc3 to Archives
+- Adding 2.4.5-rc2 to Archives
+- Adding 2.4.5 to Archives
+- Adding 2.4.0-beta1 to Archives
+- Adding 2.4.0 to Archives
+- Adding 2.3.3 to Archives
+- 
+- Adding 2.3.0 to Archives
+- Fixed small bugs
+- Forking luciorota's version
+- Intial planning for Email Ticketter with secondary raise to MantisBT for second level support and faults!
+- Added possibility to include full icon URL in module's menu.php
+- Replacing floatval() with (float)
+- Replacing intval() with (int)
+- Merged modifies (With Goffy)
+- Fix
+- Added morefiles.php and more for extra custom files
+- Fix added more files
+- Added template list
+- Pre-release (dev-in-progress) for new signed 2.07 -- trunk
+- Cleaning for new signed 2.07 -- trunk
+- Updating XOOPS copyright to 2015
+- XOOPS links point to http://xoops.org
+- Added jquery ui tabs
+- Fix
+- Fixed conflict autoload.php
+- Addeds & fix
+- Added alpha 3
+- Alpha 3
+- Fixed display toggle in modules, table & fields list
+- Refactoring
+- Major changes in lists and language
+- Fix missing value type sql/SqlFile.php
+- 1.02 RC-1 for XOOPS 2.5.7.1 (see changelog.txt)
+- 1.02 RC-1 for XOOPS 2.5.7.1 (see changelog.txt)
+- - Fix url logo
+- Fixed field parent & logos/tdmxoops_logo.gif
+- Fixed bugs!
+- Updating jQuery to 1.11.3, UI to 1.11.4
+- Added settings.php for customized module informazions
+- Adding module translations (from Žirafka)
+- Adding 2.5.7.1 from Zirafka
+- Jquery ui tab fixed
+- Fixings and updates
+- Added format date strings
+- Fixings and updates
+- Deleted unnecessaries functions in classes
+- Minor adjustments to classes
+- Updated
+- Added field table_solename in tables to distinguish the singular name from the plural to the singular name.
+- Autoloader for all classes
+- Updated
+- Updated
+- Updated
+- Merged to alpha 2
+- Now you can order tables from the list
+- Updated
+- Added Chechbox all controll
+- Fixed table_order
+- Sortable tables for order menu and icons in admin index.php
+- Fixed issues to creaction folders & files
+- Changed elements index, added more elements
+- Updated
+- Updated
+- Personalized checkbox and radio button form
+- Updated
+- Moving Adminbar to the top
+- Rename from /spanishutf8 to /spanish
+- Fixed path for avatars list
+- Updated
+- Updated
+- 2.5.7.1 files (culex)
+- Branch for 2.5.7.1
+- Revert changes
+- Files for 2.5.7.1 (culex)
+- 
+- 
+- 
+- Updated
+- Updated
+- Updated
+- XOOPS 2.5.7.1: Russian translate added
+- Updated
+- Updated for adaptive assets folder
+- Updated
+- Updated
+- Updated profile module with .tpl extension templates
+- Added CPanel bootnewage theme for xoops 2.5.8 based on bootstrap alpha version
+- Added more jquery ui themes
+- 
+- Added string path of theme
+- Updated
+- Updated
+- Added Breadcrumbs class & smarty plugin
+- New admin theme bootstrap responsive ( dashboard )
+- Updated & added assets folder in default admin theme
+- * require XOOPS 2.5.7+ & PHP 5.3.7+
+- Adding changes from Zyspec
+- * minor PSRx naming convention updates
+- * change to use XOOPS jquery js from Frameworks
+- Updated form elements to bootstrap 3
+- Updated to bootstrap profile and pm modules
+- 1 31_ALPHA6_zyspec
+- Setting up branch for Zyspec
+- Setting up branch for Zyspec
+- 1.11 RC3
+- 1.40 RC1
+- Adding SmartFAQ
+- 2.33 RC 1
+- 2.38 RC 1
+- 4.33 RC8
+- 1.02 RC1
+- Minified xoops css
+- Adding hack for SystemInfo link (pre-Alpha, proof of concept)
+- Pagination with bootstrap 3.3.2 in ul tag and not in div tag
+- Updated
+- Update PHPMailer
+- Code cleanup in templates/wfdownloads_singlefile.tpl
+- Updated cpanel theme
+- Adaptive cpanel theme in admin profile module
+- Updated
+- Added minified css xnewage.min.css file
+- Updated
+- New cpanel theme xnewage in beta tester
+- Sort downloads by weight
+- Changed method of loading XoopsObjectTree in category blocks
+- Create 2 category blocks
+- Updated jquery ui libraries to version 1.10.4 Minimized
+- Updating changelog
+- Reverting Timgno's jQuery updates
+- Updated jquery ui libraries to version 1.10.4
+- Updated jquery libraries to version 1.11.2
+- Branch copy of current trunk to create categories block
+- Added side footer blocks template files for customization
+- Addes assets folder path
+- Xoosp 2.5.7.1 compatible
+- Xoops 2.5.7.1 compatible
+- Changed directory structure
+- New branch
+- New branch
+- Xortify XOOPS 2.5 - Client 5.00
+- * minor code cleanup
+- * fixed syntax error in ./ajax.php (extra apostrophy)
+- Removed unnecessary exit() statement after redirect_header() calls
+- From Xoops 2.5.6 XoopsFormSelectUser is not compatible with some old modules like xNews
+- Branching Zyspec's modules
+- -create copy of trunk for new branch
+- - added breadcrumb display to top of index page
+- 
+- * Improved module update script to add some error reporting on failure(s)
+- I think this should be included in the folder xoops_lib / Frameworks from xoops 2.5.8
+- Update to PHPMailer 5.2.9, remove addrFormat override in XoopsMultiMailer
+- Added field item file template for sortable field
+- Updated
+- Added jquery ui libraries in default admin theme system
+- Code cleanup, adding XoopsRequest in couple of places
+- Adding changes from Zyspec
+- Update for cumulus block
+- Placed in incorrect directory
+- Relocate to proper branches directory
+- * fixed bug where editing menu item put item in 1st menu
+- Newmylinks with tdmcreate v.1.37
+- Branches/mylinks timgno v.3.01
+- Branches/timgno xoopstube v.1.12
+- XBootstrap compatibility
+- Signed 1.15 - Minor Changes to Major Final
+- Signed 1.15 - Minor Changes to Major Final
+- Signed 1.15 - Minor Changes to Major Final
+- Fixing a bug (geekwright)
+- Removing wrong "/"
+- Xortify 4.99.1 for XOOPS 2.5 -- Minor Fixes, new ban window!
+- Database final refactorisation - final model 1.1 SQL92
+- Final Copy of Extreme Super Closest XOOPS 2.5 Theme!
+- Final Copy of Extreme Super Closest XOOPS 2.5 Theme!
+- Final Copy of Extreme Super Closest XOOPS 2.5 Theme!
+- Final Copy of Extreme Super Closest XOOPS 2.5 Theme!
+- Final Copy of Extreme Super Closest XOOPS 2.5 Theme!
+- Commenting out breadcrumb.php, since it was deleted
+- Cosmetic changes
+- Add loading XoopsRequest
+- Use xoops_load
+- Xortify.com & Sexting XOOPS Themes for 2.5
+- 
+- 
+- - include 3 files missing from previous commit
+- - sanitized various ids passed into method/functions to reduce security vulnerability
+- - include file missing from previous commit
+- - updated admin footer to be similar to other modules
+- Improved subscr filter in admin side
+- Fixed PHP version compare on installation
+- Fixed PHP version check on install
+- Min req xoops 2.5.7.1
+- O Upgraded min Xoops version to Xoops 2.5.7.1.
+- Remove old work
+- Administrator can run the cron.php script from administrative tasks page
+- Beta 4 (see changelog)
+- Identity API for Session Handling
+- Subjected API for Conversion to XoopsAPI -- Xoops 2.x
+- Subjected API for Conversion to XoopsAPI -- Xoops 2.x
+- + minor code cleanup
+- : Self Signed Version 1.14 ~ MINOR FINAL RELEASE
+- : Self Signed Version 1.14 ~ MINOR FINAL RELEASE
+- Self Signed Version 1.14 ~ MINOR FINAL RELEASE
+- Fixing Trunk
+- Fixing Trunk
+- Fixing Trunk
+- Fixing Trunk
+- Include files missing in previous commit for v2.1 Beta 1
+- - Require PHP 5.3 & XOOPS 2.5.7+
+- Updated
+- Added folders for horoscope module in next time
+- Added folders for budget module in next time
+- Added folders for estimate module in next time
+- Added folders for invoices module in next time
+- ! fixed some database fields length
+- Xoops 2.5.7.1+ compatibility
+- Added new folder version 1.91 Alpha 1
+- Added new classes file for autoload
+- To Team Core
+- Adding 2.5.7.1 to /releases
+- Adding 2.5.7.1 patch
+- Creating base for 2.5.7.1
+- - update to latest mamba work
+- Use native XoopsRequest
+- - commit files missing in previous commit
+- - Added ability to require visitors to enter email 2X on form
+- Signed 1.13 (Trunk) - Final Minor Release Versioning
+- Signed 1.13 - Final Minor Release Versioning
+- Updated System Foter Blocks
+- Added classes for autoLoader
+- Alpha 5 (work in progress)
+- Code Cleanup
+- Replacing dirname(__FILE__), replacing WfdownloadsRequest with XoopsRequest
+- Final release of XOOPS Signed 1.12
+- Final release of XOOPS Signed 1.12
+- Fix #1298
+- First English translation with Google
+- Copying French files to English
+- Adjusting folder structure
+- Adjusting folder structure
+- Adding branch
+- Adding Vide by Black_beard
+- Fix for #1297
+- Fix for #1296
+- Added spinner.icon (timgno)
+- Cosmetic changes/updates (mamba)
+- Adding Footer blocks (http://xoops.org/modules/newbb/viewtopic.php?topic_id=76816), updating xBootstrap
+- Add X-Frame-Options header to prevent clickjacking in modern browsers. By default set to 'sameorigin', but can be overridden by setting desired value in 'xFrameOptions' key in xoopsconfig. Resolves #1295
+- 
+- 
+- Branch to update to Xoops 2.5.7. standards
+- Some code cleanup for private messages
+- Remove extra parenthesis introduced in last change
+- Updating for XOOPS 2.5.7 (work in progress)
+- Adding extension to the readme file
+- Adding gnavi module
+- Adding eGuide module
+- Updates for XOOPS 2.5.7 (work in progress)
+- Temporarily re-enable calling update from xoops_version until update block routine can be re-factored.
+- Minor updates
+- Adding missing "/" (zyspec)
+- Adding Zyspec's 0.98 RC1
+- 
+- Adding branch for Zyspec
+- RC1
+- Rename error.php to index.php for compatibility in case of module upgrade
+- Added import from fmContent (zyspec)
+- Moving files to /publisher folder
+- Adding /publisher folder
+- - creating fmcontent import functionality
+- - incorrectly created folder for branch
+- - creating fmcontent import functionality
+- Prelimiary still in developer too you Harold!
+- Add new files
+- Remove unused files
+- Standardize
+- Removing shadow box around icons for new topics/forums
+- XOOPS Rooms Chatting IRC Style Chat all in PHP
+- Cosmetic changes
+- Update Releases from labs.coop ~ Chronolabs Cooperative
+- Code clean-up for consistency
+- Merging eForms into xForms 2.0 Alpha 1
+- Branch for Bosco
+- Branch for Bosco
+- Removing extra "the" (thanks Cesag!)
+- Code formatting, updated changelog
+- Redesigned archives section to have months horizontally, added count of articles
+- Started conversion to PSR-2 coding
+- Updated makepdf.php file for the latest TCPDF
+- Replaced PublisherRequest with calls to XoopsRequest
+- Replaced $i++ with ++$i for consistency/performance
+- Upgrade from montuy337513 (alias black_beard)
+- Adding /themes/xbootstrap/modules with renamed templates to .tpl
+- Replaced "dirname(__FILE__)" with "__DIR__"
+- Use screenshots field instead of screenshot, screentshot1, ... IN PROGRESS
+- Convert to Unix file format 'cause this is the standard for Xoops files
+- Reverting couple of $i++ conversions
+- Converting $i++ to ++$i for improved performance
+- $GLOBALS['...] instead of global $... IN PROGRESS
+- WIN to UNIX file format
+- 
+- Remove 'cause will branch from mamba work
+- This is my latest version, start from here
+- Updating some changes from Luciorota
+- Clean-up of assets, PSR-2, __DIR__, English updates, centering icons in Actions (work in progress)
+- Adding changes by Luciorota
+- Standardize code
+- Standardize code
+- Allowing for "https" URL in YouTube links in Textsanitizer
+- Fixing English typo
+- Replacing relative links with absolute links
+- Added extgallery 1.11 (by Skyppyno)
+- Use include_once dirname(__FILE__)
+- Replaced dirname(__FILE__) with __DIR__
+- Beta 3, work in progress. See changelog.txt
+- Deleting TCPDF library from /Frameworks
+- Adding TDMDownloads
+- Commented out unneeded lines
+- Commit my latest work
+- Delete wfdownloads from my branch
+- Module folder in lowercase
+- 
+- Adding new version (work in progress)
+- Deleting old version
+- Branch for Cesag
+- Adding branch for Cesag
+- Making function getTimeFormatDesc() static
+- Suppression des fichiers .db inutiles et qui prennent de la place
+- Suppression du dossier upload qui n'est pas utile dans cette version puisque créé automatiquement.
+- =========================================================
+- Removing unneeded % sign
+- Updates, work in progress
+- Upgrade to version RC9 (cesag)
+- Updated links to .tpl files (cesag)
+- Renamed forgotten .html Smarty templates to .tpl (cesag)
+- Reverting to revision 1250 (cesag)
+- Renamed forgotten .html Smarty templates to .tpl (cesag)
+- Renamed .htaccess to _htaccess to avoid an error in the installation (cesag)
+- Deleting non english language files (cesag)
+- Adding Cesag branch
+- 
+- 
+- Updating copyrights, adding couple of "isset" checks
+- Adding couple of "isset" checks
+- Upgrading to TinyMCE 4.1.4
+- MyPoints 1.02 Beta 1 English corrections (cesag).
+- Deleting other obsolete bookmarks (cesag)
+- Adding define for Traffic Rank, Web Archive and Google SiteSearch (cesag)
+- Replaced dirname(__FILE__) with __DIR__
+- - Control selectbox item 1 is done by javascript instead of using $action, we use two single quotes as string
+- - Poured code @goffy since the control is done by javascript instead of using 0, we use two single quotes as string
+- - A little bug
+- - Fixed bugs (goffy/timgno)
+- - Updated
+- - Updated
+- 1.02 Beta 1: - added tab for bulk Updates and patches for Core files, required for "bulk Update" to work, located in /extras
+- Updating changelog
+- Adding language constants for Prefix Manager
+- XoopsRequest::getArray($name, $default = array(), $hash = 'default')
+- 
+- Code clean up
+- 
+- RC2
+- Updating phpThumb to latest version
+- Sync with latest changes to geekwright/xmf on GitHub. Include vendor directory in prep for release.
+- Couple more corrections
+- Converting to UTF-8 without BOM
+- Used for system and others modules
+- Improving makepdf with language options (rgriffith)
+- Adding code to .html template entries from the tpl table
+- Adding code to .html template entries from the tpl table
+- Removing unneeded % sign
+- - Updated
+- Fixing typo (Timgno)
+- Fixing typo (Timgno)
+- Fixing typo (Timgno)
+- - Fixed bugs
+- - Fix issues when protector 'id_forceintval' preference is enabled, that manifests as an error when deleting private messages.
+- - updating some copyright notices
+- Repeated code - removed
+- - Fixed important bugs
+- - Reorganized for modules without tables, but always accessible in admin
+- Adding RandomQuote update
+- FIX: Missing translation definitions
+- UTF-8-BOM file formats.
+- Adding missing files
+- Missing files
+- After renamed main folder, updated revision
+- - Renamed directory name from TDMCreate to tdmcreate
+- 
+- - Released 1.91 alpha 1
+- - Fixed bugs
+- - Updated
+- - Updated
+- - Fixed bugs
+- 
+- Fix issues when protector 'id_forceintval' preference is enabled, that manifests as an error when deleting private messages.
+- - Fixed bugs
+- Remove echo (still remained from testing period)
+- Corrected check of right for reading newsletters for the list of newsletters in block
+- - Renamed directory name from TDMCreate to tdmcreate
+- 
+- - Renamed directory name from TDMCreate to tdmcreate
+- - Fixed bug for constant _AM_SYSTEM_MODULES_UNINSTALL
+- - Updated
+- - Fixed bugs
+- Corrected check of right for reading newsletters
+- Corrected check of right for reading newsletters
+- Corrected check of right for reading newsletters
+- - Fixed bugs
+- - Fixed many issues for templates & admin/menu
+- - Fixed several bugs
+- - Fixed bugs
+- - Updated
+- - Fixed bugs
+- - Fixed several bugs
+- - Fixed bugs
+- Added frameworks/moduleclasses/icons/ 32 & 16 folder default.png
+- Normalizing copyright notice
+- Added mod_dirname field in modules to avoid conflicts with the names of the modules
+- Replaced "dirname(__FILE__)" with "__DIR__" (part 2)
+- Replaced "dirname(__FILE__)" with "__DIR__"
+- Added italian language for default theme
+- - Fixed bugs for field_name empty
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- Definitions with a single quote and their description with double quote
+- 
+- 
+- 
+- 
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- - solved issues for modules without tables
+- 
+- 
+- Removed prefix 'mod_' from mysql files
+- If there are any errors, try to comment out lines 80 and 82 of the file class/files/abstract.php
+- Renamed templates files
+- - Is't necessary to uninstall and then reinstall
+- You can test alpha 1 ???
+- Updating docu for the correct version of tablesorter, synch with 2.5.7 changes
+- Updating docu for the correct version of tablesorter
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- Fixing couple of bugs related to blocks, code cosmetics
+- Updated to XOOPS 2.5.7 version of jQuery UI Tabs (noo-b/mamba)
+- Adding clean-up routine for old directories/files
+- Adding Publisher 1.0 to SVN Release Archive
+- - updated to XOOPS 2.5.7 version of jQuery UI Tabs (noo-b/mamba)
+- - Fixed bugs
+- - Fixed bugs
+- - Fixed bugs
+- - Updated
+- Adding 2.5.7 translation for /install/language/english/install.php
+- Fix path specified for include
+- - Updated
+- For use on servers where write to root is not possible.
+- Fix path specified for include
+- - Fixed bugs
+- - Updated
+- - Updated
+- German Update for 2.5.7
+- Setting up 2.5.8
+- Setting up XOOPS 2.5.8 branch, just in case, we need it...
+- Initial commit
+
+### Refactor
+- Migrate upgrade framework to namespaced classes with DI (#10)
+- Replace $myts->htmlSpecialChars() with native… (#1689)
+- Use http_response_code(404) for direct-access guards (#1688)
+- Refactoring + optimization
+- Refactoring  convert_encoding() for PHP 8
+- Refactor XoopsRequest to Xmf\Request
+
+### Testing
+- Tests MyTextSanitizerTest.php
+
+<!-- generated by git-cliff; regenerate, do not hand-edit -->
