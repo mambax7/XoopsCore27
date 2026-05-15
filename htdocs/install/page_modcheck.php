@@ -59,7 +59,7 @@ ob_start();
 
         <tr>
             <th><?php printf(PHP_EXTENSION, 'MySQLi'); ?></th>
-            <td><?php echo xoDiag(function_exists('mysqli_connect') ? 1 : -1, @mysqli_get_client_info()); ?></td>
+            <td><?php echo xoDiag(function_exists('mysqli_connect') ? 1 : -1, function_exists('mysqli_get_client_info') ? @mysqli_get_client_info() : ''); ?></td>
         </tr>
 
         <tr>
