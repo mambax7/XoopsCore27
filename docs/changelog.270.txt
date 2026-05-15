@@ -14,6 +14,13 @@ Documentation:
 Security hardening:
 - harden upgrade/checkmainfile.php mainfile include with realpath() and boundary check (mamba) in #54
 
+Installer:
+- fix installer: guard optional function calls that fatal on PHP 8.2 - mysqli_get_client_info() and the Protector config cache (mamba) in #60
+- fix installer: block installation with a clear message when a mandatory PHP extension (mysqli, session, pcre, filter, fileinfo) is missing, instead of a raw fatal; full required-extension guards on the DB steps too (mamba) in #62
+
+Tests:
+- add unit coverage for the installer required-extension helpers (mamba) in #63
+
 ===================================
 2.7.0 RC5                    2026-04-22
 ===================================
