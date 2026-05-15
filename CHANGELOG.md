@@ -5,7 +5,7 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
-## [Unreleased]
+## [2.7.0] - 2026-05-15
 
 ### Bug Fixes
 - Changelog workflow must open a PR, not push to protected master (#68)
@@ -26,6 +26,7 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 - Fix(system): preserve theme switch context safely (#33)
 
 ### Documentation
+- Regenerate CHANGELOG.md
 - Record installer extension-guard fixes for 2.7.0 Final
 
 ### Miscellaneous
@@ -34,6 +35,7 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 - Add .githooks/ pre-commit + commit-msg sniffs for documented antipatterns (#48)
 
 ### Other
+- Merge pull request #69 from XOOPS/automation/update-changelog
 - Merge pull request #67 from mambax7/chore/bump-checkout-node24
 - Merge pull request #65 from mambax7/docs/changelog-270-installer
 - Merge pull request #64 from mambax7/feature/translations_info
