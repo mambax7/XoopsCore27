@@ -26,8 +26,8 @@
      */
     let dumpRenderer;
     const renderValue = PhpDebugBar.Widgets.renderValue = function (value, prettify) {
-        // Dump object (from JsonDataFormatter)
-        if (value && typeof value === 'object' && '_sd' in value) {
+        // Arrays and objects → render as interactive tree
+        if (value && typeof value === 'object') {
             if (!dumpRenderer) {
                 dumpRenderer = new PhpDebugBar.Widgets.VarDumpRenderer();
             }
@@ -704,7 +704,16 @@
                 }
 
                 this.get('data').forEach((item) => {
-                    const message = caseless ? item.message.toLowerCase() : item.message;
+                    let message = item.message;
+                    if (item.message_json) {
+                        message = JSON.stringify(item.message_json);
+                    } else if (item.message_html) {
+                        message = item.message_html.replace(/<[^>]*>/g, '');
+                    }
+
+                    if (caseless) {
+                        message = message.toLowerCase();
+                    }
 
                     if (
                         !excludelabel.includes(item.label || undefined)
@@ -959,20 +968,24 @@
                     });
                 }
 
-                if (e.stack_trace_html) {
+                if (e.stack_trace_json || e.stack_trace_html) {
                     const trace = document.createElement('span');
                     trace.classList.add(csscls('filename'));
-                    trace.innerHTML = e.stack_trace_html;
 
-                    const samps = trace.querySelectorAll('samp[data-depth="1"]');
-                    for (const samp of samps) {
-                        samp.classList.remove('sf-dump-expanded');
-                        samp.classList.add('sf-dump-compact');
+                    if (e.stack_trace_json) {
+                        const data = e.stack_trace_json;
+                        const savedSd = data._sd;
+                        data._sd = 0;
+                        PhpDebugBar.Widgets.renderValueInto(trace, data);
+                        data._sd = savedSd;
+                    } else {
+                        trace.innerHTML = e.stack_trace_html;
+                    }
 
-                        const note = samp.parentElement.querySelector(':scope > .sf-dump-note');
-                        if (note) {
-                            note.innerHTML = `${note.innerHTML.replace(/^array:/, '<span class="sf-dump-key">Stack Trace:</span> ')} files`;
-                        }
+                    // Relabel root array as "Stack Trace:"
+                    const note = trace.querySelector('.sf-dump-note');
+                    if (note) {
+                        note.innerHTML = `${note.innerHTML.replace(/^array:/, '<span class="sf-dump-key">Stack Trace:</span> ')} lines`;
                     }
                     li.append(trace);
                 } else if (e.stack_trace) {
@@ -1335,6 +1348,31 @@
                         }
                     }
                     item.append(badges);
+
+                    // Copy ID button
+                    const copyIdBtn = document.createElement('a');
+                    copyIdBtn.classList.add(csscls('datasets-item-copy-id'));
+                    copyIdBtn.title = `Copy Request ID: ${datasetId}`;
+                    copyIdBtn.innerHTML = '<i class="phpdebugbar-icon phpdebugbar-icon-copy"></i>';
+                    copyIdBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const tmp = document.createElement('textarea');
+                        tmp.value = datasetId;
+                        tmp.style.position = 'fixed';
+                        tmp.style.opacity = '0';
+                        document.body.append(tmp);
+                        tmp.select();
+                        document.execCommand('copy');
+                        tmp.remove();
+                        const icon = copyIdBtn.querySelector('i');
+                        icon.className = 'phpdebugbar-icon phpdebugbar-icon-circle-check';
+                        copyIdBtn.classList.add(csscls('copied'));
+                        setTimeout(() => {
+                            icon.className = 'phpdebugbar-icon phpdebugbar-icon-copy';
+                            copyIdBtn.classList.remove(csscls('copied'));
+                        }, 2000);
+                    });
+                    item.append(copyIdBtn);
 
                     // Click handler
                     item.addEventListener('click', () => {

@@ -100,6 +100,7 @@ class MessagesCollector extends AbstractLogger implements DataCollectorInterface
 
     /**
      * Returns a simple plain-text representation of a variable for search/display fallback.
+     *
      */
     protected function getPlainTextFromVar(mixed $var): string
     {
@@ -156,32 +157,28 @@ class MessagesCollector extends AbstractLogger implements DataCollectorInterface
             $message = $this->interpolate($message, $context);
         }
 
-        $messageText = $message;
+        $isString = is_string($message);
+        $formattedMessage = $this->getDataFormatter()->formatVar($message);
+        $messageText = null;
         $messageHtml = null;
         $messageJson = null;
-        $isString = true;
-        if (!is_string($message)) {
+
+        if ($isString) {
+            $messageText = $formattedMessage;
+        } else {
             if ($message instanceof MessageInterface) {
                 $messageText = $message->getText();
                 $messageHtml = $message->getHtml();
-            } else {
-                // Send both text and HTML representations; the text version is used for searches
-
-                if ($this->isJsonVarDumperUsed()) {
-                    $messageJson = $this->getDataFormatter()->formatVar($message);
-                    $messageText = $this->getPlainTextFromVar($message);
-                } elseif ($this->isHtmlVarDumperUsed()) {
-                    $messageHtml = $this->getDataFormatter()->formatVar($message);
-                    if ($this->compactDumps) {
-                        $messageHtml = $this->compactMessageDump($messageHtml);
-                    }
-                    $messageText = strip_tags($messageHtml);
-                } else {
-                    $messageText = $this->getDataFormatter()->formatVar($message);
+            } elseif ($this->isJsonVarDumperUsed()) {
+                $messageJson = $formattedMessage;
+            } elseif ($this->isHtmlVarDumperUsed()) {
+                $messageHtml = $formattedMessage;
+                if ($this->compactDumps) {
+                    $messageHtml = $this->compactMessageDump($messageHtml);
                 }
+            } else {
+                $messageText = $formattedMessage;
             }
-
-            $isString = false;
         }
 
         $contextJson = null;
@@ -190,7 +187,7 @@ class MessagesCollector extends AbstractLogger implements DataCollectorInterface
                 $formatted = $this->getDataFormatter()->formatVar($value);
                 if ($this->isJsonVarDumperUsed()) {
                     $contextJson[$key] = $formatted;
-                    $context[$key] = $this->getPlainTextFromVar($value);
+                    $context[$key] = null;
                 } else {
                     $context[$key] = $formatted;
                 }
@@ -217,7 +214,7 @@ class MessagesCollector extends AbstractLogger implements DataCollectorInterface
         ];
 
         if ($this->hasTimeDataCollector()) {
-            $this->addTimeMeasure("[{$label}]: " . substr($messageText, 0, 100), null, microtime(true));
+            $this->addTimeMeasure("[{$label}]: " . substr($isString ? $message : $this->getPlainTextFromVar($message), 0, 100), microtime(true));
         }
 
     }

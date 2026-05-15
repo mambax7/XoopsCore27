@@ -1,4 +1,5 @@
 <?php
+
 /*
  You may not change or alter any portion of this comment or credits
  of supporting developers from this source code or any supporting source code
@@ -24,17 +25,16 @@ namespace Xmf;
  */
 class Metagen
 {
-
     /**
      * mbstring encoding
      */
-    const ENCODING = 'UTF-8';
+    public const ENCODING = 'UTF-8';
 
     /**
      * horizontal ellipsis
      * This will be used to replace omitted text.
      */
-    const ELLIPSIS = "...";
+    public const ELLIPSIS = "...";
 
     /**
      * assignTitle set the page title
@@ -151,7 +151,8 @@ class Metagen
             if (static::stopWordsObject()->check($originalKeyword)) {
                 $secondRoundKeywords = explode("'", $originalKeyword);
                 foreach ($secondRoundKeywords as $secondRoundKeyword) {
-                    if (static::stopWordsObject()->check($secondRoundKeyword)
+                    if (
+                        static::stopWordsObject()->check($secondRoundKeyword)
                         && strlen($secondRoundKeyword) >= $minLength
                     ) {
                         $keyCount[$secondRoundKeyword] =
@@ -271,7 +272,7 @@ class Metagen
         $title = preg_replace("/[^\p{N}\p{L}]/u", "-", $title);
 
         $tableau = explode("-", $title);
-        $tableau = array_filter($tableau, 'static::nonEmptyString');
+        $tableau = array_filter($tableau, static::nonEmptyString(...));
         $tableau = array_filter($tableau, array(static::stopWordsObject(), 'check'));
         $title = implode("-", $tableau);
 
@@ -403,7 +404,7 @@ class Metagen
         $text = str_replace('<br/>', ' ', $text);
         $text = str_replace('<br', ' ', $text);
         $text = strip_tags($text);
-        $text = html_entity_decode($text);
+        $text = html_entity_decode($text, ENT_QUOTES, self::ENCODING);
         $text = htmlspecialchars_decode($text, ENT_QUOTES);
         $text = str_replace(')', ' ', $text);
         $text = str_replace('(', ' ', $text);
@@ -415,7 +416,7 @@ class Metagen
         $text = str_replace('?', ' ', $text);
         $text = str_replace('"', ' ', $text);
         $text = str_replace('-', ' ', $text);
-        $text = str_replace('\n', ' ', $text);
+        $text = str_replace(["\r", "\n"], ' ', $text);
         $text = str_replace('&#8213;', ' ', $text);
 
         if ($keyword) {

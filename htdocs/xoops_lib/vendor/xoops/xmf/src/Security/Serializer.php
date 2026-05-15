@@ -1,4 +1,5 @@
 <?php
+
 /*
  You may not change or alter any portion of this comment or credits
  of supporting developers from this source code or any supporting source code
@@ -172,7 +173,7 @@ final class Serializer
     /**
      * Get collected debug statistics
      *
-     * @return array{total_operations: int, total_time: float, formats_detected: array<string, int>, slow_operations: array<int, array{operation: string, format: string, time: float, memory: int, error: string|null, trace: array<int|string, mixed>|null}>, errors: array<int, array{operation: string, format: string, time: float, memory: int, error: string|null, trace: array<int|string, mixed>|null}>}|array{}
+     * @return array{total_operations: int, total_time: float, formats_detected: array<string, int>, slow_operations: array<int, array{operation: string, format: string, time: float, memory: int, error: string|null, trace: array<int|string, mixed>|null}>, errors: array<int, array{operation: string, format: string, time: float, memory: int, error: string, trace: array<int|string, mixed>|null}>}|array{}
      */
     public static function getDebugStats(): array
     {
@@ -181,14 +182,25 @@ final class Serializer
         }
 
         $totalTime = microtime(true) - self::$startTime;
-        $formats = array_count_values(array_column(self::$debugLog, 'format'));
+        $formats = [];
+        foreach (array_count_values(array_column(self::$debugLog, 'format')) as $format => $count) {
+            $formats[(string) $format] = $count;
+        }
+
+        $slowOperations = array_values(
+            array_filter(self::$debugLog, static fn(array $log): bool => $log['time'] > 0.01)
+        );
+        /** @var array<int, array{operation: string, format: string, time: float, memory: int, error: string, trace: array<int|string, mixed>|null}> $errors */
+        $errors = array_values(
+            array_filter(self::$debugLog, static fn(array $log): bool => $log['error'] !== null)
+        );
 
         return [
             'total_operations' => count(self::$debugLog),
             'total_time' => round($totalTime, 4),
             'formats_detected' => $formats,
-            'slow_operations' => array_filter(self::$debugLog, static fn(array $log): bool => $log['time'] > 0.01),
-            'errors' => array_filter(self::$debugLog, static fn(array $log): bool => isset($log['error']))
+            'slow_operations' => $slowOperations,
+            'errors' => $errors
         ];
     }
 
@@ -315,14 +327,9 @@ final class Serializer
         // Validate size after decoding
         self::validateSize($decoded);
 
-        // Check for optional gzip compression
+        // Check for optional gzip compression — stream-decompress to enforce size cap
         if (self::isGzip($decoded)) {
-            $unzipped = gzdecode($decoded);
-            if ($unzipped === false) {
-                throw new RuntimeException('Gzip decompression failed');
-            }
-            $decoded = $unzipped;
-            self::validateSize($decoded);
+            $decoded = self::safeGzipDecode($decoded);
         }
 
         self::logLegacy($payload);
@@ -404,7 +411,8 @@ final class Serializer
         // Check base64-encoded serialized
         if (self::isLikelyBase64($payload)) {
             $decoded = base64_decode($payload, true);
-            if ($decoded !== false
+            if (
+                $decoded !== false
                 && \strlen($decoded) <= self::MAX_SIZE
                 && self::looksLikeSerialized($decoded)
             ) {
@@ -642,6 +650,68 @@ final class Serializer
     }
 
     /**
+     * Decompress gzip data with streaming size enforcement.
+     *
+     * Uses inflate_init()/inflate_add() to decompress in chunks, aborting
+     * as soon as output exceeds MAX_SIZE. This prevents a small compressed
+     * payload from consuming unbounded memory during decompression.
+     *
+     * @param string $data gzip-compressed data
+     *
+     * @return string decompressed data
+     *
+     * @throws DecompressionException on decompression failure or size exceeded
+     */
+    private static function safeGzipDecode(string $data): string
+    {
+        $context = inflate_init(ZLIB_ENCODING_GZIP);
+        if ($context === false) {
+            throw new DecompressionException('Failed to initialize gzip decompression');
+        }
+
+        $output = '';
+        $offset = 0;
+        $chunkSize = 8192;
+        $maxSize = self::MAX_SIZE;
+
+        while ($offset < \strlen($data)) {
+            $chunk = substr($data, $offset, $chunkSize);
+            $offset += \strlen($chunk);
+
+            $inflated = inflate_add($context, $chunk);
+            if ($inflated === false) {
+                throw new DecompressionException('Gzip decompression failed');
+            }
+            $output .= $inflated;
+
+            if (\strlen($output) > $maxSize) {
+                throw new DecompressionException(
+                    sprintf('Decompressed payload exceeds %d bytes', $maxSize)
+                );
+            }
+        }
+
+        // Flush remaining and verify stream completed
+        $inflated = inflate_add($context, '', ZLIB_FINISH);
+        if ($inflated === false) {
+            throw new DecompressionException('Gzip decompression failed during final flush');
+        }
+        if (inflate_get_status($context) !== ZLIB_STREAM_END) {
+            throw new DecompressionException('Gzip stream is incomplete or truncated');
+        }
+        if ($inflated !== '') {
+            $output .= $inflated;
+            if (\strlen($output) > $maxSize) {
+                throw new DecompressionException(
+                    sprintf('Decompressed payload exceeds %d bytes', $maxSize)
+                );
+            }
+        }
+
+        return $output;
+    }
+
+    /**
      * Secondary defense against object injection in scalar/array payloads.
      *
      * PHP serialized objects use NUL bytes to mark private/protected
@@ -802,7 +872,7 @@ final class Serializer
     {
         // Use json_validate if available (PHP 8.3+)
         if (function_exists('json_validate')) {
-            return json_validate($s, self::JSON_DEPTH);
+            return json_validate($s, self::JSON_DEPTH) === true;
         }
 
         // Fallback for older PHP versions
