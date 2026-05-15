@@ -12,13 +12,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write          # push the automation branch
+  pull-requests: write     # open/update the changelog PR
 
 concurrency:
   # Fixed group (not keyed by ref): release-tag and manual-dispatch runs
-  # both push the default branch. Queue them (cancel-in-progress: false) so
-  # each run finishes and persists its CHANGELOG.md instead of a later run
-  # cancelling an in-flight one mid-push.
+  # both target the same automation branch / PR. Queue them
+  # (cancel-in-progress: false) so each run finishes and updates the PR
+  # instead of a later run cancelling an in-flight one mid-update.
   group: changelog
   cancel-in-progress: false
 
@@ -54,18 +55,27 @@ jobs:
       - name: Verify changelog was generated at the repo root
         run: test -s CHANGELOG.md
 
-      - name: Commit CHANGELOG.md if changed
-        run: |
-          # Stage first, then compare the index to HEAD. Plain
-          # `git diff --quiet` ignores untracked files, so on the first
-          # run (CHANGELOG.md brand-new) it falsely reported "no change"
-          # and the file was never committed. --cached sees new files too.
-          git add CHANGELOG.md
-          if git diff --cached --quiet -- CHANGELOG.md; then
-            echo "CHANGELOG.md unchanged — nothing to commit."
-            exit 0
-          fi
-          git config user.name  "xoops-ci"
-          git config user.email "ci@xoops.org"
-          git commit -m "docs(changelog): regenerate CHANGELOG.md [skip ci]"
-          git push origin HEAD:${{ github.event.repository.default_branch }}
+      - name: Open/update changelog pull request
+        # master is protected (changes must go through a PR), so the bot
+        # cannot push directly. Push a fixed automation branch and let this
+        # action open or update the PR; it no-ops when nothing changed.
+        # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ github.event.repository.default_branch }}
+          branch: automation/update-changelog
+          delete-branch: true
+          add-paths: CHANGELOG.md
+          commit-message: "docs(changelog): regenerate CHANGELOG.md"
+          committer: "xoops-ci <ci@xoops.org>"
+          author: "xoops-ci <ci@xoops.org>"
+          title: "docs(changelog): regenerate CHANGELOG.md"
+          body: |
+            Regenerated `CHANGELOG.md` from the commit history via
+            `git-cliff` (config: `cliff.toml`).
+
+            Opened by the **Changelog** workflow — `master` is protected
+            (changes must go through a PR), so the generated file is
+            delivered this way instead of a direct push. Safe to merge
+            once green; it only touches `CHANGELOG.md`.
