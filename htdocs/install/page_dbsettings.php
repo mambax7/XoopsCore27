@@ -31,6 +31,18 @@ defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 $pageHasForm = true;
 $pageHasHelp = true;
 
+// The requirements page already blocks Next when a mandatory extension is
+// missing, but that gate is bypassable via a direct URL or a stale session.
+// Re-check the full required set here (mysqli especially has no fallback and
+// would fatal below) so a bypass yields the clear message, not a raw fatal.
+$missingRequired = xoInstallerMissingRequired($wizard);
+if (!empty($missingRequired)) {
+    $blockNext = true;
+    $content   = xoInstallerBlockedHtml(implode(', ', $missingRequired));
+    include_once __DIR__ . '/include/install_tpl.php';
+    exit;
+}
+
 $vars = & $_SESSION['settings'];
 
 $hostConnectPrefix = empty($vars['DB_PCONNECT']) ? '' : 'p:';

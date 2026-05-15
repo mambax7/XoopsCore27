@@ -6,6 +6,10 @@ Below are language differences from a version to next version.
 ================================
 2025/03/30: Version 2.7.0-Betas (previously released as 2.5.12-Betas)
 ================================
+/htdocs/install/language/english/install.php
+- added define('MISSING_REQUIRED_EXTENSIONS', 'Required PHP extensions are missing');
+- added define('MISSING_REQUIRED_EXTENSIONS_MSG', 'XOOPS cannot be installed because the following mandatory PHP extension(s) are not available: %s. Enable them in your PHP configuration (php.ini) and restart your web server, then reload this page.');
+
 /htdocs/modules/system/language/english/admin.php
 - added define('_AM_SYSTEM_MENUS', 'Menus');
 - added define('_AM_SYSTEM_MENUS_DESC', 'Manage site navigation menus');

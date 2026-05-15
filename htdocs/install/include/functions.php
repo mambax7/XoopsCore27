@@ -257,6 +257,77 @@ function xoPhpVersion()
 }
 
 /**
+ * Whether a mandatory extension is usable.
+ *
+ * For extensions with no fallback driver (e.g. mysqli) a plain
+ * extension_loaded() is enough, but a partial/unusual build can report the
+ * extension loaded while a specific symbol the caller needs (e.g.
+ * mysqli_report) is absent — so optional functions/classes are verified too.
+ *
+ * @param string   $ext     extension name (e.g. 'mysqli')
+ * @param string[] $symbols functions/classes that must also exist
+ *
+ * @return bool
+ */
+function xoInstallerExtensionAvailable(string $ext, array $symbols = []): bool
+{
+    if (!extension_loaded($ext)) {
+        return false;
+    }
+    foreach ($symbols as $symbol) {
+        // class_exists(.., false): don't trigger the autoloader during the
+        // install bootstrap just to probe for an internal extension class.
+        if (!function_exists($symbol) && !class_exists($symbol, false)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Labels of the mandatory extensions that are not usable.
+ *
+ * Single source of truth shared by the requirements-page gate and the
+ * server-side guards on later pages, so every entry point applies the same
+ * rule against $configs['extensions_required'] (label + required symbols).
+ *
+ * @param XoopsInstallWizard $wizard
+ *
+ * @return string[] human-readable labels of missing extensions (empty = ok)
+ */
+function xoInstallerMissingRequired(XoopsInstallWizard $wizard): array
+{
+    $missing = [];
+    foreach ($wizard->configs['extensions_required'] as $ext => $info) {
+        [$label, $symbols] = $info;
+        if (!xoInstallerExtensionAvailable($ext, $symbols)) {
+            $missing[] = $label;
+        }
+    }
+    return $missing;
+}
+
+/**
+ * Build the "mandatory extension missing" alert markup.
+ *
+ * Returned (not echoed) so the caller can assign it to $content and render it
+ * through the standard installer chrome at file scope.
+ *
+ * @param string $labels human-readable extension label or comma-separated
+ *                       list of labels (callers pass the joined missing set)
+ *
+ * @return string
+ */
+function xoInstallerBlockedHtml(string $labels): string
+{
+    return '<div class="alert alert-danger" role="alert">'
+        . '<h4 class="alert-heading"><span class="fa-solid fa-ban"></span> ' . MISSING_REQUIRED_EXTENSIONS . '</h4>'
+        . '<p class="mb-0">'
+        . installerHtmlSpecialChars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $labels))
+        . '</p></div>';
+}
+
+/**
  * @param $path
  * @param $valid
  *
