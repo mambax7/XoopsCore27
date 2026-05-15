@@ -16,9 +16,9 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 $modversion = [];
 
 // --- Module Info ---
+$modversion['version']      = '1.0.0';
+$modversion['release_date'] = '2026/05/14';
 $modversion['name']         = _MI_DEBUGBAR_NAME;
-$modversion['version']      = '1.0.0-beta1';
-$modversion['release_date'] = '2026/02/09';
 $modversion['description']  = _MI_DEBUGBAR_DSC;
 $modversion['author']       = 'XOOPS Project';
 $modversion['credits']      = 'trabis, Richard Griffith';
