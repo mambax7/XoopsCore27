@@ -62,7 +62,8 @@ class Protector
         $this->mydirname = 'protector';
 
         // Preferences from configs/cache
-        $this->_conf_serialized = @file_get_contents($this->get_filepath4confighcache());
+        $confcache = $this->get_filepath4confighcache();
+        $this->_conf_serialized = is_file($confcache) ? (string)file_get_contents($confcache) : '';
         $this->_conf            = @unserialize($this->_conf_serialized, ['allowed_classes' => false]);
         if (empty($this->_conf)) {
             $this->_conf = [];
