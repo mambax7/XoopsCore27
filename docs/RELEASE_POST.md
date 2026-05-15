@@ -131,6 +131,14 @@ XOOPS 2.7.0 adds **right-to-left language support** at the core level, with init
 
 ---
 
+## Translations — 37 languages and counting
+
+Beyond the English source, XOOPS 2.7.0 is available in **37 community translations**, all maintained in the **[XoopsLanguages](https://github.com/XoopsLanguages)** organization on GitHub. Direct, per-language download links and installation notes are in **[`docs/TRANSLATIONS.md`](TRANSLATIONS.md)**.
+
+Translations are a community effort and never truly finished. **Please help us find and fix translation errors** — and if your language is missing, or you can review an existing one, we'd love your help adding and improving it. Everything starts from the repositories under [github.com/XoopsLanguages](https://github.com/XoopsLanguages).
+
+---
+
 ## System requirements
 
 | | |
