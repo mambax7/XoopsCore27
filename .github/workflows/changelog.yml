@@ -1,0 +1,67 @@
+name: Changelog
+
+# Generates the root CHANGELOG.md from the conventional-commit history with
+# git-cliff (config: cliff.toml). CHANGELOG.md is a generated artifact and
+# must not be hand-edited. Runs on each published release and can be
+# dispatched manually. The curated narrative notes stay in
+# docs/changelog.270.txt.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # Fixed group (not keyed by ref): release-tag and manual-dispatch runs
+  # both push the default branch. Queue them (cancel-in-progress: false) so
+  # each run finishes and persists its CHANGELOG.md instead of a later run
+  # cancelling an in-flight one mid-push.
+  group: changelog
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate CHANGELOG.md
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history + tags)
+        # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # On release: published the default ref is the tag (detached HEAD),
+          # which cannot be pushed back. Always work on the default branch.
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Generate changelog
+        # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          # git-cliff-action reads OUTPUT as an ENV var (run.sh:
+          # OUTPUT=${OUTPUT:="git-cliff/CHANGELOG.md"}); there is no `output`
+          # action input. Do not move this into `with:` — it would be ignored
+          # and the changelog would land at the default git-cliff/ path.
+          OUTPUT: CHANGELOG.md
+
+      - name: Verify changelog was generated at the repo root
+        run: test -s CHANGELOG.md
+
+      - name: Commit CHANGELOG.md if changed
+        run: |
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "xoops-ci"
+          git config user.email "ci@xoops.org"
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): regenerate CHANGELOG.md [skip ci]"
+          git push origin HEAD:${{ github.event.repository.default_branch }}
