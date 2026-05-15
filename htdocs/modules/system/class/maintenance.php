@@ -196,10 +196,10 @@ class SystemMaintenance
         // upload. realpath() is constant for the run, so per-row
         // resolution would just be wasted filesystem work on
         // installations with large orphaned-avatar tables.
-        $avatarRoot       = realpath(XOOPS_UPLOAD_PATH . '/avatars');
-        $avatarRootPrefix = is_string($avatarRoot)
-            ? rtrim($avatarRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
-            : null;
+        $avatarRootPath   = XOOPS_UPLOAD_PATH . '/avatars';
+        $avatarRootPrefix = is_dir($avatarRootPath)
+            ? rtrim((string) realpath($avatarRootPath), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+            : '';
 
         // Track whether every DELETE in the sweep succeeded. The method
         // contract is `@return bool`, but the previous implementation
@@ -251,7 +251,8 @@ class SystemMaintenance
                 $avatarParent    = realpath(dirname($avatarCandidate));
                 if (
                     is_string($avatarParent)
-                    && is_string($avatarRootPrefix)
+                    && '' !== $avatarRootPrefix
+                    && $avatarRootPrefix !== DIRECTORY_SEPARATOR
                     && str_starts_with(rtrim($avatarParent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR, $avatarRootPrefix)
                     && (is_file($avatarCandidate) || is_link($avatarCandidate))
                 ) {

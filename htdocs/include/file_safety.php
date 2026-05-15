@@ -121,17 +121,13 @@ if (!function_exists('xoops_chmod_quietly')) {
      */
     function xoops_chmod_quietly($path, $perms, $context = 'temp')
     {
-        // Initialise $ok before the try block: error_reporting(0) does NOT
-        // disable user-defined error handlers, only the native warning. A
-        // naively written handler that always throws (without checking
-        // error_reporting() & $errno) would propagate out of the try block
-        // before chmod() returns, leaving $ok unset. Defensive default.
-        // Catch \Throwable too: chmod() raises ValueError on PHP 8+ for
+        // error_reporting(0) does NOT disable user-defined error handlers,
+        // only the native warning. Catch \Throwable too: chmod() raises
+        // ValueError on PHP 8+ for
         // paths containing a null byte, and a user error handler may throw
         // ErrorException for other filesystem conditions. Both are reported
         // as a single project-standard warning, never propagated out of a
         // best-effort cleanup helper.
-        $ok            = false;
         $previousLevel = error_reporting(0);
         try {
             $ok = chmod($path, $perms);
@@ -189,11 +185,10 @@ if (!function_exists('xoops_remove_file_quietly')) {
         } catch (\Throwable $e) {
             return;
         }
-        // Initialise $ok defensively — see xoops_chmod_quietly() for the
-        // rationale (error_reporting(0) does not disable user-defined
-        // error handlers). Catch \Throwable around unlink() for the same
-        // ValueError-on-null-byte / throwing-error-handler reasons.
-        $ok            = false;
+        // See xoops_chmod_quietly() for the rationale: error_reporting(0)
+        // does not disable user-defined error handlers. Catch \Throwable
+        // around unlink() for the same ValueError-on-null-byte /
+        // throwing-error-handler reasons.
         $previousLevel = error_reporting(0);
         try {
             $ok = unlink($path);

@@ -53,7 +53,7 @@ class XoopsLocal extends XoopsLocalAbstract
     /**
      * Number Formats
      *
-     * The @param annotation accepts string for backward compatibility with
+     * The parameter type accepts string for backward compatibility with
      * callers that still pass numeric strings, but PHP's number_format()
      * requires float. Cast at the boundary ONLY when the input is a
      * numeric string — otherwise pass through unchanged so PHP's
@@ -79,8 +79,10 @@ class XoopsLocal extends XoopsLocalAbstract
      * Money Format
      *
      * @param  string    $format  legacy money_format()-style format string (ignored, kept for BC)
-     * @param  int|float $number
+     * @param  int|float|string $number
      * @return string
+     *
+     * @throws \TypeError when $number is not int, float, or a numeric string
      *
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */

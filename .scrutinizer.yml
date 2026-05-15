@@ -1,4 +1,7 @@
 build:
+  environment:
+    php:
+      version: '8.2'
   nodes:
     analysis:
       tests:
@@ -7,9 +10,7 @@ build:
 
 filter:
   excluded_paths:
-    - '_archive/'
     - 'tests/'
-    - 'tests_codex2/'
     - 'extras/'
     - 'docs/'
     - 'htdocs/xoops_lib/vendor/'

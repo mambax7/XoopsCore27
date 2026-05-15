@@ -147,17 +147,10 @@ class XoopsMultiMailer extends PHPMailer
         /** @var XoopsConfigHandler $config_handler */
         $config_handler    = xoops_getHandler('config');
         $xoopsMailerConfig = $config_handler->getConfigsByCat(XOOPS_CONF_MAILER);
-        // Core XoopsConfigHandler::getConfigsByCat() returns an array
-        // (possibly empty), but keep this guard defensive for custom
-        // handlers, mocked/test bootstraps, or unexpected states. The
-        // null-coalescing below then covers the case where rows for
-        // individual keys are missing (mid-upgrade, fresh install before
-        // first save, partial config), which would otherwise blank every
-        // mail-touching request (notifications, password reset, contact
-        // form).
-        if (!is_array($xoopsMailerConfig)) {
-            $xoopsMailerConfig = [];
-        }
+        // getConfigsByCat() returns an array, possibly empty. The
+        // null-coalescing below covers missing individual keys
+        // (mid-upgrade, fresh install before first save, partial config)
+        // without blanking every mail-touching request.
 
         $this->From = (string) ($xoopsMailerConfig['from'] ?? '');
         if ('' === $this->From) {

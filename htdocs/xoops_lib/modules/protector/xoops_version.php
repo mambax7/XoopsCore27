@@ -39,7 +39,7 @@ $modversion['icons16']        = 'Frameworks/moduleclasses/icons/16';
 $modversion['icons32']        = 'Frameworks/moduleclasses/icons/32';
 
 //about
-$modversion['release_date']        = '2019/02/18';
+$modversion['release_date']        = '2026/05/14';
 $modversion['module_website_url']  = 'https://xoops.org/';
 $modversion['module_website_name'] = 'XOOPS';
 $modversion['min_php']             = '8.2.0';

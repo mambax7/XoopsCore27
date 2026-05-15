@@ -37,8 +37,8 @@ $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id
 //   - throws \Exception("Handler does not exist") when the handler class
 //     can't be resolved (unless $optional = true, which we don't pass)
 // Wrap in try/catch so neither path produces an uncaught exception. Then
-// keep the instanceof PmMessageHandler check for static-analysis type
-// narrowing of the PM-specific methods (setTodelete etc.) used below.
+// annotate the handler for static-analysis type narrowing of the
+// PM-specific methods (setTodelete etc.) used below.
 //
 // In the "No Module is loaded" case the PM language file may not be loaded
 // yet, so _PM_ACTION_ERROR can itself fatal as an undefined constant on
@@ -55,12 +55,6 @@ try {
     // Prefix with basename(__FILE__) so the log line is traceable without
     // exposing the absolute server path.
     trigger_error(basename(__FILE__) . ': PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
-    redirect_header(XOOPS_URL, 2, $pmActionError);
-}
-if (!($pm_handler instanceof PmMessageHandler)) {
-    // Internal load failure (not an authorisation failure), so use the
-    // PM action-error message rather than _NOPERM.
-    trigger_error(basename(__FILE__) . ': PM module handler unavailable', E_USER_WARNING);
     redirect_header(XOOPS_URL, 2, $pmActionError);
 }
 $pm                = null;

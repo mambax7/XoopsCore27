@@ -1,3 +1,24 @@
+1.9.2
+--------------------------------------
+- handler-based avatar save with rollback, null guards, strip_tags cast (mamba) in #47
+- normalize profile and session indexes for 2.7.0 (mamba) in #23
+- skip index normalisation on profile_field.field_name when index already present (mamba) in #29
+- migrate superglobals to Xmf\Request across user-facing and admin pages (mamba)
+- pin explicit hash argument on all Request::getXxx() calls (mamba)
+- use http_response_code(404) for direct-access guards (mamba)
+- clamp search limit to prevent unbounded queries (mamba)
+- fix CSRF protection on profile visibility actions (mamba)
+- harden activation keys with CSPRNG and strict comparison (mamba)
+- fix `!$x instanceof Y` precedence bug — wrap with parens (mamba)
+- fix getCmd lowercasing and zero-valid Elvis (?:) patterns (mamba)
+- use raw, no-trim getVar()/getText() for password fields in admin/user.php (mamba)
+- add password != username check to admin user create/edit (mamba)
+- rename step toggle params to camelCase with type hints (mamba)
+- toggle from stored value; use $obj->getVar() for delete confirm IDs (mamba)
+- refactor email confirmation message output (mamba)
+- update copyright year to 2026 (mamba)
+- raise PHP minimum to 8.2 (mamba)
+
 1.9.2-Beta1
 --------------------------------------
 - UTF8mb4: subsetting in sorting on step_order in profile_regstep (mamba)

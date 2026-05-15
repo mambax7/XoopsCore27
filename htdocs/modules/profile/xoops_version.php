@@ -23,8 +23,8 @@
  *
  */
 $modversion                   = [];
+$modversion['version']        = '1.9.2';
 $modversion['name']           = _PROFILE_MI_NAME;
-$modversion['version']        = '1.9.2-Stable';
 $modversion['description']    = _PROFILE_MI_DESC;
 $modversion['author']         = 'Jan Pedersen, Taiwen Jiang, alfred, Wishcraft';
 $modversion['credits']        = 'Ackbarr, mboyden, marco, mamba, trabis, etc.';
@@ -36,17 +36,14 @@ $modversion['dirname']        = 'profile';
 $modversion['dirmoduleadmin'] = '/Frameworks/moduleclasses/moduleadmin';
 $modversion['icons16']        = '../../Frameworks/moduleclasses/icons/16';
 $modversion['icons32']        = '../../Frameworks/moduleclasses/icons/32';
-
 $modversion['icon']           = 'fa-solid fa-user';
-
-
 //about
-$modversion['release_date']        = '2022/09/09';
+$modversion['release_date']        = '2026/05/14';
 $modversion['module_website_url']  = 'https://xoops.org/';
 $modversion['module_website_name'] = 'XOOPS';
-$modversion['min_php']             = '8.2.0';
-$modversion['min_xoops']           = '2.5.11';
+$modversion['min_xoops']           = '2.7.0';
 $modversion['min_admin']           = '1.2';
+$modversion['min_php']             = '8.2.0';
 $modversion['min_db']              = ['mysql' => '5.0.7'];
 
 // Admin menu

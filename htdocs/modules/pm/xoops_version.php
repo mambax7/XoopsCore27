@@ -24,8 +24,8 @@
  */
 
 $modversion                   = [];
+$modversion['version']        = '1.1.4';
 $modversion['name']           = _PM_MI_NAME;
-$modversion['version']        = '1.1.4-Stable';
 $modversion['description']    = _PM_MI_DESC;
 $modversion['author']         = 'Jan Pedersen, Taiwen Jiang';
 $modversion['credits']        = 'The XOOPS Project, Wanikoo';
@@ -39,12 +39,12 @@ $modversion['icons16']        = '../../Frameworks/moduleclasses/icons/16';
 $modversion['icons32']        = '../../Frameworks/moduleclasses/icons/32';
 $modversion['icon']           = 'fa-solid fa-message';
 //about
-$modversion['release_date']        = '2019/02/18';
+$modversion['release_date']        = '2026/05/14';
 $modversion['module_website_url']  = 'https://xoops.org/';
 $modversion['module_website_name'] = 'XOOPS';
-$modversion['min_php']             = '8.2.0';
-$modversion['min_xoops']           = '2.5.11';
+$modversion['min_xoops']           = '2.7.0';
 $modversion['min_admin']           = '1.2';
+$modversion['min_php']             = '8.2.0';
 $modversion['min_db']              = ['mysql' => '5.0.7'];
 
 // Admin menu
@@ -80,6 +80,7 @@ $modversion['templates'][3]['description'] = '';
 // Menu
 $modversion['hasMain'] = 1;
 
+// Config items
 $modversion['config']   = [];
 $modversion['config'][] = [
     'name'        => 'perpage',

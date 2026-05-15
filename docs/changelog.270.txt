@@ -1,7 +1,54 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
-2.7.0 RC1                    2026-04
+2.7.0 Final                  2026-05
+===================================
+Version and platform:
+- drop pre-release suffix from XOOPS_VERSION constant; "XOOPS 2.7.0" per SemVer 2.0.0 (mamba)
+- bump Protector module version from 3.6.3-RC1 to 3.6.3 (mamba)
+- bump Protector release_date to 2026/05/14 (mamba)
+
+Documentation:
+- migrate documentation links in release notes from GitBook to https://xoops.github.io/xoops-docs/ (mamba)
+
+Security hardening:
+- harden upgrade/checkmainfile.php mainfile include with realpath() and boundary check (mamba) in #54
+
+===================================
+2.7.0 RC5                    2026-04-22
+===================================
+- show section for system services always, after controlpanel (ggoffy) in #21
+- normalize profile and session indexes for 2.7.0 (mamba) in #23
+- fix TinyMCE default config to actually load the full plugin set (mamba) in #24
+- fix installer cleanup: /install folder is deleted before final calls (mamba) in #25
+- add menusitems FK during fresh install for schema parity (mamba) in #27
+- RC-scoped 3.6.4 fixes for PHP 8, dblayertrap, and filter loading in Protector (mamba) in #28
+- skip index normalisation on profile_field.field_name when index already present (mamba) in #29
+- set utf8mb4 as the default character set (mamba) in #30
+- fix xbootstrap5 runtime script load order (mamba) in #31
+- SonarQube settings update (mamba) in #26
+- bump actions/cache from 5.0.4 to 5.0.5 (dependabot) in #22
+
+===================================
+2.7.0 RC4                    2026-04-14
+===================================
+- fix installer: remove XMF dependency from all pre-autoloader install paths (mamba) in #19
+
+===================================
+2.7.0 RC3                    2026-04-14
+===================================
+- fix installer: prevent column-shift corruption and autoloader failure on fresh install (mamba) in #16
+- fix upgrade: skip stale patch directories and fix System module update URL (mamba) in #17
+- update Modern admin theme (ggoffy) in #14
+- new contributor: @ggoffy
+
+===================================
+2.7.0 RC2                    2026-04-13
+===================================
+- fix for missing /htdocs/modules/system/constants.php (mamba)
+
+===================================
+2.7.0 RC1                    2026-04-12
 ===================================
 Version and platform:
 - renamed version from 2.5.12 to 2.7.0 RC1 (mamba)
