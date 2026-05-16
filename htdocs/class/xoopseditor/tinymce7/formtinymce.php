@@ -97,7 +97,7 @@ class XoopsFormTinymce7 extends XoopsEditor
             return $this->language;
         }
         if (defined('_XOOPS_EDITOR_TINYMCE7_LANGUAGE')) {
-            $this->language = strtolower(constant('_XOOPS_EDITOR_TINYMCE7_LANGUAGE'));
+            $this->language = constant('_XOOPS_EDITOR_TINYMCE7_LANGUAGE');
         } else {
             $this->language = str_replace('_', '-', strtolower(_LANGCODE));
             if (strtolower(_CHARSET) === 'utf-8') {
