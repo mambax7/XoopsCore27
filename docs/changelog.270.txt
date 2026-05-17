@@ -24,6 +24,7 @@ Tests:
 
 Forms and templates:
 - fix TinyMCE 7 language handling to preserve case-sensitive locale codes such as zh_TW
+- fix TinyMCE 7 fallback language handling to emit pack filename codes such as zh_TW/fr_FR/pt_BR and drop the invalid legacy _utf8 suffix (issue #76)
 
 System:
 - fix cloning a module block: the save handler now hydrates the module fields (mid, func_num, func_file, show_func, edit_func, template, dirname, name) from the clone form when bid=0, so the clone keeps its module binding and passes name validation; the path/function fields are validated (no traversal, identifier-only) before persisting (issue #73)

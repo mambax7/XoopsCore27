@@ -21,6 +21,5 @@
  */
 // Name of the editor
 define('_XOOPS_EDITOR_TINYMCE7', 'TinyMCE7');
-// The value must be the same as /tinymce/jscripts/langs/your_language_code, for example, "en" for English, "fr" for French
-// For details, check http://tinymce.moxiecode.com/download_i18n.php
+// The value must match the TinyMCE 7 language-pack filename without ".js", for example "en", "fr_FR", or "zh_TW".
 define('_XOOPS_EDITOR_TINYMCE7_LANGUAGE', 'en');
