@@ -302,15 +302,29 @@ switch ($op) {
             // Reject tampered hidden inputs. dirname/func_file/template are
             // later concatenated into include_once paths and show/edit_func
             // are called as functions when the block renders. Legitimate
-            // clone values are plain module identifiers copied from a
-            // trusted DB row, so a strict check never rejects real clones
-            // but blocks path traversal / code injection via forged POST.
-            foreach ([$clone_dirname, $clone_func_file, $clone_template] as $clone_path) {
+            // clone values come from a trusted DB row, so these checks never
+            // reject real clones but block path traversal / code injection
+            // via a forged POST.
+            //
+            // dirname is a single module directory segment (never contains
+            // a separator).
+            if ($clone_dirname !== ''
+                && (false !== strpos($clone_dirname, '/')
+                    || false !== strpos($clone_dirname, '\\')
+                    || false !== strpos($clone_dirname, '..')
+                    || false !== strpos($clone_dirname, "\0"))) {
+                redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALIDCLONE);
+            }
+            // func_file/template are relative to modules/<dirname>/blocks/.
+            // A subdirectory is allowed (some modules nest block files), so
+            // permit an internal '/' but still block traversal, backslashes,
+            // NUL and absolute paths.
+            foreach ([$clone_func_file, $clone_template] as $clone_path) {
                 if ($clone_path !== ''
-                    && (false !== strpos($clone_path, '/')
+                    && (false !== strpos($clone_path, '..')
                         || false !== strpos($clone_path, '\\')
-                        || false !== strpos($clone_path, '..')
-                        || false !== strpos($clone_path, "\0"))) {
+                        || false !== strpos($clone_path, "\0")
+                        || str_starts_with($clone_path, '/'))) {
                     redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALIDCLONE);
                 }
             }
