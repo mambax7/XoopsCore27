@@ -153,9 +153,12 @@ class BlocksAdminCloneTest extends TestCase
         $insertPos = strpos($this->sourceContent, '$block_handler->insert(', $cloneOffset);
         self::assertNotFalse($insertPos, 'save handler must insert() the block');
 
-        self::assertLessThan(
-            $insertPos,
+        // assertGreaterThan($expected, $actual) passes when $actual >
+        // $expected, i.e. insert() appears after the name read. Phrased
+        // this way (vs the equivalent assertLessThan) to read naturally.
+        self::assertGreaterThan(
             $nameRead,
+            $insertPos,
             "'name' must be hydrated before insert() so a clone passes name validation (issue #73)"
         );
     }

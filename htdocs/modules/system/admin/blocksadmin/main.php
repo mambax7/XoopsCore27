@@ -299,12 +299,14 @@ switch ($op) {
             $clone_show_func = Request::getString('show_func', '', 'POST');
             $clone_edit_func = Request::getString('edit_func', '', 'POST');
 
-            // Reject tampered hidden inputs. dirname/func_file/template are
-            // later concatenated into include_once paths and show/edit_func
-            // are called as functions when the block renders. Legitimate
-            // clone values come from a trusted DB row, so these checks never
-            // reject real clones but block path traversal / code injection
-            // via a forged POST.
+            // Reject tampered hidden inputs. dirname/func_file are later
+            // used to locate and include_once the module block PHP file,
+            // template is persisted as the block's Smarty template name,
+            // and show/edit_func are called as functions when the block
+            // renders or exposes options. Legitimate clone values come
+            // from a trusted DB row, so these checks never reject real
+            // clones but block path traversal / code injection via a
+            // forged POST.
             //
             // dirname is a single module directory segment (never contains
             // a separator).
@@ -315,10 +317,11 @@ switch ($op) {
                     || false !== strpos($clone_dirname, "\0"))) {
                 redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALIDCLONE);
             }
-            // func_file/template are relative to modules/<dirname>/blocks/.
-            // A subdirectory is allowed (some modules nest block files), so
-            // permit an internal '/' but still block traversal, backslashes,
-            // NUL and absolute paths.
+            // func_file is the block PHP file under modules/<dirname>/blocks/
+            // (a subdirectory is allowed - some modules nest block files);
+            // template is a Smarty template name. Neither legitimately
+            // contains traversal, backslashes, NUL or an absolute path, so
+            // reject those while still permitting an internal '/'.
             foreach ([$clone_func_file, $clone_template] as $clone_path) {
                 if ($clone_path !== ''
                     && (false !== strpos($clone_path, '..')
