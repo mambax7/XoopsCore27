@@ -20,6 +20,7 @@ Installer:
 
 Tests:
 - add unit coverage for the installer required-extension helpers (mamba) in #63
+- harden XoopsFormTinymce7 language test with process isolation and a defined() guard so the editor-language constant cannot leak between tests
 
 Forms and templates:
 - fix TinyMCE 7 language handling to preserve case-sensitive locale codes such as zh_TW
