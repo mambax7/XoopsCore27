@@ -88,3 +88,4 @@ define('_AM_SYSTEM_BLOCKS_TIPS', '<ul>
 define('_AM_SYSTEM_BLOCKS_FOOTER_LEFT', 'Footer Left');
 define('_AM_SYSTEM_BLOCKS_FOOTER_CENTER', 'Footer Center');
 define('_AM_SYSTEM_BLOCKS_FOOTER_RIGHT', 'Footer Right');
+define('_AM_SYSTEM_BLOCKS_INVALIDCLONE', 'Invalid block parameters.');

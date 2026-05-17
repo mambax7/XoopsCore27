@@ -311,12 +311,12 @@ switch ($op) {
                         || false !== strpos($clone_path, '\\')
                         || false !== strpos($clone_path, '..')
                         || false !== strpos($clone_path, "\0"))) {
-                    redirect_header('admin.php?fct=blocksadmin', 3, 'Invalid block parameters.');
+                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALIDCLONE);
                 }
             }
             foreach ([$clone_show_func, $clone_edit_func] as $clone_func) {
                 if ($clone_func !== '' && !preg_match('/^[A-Za-z_]\w*$/', $clone_func)) {
-                    redirect_header('admin.php?fct=blocksadmin', 3, 'Invalid block parameters.');
+                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALIDCLONE);
                 }
             }
 

@@ -112,7 +112,7 @@ class BlocksAdminCloneTest extends TestCase
     }
 
     /**
-     * Hardening (PR #77 review): the clone branch must reject tampered
+     * Hardening for issue #73: the clone branch must reject tampered
      * hidden inputs before persisting, since dirname/func_file/template
      * feed include_once paths and show/edit_func are called as functions.
      */
