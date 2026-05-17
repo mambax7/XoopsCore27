@@ -287,6 +287,22 @@ switch ($op) {
             $block = $block_handler->get($block_id);
         } else {
             $block = $block_handler->create();
+            // Clone (bid=0): a fresh object has no module metadata. The
+            // source block's binding only survives in the hidden fields
+            // emitted by SystemBlock::getForm('clone'); read them back so
+            // the clone keeps its module association and passes the
+            // not-null name validation. Normal new custom blocks post these
+            // empty/0, which is harmless (isCustom() path ignores them).
+            $block->setVars([
+                'mid'       => Request::getInt('mid', 0, 'POST'),
+                'func_num'  => Request::getInt('func_num', 0, 'POST'),
+                'func_file' => Request::getString('func_file', '', 'POST'),
+                'show_func' => Request::getString('show_func', '', 'POST'),
+                'edit_func' => Request::getString('edit_func', '', 'POST'),
+                'template'  => Request::getString('template', '', 'POST'),
+                'dirname'   => Request::getString('dirname', '', 'POST'),
+                'name'      => Request::getString('name', '', 'POST'),
+            ]);
         }
         $block_type = Request::getString('block_type', '');
         $block->setVar('block_type', $block_type);
