@@ -293,14 +293,41 @@ switch ($op) {
             // the clone keeps its module association and passes the
             // not-null name validation. Normal new custom blocks post these
             // empty/0, which is harmless (isCustom() path ignores them).
+            $clone_dirname   = Request::getString('dirname', '', 'POST');
+            $clone_func_file = Request::getString('func_file', '', 'POST');
+            $clone_template  = Request::getString('template', '', 'POST');
+            $clone_show_func = Request::getString('show_func', '', 'POST');
+            $clone_edit_func = Request::getString('edit_func', '', 'POST');
+
+            // Reject tampered hidden inputs. dirname/func_file/template are
+            // later concatenated into include_once paths and show/edit_func
+            // are called as functions when the block renders. Legitimate
+            // clone values are plain module identifiers copied from a
+            // trusted DB row, so a strict check never rejects real clones
+            // but blocks path traversal / code injection via forged POST.
+            foreach ([$clone_dirname, $clone_func_file, $clone_template] as $clone_path) {
+                if ($clone_path !== ''
+                    && (false !== strpos($clone_path, '/')
+                        || false !== strpos($clone_path, '\\')
+                        || false !== strpos($clone_path, '..')
+                        || false !== strpos($clone_path, "\0"))) {
+                    redirect_header('admin.php?fct=blocksadmin', 3, 'Invalid block parameters.');
+                }
+            }
+            foreach ([$clone_show_func, $clone_edit_func] as $clone_func) {
+                if ($clone_func !== '' && !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $clone_func)) {
+                    redirect_header('admin.php?fct=blocksadmin', 3, 'Invalid block parameters.');
+                }
+            }
+
             $block->setVars([
                 'mid'       => Request::getInt('mid', 0, 'POST'),
                 'func_num'  => Request::getInt('func_num', 0, 'POST'),
-                'func_file' => Request::getString('func_file', '', 'POST'),
-                'show_func' => Request::getString('show_func', '', 'POST'),
-                'edit_func' => Request::getString('edit_func', '', 'POST'),
-                'template'  => Request::getString('template', '', 'POST'),
-                'dirname'   => Request::getString('dirname', '', 'POST'),
+                'func_file' => $clone_func_file,
+                'show_func' => $clone_show_func,
+                'edit_func' => $clone_edit_func,
+                'template'  => $clone_template,
+                'dirname'   => $clone_dirname,
                 'name'      => Request::getString('name', '', 'POST'),
             ]);
         }

@@ -70,16 +70,18 @@ class BlocksAdminCloneTest extends TestCase
     }
 
     /**
-     * Capture the exact setVars([...]) array literal that hydrates the
-     * cloned block, anchored to the clone create(). Window-free so it
-     * cannot under/over-read like a fixed substring length would.
+     * Capture the clone-branch hydration region: from the clone create()
+     * through the end of the $block->setVars([...]); call. This spans both
+     * the $clone_* = Request::get*() reads and the setVars() array, so it
+     * works whether a field is read inline or via a local. Window-free, so
+     * it cannot under/over-read like a fixed substring length would.
      */
-    private function cloneSetVarsBody(): string
+    private function cloneHydrationRegion(): string
     {
         $matched = preg_match(
             '/\$block_handler->get\(\$block_id\);\s*\}\s*else\s*\{\s*'
             . '\$block\s*=\s*\$block_handler->create\(\);'
-            . '.*?\$block->setVars\(\[(.*?)\]\);/s',
+            . '(.*?\$block->setVars\(\[.*?\]\);)/s',
             $this->sourceContent,
             $m
         );
@@ -98,15 +100,43 @@ class BlocksAdminCloneTest extends TestCase
      */
     public function testCloneBranchHydratesModuleFieldsFromPost(): void
     {
-        $setVarsBody = $this->cloneSetVarsBody();
+        $region = $this->cloneHydrationRegion();
 
         foreach (self::CLONE_FIELDS as $field) {
             self::assertMatchesRegularExpression(
                 "/Request::get\w+\(\s*'" . preg_quote($field, '/') . "'.*'POST'\s*\)/",
-                $setVarsBody,
-                "Clone setVars() must read '{$field}' from POST so the cloned block keeps its module binding (issue #73)"
+                $region,
+                "Clone branch must read '{$field}' from POST so the cloned block keeps its module binding (issue #73)"
             );
         }
+    }
+
+    /**
+     * Hardening (PR #77 review): the clone branch must reject tampered
+     * hidden inputs before persisting, since dirname/func_file/template
+     * feed include_once paths and show/edit_func are called as functions.
+     */
+    public function testCloneBranchRejectsTamperedPathAndFunctionFields(): void
+    {
+        $region = $this->cloneHydrationRegion();
+
+        // Path-traversal rejection on the path-building fields.
+        self::assertStringContainsString(
+            "'..'",
+            $region,
+            'Clone branch must reject ".." in dirname/func_file/template'
+        );
+        self::assertStringContainsString(
+            "redirect_header('admin.php?fct=blocksadmin'",
+            $region,
+            'A tampered clone must be rejected via redirect_header(), not persisted'
+        );
+        // Function-name allowlist for show_func / edit_func.
+        self::assertStringContainsString(
+            '^[A-Za-z_][A-Za-z0-9_]*$',
+            $region,
+            'show_func/edit_func must be validated against a PHP-identifier allowlist'
+        );
     }
 
     /**
