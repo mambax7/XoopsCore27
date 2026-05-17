@@ -133,7 +133,7 @@ class BlocksAdminCloneTest extends TestCase
         );
         // Function-name allowlist for show_func / edit_func.
         self::assertStringContainsString(
-            '^[A-Za-z_][A-Za-z0-9_]*$',
+            '^[A-Za-z_]\w*$',
             $region,
             'show_func/edit_func must be validated against a PHP-identifier allowlist'
         );

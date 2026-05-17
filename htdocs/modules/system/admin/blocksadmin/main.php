@@ -315,7 +315,7 @@ switch ($op) {
                 }
             }
             foreach ([$clone_show_func, $clone_edit_func] as $clone_func) {
-                if ($clone_func !== '' && !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $clone_func)) {
+                if ($clone_func !== '' && !preg_match('/^[A-Za-z_]\w*$/', $clone_func)) {
                     redirect_header('admin.php?fct=blocksadmin', 3, 'Invalid block parameters.');
                 }
             }
