@@ -670,105 +670,17 @@ function b_system_themes_show($options)
         $options[2] = 6; // default visible theme rows
     }
 
-    // Defensive: if xoops_config rows for theme_set / theme_set_allowed
-    // are missing, unreadable, or contain unexpected values, neither
-    // this block nor the theme rendering chain that triggered it
-    // should fatal. The two helpers below are defined as local closures
-    // so they don't pollute the global namespace (the previous extraction
-    // to top-level system* functions risked collisions in a codebase that
-    // already uses several `system_*` and `system*` helper names) while
-    // still keeping the per-function cognitive complexity low (Sonar
-    // treats closures as separate units, so their bodies don't bubble
-    // back into the parent's complexity score).
-
-    // Validate a theme directory name for path AND HTML safety.
-    //
-    // XOOPS theme discovery (XoopsLists::getDirListAsArray) and the theme
-    // factory accept arbitrary directory names — including spaces and
-    // non-ASCII characters. The validator therefore intentionally does
-    // NOT enforce a conservative `[A-Za-z0-9_.-]` alphabet (which would
-    // silently drop legitimate `My Theme` / `テーマ` directories) and
-    // enforces two safety classes instead:
-    //
-    //  - Path safety: reject empty, leading dot, path separators (/, \),
-    //    null bytes, and `..` appearing as a path segment.
-    //  - HTML safety: reject the five HTML metacharacters (< > & " ').
-    //    No legitimate theme directory contains those, and rejecting
-    //    them at the boundary lets the option label and screenshot URL
-    //    be embedded without per-renderer escaping logic (XoopsFormSelect
-    //    renderers diverge: Bootstrap3/4/5 + Legacy render labels raw,
-    //    Tailwind escapes them — pre-escaping in the caller would
-    //    double-escape under Tailwind).
-    //
-    // Names that fail validation return ''. Surviving names are trimmed
-    // but otherwise not rewritten — `My Theme` and non-ASCII names keep
-    // their original form.
-    $validateThemeName = static function (string $name): string {
-        $name = trim($name);
-        if (
-            '' === $name
-            || str_starts_with($name, '.')
-            || str_contains($name, '/')
-            || str_contains($name, '\\')
-            || str_contains($name, "\0")
-            || preg_match('~(?:^|[\\\\/])\.\.(?:[\\\\/]|$)~', $name)
-            || preg_match('/[<>"\'&]/', $name)
-        ) {
-            return '';
-        }
-
-        return $name;
-    };
-
-    // Resolve the safe (current, allowed) theme pair from $xoopsConfig.
-    //
-    // - Casts and validates each value through $validateThemeName.
-    // - Treats a string theme_set_allowed as pipe-separated (defends
-    //   against direct overrides in mainfile.php / xoopsconfig.php).
-    // - Skips non-scalar entries (object / array / null / resource)
-    //   without casting, so a corrupted xoops_config row cannot trigger
-    //   an Error or string-conversion Warning.
-    // - Falls back to 'default' if no usable current theme survived.
-    // - Falls back to [$currentTheme] if no usable allowed theme survived.
-    // - Ensures $currentTheme is in the allowed list (otherwise the
-    //   rendered <select>'s `selected` value would not match any of
-    //   its <option>s).
-    $resolveConfig = static function (array $xoopsConfig) use ($validateThemeName): array {
-        $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
-        $currentTheme    = is_string($rawCurrentTheme) ? $validateThemeName($rawCurrentTheme) : '';
-        if ('' === $currentTheme) {
-            $currentTheme = 'default';
-        }
-
-        $rawAllowedThemes = $xoopsConfig['theme_set_allowed'] ?? [];
-        if (is_string($rawAllowedThemes)) {
-            // Filter on empty-string explicitly — default array_filter()
-            // drops any falsy entry, including a theme literally named "0".
-            $rawAllowedThemes = array_filter(
-                array_map('trim', explode('|', $rawAllowedThemes)),
-                static fn(string $theme): bool => '' !== $theme
-            );
-        } elseif (!is_array($rawAllowedThemes)) {
-            $rawAllowedThemes = [];
-        }
-        $allowedThemes = array_values(array_filter(
-            array_map(
-                static fn($name): string => is_scalar($name) ? $validateThemeName((string) $name) : '',
-                $rawAllowedThemes
-            ),
-            static fn(string $name): bool => '' !== $name
-        ));
-        if ([] === $allowedThemes) {
-            $allowedThemes = [$currentTheme];
-        }
-        if (!in_array($currentTheme, $allowedThemes, true)) {
-            array_unshift($allowedThemes, $currentTheme);
-        }
-
-        return [$currentTheme, array_values(array_unique($allowedThemes))];
-    };
-
-    [$currentTheme, $allowedThemes] = $resolveConfig($xoopsConfig);
+    // Defensive normalisation now lives in include/theme_config.php as
+    // xoops_validateThemeName() + xoops_resolveThemeConfig(). Both are
+    // already required transitively (functions.php -> theme_config.php).
+    // The block keeps using them at the call site even though
+    // common.php boundary-normalises the same values — explicit calls
+    // here document intent and survive any future caller that hits the
+    // block from a context where common.php has been bypassed (CLI
+    // entry, partial init).
+    $themeConfig   = xoops_resolveThemeConfig($xoopsConfig);
+    $currentTheme  = $themeConfig['theme_set'];
+    $allowedThemes = $themeConfig['theme_set_allowed'];
 
     $selectSize = ($options[0] == 1) ? 1 : (int) $options[2];
     $select = new XoopsFormSelect('', 'xoops_theme_select', $currentTheme, $selectSize);

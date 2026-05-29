@@ -42,9 +42,9 @@ class XoopsFormSelectTheme extends XoopsFormSelect
         if ($theme_set_allowed === false) {
             $this->addOptionArray(XoopsLists::getThemesList());
         } else {
-            $theme_arr = $GLOBALS['xoopsConfig']['theme_set_allowed'];
-            foreach (array_keys($theme_arr) as $i) {
-                $this->addOption($theme_arr[$i], $theme_arr[$i]);
+            $themeConfig = xoops_resolveThemeConfig($GLOBALS['xoopsConfig'] ?? []);
+            foreach ($themeConfig['theme_set_allowed'] as $theme) {
+                $this->addOption($theme, $theme);
             }
         }
     }

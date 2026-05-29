@@ -60,11 +60,14 @@ class xos_opal_ThemeFactory
      */
     public function createInstance($options = [], $initArgs = [])
     {
-        // Grab the theme folder from request vars if present
-        if (empty($options['folderName'])) {
-            $req = Request::getString('xoops_theme_select', '', 'POST');
+        // Grab the theme folder from request vars if present.
+        // Use === '' rather than empty() — a theme directory literally
+        // named "0" is legitimate (legacy XOOPS supports all-numeric
+        // theme names), and empty('0') === true would silently drop it.
+        if (!isset($options['folderName']) || $options['folderName'] === '') {
+            $req = xoops_validateThemeName(Request::getString('xoops_theme_select', '', 'POST'));
             if ($req === '') {
-                $req = Request::getString('xoops_theme_select', '', 'GET');
+                $req = xoops_validateThemeName(Request::getString('xoops_theme_select', '', 'GET'));
             }
             if ($req !== '' && $this->isThemeAllowed($req)) {
                 $options['folderName'] = $req;
@@ -72,12 +75,42 @@ class xos_opal_ThemeFactory
                     $_SESSION[$this->xoBundleIdentifier]['defaultTheme'] = $req;
                 }
             } elseif (isset($_SESSION[$this->xoBundleIdentifier]['defaultTheme'])) {
-                $options['folderName'] = $_SESSION[$this->xoBundleIdentifier]['defaultTheme'];
-            } elseif (empty($options['folderName']) || !$this->isThemeAllowed($options['folderName'])) {
+                // Stale session theme names can outlive an admin change
+                // to the allowed list; validate AND check membership
+                // before reaching the path-construction code below.
+                // xoops_validateThemeValue() — scalar-gated; a session
+                // poisoned with an array / object never reaches the
+                // (string) cast (which would emit a warning AND let
+                // "Array" pass the path-safety check downstream).
+                $sessionTheme = xoops_validateThemeValue($_SESSION[$this->xoBundleIdentifier]['defaultTheme']);
+                $options['folderName'] = ($sessionTheme !== '' && $this->isThemeAllowed($sessionTheme))
+                    ? $sessionTheme
+                    : $this->defaultTheme;
+            } elseif (!isset($options['folderName']) || $options['folderName'] === '' || !$this->isThemeAllowed($options['folderName'])) {
                 $options['folderName'] = $this->defaultTheme;
             }
-            $GLOBALS['xoopsConfig']['theme_set'] = $options['folderName'];
         }
+        // Validate $options['folderName'] AND the defaultTheme property
+        // unconditionally, after every resolution branch. Two paths
+        // bypass the inner-if block above and could still produce an
+        // unsafe path segment:
+        //   - A non-standard caller may have supplied a poisoned
+        //     folderName directly (skipping the empty()-branch).
+        //   - $this->defaultTheme is a public property; any caller
+        //     can overwrite it before createInstance() runs.
+        // xoops_validateThemeValue() — scalar gate + path/HTML validate
+        // in one call; rejects array / object / resource at the source
+        // so the (string) cast never sees them. Explicit '' === checks
+        // rather than the ?: Elvis operator, because xoops_validateThemeName('0')
+        // returns '0' (valid), but '0' ?: $fallback evaluates as
+        // $fallback — PHP treats '0' as falsy (R-063 / base.md).
+        $fallbackTheme = xoops_validateThemeValue($this->defaultTheme);
+        if ($fallbackTheme === '') {
+            $fallbackTheme = 'default';
+        }
+        $folderName = xoops_validateThemeValue($options['folderName'] ?? '');
+        $options['folderName'] = $folderName !== '' ? $folderName : $fallbackTheme;
+        $GLOBALS['xoopsConfig']['theme_set'] = $options['folderName'];
         $testPath = isset($options['themesPath'])
             ? XOOPS_ROOT_PATH . '/' . $options['themesPath'] . '/' . $options['folderName']
             : XOOPS_THEME_PATH . '/' . $options['folderName'];
@@ -107,7 +140,7 @@ class xos_opal_ThemeFactory
      */
     public function isThemeAllowed($name)
     {
-        return (empty($this->allowedThemes) || in_array($name, $this->allowedThemes));
+        return (empty($this->allowedThemes) || in_array($name, $this->allowedThemes, true));
     }
 }
 

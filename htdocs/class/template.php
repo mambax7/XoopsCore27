@@ -164,7 +164,10 @@ class XoopsTpl extends Smarty
         global $xoopsConfig;
 
         $template_set      = empty($template_set) ? $xoopsConfig['template_set'] : $template_set;
-        $theme_set         = empty($theme_set) ? $xoopsConfig['theme_set'] : $theme_set;
+        // Use === '' rather than empty() — a theme directory literally
+        // named "0" is legitimate, and empty('0') would silently swap
+        // it for the global. Issue #45 / R-063.
+        $theme_set         = (null === $theme_set || '' === $theme_set) ? $xoopsConfig['theme_set'] : $theme_set;
         if (class_exists('XoopsSystemCpanel', false)) {
             $cPrefix = 'cp-';
             $theme_set =  isset($xoopsConfig['cpanel']) ? $cPrefix . $xoopsConfig['cpanel'] : $cPrefix . 'default';

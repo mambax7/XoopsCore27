@@ -65,8 +65,10 @@ if (false !== $user) {
     $_SESSION                    = [];
     $_SESSION['xoopsUserId']     = $user->getVar('uid');
     $_SESSION['xoopsUserGroups'] = $user->getGroups();
-    $user_theme                  = $user->getVar('theme');
-    if (in_array($user_theme, $xoopsConfig['theme_set_allowed'])) {
+    // Read raw via 'n' format — getVar()'s default 's' escapes '&' to
+    // '&amp;', which the validator's HTML guard would reject.
+    $user_theme                  = xoops_validateThemeName((string) $user->getVar('theme', 'n'));
+    if ($user_theme !== '' && in_array($user_theme, $xoopsConfig['theme_set_allowed'], true)) {
         $_SESSION['xoopsUserTheme'] = $user_theme;
     }
     $xoopsPreload = XoopsPreload::getInstance();
