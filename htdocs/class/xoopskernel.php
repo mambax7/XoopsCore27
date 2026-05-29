@@ -188,8 +188,19 @@ class xos_kernel_Xoops2
      */
     public function themeSelect()
     {
-        $themeSelect = \Xmf\Request::getString('xoops_theme_select', '', 'POST');
-        if ($themeSelect !== '' && in_array($themeSelect, xoops_getConfigOption('theme_set_allowed'))) {
+        // xoops_getConfigOption() has its own cache layer, separate from
+        // $xoopsConfig, so the boundary normalise in common.php does
+        // NOT reach this code path. Resolve via the helper at the call
+        // site, and validate submitted / session values before strict
+        // membership checks — stale session theme names can outlive an
+        // admin change to the allowed list.
+        $allowedThemes = xoops_resolveThemeConfig([
+            'theme_set'         => xoops_getConfigOption('theme_set'),
+            'theme_set_allowed' => xoops_getConfigOption('theme_set_allowed'),
+        ])['theme_set_allowed'];
+
+        $themeSelect = xoops_validateThemeName(\Xmf\Request::getString('xoops_theme_select', '', 'POST'));
+        if ($themeSelect !== '' && in_array($themeSelect, $allowedThemes, true)) {
             xoops_setConfigOption('theme_set', $themeSelect);
             $_SESSION['xoopsUserTheme'] = $themeSelect;
 
@@ -198,8 +209,13 @@ class xos_kernel_Xoops2
                 header('Location: ' . $redirectUrl, true, 303);
                 exit;
             }
-        } elseif (!empty($_SESSION['xoopsUserTheme']) && in_array($_SESSION['xoopsUserTheme'], xoops_getConfigOption('theme_set_allowed'))) {
-            xoops_setConfigOption('theme_set', $_SESSION['xoopsUserTheme']);
+        } else {
+            $sessionTheme = isset($_SESSION['xoopsUserTheme'])
+                ? xoops_validateThemeName((string) $_SESSION['xoopsUserTheme'])
+                : '';
+            if ($sessionTheme !== '' && in_array($sessionTheme, $allowedThemes, true)) {
+                xoops_setConfigOption('theme_set', $sessionTheme);
+            }
         }
     }
 

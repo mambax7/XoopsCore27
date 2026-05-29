@@ -39,8 +39,9 @@ if (!$allowed) {
     require_once $GLOBALS['xoops']->path('class/theme.php');
     $xoopsThemeFactory                = null;
     $xoopsThemeFactory                = new xos_opal_ThemeFactory();
-    $xoopsThemeFactory->allowedThemes = $xoopsConfig['theme_set_allowed'];
-    $xoopsThemeFactory->defaultTheme  = $xoopsConfig['theme_set'];
+    $themeConfig                      = xoops_resolveThemeConfig($xoopsConfig);
+    $xoopsThemeFactory->allowedThemes = $themeConfig['theme_set_allowed'];
+    $xoopsThemeFactory->defaultTheme  = $themeConfig['theme_set'];
     $xoTheme                          = $xoopsThemeFactory->createInstance(
         [
             'plugins' => [],

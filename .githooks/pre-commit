@@ -115,6 +115,23 @@ if [ -n "$added" ]; then
     hits=$(printf '%s\n' "$added" | grep -E '//[[:space:]]*removed\b' || true)
     [ -n "$hits" ] && report "leftover '// removed' marker — delete the code, do not annotate it" "$hits"
 
+    # 10. Loose in_array() on theme_set_allowed — strict comparison is
+    #     required since include/common.php boundary-normalises the list
+    #     and theme directory names like "0" must not coerce to false in
+    #     loose comparisons. Issue #45.
+    hits=$(printf '%s\n' "$added" \
+        | grep -E "in_array[[:space:]]*\([^)]*(theme_set_allowed)" \
+        | grep -vE ",[[:space:]]*true[[:space:]]*\)" || true)
+    [ -n "$hits" ] && report "loose in_array on theme_set_allowed — use strict (third arg true) — issue #45" "$hits"
+
+    # 11. New raw assignment to ->allowedThemes / ->defaultTheme from
+    #     $xoopsConfig — must go through xoops_resolveThemeConfig() so
+    #     the validated invariant set by common.php is preserved at
+    #     mid-request mutation points. Issue #45.
+    hits=$(printf '%s\n' "$added" \
+        | grep -E '(allowedThemes|defaultTheme)[[:space:]]*=[[:space:]]*\$xoopsConfig\[' || true)
+    [ -n "$hits" ] && report "raw \$xoopsConfig theme-set assignment — use xoops_resolveThemeConfig() — issue #45" "$hits"
+
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
     # the </script> breakout concern only applies inside HTML <script>
     # contexts, and the repo legitimately uses the flag elsewhere

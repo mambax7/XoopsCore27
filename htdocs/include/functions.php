@@ -17,6 +17,8 @@
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+require_once XOOPS_ROOT_PATH . '/include/theme_config.php';
+
 /** @var \XoopsNotificationHandler $notification_handler */
 
 /**
@@ -886,8 +888,14 @@ function xoops_getenv($key)
  */
 function xoops_getcss($theme = '')
 {
-    if ($theme == '') {
-        $theme = $GLOBALS['xoopsConfig']['theme_set'];
+    // Defence in depth — the boundary normalise in common.php already
+    // resolves $xoopsConfig['theme_set'], but $theme is a public
+    // parameter and may be passed raw by future callers. Validate so a
+    // tainted value (path separator, null byte, ..) cannot reach the
+    // <link href=> attribute or filesystem checks below.
+    $theme = xoops_validateThemeName((string) $theme);
+    if ($theme === '') {
+        $theme = xoops_resolveThemeConfig($GLOBALS['xoopsConfig'] ?? [])['theme_set'];
     }
     $uagent  = xoops_getenv('HTTP_USER_AGENT');
     $str_css = 'styleNN.css';
