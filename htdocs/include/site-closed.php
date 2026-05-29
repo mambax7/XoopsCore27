@@ -47,6 +47,13 @@ if (!$allowed) {
             'plugins' => [],
         ],
     );
+    // Re-resolve to capture any factory-driven fallback (e.g. the
+    // pre-flight theme was structurally valid but theme.tpl / theme.html
+    // wasn't present on disk, so createInstance wrote 'default' back to
+    // $GLOBALS['xoopsConfig']['theme_set']). The template assigns below
+    // use the post-factory value so the rendered closed-site page is
+    // consistent with the theme the factory actually picked.
+    $themeConfig = xoops_resolveThemeConfig($xoopsConfig);
     $xoTheme->addScript(
         '/include/xoops.js',
         [
@@ -56,9 +63,9 @@ if (!$allowed) {
     $xoopsTpl = $xoTheme->template;
     $xoopsTpl->assign(
         [
-            'xoops_theme'       => $xoopsConfig['theme_set'],
-            'xoops_imageurl'    => XOOPS_THEME_URL . '/' . $xoopsConfig['theme_set'] . '/',
-            'xoops_themecss'    => xoops_getcss($xoopsConfig['theme_set']),
+            'xoops_theme'       => $themeConfig['theme_set'],
+            'xoops_imageurl'    => XOOPS_THEME_URL . '/' . $themeConfig['theme_set'] . '/',
+            'xoops_themecss'    => xoops_getcss($themeConfig['theme_set']),
             'xoops_requesturi'  => htmlspecialchars($_SERVER['REQUEST_URI'], ENT_QUOTES | ENT_HTML5),
             'xoops_sitename'    => htmlspecialchars($xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5),
             'xoops_slogan'      => htmlspecialchars($xoopsConfig['slogan'], ENT_QUOTES | ENT_HTML5),

@@ -188,13 +188,14 @@ class xos_kernel_Xoops2
      */
     public function themeSelect()
     {
-        // xoops_getConfigOption() has its own cache layer, separate from
-        // $xoopsConfig, so the boundary normalise in common.php does
-        // NOT reach this code path. Resolve via the helper at the call
-        // site, and validate submitted / session values before strict
-        // membership checks — stale session theme names can outlive an
-        // admin change to the allowed list.
-        $allowedThemes = xoops_resolveThemeConfig([
+        // Prefer the already-boundary-normalised runtime config so any
+        // var/configs/xoopsconfig.php override survives — those overrides
+        // never reach the XoopsConfigHandler cache that backs
+        // xoops_getConfigOption(). Fall back to the cache only for
+        // partial-init paths that may run before common.php has hydrated
+        // $GLOBALS['xoopsConfig']. The helper is idempotent, so re-resolving
+        // an already-normalised pair is a no-op.
+        $allowedThemes = xoops_resolveThemeConfig($GLOBALS['xoopsConfig'] ?? [
             'theme_set'         => xoops_getConfigOption('theme_set'),
             'theme_set_allowed' => xoops_getConfigOption('theme_set_allowed'),
         ])['theme_set_allowed'];
@@ -210,9 +211,10 @@ class xos_kernel_Xoops2
                 exit;
             }
         } else {
-            $sessionTheme = isset($_SESSION['xoopsUserTheme'])
-                ? xoops_validateThemeName((string) $_SESSION['xoopsUserTheme'])
-                : '';
+            // xoops_validateThemeValue() — scalar gate + path/HTML
+            // validate; a session poisoned with an array / object is
+            // rejected here without ever reaching the (string) cast.
+            $sessionTheme = xoops_validateThemeValue($_SESSION['xoopsUserTheme'] ?? '');
             if ($sessionTheme !== '' && in_array($sessionTheme, $allowedThemes, true)) {
                 xoops_setConfigOption('theme_set', $sessionTheme);
             }

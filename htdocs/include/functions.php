@@ -890,10 +890,12 @@ function xoops_getcss($theme = '')
 {
     // Defence in depth — the boundary normalise in common.php already
     // resolves $xoopsConfig['theme_set'], but $theme is a public
-    // parameter and may be passed raw by future callers. Validate so a
-    // tainted value (path separator, null byte, ..) cannot reach the
-    // <link href=> attribute or filesystem checks below.
-    $theme = xoops_validateThemeName((string) $theme);
+    // parameter and may be passed raw by future callers.
+    // xoops_validateThemeValue() handles the scalar gate + validate so
+    // an array / object input never reaches the (string) cast (which
+    // would emit a conversion warning on PHP 8.x AND let "Array" pass
+    // the path-safety check).
+    $theme = xoops_validateThemeValue($theme);
     if ($theme === '') {
         $theme = xoops_resolveThemeConfig($GLOBALS['xoopsConfig'] ?? [])['theme_set'];
     }

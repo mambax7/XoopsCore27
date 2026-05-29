@@ -127,9 +127,12 @@ if [ -n "$added" ]; then
     # 11. New raw assignment to ->allowedThemes / ->defaultTheme from
     #     $xoopsConfig — must go through xoops_resolveThemeConfig() so
     #     the validated invariant set by common.php is preserved at
-    #     mid-request mutation points. Issue #45.
+    #     mid-request mutation points. The `->` prefix scopes the
+    #     pattern to property writes only; local variables named
+    #     allowedThemes / defaultTheme are exempt (they're already
+    #     downstream of a resolver call). Issue #45.
     hits=$(printf '%s\n' "$added" \
-        | grep -E '(allowedThemes|defaultTheme)[[:space:]]*=[[:space:]]*\$xoopsConfig\[' || true)
+        | grep -E -- '->[[:space:]]*(allowedThemes|defaultTheme)[[:space:]]*=[[:space:]]*\$xoopsConfig\[' || true)
     [ -n "$hits" ] && report "raw \$xoopsConfig theme-set assignment — use xoops_resolveThemeConfig() — issue #45" "$hits"
 
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:

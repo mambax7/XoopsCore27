@@ -9,7 +9,7 @@
  *                                  directory name (path + HTML safety)
  *  - xoops_resolveThemeConfig() — returns a normalised pair
  *                                  ['theme_set' => string,
- *                                   'theme_set_allowed' => list<string>]
+ *                                   'theme_set_allowed' => string[]]
  *
  * Why this file exists: prior to issue #45, only the System theme-switch
  * block (b_system_themes_show) normalised these values; every other
@@ -90,6 +90,31 @@ if (!function_exists('xoops_validateThemeName')) {
     }
 }
 
+if (!function_exists('xoops_validateThemeValue')) {
+    /**
+     * Scalar-gated wrapper around xoops_validateThemeName().
+     *
+     * Returns the validated theme name when the input is scalar
+     * (int / float / bool / string), '' otherwise. Use this at every
+     * boundary where the input may not be a string — session payloads,
+     * public properties, raw $options arrays from non-standard callers,
+     * legacy xoops_config rows. The unguarded `(string) $array` cast
+     * would emit a conversion warning on PHP 8.x AND silently produce
+     * the literal string "Array", which then passes the path-safety
+     * check in xoops_validateThemeName() and reaches the theme path
+     * logic.
+     *
+     * @param mixed $value Untrusted value, scalar or otherwise.
+     * @return string Validated theme name, or '' on rejection.
+     */
+    function xoops_validateThemeValue(mixed $value): string
+    {
+        return is_scalar($value)
+            ? xoops_validateThemeName((string) $value)
+            : '';
+    }
+}
+
 if (!function_exists('xoops_resolveThemeConfig')) {
     /**
      * Resolve the safe (current, allowed) theme pair from $xoopsConfig.
@@ -112,14 +137,15 @@ if (!function_exists('xoops_resolveThemeConfig')) {
      *                                          theme_set and
      *                                          theme_set_allowed are
      *                                          read.
-     * @return array{theme_set: string, theme_set_allowed: list<string>}
+     * @return array{theme_set: string, theme_set_allowed: string[]}
      */
     function xoops_resolveThemeConfig(array $xoopsConfig): array
     {
-        $rawCurrentTheme = $xoopsConfig['theme_set'] ?? 'default';
-        $currentTheme    = is_string($rawCurrentTheme)
-            ? xoops_validateThemeName($rawCurrentTheme)
-            : '';
+        // xoops_validateThemeValue() handles the is_scalar gate and
+        // delegates to xoops_validateThemeName() — accepts int, float,
+        // bool, string (all-numeric "0" survives via the int form);
+        // rejects array / object / resource without casting.
+        $currentTheme = xoops_validateThemeValue($xoopsConfig['theme_set'] ?? 'default');
         if ('' === $currentTheme) {
             $currentTheme = 'default';
         }
@@ -136,12 +162,7 @@ if (!function_exists('xoops_resolveThemeConfig')) {
             $rawAllowedThemes = [];
         }
         $allowedThemes = array_values(array_filter(
-            array_map(
-                static fn($name): string => is_scalar($name)
-                    ? xoops_validateThemeName((string) $name)
-                    : '',
-                $rawAllowedThemes
-            ),
+            array_map('xoops_validateThemeValue', $rawAllowedThemes),
             static fn(string $name): bool => '' !== $name
         ));
         if ([] === $allowedThemes) {

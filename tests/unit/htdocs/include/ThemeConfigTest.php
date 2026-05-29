@@ -20,9 +20,47 @@ require_once XOOPS_ROOT_PATH . '/include/theme_config.php';
  * allowed list, and a totally-corrupted config falls back to 'default'.
  */
 #[CoversFunction('xoops_validateThemeName')]
+#[CoversFunction('xoops_validateThemeValue')]
 #[CoversFunction('xoops_resolveThemeConfig')]
 class ThemeConfigTest extends TestCase
 {
+    #[Test]
+    public function validateValuePassesScalarStringThrough(): void
+    {
+        $this->assertSame('default', xoops_validateThemeValue('default'));
+    }
+
+    #[Test]
+    public function validateValueCoercesScalarNonStringTypes(): void
+    {
+        // int, float, bool — anything is_scalar — coerce via string cast
+        // and validate. The "0" theme directory survives via the int form.
+        $this->assertSame('0', xoops_validateThemeValue(0));
+        $this->assertSame('1', xoops_validateThemeValue(true));
+        $this->assertSame('1.5', xoops_validateThemeValue(1.5));
+    }
+
+    #[Test]
+    public function validateValueRejectsNonScalarsWithoutWarning(): void
+    {
+        // Without the scalar gate, `(string) []` would emit a Warning
+        // AND return the literal string "Array", which then passes the
+        // path-safety check in xoops_validateThemeName(). The gate
+        // returns '' for every non-scalar shape.
+        $this->assertSame('', xoops_validateThemeValue([]));
+        $this->assertSame('', xoops_validateThemeValue(['nested']));
+        $this->assertSame('', xoops_validateThemeValue((object) ['a' => 1]));
+        $this->assertSame('', xoops_validateThemeValue(null));
+    }
+
+    #[Test]
+    public function validateValueAppliesPathSafetyToCoercedString(): void
+    {
+        // Once coerced, the normal validator rules apply.
+        $this->assertSame('', xoops_validateThemeValue('../etc'));
+        $this->assertSame('', xoops_validateThemeValue("evil\0null"));
+    }
+
     #[Test]
     public function validateRejectsEmptyString(): void
     {
@@ -192,13 +230,28 @@ class ThemeConfigTest extends TestCase
     }
 
     #[Test]
-    public function resolveSkipsNonStringCurrentTheme(): void
+    public function resolveSkipsNonScalarCurrentTheme(): void
     {
         $result = xoops_resolveThemeConfig([
             'theme_set'         => ['array', 'value'],
             'theme_set_allowed' => ['xswatch5'],
         ]);
         $this->assertSame('default', $result['theme_set']);
+    }
+
+    #[Test]
+    public function resolveAcceptsScalarCurrentTheme(): void
+    {
+        // Codex #4 — a legacy xoops_config row may return an int for
+        // theme_set when the directory name is all-numeric ("0").
+        // is_scalar coerces those via the validator so a numeric
+        // theme directory survives identically to the string form.
+        $result = xoops_resolveThemeConfig([
+            'theme_set'         => 0,
+            'theme_set_allowed' => ['0', 'default'],
+        ]);
+        $this->assertSame('0', $result['theme_set']);
+        $this->assertContains('0', $result['theme_set_allowed']);
     }
 
     #[Test]
