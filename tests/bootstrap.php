@@ -387,8 +387,10 @@ if (!defined('XOOPS_THEME_PATH')) {
 }
 
 // XOOPS version + cache path (needed by Frameworks)
+// Source the real version.php so VersionTest exercises the shipped value
+// rather than a duplicated literal that silently drifts on each bump.
 if (!defined('XOOPS_VERSION')) {
-    define('XOOPS_VERSION', 'XOOPS 2.7.0-RC1');
+    require_once XOOPS_ROOT_PATH . '/include/version.php';
 }
 if (!defined('XOOPS_CACHE_PATH')) {
     define('XOOPS_CACHE_PATH', XOOPS_VAR_PATH . '/caches/xoops_cache');
