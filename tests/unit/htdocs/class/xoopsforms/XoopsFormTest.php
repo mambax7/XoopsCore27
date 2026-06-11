@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__DIR__, 4) . '/bootstrap.php';
 
 xoops_load('XoopsFormElement');
+xoops_load('XoopsFormContainerInterface');
 xoops_load('XoopsFormElementTray');
 xoops_load('XoopsForm');
 xoops_load('XoopsSimpleForm');
@@ -77,6 +78,117 @@ class XoopsFormTest extends TestCase
         $form = new \XoopsSimpleForm('Title', 'form', 'action.php', 'post', false);
         $elements = $form->getElements();
         $this->assertCount(0, $elements);
+    }
+
+    // ------------------------------------------------------------------
+    //  Container contract: interface path + legacy duck-typed fallback
+    // ------------------------------------------------------------------
+
+    public function testAddElementBubblesRequiredFromInterfaceContainer(): void
+    {
+        $tray = new \XoopsFormElementTray('Group');
+        $tray->addElement(new \XoopsFormText('Req', 'iface_req', 25, 100), true);
+
+        $this->form->addElement($tray);
+
+        $required = $this->form->getRequired();
+        $this->assertCount(1, $required);
+        $this->assertSame('iface_req', $required[0]->getName(false));
+    }
+
+    public function testAddElementBubblesRequiredFromLegacyDuckTypedContainer(): void
+    {
+        // BC: a third-party container that returns true from isContainer() and
+        // implements getRequired()/getElements() without implementing the new
+        // interface must still have its required elements bubbled.
+        $req    = new \XoopsFormText('Legacy', 'legacy_req', 25, 100);
+        $legacy = new class($req) extends \XoopsFormElement {
+            private $list;
+            public function __construct($req)
+            {
+                $this->list = [$req];
+            }
+            public function isContainer()
+            {
+                return true;
+            }
+            public function &getRequired()
+            {
+                return $this->list;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+        $this->assertNotInstanceOf(\XoopsFormContainerInterface::class, $legacy);
+
+        $this->form->addElement($legacy);
+
+        $required = $this->form->getRequired();
+        $this->assertCount(1, $required);
+        $this->assertSame('legacy_req', $required[0]->getName(false));
+    }
+
+    public function testAddElementBubblesRequiredFromNonSequentiallyKeyedContainer(): void
+    {
+        // Robustness: a container whose getRequired() returns a non-sequentially
+        // keyed array must still bubble every element (the old index-based loop
+        // would have silently skipped them).
+        $a      = new \XoopsFormText('A', 'req_a', 25, 100);
+        $b      = new \XoopsFormText('B', 'req_b', 25, 100);
+        $legacy = new class($a, $b) extends \XoopsFormElement {
+            private $list;
+            public function __construct($a, $b)
+            {
+                $this->list = [3 => $a, 7 => $b];
+            }
+            public function isContainer()
+            {
+                return true;
+            }
+            public function &getRequired()
+            {
+                return $this->list;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+
+        $this->form->addElement($legacy);
+
+        $required = $this->form->getRequired();
+        $this->assertCount(2, $required);
+        $names = [$required[0]->getName(false), $required[1]->getName(false)];
+        $this->assertContains('req_a', $names);
+        $this->assertContains('req_b', $names);
+    }
+
+    public function testGetElementsRecursiveFlattensContainersAndSkipsStringElements(): void
+    {
+        $tray = new \XoopsFormElementTray('Group');
+        $tray->addElement(new \XoopsFormText('Inner', 'inner', 25, 100));
+
+        $this->form->addElement('<hr>'); // string element (e.g. addBreak)
+        $this->form->addElement(new \XoopsFormText('Top', 'top', 25, 100));
+        $this->form->addElement($tray);
+
+        $flat = $this->form->getElements(true);
+        // The string is skipped by getElements(recurse) (guarded by is_object);
+        // the tray is flattened to its leaf.
+        $this->assertCount(2, $flat);
+        $this->assertSame('top', $flat[0]->getName(false));
+        $this->assertSame('inner', $flat[1]->getName(false));
     }
 
     // ------------------------------------------------------------------
