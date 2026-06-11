@@ -178,10 +178,10 @@ class XoopsFormTabTray extends XoopsFormElement implements XoopsFormContainerInt
                 && method_exists($formElement, 'isContainer')
                 && $formElement->isContainer())) {
             $required_elements = &$formElement->getRequired();
-            $count             = count($required_elements);
-            for ($i = 0; $i < $count; ++$i) {
-                $this->_required[] = &$required_elements[$i];
+            foreach ($required_elements as &$required_element) {
+                $this->_required[] = &$required_element;
             }
+            unset($required_element);
         } elseif ($required) {
             $formElement->_required = true;
             $this->_required[]      = $formElement;
@@ -256,11 +256,10 @@ class XoopsFormTabTray extends XoopsFormElement implements XoopsFormContainerInt
                     && method_exists($child, 'isContainer')
                     && $child->isContainer())) {
                 $elements = &$child->getElements(true);
-                $count2   = count($elements);
-                for ($j = 0; $j < $count2; ++$j) {
-                    $ret[] = &$elements[$j];
+                foreach ($elements as &$element) {
+                    $ret[] = &$element;
                 }
-                unset($elements);
+                unset($element, $elements);
             } else {
                 $ret[] = &$this->_elements[$i];
             }

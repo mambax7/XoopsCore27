@@ -134,7 +134,47 @@ class XoopsFormTest extends TestCase
         $this->assertSame('legacy_req', $required[0]->getName(false));
     }
 
-    public function testGetElementsRecursiveFlattensContainersAndKeepsStrings(): void
+    public function testAddElementBubblesRequiredFromNonSequentiallyKeyedContainer(): void
+    {
+        // Robustness: a container whose getRequired() returns a non-sequentially
+        // keyed array must still bubble every element (the old index-based loop
+        // would have silently skipped them).
+        $a      = new \XoopsFormText('A', 'req_a', 25, 100);
+        $b      = new \XoopsFormText('B', 'req_b', 25, 100);
+        $legacy = new class($a, $b) extends \XoopsFormElement {
+            private $list;
+            public function __construct($a, $b)
+            {
+                $this->list = [3 => $a, 7 => $b];
+            }
+            public function isContainer()
+            {
+                return true;
+            }
+            public function &getRequired()
+            {
+                return $this->list;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+
+        $this->form->addElement($legacy);
+
+        $required = $this->form->getRequired();
+        $this->assertCount(2, $required);
+        $names = [$required[0]->getName(false), $required[1]->getName(false)];
+        $this->assertContains('req_a', $names);
+        $this->assertContains('req_b', $names);
+    }
+
+    public function testGetElementsRecursiveFlattensContainersAndSkipsStringElements(): void
     {
         $tray = new \XoopsFormElementTray('Group');
         $tray->addElement(new \XoopsFormText('Inner', 'inner', 25, 100));
