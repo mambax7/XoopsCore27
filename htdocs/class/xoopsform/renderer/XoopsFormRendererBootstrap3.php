@@ -8,6 +8,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+require_once __DIR__ . '/XoopsFormTabRendererInterface.php';
+
 /**
  * Bootstrap3 style form renderer
  *
@@ -17,8 +19,14 @@
  * @copyright 2000-2026 XOOPS Project (https://xoops.org)
  * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
  */
-class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface
+class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFormTabRendererInterface
 {
+    /**
+     * Counter giving each rendered tab tray a unique DOM id.
+     *
+     * @var int
+     */
+    protected static $tabSeq = 0;
     /**
      * Render support for XoopsFormButton
      *
@@ -750,6 +758,12 @@ EOJS;
                 continue;
             }
 
+            if ($element instanceof XoopsFormTabTray) {
+                // tabs own their layout; render full width rather than in a label/value row
+                $ret .= '<div class="form-group">' . $element->render() . '</div>';
+                continue;
+            }
+
             $ret .= '<div class="form-group">';
             if (($caption = $element->getCaption()) != '') {
                 $ret .= '<label for="' . $element->getName() . '" class="col-md-2 control-label">'
@@ -760,7 +774,7 @@ EOJS;
                 $ret .= '<div class="col-md-2"> </div>';
             }
             $ret .= '<div class="col-md-10">';
-            $ret .= $element->render();
+            $ret .= (string) $element->render();
             if (($desc = $element->getDescription()) != '') {
                 $ret .= '<p class="help-block">' . $desc . '</p>';
             }
@@ -791,5 +805,82 @@ EOJS;
     {
         $class = ($class != '') ? preg_replace('/[^A-Za-z0-9\s\s_-]/i', '', $class) : '';
         $form->addElement('<div class="col-sm-12 ' . $class . '">' . $extra . '</div>');
+    }
+
+    /**
+     * Render support for XoopsFormTabTray using Bootstrap 3 nav-tabs.
+     *
+     * @param XoopsFormTabTray $element the tab tray to render
+     *
+     * @return string rendered HTML
+     */
+    public function renderFormTabTray(XoopsFormTabTray $element): string
+    {
+        $base = $element->getName(false);
+        $id   = 'xo-tabs-' . ('' !== $base ? preg_replace('/[^A-Za-z0-9]+/', '', $base) . '-' : '') . ++self::$tabSeq;
+
+        $nav     = '<ul class="nav nav-tabs" role="tablist" id="' . $id . '">';
+        $content = '<div class="tab-content" id="' . $id . '-content">';
+        $hidden  = '';
+
+        foreach ($element->getTabs() as $k => $tab) {
+            $tabId      = $id . '-tab-' . $k;
+            $paneId     = $id . '-pane-' . $k;
+            $isActive   = ($element->getActiveTab() === $k);
+            $navActive  = $isActive ? ' active' : '';
+            $paneActive = $isActive ? ' active' : '';
+            $selected   = $isActive ? 'true' : 'false';
+
+            $nav .= '<li role="presentation" class="' . $navActive . '">'
+                . '<a href="#' . $paneId . '" aria-controls="' . $paneId . '" role="tab" data-toggle="tab" id="' . $tabId . '" aria-selected="' . $selected . '"'
+                . ' title="' . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '">'
+                . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '</a></li>';
+
+            $rows = '';
+            foreach ($tab['elements'] as $ele) {
+                if ($ele->isHidden()) {
+                    $hidden .= $ele->render();
+                    continue;
+                }
+                $rows .= $this->renderTabPaneRow($ele);
+            }
+
+            $content .= '<div role="tabpanel" class="tab-pane' . $paneActive . '" id="' . $paneId . '" aria-labelledby="' . $tabId . '">'
+                . $rows . '</div>';
+        }
+
+        $nav     .= '</ul>';
+        $content .= '</div>';
+
+        return $nav . $content . $hidden;
+    }
+
+    /**
+     * Render a single element row inside a tab pane, matching the Bootstrap 3
+     * row layout used by {@see renderThemeForm()}.
+     *
+     * @param XoopsFormElement $element element to render
+     *
+     * @return string
+     */
+    protected function renderTabPaneRow(XoopsFormElement $element)
+    {
+        $ret = '<div class="form-group">';
+        if (($caption = $element->getCaption()) != '') {
+            $ret .= '<label for="' . $element->getName() . '" class="col-sm-2 control-label">'
+                . $caption
+                . ($element->isRequired() ? '<span class="xo-caption-required">*</span>' : '')
+                . '</label>';
+        } else {
+            $ret .= '<div class="col-sm-2"> </div>';
+        }
+        $ret .= '<div class="col-sm-10">';
+        $ret .= (string) $element->render();
+        if (($desc = $element->getDescription()) != '') {
+            $ret .= '<p class="help-block">' . $desc . '</p>';
+        }
+        $ret .= '</div></div>';
+
+        return $ret;
     }
 }

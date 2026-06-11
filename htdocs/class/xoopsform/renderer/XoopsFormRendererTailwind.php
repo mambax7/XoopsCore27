@@ -19,6 +19,8 @@
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+require_once __DIR__ . '/XoopsFormTabRendererInterface.php';
+
 /**
  * Tailwind CSS + DaisyUI form renderer
  *
@@ -39,8 +41,15 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  * @link      https://xoops.org
  * @see       https://daisyui.com/components/
  */
-class XoopsFormRendererTailwind implements XoopsFormRendererInterface
+class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsFormTabRendererInterface
 {
+    /**
+     * Counter giving each rendered tab tray a unique DOM id / radio group.
+     *
+     * @var int
+     */
+    protected static $tabSeq = 0;
+
     /** @var string Reusable class string for small neutral buttons */
     private const BTN_NEUTRAL_SM = 'btn btn-neutral btn-sm';
 
@@ -1064,6 +1073,11 @@ EOJS;
                 $hidden .= $this->renderElementHtml($element);
                 continue;
             }
+            if ($element instanceof XoopsFormTabTray) {
+                // tabs own their layout; render full width rather than in a label/value grid row
+                $ret .= '<div class="mb-4">' . $element->render() . '</div>';
+                continue;
+            }
             $ret .= $this->renderThemeFormField($element);
         }
         if (count($form->getRequired()) > 0) {
@@ -1113,6 +1127,56 @@ EOJS;
             . $descHtml
             . '</div>'
             . '</div>';
+    }
+
+    /**
+     * Render support for XoopsFormTabTray using DaisyUI tabs.
+     *
+     * Uses DaisyUI's radio-input tab pattern, which is CSS-only: tab switching
+     * needs no JavaScript, so the form works even with scripting disabled. The
+     * radio group name is internal (`__xotab_…`) and carries no field data, so
+     * the harmless extra POST key is ignored by handlers. Field rows reuse the
+     * same DaisyUI layout as the rest of the form, and because the elements stay
+     * in the owning form their required handling and client-side validation keep
+     * working across every tab.
+     *
+     * @param XoopsFormTabTray $element the tab tray to render
+     *
+     * @return string rendered HTML
+     */
+    public function renderFormTabTray(XoopsFormTabTray $element): string
+    {
+        $base  = $element->getName(false);
+        $id    = 'xo-tabs-' . ('' !== $base ? preg_replace('/[^A-Za-z0-9]+/', '', $base) . '-' : '') . ++self::$tabSeq;
+        $group = '__xotab_' . $id;
+
+        $ret    = '<div role="tablist" class="tabs tabs-bordered" id="' . $this->esc($id) . '">';
+        $hidden = '';
+
+        foreach ($element->getTabs() as $k => $tab) {
+            $tabId   = $id . '-tab-' . $k;
+            $paneId  = $id . '-pane-' . $k;
+            $checked = ($element->getActiveTab() === $k) ? ' checked="checked"' : '';
+            $ret    .= '<input type="radio" id="' . $this->esc($tabId) . '" name="' . $this->esc($group) . '"'
+                . ' role="tab" class="tab" aria-controls="' . $this->esc($paneId) . '"'
+                . ' aria-label="' . $this->esc((string) $tab['title']) . '"' . $checked . ' title="' . $this->esc((string) $tab['title']) . '" />';
+
+            $rows = '';
+            foreach ($tab['elements'] as $ele) {
+                if ($ele->isHidden()) {
+                    $hidden .= $this->renderElementHtml($ele);
+                    continue;
+                }
+                $rows .= $this->renderThemeFormField($ele);
+            }
+
+            $ret .= '<div role="tabpanel" id="' . $this->esc($paneId) . '" aria-labelledby="' . $this->esc($tabId) . '"'
+                . ' class="tab-content border-base-300 bg-base-100 p-4">' . $rows . '</div>';
+        }
+
+        $ret .= '</div>' . $hidden;
+
+        return $ret;
     }
 
     /**

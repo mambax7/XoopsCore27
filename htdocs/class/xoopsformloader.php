@@ -20,6 +20,7 @@ xoops_load('XoopsThemeForm');
 xoops_load('XoopsSimpleForm');
 xoops_load('XoopsFormElement');
 xoops_load('XoopsFormElementTray');
+xoops_load('XoopsFormTabTray');
 xoops_load('XoopsFormLabel');
 xoops_load('XoopsFormCheckBox');
 xoops_load('XoopsFormPassword');
