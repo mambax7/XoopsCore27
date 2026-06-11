@@ -17,6 +17,7 @@
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 require_once __DIR__ . '/renderer/XoopsFormTabRendererInterface.php';
+require_once __DIR__ . '/formcontainerinterface.php';
 
 /**
  * A tabbed group of form elements.
@@ -50,7 +51,7 @@ require_once __DIR__ . '/renderer/XoopsFormTabRendererInterface.php';
  * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @link      https://xoops.org
  */
-class XoopsFormTabTray extends XoopsFormElement
+class XoopsFormTabTray extends XoopsFormElement implements XoopsFormContainerInterface
 {
     /**
      * Tab panes: each entry is ['title' => string, 'elements' => XoopsFormElement[]].
@@ -169,17 +170,21 @@ class XoopsFormTabTray extends XoopsFormElement
         $this->_tabs[$this->_currentTab]['elements'][] = $formElement;
         $this->_elements[]                             = $formElement;
 
-        if (!$formElement->isContainer()) {
-            if ($required) {
-                $formElement->_required = true;
-                $this->_required[]      = $formElement;
-            }
-        } else {
-            $required_elements = $formElement->getRequired();
+        // Prefer the formal container contract; fall back to the legacy
+        // isContainer() duck-typing so third-party containers that predate
+        // XoopsFormContainerInterface keep bubbling their required elements.
+        if ($formElement instanceof XoopsFormContainerInterface
+            || (method_exists($formElement, 'getRequired')
+                && method_exists($formElement, 'isContainer')
+                && $formElement->isContainer())) {
+            $required_elements = &$formElement->getRequired();
             $count             = count($required_elements);
             for ($i = 0; $i < $count; ++$i) {
                 $this->_required[] = &$required_elements[$i];
             }
+        } elseif ($required) {
+            $formElement->_required = true;
+            $this->_required[]      = $formElement;
         }
     }
 
@@ -245,15 +250,19 @@ class XoopsFormTabTray extends XoopsFormElement
         $ret   = [];
         $count = count($this->_elements);
         for ($i = 0; $i < $count; ++$i) {
-            if (!$this->_elements[$i]->isContainer()) {
-                $ret[] = &$this->_elements[$i];
-            } else {
-                $elements = &$this->_elements[$i]->getElements(true);
+            $child = $this->_elements[$i];
+            if ($child instanceof XoopsFormContainerInterface
+                || (method_exists($child, 'getElements')
+                    && method_exists($child, 'isContainer')
+                    && $child->isContainer())) {
+                $elements = &$child->getElements(true);
                 $count2   = count($elements);
                 for ($j = 0; $j < $count2; ++$j) {
                     $ret[] = &$elements[$j];
                 }
                 unset($elements);
+            } else {
+                $ret[] = &$this->_elements[$i];
             }
         }
 

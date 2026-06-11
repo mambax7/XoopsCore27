@@ -194,6 +194,7 @@ class XoopsLoad
             'xoopseditorhandler'         => XOOPS_ROOT_PATH . '/class/xoopseditor/xoopseditor.php',
             'xoopsformloader'            => XOOPS_ROOT_PATH . '/class/xoopsformloader.php',
             'xoopsformelement'           => XOOPS_ROOT_PATH . '/class/xoopsform/formelement.php',
+            'xoopsformcontainerinterface' => XOOPS_ROOT_PATH . '/class/xoopsform/formcontainerinterface.php',
             'xoopsform'                  => XOOPS_ROOT_PATH . '/class/xoopsform/form.php',
             'xoopsformlabel'             => XOOPS_ROOT_PATH . '/class/xoopsform/formlabel.php',
             'xoopsformselect'            => XOOPS_ROOT_PATH . '/class/xoopsform/formselect.php',
