@@ -1,0 +1,269 @@
+/*
+ * Dark-mode compatibility for XOOPS legacy module output.
+ * Loaded after module CSS so theme dark mode can override hard-coded light surfaces.
+ */
+
+html[data-theme="dark"],
+html[data-bs-theme="dark"] {
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] body,
+html[data-bs-theme="dark"] body {
+    background-color: var(--bs-body-bg, #111827);
+    color: var(--bs-body-color, #e5e7eb);
+}
+
+html[data-theme="dark"] .maincontainer,
+html[data-bs-theme="dark"] .maincontainer {
+    color: var(--bs-body-color, #e5e7eb);
+}
+
+html[data-theme="dark"] a,
+html[data-bs-theme="dark"] a {
+    color: var(--bs-link-color, #60a5fa);
+}
+
+html[data-theme="dark"] a:hover,
+html[data-bs-theme="dark"] a:hover {
+    color: var(--bs-link-hover-color, #93c5fd);
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .panel-default,
+html[data-theme="dark"] .well,
+html[data-theme="dark"] .jumbotron,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .dropdown-menu,
+html[data-theme="dark"] .list-group-item,
+html[data-theme="dark"] .accordion-item,
+html[data-theme="dark"] .tab-content,
+html[data-theme="dark"] .xoopscontents,
+html[data-theme="dark"] .xoops-content,
+html[data-theme="dark"] .module-content,
+html[data-theme="dark"] .item,
+html[data-theme="dark"] .newbb-thread,
+html[data-theme="dark"] .newbb-user-data,
+html[data-theme="dark"] .newbb-message-area,
+html[data-theme="dark"] .newbb-links,
+html[data-theme="dark"] .pagenav,
+html[data-theme="dark"] .block-content,
+html[data-theme="dark"] .block-title,
+html[data-theme="dark"] .bottom-blocks,
+html[data-theme="dark"] .footer-blocks,
+html[data-bs-theme="dark"] .card,
+html[data-bs-theme="dark"] .panel,
+html[data-bs-theme="dark"] .panel-default,
+html[data-bs-theme="dark"] .well,
+html[data-bs-theme="dark"] .jumbotron,
+html[data-bs-theme="dark"] .modal-content,
+html[data-bs-theme="dark"] .dropdown-menu,
+html[data-bs-theme="dark"] .list-group-item,
+html[data-bs-theme="dark"] .accordion-item,
+html[data-bs-theme="dark"] .tab-content,
+html[data-bs-theme="dark"] .xoopscontents,
+html[data-bs-theme="dark"] .xoops-content,
+html[data-bs-theme="dark"] .module-content,
+html[data-bs-theme="dark"] .item,
+html[data-bs-theme="dark"] .newbb-thread,
+html[data-bs-theme="dark"] .newbb-user-data,
+html[data-bs-theme="dark"] .newbb-message-area,
+html[data-bs-theme="dark"] .newbb-links,
+html[data-bs-theme="dark"] .pagenav,
+html[data-bs-theme="dark"] .block-content,
+html[data-bs-theme="dark"] .block-title,
+html[data-bs-theme="dark"] .bottom-blocks,
+html[data-bs-theme="dark"] .footer-blocks {
+    background-color: var(--bs-tertiary-bg, #1f2937);
+    color: var(--bs-body-color, #e5e7eb);
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .16));
+}
+
+html[data-theme="dark"] .newbb-thread,
+html[data-bs-theme="dark"] .newbb-thread {
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--bs-border-color, rgba(255, 255, 255, .16));
+    border-radius: .75rem;
+    overflow: hidden;
+}
+
+html[data-theme="dark"] .newbb-user-data,
+html[data-theme="dark"] .newbb-message-area,
+html[data-bs-theme="dark"] .newbb-user-data,
+html[data-bs-theme="dark"] .newbb-message-area {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+html[data-theme="dark"] .newbb-forum-title,
+html[data-bs-theme="dark"] .newbb-forum-title {
+    color: var(--bs-emphasis-color, #fff);
+}
+
+html[data-theme="dark"] .newbb-message-area :where(p, li, div),
+html[data-bs-theme="dark"] .newbb-message-area :where(p, li, div) {
+    color: var(--bs-body-color, #e5e7eb);
+}
+
+html[data-theme="dark"] .newbb-user-signature,
+html[data-theme="dark"] .newbb-thread-attachment,
+html[data-bs-theme="dark"] .newbb-user-signature,
+html[data-bs-theme="dark"] .newbb-thread-attachment {
+    border-top: 1px solid var(--bs-border-color, rgba(255, 255, 255, .16));
+    color: var(--bs-secondary-color, #aab4c0);
+}
+
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .card-footer,
+html[data-theme="dark"] .panel-heading,
+html[data-theme="dark"] .panel-footer,
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .modal-footer,
+html[data-bs-theme="dark"] .card-header,
+html[data-bs-theme="dark"] .card-footer,
+html[data-bs-theme="dark"] .panel-heading,
+html[data-bs-theme="dark"] .panel-footer,
+html[data-bs-theme="dark"] .modal-header,
+html[data-bs-theme="dark"] .modal-footer {
+    background-color: var(--bs-secondary-bg, #273244);
+    color: var(--bs-body-color, #e5e7eb);
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .16));
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] .table,
+html[data-bs-theme="dark"] table,
+html[data-bs-theme="dark"] .table {
+    color: var(--bs-body-color, #e5e7eb);
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .16));
+}
+
+html[data-theme="dark"] th,
+html[data-theme="dark"] td,
+html[data-theme="dark"] .outer,
+html[data-theme="dark"] .inner,
+html[data-theme="dark"] .head,
+html[data-theme="dark"] .even,
+html[data-theme="dark"] .odd,
+html[data-theme="dark"] .foot,
+html[data-bs-theme="dark"] th,
+html[data-bs-theme="dark"] td,
+html[data-bs-theme="dark"] .outer,
+html[data-bs-theme="dark"] .inner,
+html[data-bs-theme="dark"] .head,
+html[data-bs-theme="dark"] .even,
+html[data-bs-theme="dark"] .odd,
+html[data-bs-theme="dark"] .foot {
+    color: var(--bs-body-color, #e5e7eb);
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .16));
+}
+
+html[data-theme="dark"] .outer,
+html[data-theme="dark"] .inner,
+html[data-bs-theme="dark"] .outer,
+html[data-bs-theme="dark"] .inner {
+    background-color: var(--bs-tertiary-bg, #1f2937);
+}
+
+html[data-theme="dark"] .head,
+html[data-theme="dark"] .foot,
+html[data-bs-theme="dark"] .head,
+html[data-bs-theme="dark"] .foot {
+    background-color: var(--bs-secondary-bg, #273244);
+}
+
+html[data-theme="dark"] .even,
+html[data-bs-theme="dark"] .even {
+    background-color: rgba(255, 255, 255, .035);
+}
+
+html[data-theme="dark"] .odd,
+html[data-bs-theme="dark"] .odd {
+    background-color: rgba(255, 255, 255, .06);
+}
+
+html[data-theme="dark"] input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .custom-select,
+html[data-bs-theme="dark"] input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+html[data-bs-theme="dark"] select,
+html[data-bs-theme="dark"] textarea,
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] .custom-select {
+    background-color: var(--bs-body-bg, #111827);
+    color: var(--bs-body-color, #e5e7eb);
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .2));
+}
+
+html[data-theme="dark"] option,
+html[data-theme="dark"] optgroup,
+html[data-bs-theme="dark"] option,
+html[data-bs-theme="dark"] optgroup {
+    background-color: var(--bs-body-bg, #111827);
+    color: var(--bs-body-color, #e5e7eb);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder,
+html[data-theme="dark"] .form-control::placeholder,
+html[data-bs-theme="dark"] input::placeholder,
+html[data-bs-theme="dark"] textarea::placeholder,
+html[data-bs-theme="dark"] .form-control::placeholder {
+    color: var(--bs-secondary-color, #94a3b8);
+    opacity: 1;
+}
+
+html[data-theme="dark"] .input-group-text,
+html[data-bs-theme="dark"] .input-group-text {
+    background-color: var(--bs-secondary-bg, #273244);
+    color: var(--bs-body-color, #e5e7eb);
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .2));
+}
+
+html[data-theme="dark"] .text-muted,
+html[data-bs-theme="dark"] .text-muted {
+    color: var(--bs-secondary-color, #aab4c0) !important;
+}
+
+html[data-theme="dark"] hr,
+html[data-bs-theme="dark"] hr {
+    border-color: var(--bs-border-color, rgba(255, 255, 255, .16));
+    opacity: 1;
+}
+
+html[data-theme="dark"] pre,
+html[data-theme="dark"] code,
+html[data-theme="dark"] blockquote,
+html[data-theme="dark"] .quote,
+html[data-theme="dark"] .comText,
+html[data-theme="dark"] .comTitle,
+html[data-theme="dark"] .xoopsCode,
+html[data-bs-theme="dark"] pre,
+html[data-bs-theme="dark"] code,
+html[data-bs-theme="dark"] blockquote,
+html[data-bs-theme="dark"] .quote,
+html[data-bs-theme="dark"] .comText,
+html[data-bs-theme="dark"] .comTitle,
+html[data-bs-theme="dark"] .xoopsCode {
+    background-color: #0f172a;
+    color: #e5e7eb;
+    border-color: rgba(255, 255, 255, .16);
+}
+
+html[data-theme="dark"] .breadcrumb,
+html[data-theme="dark"] .pagination,
+html[data-bs-theme="dark"] .breadcrumb,
+html[data-bs-theme="dark"] .pagination {
+    --bs-breadcrumb-divider-color: var(--bs-secondary-color, #aab4c0);
+    color: var(--bs-body-color, #e5e7eb);
+}
+
+html[data-theme="dark"] img,
+html[data-bs-theme="dark"] img {
+    color: transparent;
+}

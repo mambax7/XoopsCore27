@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>">
+<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>" data-theme="light" data-bs-theme="light">
 <head>
     <meta charset="<{$xoops_charset}>">
     <meta name="robots" content="noindex, nofollow" />
@@ -13,12 +13,15 @@
     <{include file="$themePath/tpl/xswatchCss.tpl" assign="xswatchCss"}>
     <link rel="stylesheet" type="text/css" href="<{$themeUrl}><{$xswatchCss}>/xoops.css">
     <link rel="stylesheet" type="text/css" href="<{$themeUrl}><{$xswatchCss}>/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="<{$themeUrl}>css/dark-mode.css">
 
     <script>
     (function() {
-        const stored = localStorage.getItem('xswatch-theme');
+        let stored = null;
+        try { stored = localStorage.getItem('xswatch-theme'); } catch (e) {}
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-bs-theme', theme);
     })();
     </script>

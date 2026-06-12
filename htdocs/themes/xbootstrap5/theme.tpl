@@ -1,7 +1,7 @@
 <!-- theme.tpl (XOOPS + Bootstrap 5 layout example) -->
 
 <!DOCTYPE html>
-<html lang="<{$xoops_langcode}>" data-theme="light">
+<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>" data-theme="light" data-bs-theme="light">
 <head>
     <{assign var=theme_name value=$xoTheme->folderName}>
     <meta charset="<{$xoops_charset}>">
@@ -12,6 +12,16 @@
     <meta name="author" content="<{$xoops_meta_author}>">
     <meta name="generator" content="XOOPS">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function() {
+            var stored = null;
+            try { stored = localStorage.getItem('theme'); } catch (e) {}
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
     <!-- Owl Carousel Assets -->
     <link href="<{xoImgUrl}>js/owl/assets/owl.carousel.css" rel="stylesheet">
     <link href="<{xoImgUrl}>js/owl/assets/owl.theme.default.css" rel="stylesheet">
@@ -53,7 +63,7 @@
     <{include file="$theme_name/tpl/shareaholic-script.tpl"}>
 
     <{$xoops_module_header}>
-
+    <link rel="stylesheet" type="text/css" href="<{xoImgUrl}>css/dark-mode.css">
 
 </head>
 <body id="<{$xoops_dirname}>">

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>">
+<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>" data-theme="light" data-bs-theme="light">
 <head>
 <{assign var=theme_name value=$xoTheme->folderName}>
     <meta charset="<{$xoops_charset}>">
@@ -27,12 +27,14 @@
     <{* Color mode + variant: localStorage > OS preference > server default *}>
     <script>
     (function() {
-        const stored = localStorage.getItem('xswatch-theme');
+        var safeGet = function(key) { try { return localStorage.getItem(key); } catch (e) { return null; } };
+        const stored = safeGet('xswatch-theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-bs-theme', theme);
 
-        const savedVariant = localStorage.getItem('xswatch-variant');
+        const savedVariant = safeGet('xswatch-variant');
         if (savedVariant) {
             const base = document.getElementById('xswatch-bootstrap-css').href.replace(/css-[^/]+/, savedVariant);
             document.getElementById('xswatch-bootstrap-css').href = base;
@@ -54,6 +56,7 @@
 
 <{$xoops_module_header}>
     <link rel="stylesheet" type="text/css" media="all" href="<{$xoops_themecss}>">
+    <link rel="stylesheet" type="text/css" href="<{xoImgUrl}>css/dark-mode.css">
 </head>
 
 <body id="<{$xoops_dirname}>">

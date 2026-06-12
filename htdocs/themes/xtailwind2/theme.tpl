@@ -17,7 +17,8 @@
 
     <script>
     (function() {
-        const stored = localStorage.getItem('xtailwind2-theme');
+        let stored = null;
+        try { stored = localStorage.getItem('xtailwind2-theme'); } catch (e) {}
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = stored || (prefersDark ? 'noctis' : 'atelier');
         document.documentElement.setAttribute('data-theme', theme);
@@ -31,6 +32,7 @@
 
 <{$xoops_module_header}>
     <link rel="stylesheet" type="text/css" media="all" href="<{$xoops_themecss}>">
+    <link rel="stylesheet" type="text/css" href="<{xoImgUrl 'css/dark-mode.css'}>">
 </head>
 
 <body id="<{$xoops_dirname}>" class="min-h-screen text-base-content antialiased">
@@ -178,10 +180,13 @@ function xtailwind2CurrentMode() {
     return XTAILWIND2_THEME_MODES[xtailwind2CurrentTheme()] || 'light';
 }
 
+function xtailwind2SafeSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+function xtailwind2SafeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
 function xtailwind2RememberTheme(theme) {
-    localStorage.setItem('xtailwind2-theme', theme);
+    xtailwind2SafeSet('xtailwind2-theme', theme);
     const mode = XTAILWIND2_THEME_MODES[theme] || 'light';
-    localStorage.setItem('xtailwind2-' + mode + '-theme', theme);
+    xtailwind2SafeSet('xtailwind2-' + mode + '-theme', theme);
 }
 
 function xtailwind2SetTheme(theme) {
@@ -194,7 +199,7 @@ function xtailwind2ToggleMode() {
     const currentMode = xtailwind2CurrentMode();
     const nextMode = currentMode === 'dark' ? 'light' : 'dark';
     const fallback = nextMode === 'dark' ? 'noctis' : 'atelier';
-    const nextTheme = localStorage.getItem('xtailwind2-' + nextMode + '-theme') || fallback;
+    const nextTheme = xtailwind2SafeGet('xtailwind2-' + nextMode + '-theme') || fallback;
     xtailwind2SetTheme(nextTheme);
 }
 
