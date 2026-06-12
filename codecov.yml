@@ -1,0 +1,16 @@
+# Codecov configuration — https://docs.codecov.com/docs/codecovyml-reference
+#
+# Patch coverage is informational only (reported, never blocking). Many XOOPS
+# core fixes touch procedural entry-point scripts (e.g. modules/*/search.php)
+# that cannot be unit-executed without a full request bootstrap, so an enforced
+# patch status would block otherwise-correct, well-reviewed changes. Overall
+# project coverage stays enforced with a small tolerance so total coverage
+# cannot quietly regress.
+coverage:
+  status:
+    patch:
+      default:
+        informational: true
+    project:
+      default:
+        threshold: 0.5%
