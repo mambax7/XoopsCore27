@@ -223,7 +223,7 @@ check($present === $u->check_smartyextensions(), 'smartyextensions: check reflec
 check(true === $u->apply_smartyextensions(), 'smartyextensions: apply true (never wedges)');
 check(true === $u->check_smartyextensions(), 'smartyextensions: true after apply (flag or present)');
 if (!$present) {
-    check(str_contains($u->message(), 'composer require'), 'smartyextensions: missing package logs actionable advice');
+    check(str_contains($u->message(), 'composer install'), 'smartyextensions: missing package logs actionable advice');
 }
 
 // =============================================================================

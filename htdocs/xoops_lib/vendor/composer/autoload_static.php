@@ -19,6 +19,7 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
     public static $prefixLengthsPsr4 = array (
         'X' =>
         array (
+            'Xoops\\SmartyExtensions\\' => 23,
             'Xoops\\RegDom\\' => 13,
             'Xmf\\' => 4,
         ),
@@ -58,6 +59,10 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
     );
 
     public static $prefixDirsPsr4 = array (
+        'Xoops\\SmartyExtensions\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/xoops/smartyextensions/src',
+        ),
         'Xoops\\RegDom\\' =>
         array (
             0 => __DIR__ . '/..' . '/xoops/regdom/src',
@@ -985,6 +990,7 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
         'Symfony\\Component\\Yaml\\Exception\\RuntimeException' => __DIR__ . '/..' . '/symfony/yaml/Exception/RuntimeException.php',
         'Symfony\\Component\\Yaml\\Inline' => __DIR__ . '/..' . '/symfony/yaml/Inline.php',
         'Symfony\\Component\\Yaml\\Parser' => __DIR__ . '/..' . '/symfony/yaml/Parser.php',
+        'Symfony\\Component\\Yaml\\ParserState' => __DIR__ . '/..' . '/symfony/yaml/ParserState.php',
         'Symfony\\Component\\Yaml\\Tag\\TaggedValue' => __DIR__ . '/..' . '/symfony/yaml/Tag/TaggedValue.php',
         'Symfony\\Component\\Yaml\\Unescaper' => __DIR__ . '/..' . '/symfony/yaml/Unescaper.php',
         'Symfony\\Component\\Yaml\\Yaml' => __DIR__ . '/..' . '/symfony/yaml/Yaml.php',
@@ -1002,8 +1008,10 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
         'TPC_yyStackEntry' => __DIR__ . '/..' . '/smarty/smarty/libs/sysplugins/smarty_internal_configfileparser.php',
         'TP_yyStackEntry' => __DIR__ . '/..' . '/smarty/smarty/libs/sysplugins/smarty_internal_templateparser.php',
         'Webmozart\\Assert\\Assert' => __DIR__ . '/..' . '/webmozart/assert/src/Assert.php',
+        'Webmozart\\Assert\\HasAssert' => __DIR__ . '/..' . '/webmozart/assert/src/HasAssert.php',
         'Webmozart\\Assert\\InvalidArgumentException' => __DIR__ . '/..' . '/webmozart/assert/src/InvalidArgumentException.php',
         'Webmozart\\Assert\\Mixin' => __DIR__ . '/..' . '/webmozart/assert/src/Mixin.php',
+        'Webmozart\\Assert\\PsalmPlugin' => __DIR__ . '/..' . '/webmozart/assert/src/PsalmPlugin.php',
         'WideImage\\Canvas' => __DIR__ . '/..' . '/smottt/wideimage/lib/WideImage/Canvas.php',
         'WideImage\\Coordinate' => __DIR__ . '/..' . '/smottt/wideimage/lib/WideImage/Coordinate.php',
         'WideImage\\Exception\\Exception' => __DIR__ . '/..' . '/smottt/wideimage/lib/WideImage/Exception/Exception.php',
@@ -1106,6 +1114,18 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
         'Xoops\\RegDom\\Exception\\PslCacheNotFoundException' => __DIR__ . '/..' . '/xoops/regdom/src/Exception/PslCacheNotFoundException.php',
         'Xoops\\RegDom\\PublicSuffixList' => __DIR__ . '/..' . '/xoops/regdom/src/PublicSuffixList.php',
         'Xoops\\RegDom\\RegisteredDomain' => __DIR__ . '/..' . '/xoops/regdom/src/RegisteredDomain.php',
+        'Xoops\\SmartyExtensions\\AbstractExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/AbstractExtension.php',
+        'Xoops\\SmartyExtensions\\Adapter\\Smarty5Adapter' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Adapter/Smarty5Adapter.php',
+        'Xoops\\SmartyExtensions\\ExtensionRegistry' => __DIR__ . '/..' . '/xoops/smartyextensions/src/ExtensionRegistry.php',
+        'Xoops\\SmartyExtensions\\Extension\\AssetExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/AssetExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\DataExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/DataExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\FormExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/FormExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\FormatExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/FormatExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\NavigationExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/NavigationExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\RayDebugExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/RayDebugExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\SecurityExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/SecurityExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\TextExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/TextExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\XoopsCoreExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/XoopsCoreExtension.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

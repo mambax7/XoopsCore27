@@ -14,8 +14,16 @@ reviews:
   review_status: true
   collapse_walkthrough: false
   auto_review:
-    enabled: true
+    enabled: false
     drafts: false
+  path_filters:
+    # Skip vendored third-party code and generated/lock files (e.g. the
+    # xoops/smartyextensions package under htdocs/xoops_lib/vendor).
+    - "!**/vendor/**"
+    - "!**/composer.lock"
+    - "!**/composer.dist.lock"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
   path_instructions:
     - path: "htdocs/**/*.php"
       instructions: >-

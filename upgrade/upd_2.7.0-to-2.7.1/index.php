@@ -38,15 +38,16 @@ use Xoops\Upgrade\XoopsUpgrade;
  *                        from pre-repair sources cannot survive. Invariant: a
  *                        durable one-shot, recorded with a marker file (not the
  *                        session) so it does not re-queue after a new session.
- *  3. smartyextensions — Guard that xoops/smartyextensions is installed and its
- *                        ExtensionRegistry is autoloadable (composer runs out of
- *                        band). Invariant: a missing package logs an actionable
- *                        error but never wedges the queue (session-flag warn-once).
+ *  3. smartyextensions — Guard that the bundled xoops/smartyextensions package and
+ *                        its ExtensionRegistry are autoloadable. Invariant: a
+ *                        missing package logs an actionable error but never wedges
+ *                        the queue (session-flag warn-once).
  *
- * Fresh-install parity: core 2.7.1 ships clean templates, so smartytemplates and
- * smartycache pass with no work. The xoops/smartyextensions package is optional and
- * NOT bundled (it is not in composer.dist.json); its check is advisory only —
- * absence logs an actionable notice and never blocks the upgrade.
+ * Fresh-install parity: core 2.7.1 ships clean templates and bundles
+ * xoops/smartyextensions in htdocs/xoops_lib (composer.dist.json), so all three
+ * check_ methods pass on a fresh install. The smartyextensions check stays
+ * non-fatal: if the package is somehow absent it logs a notice and the upgrade
+ * still completes.
  *
  * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -227,8 +228,8 @@ class Upgrade_271 extends XoopsUpgrade
      */
     public function check_smartyextensions(): bool
     {
-        // String form (not ::class) so static analysis does not require this
-        // optional package to be present.
+        // String form (not ::class) so static analysis does not hard-require the
+        // package at analysis time even though it ships with 2.7.1.
         if (class_exists('Xoops\\SmartyExtensions\\ExtensionRegistry')) {
             return true;
         }
@@ -243,17 +244,17 @@ class Upgrade_271 extends XoopsUpgrade
      */
     public function apply_smartyextensions(): bool
     {
-        // String form (not ::class) so static analysis does not require this
-        // optional package to be present.
+        // String form (not ::class) so static analysis does not hard-require the
+        // package at analysis time even though it ships with 2.7.1.
         if (class_exists('Xoops\\SmartyExtensions\\ExtensionRegistry')) {
             $this->logSuccess('xoops/smartyextensions present and registered.');
         } else {
-            // Advisory only: this optional package is not bundled with 2.7.1 and
-            // its absence never blocks the upgrade.
+            // The package ships with 2.7.1 under htdocs/xoops_lib/vendor, so absence
+            // means an incomplete file copy. Non-fatal: the upgrade still completes.
             $this->logError(
-                'Optional package xoops/smartyextensions is not installed; its template plugins '
-                . 'are unavailable. To add it, run "composer require xoops/smartyextensions" in '
-                . 'htdocs/xoops_lib. This is advisory and does not block the upgrade.'
+                'xoops/smartyextensions was not found, although it ships with 2.7.1 under '
+                . 'htdocs/xoops_lib/vendor. Re-copy the 2.7.1 files (or run "composer install" '
+                . 'in htdocs/xoops_lib) so its template plugins are available.'
             );
         }
         $_SESSION[$this->smartyExtKey] = true;

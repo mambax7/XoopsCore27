@@ -6,6 +6,7 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Xoops\\SmartyExtensions\\' => array($vendorDir . '/xoops/smartyextensions/src'),
     'Xoops\\RegDom\\' => array($vendorDir . '/xoops/regdom/src'),
     'Xmf\\' => array($vendorDir . '/xoops/xmf/src'),
     'Webmozart\\Assert\\' => array($vendorDir . '/webmozart/assert/src'),
