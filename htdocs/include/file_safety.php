@@ -2,12 +2,14 @@
 /**
  * Side-effect-free file-safety helpers.
  *
- * Hosts the three small filesystem helpers used by atomic-write and
- * cleanup paths:
+ * Hosts small, dependency-light safety helpers used by atomic-write, cleanup
+ * and redirect paths:
  *
  *  - xoops_file_label()        — root-relative label for warnings
+ *  - xoops_safe_basename()     — null-byte-safe basename() with placeholder
  *  - xoops_chmod_quietly()     — scoped-suppressed chmod() with single warning
  *  - xoops_remove_file_quietly() — scoped-suppressed unlink() with single warning
+ *  - xoops_isLocalUrl()        — strict same-origin check (scheme/host/port) for redirects
  *
  * They originally lived in include/cp_functions.php, but that file
  * unconditionally `define()`s XOOPS_CPFUNC_LOADED, which include/
@@ -211,5 +213,68 @@ if (!function_exists('xoops_remove_file_quietly')) {
                 E_USER_WARNING
             );
         }
+    }
+}
+
+if (!function_exists('xoops_isLocalUrl')) {
+    /**
+     * Decide whether an absolute or scheme-relative URL points at this site.
+     *
+     * Decodes HTML entities first, rejects control characters, then compares
+     * scheme, host and port against XOOPS_URL exactly. A look-alike host such as
+     * `localhost.example.org`, a userinfo trick such as `localhost@evil.test`, or
+     * a scheme-relative `//evil.test` therefore does not match. A single
+     * leading-slash, root-relative path (e.g. `/index.php`) is treated as local;
+     * `//` is not. Bare relative paths (e.g. `user.php`) are the caller's
+     * responsibility and are intentionally not the target of this helper.
+     *
+     * @param string $url candidate URL
+     * @return bool true when the target is same-origin or a root-relative path
+     */
+    function xoops_isLocalUrl($url)
+    {
+        $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $decoded)) {
+            return false; // control characters / CR-LF
+        }
+
+        $parts = parse_url($decoded);
+        if ($parts === false) {
+            return false;
+        }
+
+        if (!isset($parts['host'])) {
+            // A scheme with no host (e.g. "http:/evil.test/") is malformed and a
+            // browser may normalise it to an external absolute URL — reject it. A
+            // genuine root-relative path carries no scheme: allow a single-slash
+            // path, reject `//host`.
+            return !isset($parts['scheme'])
+                && isset($parts['path'])
+                && strncmp($parts['path'], '/', 1) === 0
+                && strncmp($decoded, '//', 2) !== 0;
+        }
+
+        $base = parse_url((string) XOOPS_URL);
+        if (!isset($base['host'])) {
+            return false;
+        }
+
+        $sameHost = strcasecmp($parts['host'], $base['host']) === 0;
+
+        // A scheme-relative target (//host/...) inherits the base scheme, so
+        // compare against the base rather than defaulting to http.
+        $baseScheme   = strtolower($base['scheme'] ?? 'http');
+        $targetScheme = strtolower($parts['scheme'] ?? $baseScheme);
+        $sameScheme   = $targetScheme === $baseScheme;
+
+        // Normalise default ports so http://host and http://host:80 (and the
+        // https/443 pair) compare as the same origin.
+        $defaultPorts = ['http' => 80, 'https' => 443, 'ftp' => 21];
+        $targetPort = $parts['port'] ?? ($defaultPorts[$targetScheme] ?? null);
+        $basePort   = $base['port'] ?? ($defaultPorts[$baseScheme] ?? null);
+        $samePort   = $targetPort === $basePort;
+
+        return $sameHost && $sameScheme && $samePort;
     }
 }

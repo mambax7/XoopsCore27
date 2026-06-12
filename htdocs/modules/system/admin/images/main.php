@@ -64,6 +64,14 @@ if (!$xoopsUser->isAdmin($xoopsModule->mid()) && ($op === 'delfile' || $op === '
     redirect_header('admin.php?fct=images', 1);
 }
 
+// The category/image display toggles arrive via AJAX (system_setStatus);
+// validate the request token before any output so a forged request cannot flip
+// the display flag.
+if (in_array($op, ['display_cat', 'display_img'], true) && !$GLOBALS['xoopsSecurity']->check(false)) {
+    http_response_code(403);
+    exit();
+}
+
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_images.tpl';
 // Call Header

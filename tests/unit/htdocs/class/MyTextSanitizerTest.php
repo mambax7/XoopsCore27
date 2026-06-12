@@ -228,6 +228,49 @@ class MyTextSanitizerTest extends TestCase
         }
     }
 
+    // ---------------------------------------------------------------------
+    // Output-encoding regression guards (finding C-1).
+    //
+    // displayTarea() encodes untrusted textarea content for safe display and
+    // then calls makeClickable() to linkify it. makeClickable() must keep that
+    // encoding intact for the surrounding text and only round-trip the URL/email
+    // tokens it linkifies, so encoded markup never becomes live markup again.
+    // ---------------------------------------------------------------------
+
+    public function testDisplayTareaWithHtmlDisabledKeepsMarkupEncoded()
+    {
+        $out = $this->sanitizer->displayTarea('<script>alert(1)</script> visit https://xoops.org', 0);
+
+        // displayTarea()'s legacy path installs an error and an exception handler
+        // and never restores them. Confirmed by PHPUnit: removing these two calls
+        // makes this test "risky — did not remove its own error/exception
+        // handlers". Pop them so handler state does not leak into later tests.
+        restore_error_handler();
+        restore_exception_handler();
+
+        $this->assertStringNotContainsString('<script>', $out);
+        $this->assertStringContainsString('&lt;script&gt;', $out);
+        $this->assertStringContainsString('href="https://xoops.org', $out);
+    }
+
+    public function testMakeClickableLeavesEncodedMarkupEncoded()
+    {
+        $out = $this->sanitizer->makeClickable('&lt;img src=x onerror=alert(1)&gt;');
+
+        $this->assertStringNotContainsString('<img', $out);
+        $this->assertStringContainsString('&lt;img', $out);
+    }
+
+    public function testMakeClickableDoesNotDoubleEncodeAmpersandInUrl()
+    {
+        // A URL arriving already-encoded (as it would after displayTarea) must
+        // render with a single &amp;, not &amp;amp;.
+        $out = $this->sanitizer->makeClickable('see https://example.com/?a=1&amp;b=2 here');
+
+        $this->assertStringContainsString('https://example.com/?a=1&amp;b=2', $out);
+        $this->assertStringNotContainsString('&amp;amp;', $out);
+    }
+
 
 //    public function testNestedTagsAndIncompleteTags()
 //    {

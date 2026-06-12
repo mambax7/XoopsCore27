@@ -53,8 +53,12 @@ if ($path_type === 'var') {
 $file = realpath($xoops->path($path));
 $dir  = realpath($xoops->paths[$path_type][0]);
 
-//We are not allowing directory traversal either
-if (false === strpos($file, (string) $dir)) {
+//We are not allowing directory traversal either: the resolved file must sit
+//inside the resolved root. Require a path-boundary match, not a substring
+//match (which a sibling directory sharing the root's name prefix would pass).
+$dirPrefix = rtrim((string) $dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+if (false === $file || false === $dir
+    || !str_starts_with($file . DIRECTORY_SEPARATOR, $dirPrefix)) {
     http_response_code(404);
     exit();
 }

@@ -33,6 +33,13 @@ $mimetypes   = ['image/gif', 'image/jpeg', 'image/pjpeg', 'image/x-png', 'image/
 $upload_size = 500000;
 // Get Action type
 $op = Request::hasVar('op', 'POST') ? Request::getString('op', 'list', 'POST') : Request::getString('op', 'list', 'GET');
+
+// The status toggle arrives via AJAX (system_setStatus); validate the request
+// token before any output so a forged request cannot flip the display flag.
+if ('smilies_update_display' === $op && !$GLOBALS['xoopsSecurity']->check(false)) {
+    http_response_code(403);
+    exit();
+}
 // Get smilies handler
 /** @var  SystemsmiliesHandler $smilies_Handler */
 $smilies_Handler = xoops_getModuleHandler('smilies', 'system');

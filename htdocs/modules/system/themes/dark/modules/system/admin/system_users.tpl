@@ -6,7 +6,7 @@
         <div class="floatleft"><{$form_sort}></div>
         <div class="floatright">
             <div class="xo-buttons">
-                <a class="ui-corner-all tooltip" href="admin.php?fct=users&amp;op=users_synchronize&amp;status=2"
+                <a class="ui-corner-all tooltip" href="admin.php?fct=users&amp;op=users_synchronize&amp;status=2&amp;XOOPS_TOKEN_REQUEST=<{$users_csrf}>"
                    title="<{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>">
                     <img src="<{xoAdminIcons 'reload.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>"/>
                     <{$smarty.const._AM_SYSTEM_USERS_SYNCHRONIZE}>
@@ -68,7 +68,7 @@
                                    title="<{$smarty.const._AM_SYSTEM_USERS_DEL}>">
                                     <img src="<{xoAdminIcons 'delete.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_DEL}>"/></a>
                             <{else}>
-                                <a class="tooltip" href="admin.php?fct=users&amp;op=users_active&amp;uid=<{$user.uid}>"
+                                <a class="tooltip" href="admin.php?fct=users&amp;op=users_active&amp;uid=<{$user.uid}>&amp;XOOPS_TOKEN_REQUEST=<{$users_csrf}>"
                                    title="<{$smarty.const._AM_SYSTEM_USERS_ACTIVE}>">
                                     <img src="<{xoAdminIcons 'xoops/active_user.png'}>" alt="<{$smarty.const._AM_SYSTEM_USERS_ACTIVE}>"/></a>
                                 <img class="tooltip" onclick="display_dialog('<{$user.uid}>', true, true, 'slide', 'slide', 300, 400);"

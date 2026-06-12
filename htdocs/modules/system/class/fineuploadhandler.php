@@ -62,19 +62,87 @@ abstract class SystemFineUploadHandler
     }
 
     /**
+     * Confirm a client-supplied chunk identifier is a single safe path segment.
+     *
+     * @param string $uuid
+     * @return string the validated identifier
+     * @throws \RuntimeException when the value is not a plain identifier
+     */
+    protected function safeUuid($uuid)
+    {
+        $uuid = (string) $uuid;
+        if (1 !== preg_match('/^[A-Za-z0-9_-]{1,64}$/', $uuid)) {
+            throw new \RuntimeException('Invalid upload identifier.');
+        }
+        return $uuid;
+    }
+
+    /**
+     * Reduce a client-supplied filename to a single safe leaf name and, when an
+     * extension allowlist is configured, confirm the extension is permitted. This
+     * is applied on the chunk-combine path as well as on normal upload, so a
+     * combine request cannot introduce a path segment or a disallowed type.
+     *
+     * @param string $name
+     * @return string the validated leaf name
+     * @throws \RuntimeException when the value is empty, hidden, or disallowed
+     */
+    protected function safeLeafName(string $name): string
+    {
+        $name = basename(str_replace('\\', '/', $name));
+        if ('' === $name || '.' === $name[0]
+            || strlen($name) > 255
+            || preg_match('/[\x00-\x1F\x7F]/', $name)) {
+            throw new \RuntimeException('Invalid file name.');
+        }
+        if (!empty($this->allowedExtensions)) {
+            $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+            if (!in_array($ext, array_map('strtolower', $this->allowedExtensions), true)) {
+                throw new \RuntimeException('File has an invalid extension.');
+            }
+        }
+        return $name;
+    }
+
+    /**
+     * Defence-in-depth check that a built path stays under $root. The UUID and
+     * leaf name are already validated, so this performs a filesystem-independent
+     * lexical check (no realpath) that rejects residual parent traversal and
+     * confirms the root prefix - it never rejects a directory that does not exist
+     * yet, which would otherwise break the first chunk of an upload.
+     *
+     * @param string $path
+     * @param string $root
+     * @return string the validated path
+     * @throws \RuntimeException when the path would fall outside $root
+     */
+    protected function assertWithin($path, $root)
+    {
+        $normalizedPath = str_replace('\\', '/', (string) $path);
+        $normalizedRoot = rtrim(str_replace('\\', '/', (string) $root), '/') . '/';
+        if (false !== strpos($normalizedPath, '../')
+            || str_ends_with($normalizedPath, '/..')
+            || 0 !== strncmp($normalizedPath, $normalizedRoot, strlen($normalizedRoot))) {
+            throw new \RuntimeException('Path escapes upload root.');
+        }
+        return $path;
+    }
+
+    /**
      * Get the original filename
      */
-    public function getName()
+    public function getName(): string
     {
         if (Request::hasVar('qqfilename', 'REQUEST')) {
-            $qqfilename = Request::getString('qqfilename', '', 'REQUEST');
-            return $qqfilename;
+            return Request::getString('qqfilename', '', 'REQUEST');
         }
 
         if (Request::hasVar($this->inputName, 'FILES')) {
-            $file = Request::getArray($this->inputName, null, 'FILES');
-            return $file ;
+            $file = Request::getArray($this->inputName, [], 'FILES');
+            return (is_array($file) && isset($file['name']) && is_string($file['name'])) ? $file['name'] : '';
         }
+
+        return '';
     }
 
     /**
@@ -95,18 +163,36 @@ abstract class SystemFineUploadHandler
      */
     public function combineChunks($uploadDirectory, $name = null)
     {
-        $uuid = Request::getString('qquuid', '', 'POST');
-        if ('' === $name) {
+        $uuid = $this->safeUuid(Request::getString('qquuid', '', 'REQUEST'));
+        if (null === $name || '' === $name) {
             $name = $this->getName();
         }
-        $targetFolder = $this->chunksFolder . DIRECTORY_SEPARATOR . $uuid;
+        $name = $this->safeLeafName($name);
+        $targetFolder = $this->assertWithin(
+            $this->chunksFolder . DIRECTORY_SEPARATOR . $uuid,
+            $this->chunksFolder
+        );
         $totalParts = Request::getInt('qqtotalparts', 1, 'REQUEST');
+        if ($totalParts < 1) {
+            throw new \RuntimeException('Invalid chunk metadata.');
+        }
 
-        $targetPath = implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid, $name]);
+        $targetPath = $this->assertWithin(
+            implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid, $name]),
+            $uploadDirectory
+        );
         $this->uploadName = $name;
 
+        // Confirm every expected chunk is present before writing the final file,
+        // so a combine request cannot produce an empty or partial target.
+        for ($i = 0; $i < $totalParts; $i++) {
+            if (!is_readable($targetFolder . DIRECTORY_SEPARATOR . $i)) {
+                throw new \RuntimeException('Missing upload chunk.');
+            }
+        }
+
         if (!file_exists($targetPath)) {
-            if (!mkdir($concurrentDirectory = dirname($targetPath), 0777, true) && !is_dir($concurrentDirectory)) {
+            if (!mkdir($concurrentDirectory = dirname($targetPath), 0775, true) && !is_dir($concurrentDirectory)) {
                 throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
             }
         }
@@ -179,9 +265,11 @@ abstract class SystemFineUploadHandler
 
         // Get size and name
         $file = Request::getArray($this->inputName, [], 'FILES');
-        $size = $file['size'];
-        if (Request::hasVar('qqtotalfilesize')) {
-            $size = Request::getInt('qqtotalfilesize');
+        $size = $file['size'] ?? 0;
+        // Pin the declared total size to POST so a GET/cookie value cannot
+        // understate the size and slip past the size-limit check below.
+        if (Request::hasVar('qqtotalfilesize', 'POST')) {
+            $size = Request::getInt('qqtotalfilesize', 0, 'POST');
         }
 
         if (null === $name) {
@@ -189,7 +277,7 @@ abstract class SystemFineUploadHandler
         }
 
         // check file error
-        if ($file['error']) {
+        if (!empty($file['error'])) {
             return ['error' => 'Upload Error #' . $file['error']];
         }
 
@@ -222,32 +310,48 @@ abstract class SystemFineUploadHandler
 
         $mimeType = '';
         if (!empty($this->allowedMimeTypes)) {
-
-            $temp = $this->inputName;
-            $mimeType = mime_content_type(Request::getArray($temp, [], 'FILES')['tmp_name']);
-            if (!in_array($mimeType, $this->allowedMimeTypes)) {
+            $fileArr = Request::getArray($this->inputName, [], 'FILES');
+            $tmpName = $fileArr['tmp_name'] ?? '';
+            if ('' === $tmpName || !is_string($tmpName) || !is_readable($tmpName)) {
+                return ['error' => 'File is empty.', 'preventRetry' => true];
+            }
+            $mimeType = mime_content_type($tmpName);
+            if (false === $mimeType || !in_array($mimeType, $this->allowedMimeTypes, true)) {
                 return ['error' => 'File is of an invalid type.', 'preventRetry' => true];
             }
         }
 
         // Save a chunk
         $totalParts = 1;
-        if (Request::hasVar('qqtotalparts')) {
-            $totalParts = (int) Request::getString('qqtotalparts');
+        if (Request::hasVar('qqtotalparts', 'REQUEST')) {
+            $totalParts = Request::getInt('qqtotalparts', 1, 'REQUEST');
+        }
+        if ($totalParts < 1) {
+            throw new \RuntimeException('Invalid chunk metadata.');
         }
 
-        $uuid = Request::getString('qquuid');
+        // FineUploader sends its qq* identifiers where the REQUEST hash finds them
+        // (query string or body depending on the client); do NOT pin these to POST
+        // or uploads break. safeUuid() validates the value regardless of source.
+        // Only qqtotalfilesize stays POST-only (above), where the source matters.
+        $uuid = $this->safeUuid(Request::getString('qquuid', '', 'REQUEST'));
         if ($totalParts > 1) {
             # chunked upload
 
             $chunksFolder = $this->chunksFolder;
-            $partIndex = (int) Request::getString('qqpartindex');
+            $partIndex = Request::getInt('qqpartindex', -1, 'REQUEST');
+            if ($partIndex < 0 || $partIndex >= $totalParts) {
+                throw new \RuntimeException('Invalid chunk metadata.');
+            }
 
-            if (!is_writable($chunksFolder) && !is_executable($uploadDirectory)) {
+            if ($this->isInaccessible($chunksFolder)) {
                 return ['error' => "Server error. Chunks directory isn't writable or executable."];
             }
 
-            $targetFolder = $this->chunksFolder . DIRECTORY_SEPARATOR . $uuid;
+            $targetFolder = $this->assertWithin(
+                $this->chunksFolder . DIRECTORY_SEPARATOR . $uuid,
+                $this->chunksFolder
+            );
 
             if (!file_exists($targetFolder)) {
                 if (!mkdir($targetFolder, 0775, true) && !is_dir($targetFolder)) {
@@ -264,7 +368,11 @@ abstract class SystemFineUploadHandler
         } else {
             # non-chunked upload
 
-            $target = implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid, $name]);
+            $name = $this->safeLeafName($name);
+            $target = $this->assertWithin(
+                implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid, $name]),
+                $uploadDirectory
+            );
 
             if ($target) {
                 $this->uploadName = basename($target);
@@ -311,6 +419,7 @@ abstract class SystemFineUploadHandler
         }
 
         $uuid = false;
+        $url  = '';
         $method = Request::getString('REQUEST_METHOD', 'GET', 'SERVER');
 
         if ('DELETE' === $method) {
@@ -318,17 +427,26 @@ abstract class SystemFineUploadHandler
             if ('' !== $url) {
                 $url    = parse_url($url, PHP_URL_PATH);
                 $tokens = explode('/', $url);
-                $uuid = $tokens[count($tokens) - 1];
+                $uuid = $this->safeUuid($tokens[count($tokens) - 1]);
             }
         } elseif ('POST' === $method) {
-            $uuid = Request::getString('qquuid', '', 'REQUEST');
+            $uuid = $this->safeUuid(Request::getString('qquuid', '', 'REQUEST'));
         } else {
             return ['success' => false,
                 'error'   => 'Invalid request method! ' . $method,
             ];
         }
 
-        $target = implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid]);
+        // Refuse a missing identifier: without it the target resolves to the
+        // upload root itself and removeDir() would wipe the whole directory.
+        if (false === $uuid || '' === $uuid) {
+            return ['success' => false, 'error' => 'Missing upload identifier.'];
+        }
+
+        $target = $this->assertWithin(
+            implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid]),
+            $uploadDirectory
+        );
 
         if (is_dir($target)) {
             $this->removeDir($target);
@@ -428,10 +546,13 @@ abstract class SystemFineUploadHandler
                 continue;
             }
 
-            if (is_dir($item)) {
-                $this->removeDir($item);
+            // Build the full child path so recursion and deletion act on the
+            // intended entry rather than a bare name resolved against the CWD.
+            $child = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($child)) {
+                $this->removeDir($child);
             } else {
-                unlink(implode(DIRECTORY_SEPARATOR, [$dir, $item]));
+                unlink($child);
             }
         }
         rmdir($dir);
@@ -478,10 +599,13 @@ abstract class SystemFineUploadHandler
      */
     protected function isInaccessible($directory)
     {
-        $isWin = $this->isWindows();
-        $folderInaccessible =
-            ($isWin) ? !is_writable($directory) : (!is_writable($directory) && !is_executable($directory));
-        return $folderInaccessible;
+        // A directory must be writable to create files in, and (on non-Windows)
+        // executable to traverse; lacking either makes it unusable. is_executable()
+        // is unreliable for directories on Windows, so it is only checked elsewhere.
+        if (!is_writable($directory)) {
+            return true;
+        }
+        return !$this->isWindows() && !is_executable($directory);
     }
 
     /**

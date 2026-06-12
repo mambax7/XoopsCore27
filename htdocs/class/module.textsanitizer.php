@@ -560,7 +560,9 @@ class MyTextSanitizer
      */
     protected function makeClickableCallbackEmailAddress($match)
     {
-        $email = $match[2];  // Extract the email address
+        // Decode only this matched token (never the whole buffer) so a pre-encoded
+        // address round-trips to a single, safely re-encoded output.
+        $email = html_entity_decode($match[2], ENT_QUOTES, 'UTF-8');
         return $match[1] . '<a href="mailto:' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '</a>';
     }
 
@@ -643,8 +645,11 @@ class MyTextSanitizer
     }
 
     public function makeClickable($text) {
-        // Decode HTML entities
-        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        // Do NOT entity-decode the whole buffer here. displayTarea() may have
+        // already encoded this text for safe display, and decoding everything back
+        // would undo that encoding. Each match below decodes only its own URL or
+        // email token and then re-encodes it, so links render correctly while the
+        // surrounding text keeps the encoding displayTarea() applied.
 
         // Convert line breaks and multiple spaces to a single space
         $text = preg_replace('/[\n\s]+/', ' ', $text);
@@ -658,7 +663,9 @@ class MyTextSanitizer
         $text = preg_replace_callback(
             $pattern,
             function ($matches) {
-                $url = $matches[2];
+                // Decode only the matched URL token so a pre-encoded URL round-trips
+                // to a single, safely re-encoded href (&amp; stays &amp;, not &amp;amp;).
+                $url = html_entity_decode($matches[2], ENT_QUOTES, 'UTF-8');
                 $prefix = $matches[0][0] ?? ''; // Get the prefix character (space, bracket, etc.)
                 $openingBracket = $matches[1] ?? ''; // Check for the opening angle bracket
 

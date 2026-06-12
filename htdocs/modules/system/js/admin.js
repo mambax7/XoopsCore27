@@ -103,9 +103,14 @@ function _refreshToken(html, $tokenInput) {
 
 function system_setStatus(data, img, file) {
     const $form = $('form[name="moduleadmin"]');
-    const $tokenInput = $form.length
+    let $tokenInput = $form.length
         ? $form.find("input[name='XOOPS_TOKEN_REQUEST']").first()
         : $("input[name='XOOPS_TOKEN_REQUEST']").first();
+    // Fall back to any token on the page (e.g. the control-panel footer token)
+    // when the module-admin form does not carry one.
+    if (!$tokenInput.length) {
+        $tokenInput = $("input[name='XOOPS_TOKEN_REQUEST']").first();
+    }
     if ($tokenInput.length) {
         data[$tokenInput.attr('name')] = $tokenInput.val();
     }
@@ -220,13 +225,17 @@ function blocks_preview() {
  *
  * @author  Kraven30
  */
+function xoAdminToken() {
+    var $t = $("input[name='XOOPS_TOKEN_REQUEST']").first();
+    return $t.length ? $t.val() : '';
+}
 function display_post(uid) {
     $('#display_post_' + uid).hide();
     $("#loading_" + uid).show();
     $.ajax({
         type: "POST",
         url: "./admin/users/jquery.php",
-        data: "op=display_post&uid=" + uid,
+        data: "op=display_post&uid=" + uid + "&XOOPS_TOKEN_REQUEST=" + encodeURIComponent(xoAdminToken()),
         success: function (msg) {
             $('#display_post_' + uid).html(msg);
             $('#loading_' + uid).hide();

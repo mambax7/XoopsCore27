@@ -123,6 +123,9 @@ if ($op === 'delete') {
             xoops_confirm(['op' => 'delete', 'ok' => 1], 'user.php', _US_SURETODEL . '<br>' . _US_REMOVEINFO);
             include $GLOBALS['xoops']->path('footer.php');
         } else {
+            if (!$GLOBALS['xoopsSecurity']->check()) {
+                redirect_header('user.php', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            }
             $del_uid        = $GLOBALS['xoopsUser']->getVar('uid');
             /** @var XoopsMemberHandler $member_handler */
             $member_handler = xoops_getHandler('member');

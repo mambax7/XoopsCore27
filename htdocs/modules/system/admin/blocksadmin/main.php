@@ -48,6 +48,14 @@ if ($type === 'preview') {
 
 $bid = Request::getInt('bid', 0);
 
+// The block visibility/drag/order operations arrive via AJAX; validate the
+// request token before any output and stop quietly on mismatch (these endpoints
+// ignore the response body).
+if (in_array($op, ['display', 'drag', 'order'], true) && !$GLOBALS['xoopsSecurity']->check(false)) {
+    http_response_code(403);
+    exit();
+}
+
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_blocks.tpl';
 // Call Header
