@@ -192,49 +192,31 @@ switch ($op) {
                 redirect_header(XOOPS_URL . '/', 3, 'Invalid username provided.');
             }
 
-            // Adjust the search pattern based on the match type
+            // Build the LIKE pattern in a separate variable so $uname stays
+            // pristine for the search URL below.
+            $pattern = $uname;
             switch ($uname_match) {
                 case XOOPS_MATCH_START:
-                    $uname .= '%';
+                    $pattern .= '%';
                     break;
                 case XOOPS_MATCH_END:
-                    $uname = '%' . $uname;
+                    $pattern = '%' . $pattern;
                     break;
                 case XOOPS_MATCH_CONTAIN:
-                    $uname = '%' . $uname . '%';
+                    $pattern = '%' . $pattern . '%';
                     break;
             }
 
-            // Create criteria for the SQL query
-            $criteria = new Criteria('uname', $uname, 'LIKE');
-            [$clause, $params] = $criteria->render();
-
-            // Prepare and execute the SQL query
-            $sql = "SELECT * FROM " . $xoopsDB->prefix('users') . " WHERE " . $clause;
-            $stmt = $xoopsDB->prepare($sql);
-
-            foreach ($params as $placeholder => $value) {
-                $stmt->bindValue($placeholder, $value);
-            }
-
-            $stmt->execute();
-            $results = $stmt->fetchAll();
-
-            // Process results
-            $search_url = [];
-            $searchvars = [];
-
-            if ($results) {
-                foreach ($results as $row) {
-                    // Populate search URL and search variables based on the results
-                    $search_url[] = 'uname=' . urlencode($row['uname']);
-                    $search_url[] = 'uname_match=' . urlencode((string) $uname_match);
-                    $searchvars[] = 'uname';
-                }
-            }
-
-            // Further processing or usage of $search_url, $searchvars
-            // You might render a page or redirect the user based on these results
+            // AND the username into the compound criteria so the active-user
+            // filter (level > 0) built above is preserved — otherwise inactive
+            // accounts leak into the results. The search itself runs once at
+            // $profile_handler->search($criteria, ...) further down; adding to
+            // $criteria here (rather than reassigning it) also keeps the
+            // email/profile-field $criteria->add() calls below working.
+            $criteria->add(new Criteria('uname', $pattern, 'LIKE'));
+            $searchvars[] = 'uname';
+            $search_url[] = 'uname=' . urlencode($uname);
+            $search_url[] = 'uname_match=' . urlencode((string) $uname_match);
         }
 
         $email = Request::hasVar('email', 'GET') ? Request::getString('email', '', 'GET') : Request::getString('email', '', 'POST');
