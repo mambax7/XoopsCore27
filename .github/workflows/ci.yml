@@ -82,6 +82,10 @@ jobs:
         if: ${{ !matrix.coverage }}
         run: cd tests && phpunit --configuration phpunit.xml.dist --stderr
 
+      - name: Run upgrade tool tests
+        if: ${{ !matrix.coverage }}
+        run: cd upgrade/tests && phpunit --configuration phpunit.xml.dist --stderr
+
       - name: Run XOOPS tests with coverage
         if: ${{ matrix.coverage }}
         run: cd tests && phpunit --configuration phpunit.xml.dist --stderr --coverage-clover ../build/logs/clover.xml
