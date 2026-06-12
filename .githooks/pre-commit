@@ -135,6 +135,26 @@ if [ -n "$added" ]; then
         | grep -E -- '->[[:space:]]*(allowedThemes|defaultTheme)[[:space:]]*=[[:space:]]*\$xoopsConfig\[' || true)
     [ -n "$hits" ] && report "raw \$xoopsConfig theme-set assignment — use xoops_resolveThemeConfig() — issue #45" "$hits"
 
+    # 12. Variable variables ($$x and ${$x}) — banned (opaque, injection-
+    #     prone). Access array keys / object properties explicitly instead.
+    hits=$(printf '%s\n' "$added" | grep -E '\$\$[a-zA-Z_]|\$\{[[:space:]]*\$' || true)
+    [ -n "$hits" ] && report "variable-variable \$\$ is banned — access keys/properties explicitly" "$hits"
+
+    # 13. Direct request-superglobal access — route through Xmf\Request
+    #     with an explicit hash, which pins the source (GET/POST) and
+    #     applies filtering. Excludes $_SERVER / $_FILES / $_SESSION /
+    #     $_ENV (legitimately direct) and unset() cleanups. Writes to
+    #     these superglobals ($_POST[x] = ...) are deliberately NOT
+    #     exempted: they are rare and suspicious in their own right, and
+    #     exempting them would let a same-line read such as
+    #     $_COOKIE[x] = $_GET[y] slip past. The [[:space:]]* before `[`
+    #     catches the $_GET ['k'] whitespace form. Added-lines-only scope
+    #     means legacy code is never touched.
+    hits=$(printf '%s\n' "$added" \
+        | grep -E '\$_(GET|POST|REQUEST|COOKIE)[[:space:]]*\[' \
+        | grep -vE 'unset[[:space:]]*\(' || true)
+    [ -n "$hits" ] && report "direct \$_GET/\$_POST/\$_REQUEST/\$_COOKIE — use Xmf\\Request::getX('k', def, 'GET'|'POST')" "$hits"
+
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
     # the </script> breakout concern only applies inside HTML <script>
     # contexts, and the repo legitimately uses the flag elsewhere
