@@ -19,7 +19,13 @@ function smarty_function_xoPageNav($params, &$smarty)
 {
     global $xoops;
 
-    extract($params);
+    // Read params explicitly rather than expanding them into local scope (R-011).
+    $itemsCount = (int) ($params['itemsCount'] ?? 0);
+    $pageSize   = (int) ($params['pageSize'] ?? 0);
+    $offset     = (int) ($params['offset'] ?? 0);
+    $linksCount = (int) ($params['linksCount'] ?? 5);
+    $url        = (string) ($params['url'] ?? '');
+    $class      = (string) ($params['class'] ?? '');
     if ($pageSize < 1) {
         $pageSize = 10;
     }
@@ -36,16 +42,18 @@ function smarty_function_xoPageNav($params, &$smarty)
 
     //TODO Remove this hardcoded strings
     if ($currentPage > 1) {
-        $str .= '<a href="' . $xoops->url(str_replace('%s', $offset - $pageSize, $url)) . '">Previous</a>';
+        $prevUrl = htmlspecialchars($xoops->url(str_replace('%s', (string) ($offset - $pageSize), $url)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $str .= '<a href="' . $prevUrl . '">Previous</a>';
     }
     for ($i = $minPage; $i <= $maxPage; ++$i) {
-        $tgt = htmlspecialchars($xoops->url(str_replace('%s', ($i - 1) * $pageSize, $url)), ENT_QUOTES | ENT_HTML5);
+        $tgt = htmlspecialchars($xoops->url(str_replace('%s', (string) (($i - 1) * $pageSize), $url)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $str .= "<a href='$tgt'>$i</a>";
     }
     if ($currentPage < $lastPage) {
-        $str .= '<a href="' . $xoops->url(str_replace('%s', $offset + $pageSize, $url)) . '">Next</a>';
+        $nextUrl = htmlspecialchars($xoops->url(str_replace('%s', (string) ($offset + $pageSize), $url)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $str .= '<a href="' . $nextUrl . '">Next</a>';
     }
-    $class = @!empty($class) ? htmlspecialchars($class, ENT_QUOTES | ENT_HTML5) : 'pagenav';
+    $class = '' !== $class ? htmlspecialchars($class, ENT_QUOTES | ENT_HTML5, 'UTF-8') : 'pagenav';
 
     $str = "<div class='{$class}'>{$str}</div>";
 

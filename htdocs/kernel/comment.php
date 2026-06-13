@@ -478,8 +478,15 @@ class XoopsCommentHandler extends XoopsObjectHandler
         $sql   = 'SELECT * FROM ' . $this->db->prefix('xoopscomments');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
-            $sort = ($criteria->getSort() != '') ? $criteria->getSort() : 'com_id';
-            $sql .= ' ORDER BY ' . $sort . ' ' . $criteria->getOrder();
+            // Restrict ORDER BY to real columns of this table. xoops_buildOrderBy()
+            // attaches each clause's direction, so the criteria order must NOT be
+            // appended again here (SECURITY.md L-6).
+            $sql .= ' ORDER BY ' . self::buildOrderBy($criteria->getSort(), $criteria->getOrder(), [
+                'com_id', 'com_pid', 'com_rootid', 'com_modid', 'com_itemid', 'com_icon',
+                'com_created', 'com_modified', 'com_uid', 'com_user', 'com_email', 'com_url',
+                'com_ip', 'com_title', 'com_text', 'com_sig', 'com_status', 'com_exparams',
+                'dohtml', 'dosmiley', 'doxcode', 'doimage', 'dobr',
+            ], 'com_id');
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();
         }

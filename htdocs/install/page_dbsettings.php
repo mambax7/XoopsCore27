@@ -68,8 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($vars['DB_NAME'])) {
+    // MySQL identifiers placed inside `backticks` are NOT escaped by
+    // mysqli_real_escape_string — restrict DB_NAME to safe identifier characters
+    // before it reaches CREATE/ALTER DATABASE (SECURITY.md L-12).
+    if (!preg_match('/^[A-Za-z0-9_$]+$/', (string) $vars['DB_NAME'])) {
+        $error = defined('ERR_NO_DATABASE') ? ERR_NO_DATABASE : 'Invalid database name.';
+    } else {
+        $error = validateDbCharset($link, $vars['DB_CHARSET'], $vars['DB_COLLATION']);
+    }
     $dbName   = mysqli_real_escape_string($link, $vars['DB_NAME']);
-    $error    = validateDbCharset($link, $vars['DB_CHARSET'], $vars['DB_COLLATION']);
     $db_exist = true;
     if (empty($error)) {
         if (!@mysqli_select_db($link, $dbName)) {

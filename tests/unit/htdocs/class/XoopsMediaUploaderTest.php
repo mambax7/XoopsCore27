@@ -39,7 +39,8 @@ class XoopsMediaUploaderTest extends TestCase
         $uploader->allowedMimeTypes = [];
         $uploader->deniedMimeTypes = ['application/x-httpd-php'];
         $uploader->extensionsToBeSanitized = [
-            'php', 'phtml', 'phtm', 'php3', 'php4', 'cgi', 'pl', 'asp', 'php5', 'php7',
+            'php', 'phtml', 'phtm', 'pht', 'php3', 'php4', 'php5', 'php7', 'php8',
+            'phar', 'shtml', 'cgi', 'pl', 'asp',
         ];
         $uploader->imageExtensions = [
             1 => 'gif', 2 => 'jpg', 3 => 'png', 4 => 'swf', 5 => 'psd',
@@ -622,14 +623,20 @@ class XoopsMediaUploaderTest extends TestCase
 
     public function testDefaultExtensionsToBeSanitized(): void
     {
-        $uploader = $this->createUploader();
-        $expected = ['php', 'phtml', 'phtm', 'php3', 'php4', 'cgi', 'pl', 'asp', 'php5', 'php7'];
+        // Read the real class default (the shared fixture overrides this property,
+        // which would make the assertion self-fulfilling) so a regression in the
+        // class default is actually caught.
+        $uploader = (new ReflectionClass(\XoopsMediaUploader::class))->newInstanceWithoutConstructor();
+        $expected = [
+            'php', 'phtml', 'phtm', 'pht', 'php3', 'php4', 'php5', 'php7', 'php8',
+            'phar', 'shtml', 'cgi', 'pl', 'asp',
+        ];
         $this->assertSame($expected, $uploader->extensionsToBeSanitized);
     }
 
     public function testDefaultDeniedMimeTypes(): void
     {
-        $uploader = $this->createUploader();
+        $uploader = (new ReflectionClass(\XoopsMediaUploader::class))->newInstanceWithoutConstructor();
         $this->assertSame(['application/x-httpd-php'], $uploader->deniedMimeTypes);
     }
 

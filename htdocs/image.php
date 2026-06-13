@@ -257,6 +257,12 @@ function imageFilenameCheck($imageUrl)
 $imageId = Request::getInt('id', 0, 'GET');
 $imageUrl = Request::getUrl('url', Request::getString('src', '', 'GET'), 'GET');
 
+// Source-image guards: reject oversized inputs BEFORE decoding so a crafted
+// file or DB blob cannot drive a huge allocation in imagecreatefrom*()
+// (a decode bomb is expensive even when the OUTPUT is later capped) — M-14.
+$imgSrcMaxBytes  = 26214400; // 25 MiB cap on the raw source data
+$imgSrcMaxPixels = 40000000; // ~40 MP cap on the decoded source dimensions
+
 if (!empty($imageId)) {
     // If image is a Xoops image
     /** @var XoopsImageHandler $imageHandler */
@@ -289,9 +295,28 @@ if (!empty($imageId)) {
         $imageData = $image->getVar('image_body');
     } else {
         $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
+        // Cap the file on disk BEFORE reading it into memory (M-14). Treat a
+        // stat failure (filesize() === false) as a rejection, not a pass.
+        $srcBytes = is_file($imagePath) ? filesize($imagePath) : false;
+        if (false === $srcBytes || $srcBytes > $imgSrcMaxBytes) {
+            exitInvalidRequest();
+        }
         $imageData = file_get_contents($imagePath);
     }
+    // Cap the raw blob and its decoded dimensions before allocating (M-14).
+    if (!is_string($imageData) || strlen($imageData) > $imgSrcMaxBytes) {
+        exitInvalidRequest();
+    }
+    $srcInfo = getimagesizefromstring($imageData);
+    if (false === $srcInfo || ($srcInfo[0] * $srcInfo[1]) > $imgSrcMaxPixels) {
+        exitInvalidRequest();
+    }
     $sourceImage = imagecreatefromstring($imageData);
+    // imagesx()/imagesy() require a GdImage; reject a decode failure rather than
+    // passing false into them (a TypeError under PHP 8).
+    if (!($sourceImage instanceof \GdImage)) {
+        exitInvalidRequest();
+    }
     $imageWidth = imagesx($sourceImage);
     $imageHeight = imagesy($sourceImage);
 } elseif (!empty($imageUrl)) {
@@ -316,6 +341,18 @@ if (!empty($imageId)) {
     // Get the size and MIME type of the requested image
     $imageFilename = basename($imagePath);  // image filename
     $imagesize = getimagesize($imagePath);
+    // Reject before decode if the source is unreadable or would decode to an
+    // excessive pixel count (M-14). The byte cap only applies to a local file —
+    // if ONLY_LOCAL_IMAGES is ever disabled, $imagePath may be a remote URL, where
+    // is_file()/filesize() do not apply (the pixel cap from getimagesize() still
+    // does). For a local file a stat failure is a rejection, not a pass.
+    $isLocalSource = is_file($imagePath);
+    $srcBytes      = $isLocalSource ? filesize($imagePath) : false;
+    if (false === $imagesize
+        || ($isLocalSource && (false === $srcBytes || $srcBytes > $imgSrcMaxBytes))
+        || ($imagesize[0] * $imagesize[1]) > $imgSrcMaxPixels) {
+        exitInvalidRequest();
+    }
     $imageWidth = $imagesize[0];
     $imageHeight = $imagesize[1];
     $imageMimetype = $imagesize['mime'];
@@ -337,6 +374,11 @@ if (!empty($imageId)) {
         default:
             exitInvalidRequest();
             break;
+    }
+    // Reject a decode failure before imagesx() further down (parity with the
+    // DB-blob path; avoids a PHP 8 TypeError on a corrupt file).
+    if (!($sourceImage instanceof \GdImage)) {
+        exitInvalidRequest();
     }
 } else {
     // No id, no url, no src parameters

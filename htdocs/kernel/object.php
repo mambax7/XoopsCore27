@@ -1067,6 +1067,59 @@ class XoopsObjectHandler
     }
 
     /**
+     * Build a safe ORDER BY column list from a (possibly multi-column) sort string.
+     *
+     * Splits $sort on commas, keeps only tokens whose (optionally table-qualified)
+     * column name is in $allowedColumns, and gives each clause a direction: its own
+     * ASC/DESC when present, otherwise the sanitized $order. The emitted clause uses
+     * $columnPrefix . column — any qualifier on the INPUT is dropped and replaced with
+     * the caller's canonical prefix, so an unknown alias (e.g. "bogus.com_id") cannot
+     * reach the SQL, and a joined query can force its own alias (e.g. "i.") to keep
+     * columns shared by two tables unambiguous. Single-table callers pass '' (the
+     * default) for bare columns. This blocks ORDER BY injection, supports multi-column
+     * sorts, and — because each clause already carries its direction — must be used
+     * WITHOUT appending the criteria order again.
+     *
+     * @param  string   $sort           raw sort string, e.g. "image_weight ASC, image_id"
+     * @param  string   $order          default direction (ASC/DESC) for clauses with none
+     * @param  string[] $allowedColumns lowercase column names permitted for this table
+     * @param  string   $defaultColumn  column used when no valid clause remains
+     * @param  string   $columnPrefix   canonical qualifier prepended to every column
+     *                                   (e.g. "i."); '' emits bare columns. Only ''
+     *                                   or a single "alias." is honoured; anything
+     *                                   else is neutralised to ''.
+     * @return string   a safe ORDER BY column list including directions
+     */
+    public static function buildOrderBy($sort, $order, array $allowedColumns, $defaultColumn, $columnPrefix = '')
+    {
+        $order = strtoupper(trim((string) $order));
+        if ('ASC' !== $order && 'DESC' !== $order) {
+            $order = 'ASC';
+        }
+        // Defence-in-depth: this is a public static helper, so do not trust the
+        // prefix even though current callers pass literals. Accept only '' or a
+        // single "alias." qualifier; anything else is neutralised to ''.
+        $columnPrefix = (string) $columnPrefix;
+        if ('' !== $columnPrefix && 1 !== preg_match('/^[A-Za-z_]\w*\.$/', $columnPrefix)) {
+            $columnPrefix = '';
+        }
+        $parts = [];
+        foreach (explode(',', (string) $sort) as $token) {
+            if (preg_match('/^\s*((?:[A-Za-z_]\w*\.)?)([A-Za-z_]\w*)\s*(ASC|DESC)?\s*$/i', $token, $m)
+                && in_array(strtolower($m[2]), $allowedColumns, true)) {
+                $direction = ('' !== ($m[3] ?? '')) ? strtoupper($m[3]) : $order;
+                // Drop the caller-supplied qualifier and apply the canonical prefix.
+                $parts[]   = $columnPrefix . $m[2] . ' ' . $direction;
+            }
+        }
+        if ([] === $parts) {
+            return $columnPrefix . $defaultColumn . ' ' . $order;
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
      * PHP 4 style constructor compatibility shim
      *
      * @param XoopsDatabase $db database object
