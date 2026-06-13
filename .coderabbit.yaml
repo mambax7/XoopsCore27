@@ -45,7 +45,10 @@ reviews:
     - path: "tests/**/*.php"
       instructions: >-
         Review test code for proper assertions, test isolation, and edge
-        case coverage. Tests must work across PHPUnit 9.6, 10, and 11.
+        case coverage. The project pins PHPUnit ^11.2 (see composer/CLAUDE.md)
+        and uses its attribute API throughout (#[Test], #[DataProvider],
+        #[CoversClass]). Do NOT flag those attributes or the absence of a
+        test* method-name prefix as PHPUnit 9.6/10 incompatibilities.
   tools:
     phpcs:
       enabled: true
