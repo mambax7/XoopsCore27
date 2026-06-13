@@ -10,14 +10,19 @@ parameters:
     excludePaths:
         analyseAndScan:
             - htdocs/xoops_data/caches
-            - htdocs/class/libraries/vendor/
+            # vendor trees are gitignored / composer-installed, so they are absent in
+            # checkouts that skip `composer install` (e.g. CodeRabbit's PHPStan run).
+            # `(?)` marks the path optional so PHPStan does not error when it is missing.
+            - htdocs/class/libraries/vendor/ (?)
             - tests/
         analyse:
             - htdocs/class/auth/
             - htdocs/install/
-            - htdocs/xoops_lib/vendor/
+            - htdocs/xoops_lib/vendor/ (?)
     scanFiles:
-        - htdocs/xoops_lib/vendor/kint-php/kint/src/Kint.php
+        # Same vendor tree as above — optional so PHPStan does not error when the
+        # kint dependency is absent (checkouts without `composer install`).
+        - htdocs/xoops_lib/vendor/kint-php/kint/src/Kint.php (?)
     stubFiles:
         - phpstan-constants.stub.php
     treatPhpDocTypesAsCertain: false
