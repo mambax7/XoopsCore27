@@ -65,8 +65,9 @@ class XoopsCaptchaText extends XoopsCaptchaMethod
 
     protected function buildQuestion()
     {
-        $val_a = mt_rand(0, 9);
-        $val_b = mt_rand(0, 9);
+        // CSPRNG for the challenge operands (SECURITY.md M-15).
+        $val_a = random_int(0, 9);
+        $val_b = random_int(0, 9);
         if ($val_a > $val_b) {
             $expression = "{$val_a} - {$val_b} = ?";
             $this->code = $val_a - $val_b;

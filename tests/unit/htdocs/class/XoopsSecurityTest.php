@@ -145,7 +145,20 @@ class TestableXoopsSecurity extends \XoopsSecurity
         if ($ref == '') {
             return false;
         }
-        return !(strpos($ref, XOOPS_URL) !== 0);
+        // Mirror of the real XoopsSecurity::checkReferer() — exact scheme/host/port compare.
+        $refParts  = parse_url($ref);
+        $baseParts = parse_url(XOOPS_URL);
+        if ($refParts === false || $baseParts === false || empty($refParts['host']) || empty($baseParts['host'])) {
+            return false;
+        }
+        $refScheme  = strtolower($refParts['scheme'] ?? '');
+        $baseScheme = strtolower($baseParts['scheme'] ?? 'http');
+        $refPort    = (int) ($refParts['port'] ?? ('https' === $refScheme ? 443 : 80));
+        $basePort   = (int) ($baseParts['port'] ?? ('https' === $baseScheme ? 443 : 80));
+
+        return strcasecmp((string) $refParts['host'], (string) $baseParts['host']) === 0
+            && $refScheme === $baseScheme
+            && $refPort === $basePort;
     }
 
     public function setErrors($error)
@@ -549,6 +562,27 @@ class XoopsSecurityTest extends TestCase
     public function testCheckRefererReturnsFalseForNonMatchingUrl(): void
     {
         $_SERVER['HTTP_REFERER'] = 'http://evil.example.com/attack.php';
+        $this->assertFalse($this->security->checkReferer(1));
+    }
+
+    public function testCheckRefererRejectsSiblingHostPrefix(): void
+    {
+        // XOOPS_URL is http://localhost; the old strpos()-prefix check accepted this
+        // sibling host, the exact-origin compare must reject it (L-5).
+        $_SERVER['HTTP_REFERER'] = XOOPS_URL . '.attacker.test/attack.php';
+        $this->assertFalse($this->security->checkReferer(1));
+    }
+
+    public function testCheckRefererRejectsSchemeMismatch(): void
+    {
+        // http://localhost vs https://localhost are different origins.
+        $_SERVER['HTTP_REFERER'] = 'https://localhost/modules/test/index.php';
+        $this->assertFalse($this->security->checkReferer(1));
+    }
+
+    public function testCheckRefererRejectsPortMismatch(): void
+    {
+        $_SERVER['HTTP_REFERER'] = 'http://localhost:8080/modules/test/index.php';
         $this->assertFalse($this->security->checkReferer(1));
     }
 

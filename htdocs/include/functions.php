@@ -621,11 +621,13 @@ function xoops_makepass()
         'be',
         'se',
     ];
+    // Use a CSPRNG: generated passwords must not be predictable (SECURITY.md M-3).
+    $syllableCount = count($syllables);
     for ($count = 1; $count <= 4; ++$count) {
-        if (mt_rand() % 10 == 1) {
-            $makepass .= sprintf('%0.0f', (mt_rand() % 50) + 1);
+        if (random_int(0, 9) === 1) {
+            $makepass .= sprintf('%0.0f', random_int(1, 50));
         } else {
-            $makepass .= sprintf('%s', $syllables[mt_rand() % 62]);
+            $makepass .= sprintf('%s', $syllables[random_int(0, $syllableCount - 1)]);
         }
     }
 
