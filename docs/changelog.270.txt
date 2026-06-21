@@ -1,6 +1,74 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.1 Beta 2                  2026-06
+===================================
+Version and platform:
+- start the 2.7.1 Beta 2 cycle; set XOOPS_VERSION to "XOOPS 2.7.1-Beta2" (mamba)
+
+Dependencies:
+- add xoops/helpers ^1.0 and tecnickcom/tcpdf ^6.10 to the bundled libraries (mamba)
+- bump xoops/smartyextensions from ^1.0 to ^1.3 (brings chillerlan/php-qrcode for QR support) (mamba)
+- bump xoops/xmf from ^1.3.0 to ^1.3.1 (mamba)
+- update webmozart/assert from 2.4.0 to 2.4.1 (mamba)
+
+===================================
+2.7.1 Beta 1                  2026-05
+===================================
+Version and platform:
+- 2.7.1 updates (mamba) in #82
+
+Forms and templates:
+- add XoopsFormTabTray tabbed widget with themed renderers (mamba) in #87
+- introduce XoopsFormContainerInterface to formalise the form-container contract (mamba) in #90
+- adopt XoopsFormContainerInterface in XoopsForm and iterate containers by reference (mamba) in #91
+- add SmartyExtensions and register them across themes (mamba) in #97
+- preserve TinyMCE 7 language locale casing such as zh_TW (masskrdjn) in #72
+- map XOOPS locale to the TinyMCE 7 language pack code (issue #76) (mamba) in #78
+- fix default theme: keep inline rich-text baseline aligned (mamba) in #84
+
+Core:
+- consolidate theme-config normalisation across runtime readers (mamba) in #81
+
+System:
+- hydrate module fields when cloning a block (issue #73) (mamba) in #77
+- fix profile search active-filter handling (mamba) in #98
+
+Themes:
+- add dark mode to xbootstrap5, xswatch5 and xtailwind2, and register SmartyExtensions (mamba) in #100
+
+Security hardening:
+- security/hardening pass (mamba) in #92
+- medium-tier hardening pass 2 (mamba) in #102
+- medium/low defence-in-depth hardening pass 3 (mamba) in #105
+- security tooling (mamba) in #101
+
+Upgrade:
+- upgrade tool: Smarty 4->5 readiness gate, 2.7.0->2.7.1 step, and hardening (mamba) in #96
+
+Tests:
+- isolate the TinyMCE 7 language test (mamba) in #75
+
+Tooling and CI:
+- scope Sonar S115/S3011 out of test sources (mamba) in #74
+- make codecov patch coverage informational (mamba) in #99
+- mark gitignored vendor excludePaths as optional in PHPStan (mamba) in #103
+- align CodeRabbit test-review instruction with PHPUnit ^11.2 (mamba) in #104
+
+Dependencies:
+- bump SonarSource/sonarqube-scan-action from 8.0.0 to 8.2.0 (dependabot) in #79, #94
+- bump codecov/codecov-action from 6.0.0 to 7.0.0 (dependabot) in #80, #93
+- bump shivammathur/setup-php from 2.37.1 to 2.37.2 (dependabot) in #95
+- bump actions/checkout from 6.0.2 to 6.0.3 (dependabot) in #85
+- bump postcss from 8.5.8 to 8.5.15 in xtailwind and xtailwind2 (dependabot) in #83, #86
+
+Documentation:
+- regenerate CHANGELOG.md (github-actions) in #70
+
+New contributor:
+- @masskrdjn (first contribution in #72)
+
+===================================
 2.7.0 Final                  2026-05
 ===================================
 Version and platform:

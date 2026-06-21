@@ -331,18 +331,26 @@ final class XoopsCoreExtension extends AbstractExtension
     // ---------------------------------------------------------------
 
     /**
-     * Looks up a XOOPS language constant. Returns the constant value if defined,
-     * or the original string as a fallback.
+     * Looks up a XOOPS language constant. Returns the constant value when defined;
+     * otherwise the optional $default, or the original string when no default is given.
+     *
+     * The $default argument lets this modifier replace the common
+     * `<{$smarty.const.X|default:'…'}>` idiom (which leaks the literal constant
+     * name when X is undefined) with `<{"X"|translate:'…'}>`.
+     *
+     * Returns a raw string (language constants may contain markup); pipe through
+     * |escape when interpolating the result into HTML attribute/text context.
      *
      * Usage: <{$string|translate}>
      *        <{"_MI_NEWS_TITLE"|translate}>
+     *        <{"_MI_NEWS_TITLE"|translate:'Latest news'}>
      */
-    public function translate(string $string): string
+    public function translate(string $string, ?string $default = null): string
     {
         if (\defined($string)) {
-            return \constant($string);
+            return (string) \constant($string);
         }
 
-        return $string;
+        return $default ?? $string;
     }
 }

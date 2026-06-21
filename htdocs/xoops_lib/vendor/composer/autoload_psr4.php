@@ -6,8 +6,11 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'chillerlan\\Settings\\' => array($vendorDir . '/chillerlan/php-settings-container/src'),
+    'chillerlan\\QRCode\\' => array($vendorDir . '/chillerlan/php-qrcode/src'),
     'Xoops\\SmartyExtensions\\' => array($vendorDir . '/xoops/smartyextensions/src'),
     'Xoops\\RegDom\\' => array($vendorDir . '/xoops/regdom/src'),
+    'Xoops\\Helpers\\' => array($vendorDir . '/xoops/helpers/src'),
     'Xmf\\' => array($vendorDir . '/xoops/xmf/src'),
     'Webmozart\\Assert\\' => array($vendorDir . '/webmozart/assert/src'),
     'Symfony\\Polyfill\\Mbstring\\' => array($vendorDir . '/symfony/polyfill-mbstring'),

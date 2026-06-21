@@ -96,17 +96,15 @@ final class FormatExtension extends AbstractExtension
      */
     public function formatDate(string|int $date, string $format = 'Y-m-d H:i:s'): string
     {
-        try {
-            if (\is_numeric($date)) {
-                $dateObj = new \DateTimeImmutable('@' . (int) $date);
-            } else {
-                $dateObj = new \DateTimeImmutable($date);
-            }
+        $dateObj = $this->toDateTime($date);
 
-            return $dateObj->format($format);
-        } catch (\Exception) {
+        // Already-formatted display strings (e.g. XOOPS formatTimestamp output) are
+        // returned unchanged rather than re-parsed and reformatted (S3).
+        if ($dateObj === null) {
             return (string) $date;
         }
+
+        return $dateObj->format($format);
     }
 
     /**
@@ -116,13 +114,10 @@ final class FormatExtension extends AbstractExtension
      */
     public function relativeTime(string|int $timestamp): string
     {
-        try {
-            if (\is_numeric($timestamp)) {
-                $date = new \DateTimeImmutable('@' . (int) $timestamp);
-            } else {
-                $date = new \DateTimeImmutable($timestamp);
-            }
-        } catch (\Exception) {
+        $date = $this->toDateTime($timestamp);
+
+        // A pre-formatted display string cannot be made relative — pass it through (S3).
+        if ($date === null) {
             return (string) $timestamp;
         }
 
@@ -139,6 +134,31 @@ final class FormatExtension extends AbstractExtension
             $diff->i > 0 => $diff->i . ' minute' . ($diff->i > 1 ? 's' : '') . $suffix,
             default       => 'Just now',
         };
+    }
+
+    /**
+     * Resolve a temporal input to a DateTimeImmutable for formatting (S3).
+     *
+     * Numeric values are treated as Unix timestamps and ISO-8601-style strings
+     * (YYYY-MM-DD[ T]HH:MM[:SS]) are parsed. Any other string is assumed to be an
+     * already-formatted display value (e.g. XOOPS formatTimestamp output) and
+     * yields null so the caller can return it unchanged instead of corrupting it.
+     */
+    private function toDateTime(string|int $value): ?\DateTimeImmutable
+    {
+        try {
+            if (\is_numeric($value)) {
+                return new \DateTimeImmutable('@' . (int) $value);
+            }
+
+            if (\preg_match('/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/', (string) $value) === 1) {
+                return new \DateTimeImmutable((string) $value);
+            }
+        } catch (\Exception) {
+            return null;
+        }
+
+        return null;
     }
 
     /**
