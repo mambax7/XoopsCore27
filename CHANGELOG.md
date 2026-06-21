@@ -5,6 +5,50 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.1-beta1] - 2026-06-13
+
+### Bug Fixes
+- Keep inline rich text baseline aligned (#84)
+- Map XOOPS locale to TinyMCE 7 pack code (#76) (#78)
+- Hydrate module fields when cloning a block (#73) (#77)
+- Preserve TinyMCE 7 language locale casing
+
+### Documentation
+- Regenerate CHANGELOG.md
+
+### Features
+- Add XoopsFormTabTray tabbed widget + themed renderers (#87)
+
+### Miscellaneous
+- Align test review instruction with PHPUnit ^11.2 (#104)
+- Mark gitignored vendor excludePaths as optional (#103)
+- Make patch coverage informational (#99)
+- Scope S115/S3011 out of test sources
+
+### Other
+- Medium/low defence-in-depth hardening (pass 3) (#105)
+- Medium-tier hardening pass (pass 2) (#102)
+- Chore/security tooling (#101)
+- Dark-mode for xbootstrap5/xswatch5/xtailwind2 + register smartyextensions (#100)
+- Fix/profile search active filter (#98)
+- Add SmartyExtensions (#97)
+- Upgrade tool: Smarty 4→5 readiness gate, 2.7.0→2.7.1 step, and hardening (#96)
+- Security/hardening pass (#92)
+- 2.7.1 updates (#82)
+- Consolidate theme-config normalisation across runtime readers (#81)
+- Merge pull request #80 from XOOPS/dependabot/github_actions/codecov/codecov-action-6.0.1
+- Merge pull request #79 from XOOPS/dependabot/github_actions/SonarSource/sonarqube-scan-action-8.1.0
+- Merge pull request #74 from mambax7/chore/sonar-ignore-test-rules
+- Merge pull request #70 from XOOPS/automation/update-changelog
+- Merge pull request #72 from masskrdjn/fix-TinyMCE-7-language-loading-break
+
+### Refactor
+- Adopt XoopsFormContainerInterface in XoopsForm + foreach-by-ref container iteration (#91)
+- Introduce XoopsFormContainerInterface for container contract (#90)
+
+### Testing
+- Isolate the TinyMCE7 language test (#75)
+
 ## [2.7.0] - 2026-05-15
 
 ### Bug Fixes
