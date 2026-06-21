@@ -195,32 +195,27 @@ class ModuleAdmin
     public function renderButton($position = 'right', $delimeter = '&nbsp;')
     {
         $this->addAssets();
-        $path = self::iconUrl32();
-        switch ($position) {
-            default:
-            case 'right':
-                $ret = "<div class=\"floatright\">\n";
-                break;
-
-            case 'left':
-                $ret = "<div class=\"floatleft\">\n";
-                break;
-
-            case 'center':
-                $ret = "<div class=\"aligncenter\">\n";
+        $ret = '';
+        if (count($this->_itemButton) > 0) {
+            $path = self::iconUrl32();
+            $classMap = [
+                'right'  => 'floatright',
+                'left'   => 'floatleft',
+                'center' => 'aligncenter',
+            ];
+            $class = $classMap[$position] ?? 'floatright';
+            $ret = "<div class=\"{$class}\">\n";
+            $ret .= "<div class=\"xo-buttons\">\n";
+            foreach ($this->_itemButton as $button) {
+                $ret .= "<a class='ui-corner-all tooltip' href='" . $button['link'] . "' title='" . $button['title'] . "' " . $button['extra'] . '>';
+                $ret .= "<img src='"
+                    . (filter_var($button['icon'], FILTER_VALIDATE_URL) ? $button['icon'] : $path . $button['icon']) . "' title='" . $button['title'] . "' alt='" . $button['title'] . "' />" . $button['title'];
+                $ret .= "</a>\n";
+                $ret .= $delimeter;
+            }
+            $ret .= "</div>\n</div>\n";
+            $ret .= "<div class='clear'></div>\n";
         }
-        $ret .= "<div class=\"xo-buttons\">\n";
-        foreach (array_keys($this->_itemButton) as $i) {
-            $ret .= "<a class='ui-corner-all tooltip' href='" . $this->_itemButton[$i]['link'] . "' title='" . $this->_itemButton[$i]['title'] . "' " . $this->_itemButton[$i]['extra'] . '>';
-            $ret .= "<img src='"
-                    //. $path . $this -> _itemButton[$i]['icon']
-                    //mb for direct URL access to icons in modules Admin
-                    . (filter_var($this->_itemButton[$i]['icon'], FILTER_VALIDATE_URL) ? $this->_itemButton[$i]['icon'] : $path . $this->_itemButton[$i]['icon']) . "' title='" . $this->_itemButton[$i]['title'] . "' alt='" . $this->_itemButton[$i]['title'] . "' />" . $this->_itemButton[$i]['title'];
-            $ret .= "</a>\n";
-            $ret .= $delimeter;
-        }
-        $ret .= "</div>\n</div>\n";
-        $ret .= '<br>&nbsp;<br><br>';
 
         return $ret;
     }
