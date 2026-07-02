@@ -189,7 +189,7 @@ switch ($op) {
                 $err[] = $uploader_smilies_img->getErrors();
             }
         } else {
-            $obj->setVar('smile_url', 'smilies/' . Request::getString('smile_url', '', 'POST'));
+            $obj->setVar('smile_url', 'smilies/' . basename(Request::getString('smile_url', '', 'POST')));
             if (!$smilies_Handler->insert($obj)) {
                 $err[] = sprintf(_FAILSAVEIMG, $obj->getVar('code'));
             }
@@ -218,10 +218,15 @@ switch ($op) {
                 redirect_header('admin.php?fct=smilies', 3, implode(',', $GLOBALS['xoopsSecurity']->getErrors()));
             }
             if ($smilies_Handler->delete($obj)) {
-                $urlfile = XOOPS_UPLOAD_PATH . '/' . $obj->getVar('smile_url');
-                if (is_file($urlfile)) {
-                    chmod($urlfile, 0777);
-                    unlink($urlfile);
+                // Contain the unlink to the uploads directory: a stored
+                // smile_url containing ../ must not drive a delete outside it.
+                $uploadReal = realpath(XOOPS_UPLOAD_PATH);
+                $fileReal   = realpath(XOOPS_UPLOAD_PATH . '/' . $obj->getVar('smile_url'));
+                if (false !== $uploadReal && false !== $fileReal
+                    && str_starts_with($fileReal, $uploadReal . DIRECTORY_SEPARATOR)
+                    && is_file($fileReal)) {
+                    chmod($fileReal, 0777);
+                    unlink($fileReal);
                 }
                 redirect_header('admin.php?fct=smilies', 2, _AM_SYSTEM_SMILIES_SAVE);
             } else {

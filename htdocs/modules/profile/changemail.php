@@ -41,6 +41,14 @@ if (!Request::hasVar('submit', 'POST') || !Request::hasVar('passwd', 'POST')) {
     $form->addElement(new XoopsFormButton('', 'submit', _SUBMIT, 'submit'));
     $form->assign($GLOBALS['xoopsTpl']);
 } else {
+    // Validate the CSRF token the form advertises before changing the email.
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        redirect_header(
+            XOOPS_URL . '/modules/' . $GLOBALS['xoopsModule']->getVar('dirname', 'n') . '/userinfo.php?uid=' . $GLOBALS['xoopsUser']->getVar('uid'),
+            3,
+            implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()),
+        );
+    }
     $myts  = \MyTextSanitizer::getInstance();
     $pass  = Request::getVar('passwd', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
     $email = trim(Request::getString('newmail', '', 'POST'));
