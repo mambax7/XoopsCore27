@@ -895,7 +895,7 @@ class XoopsBlock extends XoopsObject
     {
         $db          = XoopsDatabaseFactory::getDatabaseConnection();
         $ret         = [];
-        $where_query = ' WHERE isactive=' . $isactive;
+        $where_query = ' WHERE isactive=' . (int) $isactive;
         if (isset($side)) {
             // get both sides in sidebox? (some themes need this)
             if ($side == XOOPS_SIDEBLOCK_BOTH) {
@@ -905,12 +905,17 @@ class XoopsBlock extends XoopsObject
             } elseif ($side == XOOPS_FOOTERBLOCK_ALL) {
                 $side = '(side=10 OR side=11 OR side=12)';
             } else {
-                $side = 'side=' . $side;
+                $side = 'side=' . (int) $side;
             }
             $where_query .= ' AND ' . $side;
         }
         if (isset($visible)) {
-            $where_query .= ' AND visible=.' . $visible;
+            $where_query .= ' AND visible=' . (int) $visible;
+        }
+        // Allowlist the ORDER BY column list; fall back to the default on any
+        // fragment that is not a plain comma-separated column list.
+        if (!preg_match('/^[A-Za-z0-9_,\s]+$/', (string) $orderby)) {
+            $orderby = 'side,weight,bid';
         }
         $where_query .= ' ORDER BY ' . $orderby;
         switch ($rettype) {
@@ -1281,25 +1286,27 @@ class XoopsBlockHandler extends XoopsObjectHandler
             return false;
         }
 
+        // String columns are placed into single-quoted '%s' sprintf slots below,
+        // which do not escape; run each through escape() to close that gap.
         $bid = $block->getVar('bid', 'n');
         $mid = $block->getVar('mid', 'n');
         $func_num = $block->getVar('func_num', 'n');
-        $options = $block->getVar('options', 'n');
-        $name = $block->getVar('name', 'n');
-        $title = $block->getVar('title', 'n');
-        $content = $block->getVar('content', 'n');
+        $options = $this->db->escape($block->getVar('options', 'n'));
+        $name = $this->db->escape($block->getVar('name', 'n'));
+        $title = $this->db->escape($block->getVar('title', 'n'));
+        $content = $this->db->escape($block->getVar('content', 'n'));
         $side = $block->getVar('side', 'n');
         $weight = $block->getVar('weight', 'n');
         $visible = $block->getVar('visible', 'n');
-        $c_type = $block->getVar('c_type', 'n');
+        $c_type = $this->db->escape($block->getVar('c_type', 'n'));
         $isactive = $block->getVar('isactive', 'n');
-        $func_file = $block->getVar('func_file', 'n');
-        $show_func = $block->getVar('show_func', 'n');
-        $edit_func = $block->getVar('edit_func', 'n');
-        $template = $block->getVar('template', 'n');
+        $func_file = $this->db->escape($block->getVar('func_file', 'n'));
+        $show_func = $this->db->escape($block->getVar('show_func', 'n'));
+        $edit_func = $this->db->escape($block->getVar('edit_func', 'n'));
+        $template = $this->db->escape($block->getVar('template', 'n'));
         $bcachetime = $block->getVar('bcachetime', 'n');
-        $block_type = $block->getVar('block_type', 'n');
-        $dirname = $block->getVar('dirname', 'n');
+        $block_type = $this->db->escape($block->getVar('block_type', 'n'));
+        $dirname = $this->db->escape($block->getVar('dirname', 'n'));
 
         if ($block->isNew()) {
             $bid = $this->db->genId('newblocks_bid_seq');
