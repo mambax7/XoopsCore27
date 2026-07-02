@@ -151,8 +151,15 @@ EOAVJS;
                 $xoopsMailer->assign('YOUR_NAME', $yname);
                 $xoopsMailer->assign('FRIEND_NAME', $fname);
                 $xoopsMailer->setToEmails($fmail);
-                $xoopsMailer->setFromEmail($ymail);
-                $xoopsMailer->setFromName($yname);
+                // Send From the site itself, not the (attacker-choosable) sender
+                // address: this protects the site's sending reputation/SPF and
+                // stops the anonymous tell-a-friend form being used to spoof a
+                // From header. Replies still reach the real sender via Reply-To
+                // ($ymail is FILTER_VALIDATE_EMAIL-checked above, so it is safe
+                // to place in a header).
+                $xoopsMailer->setFromEmail($xoopsConfig['adminmail']);
+                $xoopsMailer->setFromName($xoopsConfig['sitename']);
+                $xoopsMailer->addHeaders('Reply-To: ' . $ymail);
                 $xoopsMailer->setSubject(sprintf(_MSC_INTSITE, $xoopsConfig['sitename']));
 
                 if (!$xoopsMailer->send()) {
