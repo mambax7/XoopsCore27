@@ -30,6 +30,34 @@ if (!xoops_getModuleOption('active_maintenance', 'system')) {
 // Get Action type
 $op = Request::hasVar('op', 'POST') ? Request::getString('op', 'list', 'POST') : Request::getString('op', 'list', 'GET');
 
+// Authenticated download of a previously generated SQL dump. Handled here,
+// before any control-panel HTML is emitted, and only reachable by an admin
+// (verified above). The dump lives outside the web root; the requested name is
+// basename-reduced, pattern-checked and realpath-contained to the dumps dir.
+if ('dump_download' === $op) {
+    $requested = basename(Request::getString('file', '', 'GET'));
+    $dumpDir   = SystemMaintenance::dumpDirectory();
+    $baseReal  = realpath($dumpDir);
+    $fileReal  = realpath($dumpDir . '/' . $requested);
+    if ('' === $requested
+        || !preg_match('/^dump_[0-9._]+_[0-9a-f]{16}\.sql$/', $requested)
+        || false === $baseReal || false === $fileReal
+        || !str_starts_with($fileReal, $baseReal . DIRECTORY_SEPARATOR)
+        || !is_file($fileReal)) {
+        redirect_header('admin.php?fct=maintenance', 3, _AM_SYSTEM_MAINTENANCE_DUMP_ERROR_TABLES_OR_MODULES);
+        exit;
+    }
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    header('Content-Type: application/sql');
+    header('Content-Disposition: attachment; filename="' . $requested . '"');
+    header('Content-Length: ' . filesize($fileReal));
+    header('X-Content-Type-Options: nosniff');
+    readfile($fileReal);
+    exit;
+}
+
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_maintenance.tpl';
 // Call Header
