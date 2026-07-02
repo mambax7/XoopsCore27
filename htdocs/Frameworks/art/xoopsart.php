@@ -24,6 +24,11 @@ class xoopsart
      */
     public function loadFunctions($group = '')
     {
+        // Confine $group to a plain identifier so it cannot traverse the path.
+        if ('' !== $group && !preg_match('/^[a-zA-Z0-9_]+$/', (string) $group)) {
+            return false;
+        }
+
         return include_once FRAMEWORKS_ROOT_PATH . "/art/functions.{$group}" . (empty($group) ? '' : '.') . 'php';
     }
 }
