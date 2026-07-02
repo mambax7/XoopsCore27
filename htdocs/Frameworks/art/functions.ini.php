@@ -60,7 +60,13 @@ function load_object()
  */
 function load_functions($group = '', $dirname = 'art')
 {
-    $dirname  = ('' == $dirname) ? 'art' : $dirname;
+    $dirname  = ('' == $dirname) ? 'art' : basename((string) $dirname);
+    // Confine the path segments to plain identifiers so neither can traverse
+    // out of the frameworks directory (latent LFI).
+    if (('' !== $group && !preg_match('/^[a-zA-Z0-9_]+$/', (string) $group))
+        || !preg_match('/^[a-zA-Z0-9_-]+$/', (string) $dirname)) {
+        return false;
+    }
     $constant = strtoupper("frameworks_{$dirname}_functions" . ($group ? "_{$group}" : ''));
     if (defined($constant)) {
         return true;
@@ -83,7 +89,12 @@ function load_functions($group = '', $dirname = 'art')
  */
 function mod_loadFunctions($group = '', $dirname = '')
 {
-    $dirname  = !empty($dirname) ? $dirname : $GLOBALS['xoopsModule']->getVar('dirname', 'n');
+    $dirname  = !empty($dirname) ? basename((string) $dirname) : $GLOBALS['xoopsModule']->getVar('dirname', 'n');
+    // Confine the path segments to plain identifiers (latent LFI).
+    if (('' !== $group && !preg_match('/^[a-zA-Z0-9_]+$/', (string) $group))
+        || !preg_match('/^[a-zA-Z0-9_-]+$/', (string) $dirname)) {
+        return false;
+    }
     $constant = strtoupper("{$dirname}_functions" . ($group ? "_{$group}" : '') . '_loaded');
     if (defined($constant)) {
         return true;

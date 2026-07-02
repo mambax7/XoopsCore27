@@ -207,9 +207,14 @@ class ModuleAdmin
             $ret = "<div class=\"{$class}\">\n";
             $ret .= "<div class=\"xo-buttons\">\n";
             foreach ($this->_itemButton as $button) {
-                $ret .= "<a class='ui-corner-all tooltip' href='" . $button['link'] . "' title='" . $button['title'] . "' " . $button['extra'] . '>';
-                $ret .= "<img src='"
-                    . (filter_var($button['icon'], FILTER_VALIDATE_URL) ? $button['icon'] : $path . $button['icon']) . "' title='" . $button['title'] . "' alt='" . $button['title'] . "' />" . $button['title'];
+                // Escape the attribute/text values; $extra is pre-rendered markup
+                // (event handlers / extra attributes) and passes through raw.
+                $btnTitle = htmlspecialchars((string) $button['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $btnLink  = htmlspecialchars((string) $button['link'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $btnIconRaw = filter_var($button['icon'], FILTER_VALIDATE_URL) ? $button['icon'] : $path . $button['icon'];
+                $btnIcon  = htmlspecialchars((string) $btnIconRaw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $ret .= "<a class='ui-corner-all tooltip' href='" . $btnLink . "' title='" . $btnTitle . "' " . $button['extra'] . '>';
+                $ret .= "<img src='" . $btnIcon . "' title='" . $btnTitle . "' alt='" . $btnTitle . "' />" . $btnTitle;
                 $ret .= "</a>\n";
                 $ret .= $delimeter;
             }
@@ -514,42 +519,46 @@ class ModuleAdmin
         $nickname     = explode(',', $this->_obj->getInfo('nickname'));
         $release_date = formatTimestamp(mktime(0, 0, 0, (int)$date[1], (int)$date[2], (int)$date[0]), 's');
         $module_dir   = $this->_obj->getVar('dirname');
+        // Module metadata comes from the module's own xoops_version.php (trusted,
+        // but installing a module already implies code trust). Escape it anyway
+        // before it lands in this admin-CP page as a hardening measure.
+        $esc          = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $module_info  = "<div id=\"about\"><label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_DESCRIPTION . "</label>\n"
-                      . "<text>" . $this->_obj->getInfo('description') . "</text><br>\n"
+                      . "<text>" . $esc($this->_obj->getInfo('description')) . "</text><br>\n"
                       . "<label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_UPDATEDATE . "</label>\n"
                       . "<text class=\"bold\">" . formatTimestamp($this->_obj->getVar('last_update'), 'm') . "</text><br>\n"
                       . "<label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_MODULESTATUS . "</label>\n"
-                      . "<text>" . $this->_obj->getStatus() . "</text><br>\n"
+                      . "<text>" . $esc($this->_obj->getStatus()) . "</text><br>\n"
                       . "<label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_WEBSITE . "</label>\n"
-                      . "<text><a class=\"tooltip\" href=\"http://" . $this->_obj->getInfo('module_website_url') . "\" rel=\"external\" title=\""
-                      . $this->_obj->getInfo('module_website_name') . " - " . $this->_obj->getInfo('module_website_url') . "\">"
-                      . $this->_obj->getInfo('module_website_name') . "</a></text>\n"
+                      . "<text><a class=\"tooltip\" href=\"http://" . $esc($this->_obj->getInfo('module_website_url')) . "\" rel=\"external\" title=\""
+                      . $esc($this->_obj->getInfo('module_website_name')) . " - " . $esc($this->_obj->getInfo('module_website_url')) . "\">"
+                      . $esc($this->_obj->getInfo('module_website_name')) . "</a></text>\n"
                       . "</div>\n";
         $authorArray  = [];
         foreach ( $author as $k => $aName ) {
             $authorArray[$k] = ( isset( $nickname[$k] ) && ( '' != $nickname[$k] ) ) ? "{$aName} ({$nickname[$k]})" : (string)($aName);
         }
         $license_url = $this->_obj->getInfo('license_url');
-        $license_url = preg_match('%^(https?:)?//%', $license_url) ? $license_url : 'http://' . $license_url;
+        $license_url = $esc(preg_match('%^(https?:)?//%', $license_url) ? $license_url : 'http://' . $license_url);
         $website = $this->_obj->getInfo('website');
-        $website = preg_match('%^(https?:)?//%', $website) ? $website : 'http://' . $website;
+        $website = $esc(preg_match('%^(https?:)?//%', $website) ? $website : 'http://' . $website);
 
         $ret = "<table>\n<tr>\n"
              . "<td width=\"50%\">\n"
              . "<table>\n<tr>\n<td style=\"width: 100px;\">\n"
-             . "<img src=\"" . XOOPS_URL . '/modules/' . $module_dir . '/' . $this->_obj->getInfo('image') . "\" alt=\"" . $module_dir . "\" style=\"float: left; margin-right: 10px;\">\n"
+             . "<img src=\"" . XOOPS_URL . '/modules/' . $esc($module_dir) . '/' . $esc($this->_obj->getInfo('image')) . "\" alt=\"" . $esc($module_dir) . "\" style=\"float: left; margin-right: 10px;\">\n"
              . "</td><td>\n"
              . "<div style=\"margin-top: 1px; margin-bottom: 4px; font-size: 18px; line-height: 18px; color: #2F5376; font-weight: bold;\">\n"
-             . $this->_obj->getInfo('name') . ' ' . $this->_obj->getVar('version') . ' ' . " ({$release_date})\n"
+             . $esc($this->_obj->getInfo('name')) . ' ' . $esc($this->_obj->getVar('version')) . ' ' . " ({$release_date})\n"
              . "<br>\n"
              . "</div>\n"
              . "<div style=\"line-height: 16px; font-weight: bold;\">\n"
              . _AM_MODULEADMIN_ABOUT_BY . implode(', ', $authorArray) . "\n"
              . "</div>\n"
              . "<div style=\"line-height: 16px;\">\n"
-             . "<a href=\"$license_url\" target=\"_blank\" rel=\"external\">" . $this->_obj->getInfo('license') . "</a>\n"
+             . "<a href=\"$license_url\" target=\"_blank\" rel=\"external\">" . $esc($this->_obj->getInfo('license')) . "</a>\n"
              . "<br>\n"
-             . "<a href=\"$website\" target=\"_blank\">" . $this->_obj->getInfo('website') . "</a>\n"
+             . "<a href=\"$website\" target=\"_blank\">" . $esc($this->_obj->getInfo('website')) . "</a>\n"
              . "<br>\n"
              . "<br>\n"
              . "</div>\n"
@@ -579,17 +588,19 @@ class ModuleAdmin
               . "<td width=\"50%\">\n"
               . "<fieldset><legend class=\"label\">" . _AM_MODULEADMIN_ABOUT_CHANGELOG . "</legend><br>\n"
               . "<div class=\"txtchangelog\">\n";
-        $language = empty( $GLOBALS['xoopsConfig']['language'] ) ? 'english' : $GLOBALS['xoopsConfig']['language'];
+        // basename() the language segment so a poisoned config value cannot
+        // traverse out of the module language directory.
+        $language = empty( $GLOBALS['xoopsConfig']['language'] ) ? 'english' : basename( (string) $GLOBALS['xoopsConfig']['language'] );
         $file     = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/{$language}/changelog.txt";
         if ( !is_file( $file ) && ( 'english' !== $language ) ) {
             $file = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/english/changelog.txt";
         }
         if ( is_readable( $file ) ) {
-            $ret .= ( implode( '<br>', file( $file ) ) ) . "\n";
+            $ret .= implode( '<br>', array_map( $esc, file( $file ) ) ) . "\n";
         } else {
             $file = XOOPS_ROOT_PATH . "/modules/{$module_dir}/docs/changelog.txt";
             if ( is_readable( $file ) ) {
-                $ret .= implode( '<br>', file( $file ) ) . "\n";
+                $ret .= implode( '<br>', array_map( $esc, file( $file ) ) ) . "\n";
             }
         }
         $ret .= "</div>\n"
@@ -655,12 +666,17 @@ class ModuleAdmin
         $path       = XOOPS_URL . '/modules/' . $this->_obj->getVar('dirname') . '/';
         $this->_obj->loadAdminMenu();
         foreach (array_keys((array) $this->_obj->adminmenu) as $i) {
+            // Escape the admin-defined menu values before they land in attribute,
+            // CSS url() and text contexts (defence-in-depth on trusted metadata).
+            $menuTitle = htmlspecialchars((string) $this->_obj->adminmenu[$i]['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $menuLink  = htmlspecialchars((string) $this->_obj->adminmenu[$i]['link'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $menuIcon  = htmlspecialchars((string) $this->_obj->adminmenu[$i]['icon'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             if ($this->_obj->adminmenu[$i]['link'] == 'admin/' . $menu) {
-                $navigation .= $this->_obj->adminmenu[$i]['title'] . ' | ';
-                $ret = "<div class=\"CPbigTitle\" style=\"background-image: url(" . $path . $this->_obj->adminmenu[$i]['icon'] . "); background-repeat: no-repeat; background-position: left; padding-left: 50px;\">
-        <strong>" . $this->_obj->adminmenu[$i]['title'] . '</strong></div><br>';
+                $navigation .= $menuTitle . ' | ';
+                $ret = "<div class=\"CPbigTitle\" style=\"background-image: url('" . $path . $menuIcon . "'); background-repeat: no-repeat; background-position: left; padding-left: 50px;\">
+        <strong>" . $menuTitle . '</strong></div><br>';
             } else {
-                $navigation .= "<a href = '../" . $this->_obj->adminmenu[$i]['link'] . "'>" . $this->_obj->adminmenu[$i]['title'] . '</a> | ';
+                $navigation .= "<a href = '../" . $menuLink . "'>" . $menuTitle . '</a> | ';
             }
         }
         if (substr(XOOPS_VERSION, 0, 9) < 'XOOPS 2.5') {
