@@ -65,11 +65,10 @@ class MytsCensor extends MyTextSanitizerExtension
                     continue;
                 }
                 if (!empty($censorConf['censor_terminate'])) {
-                    throw new \Exception('Censor words found');
-                    // The below lines are now redundant and won't be executed.
-                    $text = '';
-
-                    return $text;
+                    // Terminate on a match by blanking the offending content,
+                    // rather than throwing an uncaught exception mid-render that
+                    // would white-screen the whole page.
+                    return '';
                 }
                 $patterns[]     = "/(^|[^0-9a-z_]){$bad}([^0-9a-z_]|$)/siU";
                 $replacements[] = "\\1{$replacement}\\2";
