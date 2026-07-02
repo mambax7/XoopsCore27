@@ -130,3 +130,9 @@ if (!$wizard->xoInit()) {
 if (!isset($_SESSION['settings']) || !is_array($_SESSION['settings'])) {
     $_SESSION['settings'] = [];
 }
+
+// Positive "already installed" lock: if mainfile.php is present and its users
+// table is populated, refuse the installer to any session that is not an
+// authorized in-progress install run — independent of whether the install/
+// directory still exists or mainfile.php is read-only.
+install_denyIfInstalled();

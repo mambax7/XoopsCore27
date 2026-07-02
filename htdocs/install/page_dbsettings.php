@@ -76,6 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($vars['DB_NAME'])) {
     } else {
         $error = validateDbCharset($link, $vars['DB_CHARSET'], $vars['DB_COLLATION']);
     }
+    // DB_PREFIX is concatenated into table names as an identifier at runtime
+    // (XoopsDatabase::prefix) with no backtick escaping, so restrict it to safe
+    // identifier characters here, matching the DB_NAME guard above.
+    if (empty($error) && !preg_match('/^[A-Za-z0-9_]*$/', (string) $vars['DB_PREFIX'])) {
+        $error = defined('ERR_INVALID_DBPREFIX') ? ERR_INVALID_DBPREFIX : 'Invalid database table prefix.';
+    }
     $dbName   = mysqli_real_escape_string($link, $vars['DB_NAME']);
     $db_exist = true;
     if (empty($error)) {
