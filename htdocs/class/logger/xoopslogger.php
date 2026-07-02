@@ -345,7 +345,7 @@ class XoopsLogger
                 $includeTrace  = false;
                 $errstr = substr($errstr, 8);
             }
-            echo sprintf(_XOOPS_FATAL_MESSAGE, $errstr);
+            echo sprintf(_XOOPS_FATAL_MESSAGE, htmlspecialchars((string) $errstr, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
             if ($includeTrace) {
                 echo "<div style='color:#f0f0f0;background-color:#f0f0f0;'>" . _XOOPS_FATAL_BACKTRACE . ':<br>';
                 if ($trace === null && function_exists('debug_backtrace')) {
@@ -354,7 +354,7 @@ class XoopsLogger
                 }
                 foreach ($trace as $step) {
                     if (isset($step['file'])) {
-                        echo $this->sanitizePath($step['file']);
+                        echo htmlspecialchars($this->sanitizePath($step['file']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                         echo ' (' . $step['line'] . ")\n<br>";
                     }
                 }

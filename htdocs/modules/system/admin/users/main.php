@@ -1000,7 +1000,13 @@ case 'users_save':
                     $users['name']        = $users_arr[$i]->getVar('name');
                     $users['uname']       = $users_arr[$i]->getVar('uname');
                     $users['email']       = $users_arr[$i]->getVar('email');
-                    $users['url']         = $users_arr[$i]->getVar('url');
+                    // Defence-in-depth: only surface an http(s) URL as a clickable
+                    // href. The value is normalised by formatURL() on save, but a
+                    // legacy row predating the WEBURL input filter could otherwise
+                    // carry a javascript:/data: scheme. getVar('s') still escapes it.
+                    $users['url']         = preg_match('~^https?://~i', (string) $users_arr[$i]->getVar('url', 'n'))
+                        ? $users_arr[$i]->getVar('url')
+                        : '';
                     $users['user_avatar'] = ($users_arr[$i]->getVar('user_avatar') === 'blank.gif') ? system_AdminIcons('anonymous.png') : XOOPS_URL . '/uploads/' . $users_arr[$i]->getVar('user_avatar');
                     $users['reg_date']    = formatTimestamp($users_arr[$i]->getVar('user_regdate'), 'm');
                     if ($users_arr[$i]->getVar('last_login') > 0) {
