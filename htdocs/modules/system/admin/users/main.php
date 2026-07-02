@@ -548,7 +548,6 @@ case 'users_save':
             $xoBreadCrumb->addTips(_AM_SYSTEM_USERS_NAV_TIPS);
             $xoBreadCrumb->render();
 
-            $requete_search  = '<br><br><strong>See search request: </strong><br><br>';
             $requete_pagenav = '';
 
             $user_uname = Request::getString('uname');
@@ -572,7 +571,6 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;uname=' . htmlspecialchars($user_uname, ENT_QUOTES | ENT_HTML5) . '&amp;user_uname_match=' . htmlspecialchars($user_uname_match, ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'uname: ' . $user_uname . ' and user_uname_match=' . $user_uname_match . '<br>';
             }
             $user_name = Request::getString('user_name');
             $user_name_match = Request::getInt('user_name_match', 0);
@@ -593,7 +591,6 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;user_name=' . htmlspecialchars($user_name, ENT_QUOTES | ENT_HTML5) . '&amp;user_name_match=' . htmlspecialchars(Request::getString('user_name_match'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'name: ' . $user_name . ' and user_name_match=' . $user_name_match . '<br>';
             }
             $user_email = Request::getString('user_email');
             $user_email_match = Request::getInt('user_email_match', 0);
@@ -614,7 +611,6 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;user_email=' . htmlspecialchars($user_email, ENT_QUOTES | ENT_HTML5) . '&amp;user_email_match=' . htmlspecialchars($user_email_match, ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'email: ' . $user_email . ' and user_email_match=' . $user_email_match . '<br>';
             }
             $user_url = Request::getString('user_url');
             $user_url_match = Request::getInt('user_url_match', 0);
@@ -622,7 +618,6 @@ case 'users_save':
                 $url = formatURL(Request::getUrl('user_url'));
                 $criteria->add(new Criteria('url', '%' . $xoopsDB->escape(Request::getString('user_url', '')) . '%', 'LIKE'));
                 $requete_pagenav .= '&amp;user_url=' . htmlspecialchars(Request::getString('user_url'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'url: ' . Request::getString('user_url') . '<br>';
             }
             $user_icq = Request::getString('user_icq');
             $user_icq_match = Request::getString('user_icq_match');
@@ -643,7 +638,6 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;user_icq=' . htmlspecialchars($user_icq, ENT_QUOTES | ENT_HTML5) . '&amp;user_icq_match=' . htmlspecialchars($user_icq_match, ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'icq: ' . $user_icq . ' and user_icq_match=' . $user_icq_match . '<br>';
             }
 
             $user_aim = Request::getString('user_aim');
@@ -665,7 +659,6 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;user_aim=' . htmlspecialchars($user_aim, ENT_QUOTES | ENT_HTML5) . '&amp;user_aim_match=' . htmlspecialchars($user_aim_match, ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'aim: ' . $user_aim . ' and user_aim_match=' . $user_aim_match . '<br>';
             }
             $user_yim = Request::getString('user_yim');
             $user_yim_match = Request::getString('user_yim_match');
@@ -686,7 +679,6 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;user_yim=' . htmlspecialchars(Request::getString('user_yim'), ENT_QUOTES | ENT_HTML5) . '&amp;user_yim_match=' . htmlspecialchars(Request::getString('user_yim_match'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'yim: ' . Request::getString('user_yim') . ' and user_yim_match=' . Request::getString('user_yim_match') . '<br>';
             }
 
             $user_msnm = Request::getString('user_msnm');
@@ -708,25 +700,21 @@ case 'users_save':
                         break;
                 }
                 $requete_pagenav .= '&amp;user_msnm=' . htmlspecialchars($user_msnm . '&amp;user_msnm_match=' . htmlspecialchars($user_msnm_match, ENT_QUOTES | ENT_HTML5), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'msn: ' . $user_msnm . ' and user_msnm_match=' . $user_msnm_match . '<br>';
             }
 
             if (Request::hasVar('user_from')) {
                 $criteria->add(new Criteria('user_from', '%' . $xoopsDB->escape(Request::getString('user_from')) . '%', 'LIKE'));
                 $requete_pagenav .= '&amp;user_from=' . htmlspecialchars(Request::getString('user_from'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'from: ' . Request::getString('user_from') . '<br>';
             }
 
             if (Request::hasVar('user_intrest')) {
                 $criteria->add(new Criteria('user_intrest', '%' . $xoopsDB->escape(Request::getString('user_intrest')) . '%', 'LIKE'));
                 $requete_pagenav .= '&amp;user_intrest=' . htmlspecialchars(Request::getString('user_intrest'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'interest: ' . Request::getString('user_intrest') . '<br>';
             }
 
             if (Request::hasVar('user_occ')) {
                 $criteria->add(new Criteria('user_occ', '%' . $xoopsDB->escape(Request::getString('user_occ')) . '%', 'LIKE'));
                 $requete_pagenav .= '&amp;user_occ=' . htmlspecialchars(Request::getString('user_occ'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'occupation: ' . Request::getString('user_occ') . '<br>';
             }
 
             if (Request::hasVar('user_lastlog_more','POST')) {
@@ -736,7 +724,6 @@ case 'users_save':
                     $criteria->add(new Criteria('last_login', $time, '<'));
                 }
                 $requete_pagenav .= '&amp;user_lastlog_more=' . htmlspecialchars(Request::getString('user_lastlog_more'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'last connection after: ' . Request::getString('user_lastlog_more') . '<br>';
             }
 
             if (Request::hasVar('user_lastlog_less','POST')) {
@@ -747,7 +734,6 @@ case 'users_save':
                         $criteria->add(new Criteria('last_login', $time, '>'));
                     }
                     $requete_pagenav .= '&amp;user_lastlog_less=' . htmlspecialchars(Request::getString('user_lastlog_less'), ENT_QUOTES | ENT_HTML5);
-                    $requete_search .= 'last connection before: ' . Request::getString('user_lastlog_less') . '<br>';
                 }
             }
 
@@ -758,7 +744,6 @@ case 'users_save':
                     $criteria->add(new Criteria('user_regdate', $time, '<'));
                 }
                 $requete_pagenav .= '&amp;user_regdate=' . htmlspecialchars(Request::getString('user_regdate'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'record after: ' . Request::getString('user_reg_more') . '<br>';
             }
 
 
@@ -769,19 +754,16 @@ case 'users_save':
                     $criteria->add(new Criteria('user_regdate', $time, '>'));
                 }
                 $requete_pagenav .= '&amp;user_reg_less=' . htmlspecialchars(Request::getString('user_reg_less'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'record before: ' . Request::getString('user_reg_less') . '<br>';
             }
 
             if (Request::hasVar('user_posts_more') && is_numeric(Request::getString('user_posts_more'))) {
                 $criteria->add(new Criteria('posts', (int) Request::getString('user_posts_more'), '>'));
                 $requete_pagenav .= '&amp;user_posts_more=' . htmlspecialchars(Request::getString('user_posts_more'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'posts over: ' . Request::getString('user_posts_more') . '<br>';
             }
 
             if (Request::hasVar('user_posts_less') && is_numeric(Request::getString('user_posts_less'))) {
                 $criteria->add(new Criteria('posts', (int) Request::getString('user_posts_less'), '<'));
                 $requete_pagenav .= '&amp;user_posts_less=' . htmlspecialchars(Request::getString('user_posts_less'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'post less than: ' . Request::getString('user_posts_less') . '<br>';
             }
 
             if (Request::hasVar('user_mailok')) {
@@ -793,24 +775,20 @@ case 'users_save':
                     $criteria->add(new Criteria('user_mailok', 0, '>='));
                 }
                 $requete_pagenav .= '&amp;user_mailok=' . htmlspecialchars(Request::getString('user_mailok'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'accept email: ' . Request::getString('user_mailok') . '<br>';
             }
 
             if (Request::hasVar('user_type')) {
                 if (Request::getString('user_type') === 'inactv') {
                     $criteria->add(new Criteria('level', 0, '='));
                     $user_type = 'inactv';
-                    $requete_search .= 'active or inactive : inactive<br>';
                 } elseif (Request::getString('user_type') === 'actv') {
                     $criteria->add(new Criteria('level', 0, '>'));
                     $user_type = 'actv';
-                    $requete_search .= 'active or inactive: active<br>';
                 }
                 $requete_pagenav .= '&amp;user_type=' . htmlspecialchars(Request::getString('user_type'), ENT_QUOTES | ENT_HTML5);
             } else {
                 $criteria->add(new Criteria('level', 0, '>='));
                 $user_type = '';
-                $requete_search .= 'active or inactive: admin & user<br>';
             }
 
             $validsort = ['uname', 'email', 'last_login', 'user_regdate', 'posts'];
@@ -818,31 +796,25 @@ case 'users_save':
                 $userSort = Request::getString('user_sort');
                 $sort = (!in_array($userSort, $validsort)) ? 'uid' : $userSort;
                 $requete_pagenav .= '&amp;user_sort=' . htmlspecialchars($userSort, ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'order by: ' . $sort . '<br>';
             } else {
                 $sort = 'uid';
                 $requete_pagenav .= '&amp;user_sort=uid';
-                $requete_search .= 'order by: ' . $sort . '<br>';
             }
 
             $order = 'DESC';
             if (Request::hasVar('user_order') && Request::getString('user_order') === 'ASC') {
                 $requete_pagenav .= '&amp;user_order=ASC';
-                $requete_search .= 'sort: ' . $order . '<br>';
             } else {
                 //$order = "ASC";
                 $requete_pagenav .= '&amp;user_order=DESC';
-                $requete_search .= 'sort: ' . $order . '<br>';
             }
 
             $user_limit = (int) xoops_getModuleOption('users_pager', 'system');
             if (Request::hasVar('user_limit')) {
                 $user_limit = Request::getInt('user_limit');
                 $requete_pagenav .= '&amp;user_limit=' . htmlspecialchars(Request::getString('user_limit'), ENT_QUOTES | ENT_HTML5);
-                $requete_search .= 'limit: ' . $user_limit . '<br>';
             } else {
                 $requete_pagenav .= '&amp;user_limit=' . xoops_getModuleOption('users_pager', 'system');
-                $requete_search .= 'limit: ' . $user_limit . '<br>';
             }
 
             $start = Request::getInt('start');
@@ -942,10 +914,8 @@ case 'users_save':
             // raw token value for the tokenised activate / synchronize action links
             $xoopsTpl->assign('users_csrf', $GLOBALS['xoopsSecurity']->createToken());
 
-            // echo $requete_search;
 
             if ($users_count > 0) {
-                //echo $requete_search;
 
                 // --- START: CORRECTED N+1 Query Fix ---
 

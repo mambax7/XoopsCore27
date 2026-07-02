@@ -788,7 +788,7 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
     // under normal circumstance this event will exit, so listen for the .start above
     $xoopsPreload->triggerEvent('core.include.functions.redirectheader', [$url, $time, $message, $addredirect, $allowExternalLink]);
 
-    if (preg_match("/[\\0-\\31]|about:|script:/i", $url)) {
+    if (preg_match('/[\x00-\x1F\x7F]|about:|script:/i', $url)) {
         if (!preg_match('/^\b(java)?script:([\s]*)history\.go\(-\d*\)([\s]*[;]*[\s]*)$/si', $url)) {
             $url = XOOPS_URL;
         }
