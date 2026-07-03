@@ -670,6 +670,12 @@ class Criteria extends CriteriaElement
         // filter context (mirrors the SQL render() escaping discipline).
         $attribute = preg_match('/^[A-Za-z0-9_.-]+$/', (string) $this->column) ? (string) $this->column : '';
 
+        // Fail closed: an invalid/empty attribute would otherwise build a
+        // malformed filter such as "(=value)"; emit no predicate instead.
+        if ($attribute === '') {
+            return '';
+        }
+
         $escape = static function ($value) {
             if (function_exists('ldap_escape')) {
                 return ldap_escape((string) $value, '', LDAP_ESCAPE_FILTER);
