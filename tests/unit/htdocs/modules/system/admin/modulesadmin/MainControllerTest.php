@@ -79,7 +79,7 @@ class MainControllerTest extends TestCase
     {
         // Should check security token for confirm, submit, install_ok, update_ok, uninstall_ok
         $this->assertStringContainsString(
-            "if (in_array(\$op, ['confirm', 'submit', 'install_ok', 'update_ok', 'uninstall_ok']))",
+            "if (in_array(\$op, ['confirm', 'submit', 'install_ok', 'update_ok', 'uninstall_ok'], true))",
             $this->sourceCode,
             'Should identify state-changing operations'
         );

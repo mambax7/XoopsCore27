@@ -89,7 +89,7 @@ class CriteriaElement
      */
     public function getSort()
     {
-        return $this->sort;
+        return $this->sanitizeOrderClause($this->sort);
     }
 
     /**
@@ -163,7 +163,31 @@ class CriteriaElement
      */
     public function getGroupby()
     {
-        return $this->groupby ? " GROUP BY {$this->groupby}" : '';
+        $groupby = $this->sanitizeOrderClause($this->groupby);
+
+        return $groupby !== '' ? " GROUP BY {$groupby}" : '';
+    }
+
+    /**
+     * Validate an ORDER BY / GROUP BY column-list fragment.
+     *
+     * Accepts a comma-separated list of (optionally backticked or dotted)
+     * column references, each with an optional ASC/DESC direction. Any other
+     * construct — parentheses, quotes, comment markers, semicolons, operators —
+     * indicates an injection attempt and collapses the fragment to an empty
+     * string so the caller omits the clause entirely (fail closed).
+     *
+     * @param string $clause raw sort/groupby fragment
+     * @return string validated fragment, or '' when it is not a safe column list
+     */
+    protected function sanitizeOrderClause($clause)
+    {
+        $clause = trim((string) $clause);
+        if ($clause === '') {
+            return '';
+        }
+
+        return preg_match('/^[A-Za-z0-9_.,`\s]+$/', $clause) ? $clause : '';
     }
     /**
      * *#@-
@@ -398,6 +422,31 @@ class Criteria extends CriteriaElement
     }
 
     /**
+     * Backtick-quote a column reference for safe use as an SQL identifier.
+     *
+     * Expression columns (those containing a parenthesis) are developer-supplied
+     * and returned untouched — the optional $function wrapper handles those. A
+     * plain or dotted identifier is split on '.', each segment backtick-quoted
+     * with any embedded backtick doubled, closing the identifier-breakout hole.
+     *
+     * @param string $col column name or expression
+     * @return string quoted identifier, or the original expression
+     */
+    private function quoteColumn($col)
+    {
+        $col = (string) $col;
+        if (strpos($col, '(') !== false) {
+            return $col;
+        }
+        $segments = explode('.', $col);
+        foreach ($segments as $index => $segment) {
+            $segments[$index] = '`' . str_replace('`', '``', $segment) . '`';
+        }
+
+        return implode('.', $segments);
+    }
+
+    /**
      * Render the SQL fragment (no leading WHERE)
      *
      * @param \XoopsDatabase|null $db Database connection
@@ -431,8 +480,11 @@ class Criteria extends CriteriaElement
             return '';
         }
 
-        $backtick = (strpos($col, '.') === false && strpos($col, '(') === false) ? '`' : '';
-        $clause = (empty($this->prefix) ? '' : "{$this->prefix}.") . $backtick . $col . $backtick;
+        $prefix = '';
+        if (!empty($this->prefix) && preg_match('/^[A-Za-z0-9_]+$/', (string) $this->prefix)) {
+            $prefix = '`' . (string) $this->prefix . '`.';
+        }
+        $clause = $prefix . $this->quoteColumn($col);
 
         if (!empty($this->function)) {
             $clause = sprintf($this->function, $clause);
@@ -584,6 +636,14 @@ class Criteria extends CriteriaElement
             }
         }
 
+        // Allowlist the comparison operator: everything reaching this point
+        // must be one of the scalar comparison operators. Anything else (e.g.
+        // an operator string carrying an injected "OR 1=1") collapses to '='.
+        $comparisonOperators = ['=', '!=', '<>', '<', '>', '<=', '>='];
+        if (!in_array($op, $comparisonOperators, true)) {
+            $op = '=';
+        }
+
         return $clause . ' ' . $op . ' ' . $safeValue;
     }
 
@@ -606,6 +666,24 @@ class Criteria extends CriteriaElement
      */
     public function renderLdap()
     {
+        // Allowlist the attribute name and escape every value for the LDAP
+        // filter context (mirrors the SQL render() escaping discipline).
+        $attribute = preg_match('/^[A-Za-z0-9_.-]+$/', (string) $this->column) ? (string) $this->column : '';
+
+        // Fail closed: an invalid/empty attribute would otherwise build a
+        // malformed filter such as "(=value)"; emit no predicate instead.
+        if ($attribute === '') {
+            return '';
+        }
+
+        $escape = static function ($value) {
+            if (function_exists('ldap_escape')) {
+                return ldap_escape((string) $value, '', LDAP_ESCAPE_FILTER);
+            }
+
+            return addcslashes((string) $value, "\\*()\0");
+        };
+
         if ($this->operator === '>') {
             $this->operator = '>=';
         }
@@ -614,19 +692,20 @@ class Criteria extends CriteriaElement
         }
 
         if ($this->operator === '!=' || $this->operator === '<>') {
-            $operator = '=';
-            $clause   = '(!(' . $this->column . $operator . $this->value . '))';
+            $clause = '(!(' . $attribute . '=' . $escape($this->value) . '))';
         } else {
             if ($this->operator === 'IN') {
-                $newvalue = str_replace(['(', ')'], '', $this->value);
+                $newvalue = str_replace(['(', ')'], '', (string) $this->value);
                 $tab      = explode(',', $newvalue);
                 $clause = '';
                 foreach ($tab as $uid) {
-                    $clause .= "({$this->column}={$uid})";
+                    $clause .= '(' . $attribute . '=' . $escape(trim($uid)) . ')';
                 }
                 $clause = '(|' . $clause . ')';
             } else {
-                $clause = '(' . $this->column . $this->operator . $this->value . ')';
+                $ldapOperators = ['=', '>=', '<=', '~='];
+                $op            = in_array($this->operator, $ldapOperators, true) ? $this->operator : '=';
+                $clause        = '(' . $attribute . $op . $escape($this->value) . ')';
             }
         }
 

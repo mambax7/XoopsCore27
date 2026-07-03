@@ -116,6 +116,9 @@ if (Request::hasVar('move_messages', 'POST') && Request::hasVar('msg_id', 'POST'
         if ($op === 'save') {
             for ($i = 0; $i < $size; ++$i) {
                 $pm = $pm_handler->get($msg[$i]);
+                if (!is_object($pm)) {
+                    continue;
+                }
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     $pm_handler->setTosave($pm, 0);
                 } elseif ($pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
@@ -130,9 +133,15 @@ if (Request::hasVar('move_messages', 'POST') && Request::hasVar('msg_id', 'POST'
             }
             for ($i = 0; $i < $size; ++$i) {
                 $pm = $pm_handler->get($msg[$i]);
-                if ($op === 'in') {
+                if (!is_object($pm)) {
+                    continue;
+                }
+                // Only the recipient may pin an inbox message, and only the
+                // sender may pin an outbox message — otherwise a user could flip
+                // another user's to_save/from_save flag by posting their msg_id.
+                if ($op === 'in' && $pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     $pm_handler->setTosave($pm);
-                } elseif ($op === 'out') {
+                } elseif ($op === 'out' && $pm->getVar('from_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
                     $pm_handler->setFromsave($pm);
                 }
                 unset($pm);

@@ -22,10 +22,13 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_CONFIG')):
      */
     function mod_loadConfig($dirname = '')
     {
-        if (empty($dirname) && empty($GLOBALS['xoopsModule'])) {
+        // is_object (not empty): a non-empty, non-object xoopsModule would still
+        // fatal on ->getVar() below, so require a real object when no dirname.
+        if (empty($dirname) && !is_object($GLOBALS['xoopsModule'] ?? null)) {
             return null;
         }
-        $dirname = !empty($dirname) ? $dirname : $GLOBALS['xoopsModule']->getVar('dirname');
+        // basename() the module dirname before it drives an include path below.
+        $dirname = !empty($dirname) ? basename((string) $dirname) : $GLOBALS['xoopsModule']->getVar('dirname');
 
         if (isset($GLOBALS['xoopsModule']) && is_object($GLOBALS['xoopsModule']) && $GLOBALS['xoopsModule']->getVar('dirname', 'n') == $dirname) {
             if (isset($GLOBALS['xoopsModuleConfig'])) {

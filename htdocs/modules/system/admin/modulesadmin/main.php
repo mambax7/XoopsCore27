@@ -33,7 +33,7 @@ $newname = Request::getArray('newname', [], 'POST');
 // Get Action type
 $op = Request::getString('op', 'list');
 
-if (in_array($op, ['confirm', 'submit', 'install_ok', 'update_ok', 'uninstall_ok'])) {
+if (in_array($op, ['confirm', 'submit', 'install_ok', 'update_ok', 'uninstall_ok'], true)) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
         $op = 'list';
     }
@@ -136,14 +136,14 @@ switch ($op) {
             /** @var XoopsModule $module */
             $listed_mods[$i]                  = $module->toArray();
             $listed_mods[$i]['name']          = htmlspecialchars((string) $module->getVar('name'), ENT_QUOTES | ENT_HTML5);
-            $listed_mods[$i]['image']         = $module->getInfo('image');
+            $listed_mods[$i]['image']         = htmlspecialchars((string) $module->getInfo('image'), ENT_QUOTES | ENT_HTML5);
             $listed_mods[$i]['adminindex']    = $module->getInfo('adminindex');
             $listed_mods[$i]['version']       = $module->getVar('version');
             $listed_mods[$i]['last_update']   = formatTimestamp($module->getVar('last_update'), 'm');
-            $listed_mods[$i]['author']        = $module->getInfo('author');
-            $listed_mods[$i]['credits']       = $module->getInfo('credits');
-            $listed_mods[$i]['license']       = $module->getInfo('license');
-            $listed_mods[$i]['description']   = $module->getInfo('description');
+            $listed_mods[$i]['author']        = htmlspecialchars((string) $module->getInfo('author'), ENT_QUOTES | ENT_HTML5);
+            $listed_mods[$i]['credits']       = htmlspecialchars((string) $module->getInfo('credits'), ENT_QUOTES | ENT_HTML5);
+            $listed_mods[$i]['license']       = htmlspecialchars((string) $module->getInfo('license'), ENT_QUOTES | ENT_HTML5);
+            $listed_mods[$i]['description']   = htmlspecialchars((string) $module->getInfo('description'), ENT_QUOTES | ENT_HTML5);
 
             if (true === $module->versionCompare($listed_mods[$i]['version'], $module->getInfo('version'))) {
                 $listed_mods[$i]['warning_update'] = true;
@@ -216,12 +216,12 @@ switch ($op) {
                     $module->loadInfo($file);
                     $toinstall_mods[$i]['name']          = htmlspecialchars($module->getInfo('name'), ENT_QUOTES | ENT_HTML5);
                     $toinstall_mods[$i]['dirname']       = $module->getInfo('dirname');
-                    $toinstall_mods[$i]['image']         = $module->getInfo('image');
+                    $toinstall_mods[$i]['image']         = htmlspecialchars((string) $module->getInfo('image'), ENT_QUOTES | ENT_HTML5);
                     $toinstall_mods[$i]['version']       = $module->getInfo('version');
-                    $toinstall_mods[$i]['author']        = $module->getInfo('author');
-                    $toinstall_mods[$i]['credits']       = $module->getInfo('credits');
-                    $toinstall_mods[$i]['license']       = $module->getInfo('license');
-                    $toinstall_mods[$i]['description']   = $module->getInfo('description');
+                    $toinstall_mods[$i]['author']        = htmlspecialchars((string) $module->getInfo('author'), ENT_QUOTES | ENT_HTML5);
+                    $toinstall_mods[$i]['credits']       = htmlspecialchars((string) $module->getInfo('credits'), ENT_QUOTES | ENT_HTML5);
+                    $toinstall_mods[$i]['license']       = htmlspecialchars((string) $module->getInfo('license'), ENT_QUOTES | ENT_HTML5);
+                    $toinstall_mods[$i]['description']   = htmlspecialchars((string) $module->getInfo('description'), ENT_QUOTES | ENT_HTML5);
                     $toinstall_mods[$i]['mid']           = $i; // Use only for display popup
                     unset($module);
                     ++$i;

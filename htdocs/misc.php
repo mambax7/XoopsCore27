@@ -137,6 +137,52 @@ EOAVJS;
                     $error = true;
                     $errorMessage = _MSC_ENTERFNAME;
                 }
+                // CAPTCHA for anonymous senders only (logged-in users are trusted
+                // and, per the captcha config, skipped). Stops the form being
+                // driven automatically as an anonymous mail relay.
+                if (!$error && !is_object($xoopsUser)) {
+                    xoops_load('XoopsCaptcha');
+                    $xoopsCaptcha = XoopsCaptcha::getInstance();
+                    if (!$xoopsCaptcha->verify()) {
+                        $error        = true;
+                        $errorMessage = $xoopsCaptcha->getMessage();
+                    }
+                }
+                // Rate limit anonymous senders (defence-in-depth on top of the
+                // CAPTCHA) so the form cannot be used for bulk mail relay. Two
+                // sliding windows share the same limit: a fast session-scoped one,
+                // and a persistent per-IP one (via XoopsCache) that survives a
+                // client dropping its session cookie. The window/limit are tunable
+                // constants; note the per-IP cap is shared by users behind one NAT.
+                if (!$error && !is_object($xoopsUser)) {
+                    $tfNow    = time();
+                    $tfWindow = 3600; // 1 hour
+                    $tfMax    = 5;
+
+                    // Session window.
+                    $tfSends = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
+                    $tfSends = array_values(array_filter($tfSends, static fn($t) => ($tfNow - (int) $t) < $tfWindow));
+                    $_SESSION['tellfriend_sends'] = $tfSends;
+
+                    // Persistent per-IP window, keyed by the connecting address
+                    // (REMOTE_ADDR — not a spoofable X-Forwarded-For header).
+                    $tfIp      = (isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '';
+                    $tfIpKey   = '' !== $tfIp ? 'tellfriend_rl_' . md5($tfIp) : '';
+                    $tfIpSends = [];
+                    if ('' !== $tfIpKey) {
+                        xoops_load('XoopsCache');
+                        $tfCached  = XoopsCache::read($tfIpKey);
+                        $tfIpSends = is_array($tfCached) ? $tfCached : [];
+                        $tfIpSends = array_values(array_filter($tfIpSends, static fn($t) => ($tfNow - (int) $t) < $tfWindow));
+                    }
+
+                    if (count($tfSends) >= $tfMax || count($tfIpSends) >= $tfMax) {
+                        $error        = true;
+                        $errorMessage = defined('_MSC_TELLFRIEND_TOOMANY')
+                            ? _MSC_TELLFRIEND_TOOMANY
+                            : 'You have sent too many messages recently. Please try again later.';
+                    }
+                }
                 if ($error) {
                     $variables['errorMessage'] = $errorMessage;
                 }
@@ -151,8 +197,15 @@ EOAVJS;
                 $xoopsMailer->assign('YOUR_NAME', $yname);
                 $xoopsMailer->assign('FRIEND_NAME', $fname);
                 $xoopsMailer->setToEmails($fmail);
-                $xoopsMailer->setFromEmail($ymail);
-                $xoopsMailer->setFromName($yname);
+                // Send From the site itself, not the (attacker-choosable) sender
+                // address: this protects the site's sending reputation/SPF and
+                // stops the anonymous tell-a-friend form being used to spoof a
+                // From header. Replies still reach the real sender via Reply-To
+                // ($ymail is FILTER_VALIDATE_EMAIL-checked above, so it is safe
+                // to place in a header).
+                $xoopsMailer->setFromEmail($xoopsConfig['adminmail']);
+                $xoopsMailer->setFromName($xoopsConfig['sitename']);
+                $xoopsMailer->addHeaders('Reply-To: ' . $ymail);
                 $xoopsMailer->setSubject(sprintf(_MSC_INTSITE, $xoopsConfig['sitename']));
 
                 if (!$xoopsMailer->send()) {
@@ -160,6 +213,19 @@ EOAVJS;
                     $errorMessage = $xoopsMailer->getErrors();
                     $variables['errorMessage'] = $errorMessage;
                 } else {
+                    // Record this send against both anonymous rate-limit windows.
+                    if (!is_object($xoopsUser)) {
+                        $recNow    = time();
+                        $tfSends   = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
+                        $tfSends[] = $recNow;
+                        $_SESSION['tellfriend_sends'] = $tfSends;
+                        if (!empty($tfIpKey)) {
+                            $tfIpSends   = isset($tfIpSends) && is_array($tfIpSends) ? $tfIpSends : [];
+                            $tfIpSends[] = $recNow;
+                            xoops_load('XoopsCache');
+                            XoopsCache::write($tfIpKey, $tfIpSends, isset($tfWindow) ? $tfWindow : 3600);
+                        }
+                    }
                     $variables['successMessage'] = _MSC_REFERENCESENT;
                 }
             } else {
@@ -190,6 +256,9 @@ EOAVJS;
                 $fmailElelment->setDescription(_MSC_INVALIDEMAIL1);
             }
             $form->addElement($fmailElelment, true);
+            if (!is_object($xoopsUser)) {
+                $form->addElement(new XoopsFormCaptcha(), true);
+            }
             $form->addElement(new XoopsFormHidden('action', $action));
             $form->addElement(new XoopsFormHidden('type', $type));
             $form->addElement(new XoopsFormButton('', 'submit', _SEND, 'submit'));

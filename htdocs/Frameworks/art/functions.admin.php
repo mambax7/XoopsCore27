@@ -66,7 +66,10 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_ADMIN')):
      <ul>
     ';
         foreach (array_keys($adminmenu) as $key) {
-            $adminmenu_text .= (($currentoption == $key) ? '<li class="current">' : '<li>') . '<a href="' . $module_link . $adminmenu[$key]['link'] . '"><span>' . $adminmenu[$key]['title'] . '</span></a></li>';
+            // Escape the admin-defined menu link/title (defence-in-depth).
+            $menuLink  = htmlspecialchars((string) $adminmenu[$key]['link'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $menuTitle = htmlspecialchars((string) $adminmenu[$key]['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $adminmenu_text .= (($currentoption == $key) ? '<li class="current">' : '<li>') . '<a href="' . $module_link . $menuLink . '"><span>' . $menuTitle . '</span></a></li>';
         }
         if ($GLOBALS['xoopsModule']->getVar('hasconfig') || $GLOBALS['xoopsModule']->getVar('hascomments') || $GLOBALS['xoopsModule']->getVar('hasnotification')) {
             $adminmenu_text .= '<li><a href="' . XOOPS_URL . '/modules/system/admin.php?fct=preferences&op=showmod&mod=' . $GLOBALS['xoopsModule']->getVar('mid') . '"><span>' . _PREFERENCES . '</span></a></li>';

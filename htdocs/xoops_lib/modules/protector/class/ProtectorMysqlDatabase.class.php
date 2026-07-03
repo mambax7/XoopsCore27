@@ -219,4 +219,33 @@ class ProtectorMySQLDatabase extends XoopsMySQLDatabaseProxy
 
         return parent::exec($sql);
     }
+
+    /**
+     * Execute a statement with dblayertrap SQL inspection.
+     *
+     * queryF() otherwise inherits XoopsMySQLDatabase::queryF() and runs the raw
+     * query with no Protector inspection — the same bypass class PR #1644 closed
+     * for exec(). Mirror the query()/exec() needle scan before delegating so the
+     * remaining queryF() callers (XMF Tables/TableLoad, upgrade scripts, the
+     * wider module ecosystem) are inspected too.
+     *
+     * @param string $sql   a valid MySQL query
+     * @param int    $limit number of records to return
+     * @param int    $start offset of first record to return
+     *
+     * @return mysqli_result|bool query result, or FALSE on failure, or TRUE on
+     *                            success with no result set
+     */
+    public function queryF($sql, $limit = 0, $start = 0)
+    {
+        $sql4check = substr($sql, 7);
+        foreach ($this->doubtful_needles as $needle) {
+            if (false !== stripos($sql4check, (string) $needle)) {
+                $this->checkSql($sql);
+                break;
+            }
+        }
+
+        return parent::queryF($sql, $limit, $start);
+    }
 }

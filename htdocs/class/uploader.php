@@ -592,11 +592,13 @@ class XoopsMediaUploader
             return false;
         }
 
+        $finfoAvailable = class_exists('finfo');
+
         // Content-sniff the real bytes: a file whose extension or client-supplied
         // type claims to be an image but whose content is a script/markup document
         // must be refused regardless of what the browser declared (SECURITY.md M-12).
         if (is_string($this->mediaTmpName) && '' !== $this->mediaTmpName
-            && is_file($this->mediaTmpName) && class_exists('finfo')) {
+            && is_file($this->mediaTmpName) && $finfoAvailable) {
             $finfo    = new \finfo(FILEINFO_MIME_TYPE);
             $detected = (string) $finfo->file($this->mediaTmpName);
             $blocked  = [
@@ -612,6 +614,16 @@ class XoopsMediaUploader
                 $this->setErrors(sprintf(_ER_UP_MIMETYPENOTALLOWED, htmlspecialchars($detected, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
                 return false;
             }
+        }
+
+        // Fail closed: without finfo we cannot content-sniff, so a caller that
+        // also declines to pin an allowlist (allowUnknownTypes with an empty
+        // allowedMimeTypes) would be left with no executable-content check at
+        // all — refuse rather than trust the client-declared type.
+        if (!$finfoAvailable && !empty($this->allowUnknownTypes) && empty($this->allowedMimeTypes)) {
+            $this->setErrors(_ER_UP_UNKNOWNFILETYPEREJECTED);
+
+            return false;
         }
 
         if (empty($this->mediaRealType) && empty($this->allowUnknownTypes)) {

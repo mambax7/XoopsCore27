@@ -211,6 +211,12 @@ if ($op === 'submit') {
     if ($reply == 1) {
         $pm_handler = xoops_getModuleHandler('message', 'pm');
         $pm         = $pm_handler->get($msg_id);
+        if (!is_object($pm)) {
+            // Bogus msg_id: bail instead of fataling on ->getVar() of a false.
+            pmRenderInvalidRecipient();
+            xoops_footer();
+            return;
+        }
         if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
             if (!pmCanMessageUser($pm->getVar('from_userid'))) {
                 pmRenderInvalidRecipient();

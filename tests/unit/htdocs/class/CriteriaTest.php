@@ -774,14 +774,14 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('uid', 5, '=', 'u');
 
-        $this->assertSame('u.`uid` = 5', $c->render($this->db));
+        $this->assertSame('`u`.`uid` = 5', $c->render($this->db));
     }
 
     public function testRenderWithPrefixAndStringValue(): void
     {
         $c = new Criteria('name', 'admin', '=', 't');
 
-        $this->assertSame("t.`name` = 'admin'", $c->render($this->db));
+        $this->assertSame("`t`.`name` = 'admin'", $c->render($this->db));
     }
 
     // =========================================================================
@@ -799,7 +799,7 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('name', 'john', '=', 'u', 'LOWER(%s)');
 
-        $this->assertSame("LOWER(u.`name`) = 'john'", $c->render($this->db));
+        $this->assertSame("LOWER(`u`.`name`) = 'john'", $c->render($this->db));
     }
 
     public function testRenderWithCountFunction(): void
@@ -810,14 +810,14 @@ class CriteriaTest extends TestCase
     }
 
     // =========================================================================
-    // Criteria — Column with dot (no backtick)
+    // Criteria — Column with dot (backtick-quoted per segment)
     // =========================================================================
 
-    public function testRenderColumnWithDotNoBacktick(): void
+    public function testRenderColumnWithDotBacktickPerSegment(): void
     {
         $c = new Criteria('u.uid', 5);
 
-        $this->assertSame('u.uid = 5', $c->render($this->db));
+        $this->assertSame('`u`.`uid` = 5', $c->render($this->db));
     }
 
     public function testRenderColumnWithDotAndPrefix(): void
@@ -825,7 +825,7 @@ class CriteriaTest extends TestCase
         // Prefix is still prepended even with a dot in column
         $c = new Criteria('u.uid', 5, '=', 'alias');
 
-        $this->assertSame('alias.u.uid = 5', $c->render($this->db));
+        $this->assertSame('`alias`.`u`.`uid` = 5', $c->render($this->db));
     }
 
     // =========================================================================
@@ -983,6 +983,15 @@ class CriteriaTest extends TestCase
 
         $result = $c->renderLdap();
         $this->assertSame('(|(uid=1)(uid=2)(uid=3))', $result);
+    }
+
+    public function testRenderLdapFailsClosedOnInvalidAttribute(): void
+    {
+        // An attribute name outside the allowlist must yield no predicate
+        // rather than a malformed filter like "(=value)".
+        $c = new Criteria('bad attr!', 'value', '=');
+
+        $this->assertSame('', $c->renderLdap());
     }
 
     // =========================================================================
@@ -1508,9 +1517,12 @@ class CriteriaTest extends TestCase
      */
     public static function columnBacktickProvider(): array
     {
+        // Dotted columns are backtick-quoted per segment (`u`.`uid`); that
+        // case is asserted precisely in testRenderColumnWithDotBacktickPerSegment.
+        // This generic provider covers simple identifiers (quoted) and
+        // expression columns (passed through untouched).
         return [
             'simple column'     => ['uid', true],
-            'column with dot'   => ['u.uid', false],
             'column with paren' => ['COUNT(*)', false],
             'function call'     => ['MAX(score)', false],
         ];
@@ -1677,21 +1689,21 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('name', 'john', 'LIKE', 'u', 'LOWER(%s)');
 
-        $this->assertSame("LOWER(u.`name`) LIKE 'john'", $c->render($this->db));
+        $this->assertSame("LOWER(`u`.`name`) LIKE 'john'", $c->render($this->db));
     }
 
     public function testRenderPrefixWithInOperator(): void
     {
         $c = new Criteria('uid', [1, 2, 3], 'IN', 'u');
 
-        $this->assertSame('u.`uid` IN (1,2,3)', $c->render($this->db));
+        $this->assertSame('`u`.`uid` IN (1,2,3)', $c->render($this->db));
     }
 
     public function testRenderPrefixWithIsNull(): void
     {
         $c = new Criteria('email', '', 'IS NULL', 'u');
 
-        $this->assertSame('u.`email` IS NULL', $c->render($this->db));
+        $this->assertSame('`u`.`email` IS NULL', $c->render($this->db));
     }
 
     public function testRenderFunctionWithIsNull(): void

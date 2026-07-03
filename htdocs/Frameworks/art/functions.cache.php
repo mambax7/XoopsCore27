@@ -157,7 +157,11 @@ function mod_loadCacheFile_byGroup($name, $dirname = null, $groups = null)
 function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PATH)
 {
     if (empty($dirname)) {
-        $pattern = $dirname ? "{$dirname}_{$name}.*\.php" : "[^_]+_{$name}.*\.php";
+        // Quote the interpolated value so it cannot inject regex metacharacters
+        // (ReDoS / unintended match). $dirname is empty in this branch, so the
+        // pattern is the "any prefix" form (the old $dirname ? … ternary was dead).
+        $nameQuoted = preg_quote((string) $name, '/');
+        $pattern = "[^_]+_{$nameQuoted}.*\.php";
         if ($handle = opendir($root_path)) {
             while (false !== ($file = readdir($handle))) {
                 if (is_file($root_path . '/' . $file) && preg_match("/{$pattern}$/", $file)) {
@@ -167,7 +171,11 @@ function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PAT
             closedir($handle);
         }
     } else {
-        $files = (array) glob($root_path . "/*{$dirname}_{$name}*.php");
+        // basename() strips path traversal; removing glob metacharacters (*, ?, [])
+        // stops a crafted value from broadening the match to unrelated cache files.
+        $safeDir  = str_replace(['*', '?', '[', ']'], '', basename((string) $dirname));
+        $safeName = str_replace(['*', '?', '[', ']'], '', basename((string) $name));
+        $files = (array) glob($root_path . "/*{$safeDir}_{$safeName}*.php");
         foreach ($files as $file) {
             @unlink($file);
         }

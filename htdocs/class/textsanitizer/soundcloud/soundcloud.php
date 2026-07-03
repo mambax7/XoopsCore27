@@ -63,7 +63,15 @@ EOH;
             return '';
         }
 
-        $code = '<object height="81" width="100%"><param name="movie" ' . 'value="https://player.soundcloud.com/player.swf?url=' . $url . '&amp;g=bb">' . '</param><param name="allowscriptaccess" value="always"></param>' . '<embed allowscriptaccess="always" height="81" ' . 'src="https://player.soundcloud.com/player.swf?url=' . $url . '&amp;g=bb" type="application/x-shockwave-flash" width="100%"></embed></object>' . '<a href="' . $url . '">' . $url . '</a>';
+        // $url has already been constrained to a soundcloud.com URL above.
+        // Emit the modern HTML5 iframe player (the Flash player is retired) and
+        // escape every interpolated value: rawurlencode() for the query
+        // parameter, htmlspecialchars() for the HTML attribute/link contexts.
+        $playerSrc     = 'https://w.soundcloud.com/player/?url=' . rawurlencode($url) . '&auto_play=false&show_comments=false';
+        $safePlayerSrc = htmlspecialchars($playerSrc, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeUrl       = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $code = '<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="' . $safePlayerSrc . '"></iframe>'
+              . '<a href="' . $safeUrl . '" rel="external noopener nofollow">' . $safeUrl . '</a>';
 
         return $code;
     }
