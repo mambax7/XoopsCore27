@@ -142,7 +142,10 @@ if ($xoopsorgnews !== 0) {
             $ret .= '<tr class="head"><td><a href="' . htmlspecialchars(trim($items[$i]['link']), ENT_QUOTES | ENT_HTML5) . '" rel="external">';
             $ret .= htmlspecialchars($items[$i]['title'], ENT_QUOTES | ENT_HTML5) . '</a> (' . htmlspecialchars($items[$i]['pubdate'], ENT_QUOTES | ENT_HTML5) . ')</td></tr>';
             if ($items[$i]['description'] != '') {
-                $ret .= '<tr><td class="odd">' . $items[$i]['description'];
+                // Remote feed body (xoops.org). Trusted, but a compromised or
+                // MITM feed could otherwise script the admin session — strip
+                // markup so only plain text reaches the admin page.
+                $ret .= '<tr><td class="odd">' . strip_tags((string) $items[$i]['description']);
                 if (!empty($items[$i]['guid'])) {
                     $ret .= '&nbsp;&nbsp;<a href="' . htmlspecialchars($items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external" title="">' . _MORE . '</a>';
                 }

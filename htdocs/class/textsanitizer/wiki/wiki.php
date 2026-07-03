@@ -98,7 +98,7 @@ EOH;
         }
         $charset = !empty($config['charset']) ? $config['charset'] : 'UTF-8';
         xoops_load('XoopsLocal');
-        $ret = "<a href='" . sprintf($config['link'], urlencode(XoopsLocal::convert_encoding($text, $charset))) . "' rel='external' title=''>{$text}</a>";
+        $ret = "<a href='" . sprintf($config['link'], urlencode(XoopsLocal::convert_encoding($text, $charset))) . "' rel='external' title=''>" . htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a>';
 
         return $ret;
     }

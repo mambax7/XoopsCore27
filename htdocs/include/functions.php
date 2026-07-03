@@ -745,22 +745,29 @@ function xoops_getbanner()
          * Print the banner
          */
         $bannerobject = '';
+        // Escape the stored URL/click values before they land in HTML
+        // attributes. The WEBURL input filter permits spaces, so an unquoted
+        // attribute could otherwise carry an event handler; quote and escape
+        // every interpolated attribute (the htmlcode branch stays raw by
+        // design — it is admin-authored ad markup).
+        $safeImageUrl = htmlspecialchars((string) $imageurl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeClickUrl = htmlspecialchars((string) $clickurl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         if ($htmlbanner) {
             if ($htmlcode) {
                 $bannerobject = $htmlcode;
             } else {
                 $bannerobject = $bannerobject . '<div id="xo-bannerfix">';
                 // $bannerobject = $bannerobject . '<div id="xo-fixbanner">';
-                $bannerobject = $bannerobject . ' <iframe src=' . $imageurl . ' border="0" scrolling="no" allowtransparency="true" width="480px" height="60px" style="border:0" alt="' . $clickurl . ';"> </iframe>';
+                $bannerobject = $bannerobject . ' <iframe src="' . $safeImageUrl . '" border="0" scrolling="no" allowtransparency="true" width="480px" height="60px" style="border:0" title="' . $safeClickUrl . '"> </iframe>';
                 $bannerobject .= '</div>';
                 // $bannerobject .= '</div>';
             }
         } else {
             $bannerobject = '<div id="xo-bannerfix">';
             if (false !== stripos($imageurl, '.swf')) {
-                $bannerobject = $bannerobject . '<div id ="xo-fixbanner">' . '<a href="' . XOOPS_URL . '/banners.php?op=click&amp;bid=' . $bid . '" rel="external" title="' . $clickurl . '"></a></div>' . '<object type="application/x-shockwave-flash" width="468" height="60" data="' . $imageurl . '" style="z-index:100;">' . '<param name="movie" value="' . $imageurl . '" />' . '<param name="wmode" value="opaque" />' . '</object>';
+                $bannerobject = $bannerobject . '<div id ="xo-fixbanner">' . '<a href="' . XOOPS_URL . '/banners.php?op=click&amp;bid=' . $bid . '" rel="external" title="' . $safeClickUrl . '"></a></div>' . '<object type="application/x-shockwave-flash" width="468" height="60" data="' . $safeImageUrl . '" style="z-index:100;">' . '<param name="movie" value="' . $safeImageUrl . '" />' . '<param name="wmode" value="opaque" />' . '</object>';
             } else {
-                $bannerobject = $bannerobject . '<a href="' . XOOPS_URL . '/banners.php?op=click&amp;bid=' . $bid . '" rel="external" title="' . $clickurl . '"><img src="' . $imageurl . '" alt="' . $clickurl . '" /></a>';
+                $bannerobject = $bannerobject . '<a href="' . XOOPS_URL . '/banners.php?op=click&amp;bid=' . $bid . '" rel="external" title="' . $safeClickUrl . '"><img src="' . $safeImageUrl . '" alt="' . $safeClickUrl . '" /></a>';
             }
 
             $bannerobject .= '</div>';

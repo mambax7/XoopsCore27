@@ -348,22 +348,25 @@ switch ($op) {
 
                 //Img
                 $img = '';
+                // Escape the stored image URL before interpolating it into the
+                // admin preview attributes (matches xoops_getbanner()).
+                $safeImageUrl = htmlspecialchars((string) $imageurl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 if ($htmlbanner) {
                     if ($htmlcode) {
                         $img .= html_entity_decode((string) $htmlcode);
                     } else {
-                        $img .= ' <iframe src=' . $imageurl . ' border="0" scrolling="no" allowtransparency="true" width="480px" height="60px" style="border:0" alt=""> </iframe>';
+                        $img .= ' <iframe src="' . $safeImageUrl . '" border="0" scrolling="no" allowtransparency="true" width="480px" height="60px" style="border:0" title=""> </iframe>';
                     }
                 } else {
                     if (strtolower(substr((string) $imageurl, strrpos((string) $imageurl, '.'))) === '.swf') {
                         $img .= "<object classid=\"clsid:D27CDB6E-AE6D-11cf-96B8-444553540000\" codebase=\"http://download.macromedia.com/pub/shockwave/cabs/flash/ swflash.cab#version=6,0,40,0\" width=\"468\" height=\"60\">";
-                        $img .= "<param name=movie value=\"$imageurl\">";
+                        $img .= '<param name="movie" value="' . $safeImageUrl . '">';
                         $img .= '<param name=quality value=high>';
-                        $img .= "<embed src=\"$imageurl\" quality=high pluginspage=\"http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash\"  type=\"application/x-shockwave-flash\" width=\"468\" height=\"60\">";
+                        $img .= '<embed src="' . $safeImageUrl . '" quality=high pluginspage="http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash"  type="application/x-shockwave-flash" width="468" height="60">';
                         $img .= '</embed>';
                         $img .= '</object>';
                     } else {
-                        $img .= "<img src='" . $imageurl . "' alt='' />";
+                        $img .= "<img src='" . $safeImageUrl . "' alt='' />";
                     }
                 }
 
