@@ -87,6 +87,105 @@ function install_finalize($installer_modified)
 }
 
 /**
+ * Detect whether XOOPS is already installed on this host.
+ *
+ * "Installed" means the on-disk mainfile.php has been included (so the DB
+ * connection constants are defined) AND the users table for that database
+ * already holds at least one account. A half-written mainfile, an unreachable
+ * database, or an empty users table all read as "not installed" so a genuine
+ * (re)install can still proceed. The check fails open (returns false) on any
+ * uncertainty — the lock that consumes it only bites on a confirmed install.
+ *
+ * @return bool
+ */
+function install_isInstalled(): bool
+{
+    if (!defined('XOOPS_ROOT_PATH')
+        || !defined('XOOPS_DB_HOST') || !defined('XOOPS_DB_USER')
+        || !defined('XOOPS_DB_NAME') || !defined('XOOPS_DB_PREFIX')
+        || !function_exists('mysqli_init')) {
+        return false;
+    }
+
+    $host    = (string) XOOPS_DB_HOST;
+    $cprefix = (defined('XOOPS_DB_PCONNECT') && XOOPS_DB_PCONNECT) ? 'p:' : '';
+    $port    = 0;
+    // Split an explicit host:port; leave IPv6 literals and socket paths alone.
+    if (substr_count($host, ':') === 1) {
+        [$hostPart, $portPart] = explode(':', $host, 2);
+        if (ctype_digit($portPart)) {
+            $host = $hostPart;
+            $port = (int) $portPart;
+        }
+    }
+
+    $mysqli = @mysqli_init();
+    if (!$mysqli) {
+        return false;
+    }
+    @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 3);
+    $pass      = defined('XOOPS_DB_PASS') ? (string) XOOPS_DB_PASS : '';
+    $connected = @mysqli_real_connect($mysqli, $cprefix . $host, (string) XOOPS_DB_USER, $pass, (string) XOOPS_DB_NAME, $port);
+    if (!$connected) {
+        @mysqli_close($mysqli);
+        return false;
+    }
+
+    $installed = false;
+    $table     = XOOPS_DB_PREFIX . '_users';
+    $result    = @mysqli_query($mysqli, 'SELECT COUNT(*) FROM `' . str_replace('`', '``', $table) . '`');
+    if ($result instanceof \mysqli_result) {
+        $row       = mysqli_fetch_row($result);
+        $installed = !empty($row) && (int) $row[0] > 0;
+        mysqli_free_result($result);
+    }
+    @mysqli_close($mysqli);
+
+    return $installed;
+}
+
+/**
+ * Positive "already installed" lock for the installer bootstrap.
+ *
+ * Called once from common.inc.php so every installer page inherits the gate.
+ * A completed install is walkable only by an authorized, in-progress wizard
+ * session (the run that just wrote mainfile.php, before the users table
+ * exists); a fresh or anonymous session on an already-installed site is
+ * refused. This does not rely on the install/ directory being removed or on
+ * mainfile.php being chmod-ed read-only.
+ *
+ * @return void
+ */
+function install_denyIfInstalled(): void
+{
+    if (!install_isInstalled()) {
+        return;
+    }
+    // Allow an authorized, in-progress install run to finish. The users table
+    // only becomes populated after page_configsave has set these flags, so a
+    // legitimate first-time install passes through; a fresh session on an
+    // already-installed site has neither flag and is blocked before it can
+    // reach the destructive pages.
+    if (!empty($_SESSION['UserLogin']) || !empty($_SESSION['settings']['authorized'])) {
+        return;
+    }
+
+    if (!headers_sent()) {
+        http_response_code(403);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    $title   = 'XOOPS is already installed';
+    $message = 'This site is already installed, so the installer is locked for security. '
+             . 'To reinstall, first remove mainfile.php (and, if you intend a clean install, drop the '
+             . 'existing database tables), then run the installer again.';
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>'
+        . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</title></head><body><h1>'
+        . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</h1><p>'
+        . htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p></body></html>';
+    exit;
+}
+
+/**
  * @param string $name
  * @param string $value
  * @param string $label
