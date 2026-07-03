@@ -137,6 +137,34 @@ EOAVJS;
                     $error = true;
                     $errorMessage = _MSC_ENTERFNAME;
                 }
+                // CAPTCHA for anonymous senders only (logged-in users are trusted
+                // and, per the captcha config, skipped). Stops the form being
+                // driven automatically as an anonymous mail relay.
+                if (!$error && !is_object($xoopsUser)) {
+                    xoops_load('XoopsCaptcha');
+                    $xoopsCaptcha = XoopsCaptcha::getInstance();
+                    if (!$xoopsCaptcha->verify()) {
+                        $error        = true;
+                        $errorMessage = $xoopsCaptcha->getMessage();
+                    }
+                }
+                // Session-scoped sliding-window rate limit for anonymous senders
+                // (defence-in-depth on top of the CAPTCHA): cap the number of
+                // sends per window so the form cannot be used for bulk relay.
+                if (!$error && !is_object($xoopsUser)) {
+                    $tfNow    = time();
+                    $tfWindow = 3600; // 1 hour
+                    $tfMax    = 5;
+                    $tfSends  = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
+                    $tfSends  = array_values(array_filter($tfSends, static fn($t) => ($tfNow - (int) $t) < $tfWindow));
+                    $_SESSION['tellfriend_sends'] = $tfSends;
+                    if (count($tfSends) >= $tfMax) {
+                        $error        = true;
+                        $errorMessage = defined('_MSC_TELLFRIEND_TOOMANY')
+                            ? _MSC_TELLFRIEND_TOOMANY
+                            : 'You have sent too many messages recently. Please try again later.';
+                    }
+                }
                 if ($error) {
                     $variables['errorMessage'] = $errorMessage;
                 }
@@ -167,6 +195,12 @@ EOAVJS;
                     $errorMessage = $xoopsMailer->getErrors();
                     $variables['errorMessage'] = $errorMessage;
                 } else {
+                    // Record this send against the anonymous rate-limit window.
+                    if (!is_object($xoopsUser)) {
+                        $tfSends   = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
+                        $tfSends[] = time();
+                        $_SESSION['tellfriend_sends'] = $tfSends;
+                    }
                     $variables['successMessage'] = _MSC_REFERENCESENT;
                 }
             } else {
@@ -197,6 +231,9 @@ EOAVJS;
                 $fmailElelment->setDescription(_MSC_INVALIDEMAIL1);
             }
             $form->addElement($fmailElelment, true);
+            if (!is_object($xoopsUser)) {
+                $form->addElement(new XoopsFormCaptcha(), true);
+            }
             $form->addElement(new XoopsFormHidden('action', $action));
             $form->addElement(new XoopsFormHidden('type', $type));
             $form->addElement(new XoopsFormButton('', 'submit', _SEND, 'submit'));
