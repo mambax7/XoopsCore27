@@ -209,8 +209,17 @@ class TinyMCE
 			unset($this->setting['file_browser_callback']);
         }
 
-		// Safely encode all settings to JS object
-		$jsonOptions = json_encode($this->setting, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+		// Safely encode all settings to JS object. JSON_HEX_TAG|APOS|QUOT blocks a
+		// "</script>" / quote breakout from any setting value (SECURITY.md L-8); the
+		// callbacks below are emitted as separate statements, so no raw-JS value is
+		// carried inside this JSON. JSON_THROW_ON_ERROR + safe-comment return (parity
+		// with TinyMCE7) avoids emitting a broken tinymce.init() on encode failure.
+		try {
+			$jsonOptions = json_encode($this->setting, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+		} catch (\JsonException $e) {
+			trigger_error('TinyMCE5 settings JSON encode failed: ' . $e->getMessage(), E_USER_WARNING);
+			return "\n<!-- TinyMCE: failed to encode editor configuration -->\n";
+		}
 
 		// Only include TinyMCE core script once
 		$tinyMceScriptTag = $isTinyMceJsLoaded

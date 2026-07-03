@@ -361,7 +361,12 @@ case 'users_save':
 
         // Active member
     case 'users_active':
-        if (Request::hasVar('uid')) {
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            break;
+        }
+        if (Request::hasVar('uid', 'GET')) {
+            $uid = Request::getInt('uid', 0, 'GET');
             $obj = $member_handler->getUser($uid);
         }
         if (!isset($obj) || !is_object($obj)) {
@@ -377,9 +382,15 @@ case 'users_save':
 
         // Synchronize
     case 'users_synchronize':
-        if (Request::hasVar('status') && Request::getString('status') == 1) {
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            break;
+        }
+        $status = Request::getInt('status', 0, 'GET');
+        if (1 === $status) {
+            $uid = Request::getInt('uid', 0, 'GET');
             synchronize($uid, 'user');
-        } elseif (Request::hasVar('status') && Request::getString('status') == 2) {
+        } elseif (2 === $status) {
             synchronize('', 'all users');
         }
         redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_DBUPDATED);
@@ -928,6 +939,8 @@ case 'users_save':
             $tokenElement = new XoopsFormHiddenToken();
             $token = $tokenElement->render();
             $xoopsTpl->assign('form_token', $token);
+            // raw token value for the tokenised activate / synchronize action links
+            $xoopsTpl->assign('users_csrf', $GLOBALS['xoopsSecurity']->createToken());
 
             // echo $requete_search;
 

@@ -28,4 +28,25 @@ use SplFileInfo;
 abstract class ScannerProcess
 {
     abstract public function inspectFile(SplFileInfo $fileInfo);
+
+    /**
+     * Convert an absolute pathname to a leading-slash path relative to
+     * XOOPS_ROOT_PATH. Both sides are normalised to forward slashes first, so the
+     * root prefix is trimmed regardless of the separator each side uses — without
+     * this, a Windows "\" pathname against a "/" root leaves the full absolute
+     * path in reports and scan tokens.
+     *
+     * @param string $pathname
+     *
+     * @return string
+     */
+    protected static function relativeToRoot(string $pathname): string
+    {
+        $root = rtrim(str_replace('\\', '/', XOOPS_ROOT_PATH), '/');
+        $path = str_replace('\\', '/', $pathname);
+
+        return ('' !== $root && str_starts_with($path, $root . '/'))
+            ? substr($path, strlen($root))
+            : $path;
+    }
 }

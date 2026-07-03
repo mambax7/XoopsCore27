@@ -180,12 +180,16 @@ function xswatchUpdateModeUI(mode) {
     }
 }
 
+function xswatchSafeSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+function xswatchSafeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
 function xswatchToggleTheme() {
     const html = document.documentElement;
     const current = html.getAttribute('data-bs-theme');
     const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
     html.setAttribute('data-bs-theme', next);
-    localStorage.setItem('xswatch-theme', next);
+    xswatchSafeSet('xswatch-theme', next);
     xswatchUpdateModeUI(next);
 }
 
@@ -196,7 +200,7 @@ function xswatchSwitchVariant(variant) {
     if (bsCss) { bsCss.href = bsCss.href.replace(/css-[^/]+/, variant); }
     if (xoCss) { xoCss.href = xoCss.href.replace(/css-[^/]+/, variant); }
     if (ccCss) { ccCss.href = ccCss.href.replace(/css-[^/]+/, variant); }
-    localStorage.setItem('xswatch-variant', variant);
+    xswatchSafeSet('xswatch-variant', variant);
     xswatchHighlightActiveVariant(variant);
 }
 
@@ -223,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    const currentVariant = localStorage.getItem('xswatch-variant')
+    const currentVariant = xswatchSafeGet('xswatch-variant')
         || document.getElementById('xswatch-bootstrap-css').href.match(/css-[^/]+/)?.[0]
         || 'css-cerulean';
     xswatchHighlightActiveVariant(currentVariant);

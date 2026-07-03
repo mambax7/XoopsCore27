@@ -60,7 +60,10 @@ class XoopsSecurity
             $expire  = @ini_get('session.gc_maxlifetime');
             $timeout = ($expire > 0) ? $expire : 900;
         }
-        $token_id = md5(uniqid(mt_rand(), true));
+        // CSPRNG token id — the framework-wide CSRF boundary must not rest on
+        // mt_rand()/uniqid() (SECURITY.md M-4). The public token format below is
+        // unchanged for BC; only the entropy source is hardened.
+        $token_id = bin2hex(random_bytes(32));
         // save token data on the server
         if (!isset($_SESSION[$name . '_SESSION'])) {
             $_SESSION[$name . '_SESSION'] = [];
@@ -104,7 +107,7 @@ class XoopsSecurity
         $validFound = false;
         $token_data = &$_SESSION[$name . '_SESSION'];
         foreach (array_keys($token_data) as $i) {
-            if ($token === md5($token_data[$i]['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX)) {
+            if (hash_equals(md5($token_data[$i]['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX), (string) $token)) {
                 if ($this->filterToken($token_data[$i])) {
                     if ($clearIfValid) {
                         // token should be valid once, so clear it once validated
@@ -184,7 +187,22 @@ class XoopsSecurity
         if ($ref == '') {
             return false;
         }
-        return !(strpos($ref, XOOPS_URL) !== 0);
+        // Compare scheme, host, and effective port exactly. A prefix match
+        // (strpos === 0) accepts sibling hosts such as example.com.attacker.test, and a
+        // host-only match would accept http vs https or an alternate port (SECURITY.md L-5).
+        $refParts  = parse_url($ref);
+        $baseParts = parse_url(XOOPS_URL);
+        if ($refParts === false || $baseParts === false || empty($refParts['host']) || empty($baseParts['host'])) {
+            return false;
+        }
+        $refScheme  = strtolower($refParts['scheme'] ?? '');
+        $baseScheme = strtolower($baseParts['scheme'] ?? 'http');
+        $refPort    = (int) ($refParts['port'] ?? ('https' === $refScheme ? 443 : 80));
+        $basePort   = (int) ($baseParts['port'] ?? ('https' === $baseScheme ? 443 : 80));
+
+        return strcasecmp((string) $refParts['host'], (string) $baseParts['host']) === 0
+            && $refScheme === $baseScheme
+            && $refPort === $basePort;
     }
 
     /**
@@ -242,11 +260,25 @@ class XoopsSecurity
 
         $addr = IPAddress::fromRequest();
         $ip = $addr->asReadable();
-        if ($xoopsConfig['enable_badips'] == 1 && $ip != '0.0.0.0') {
-            foreach ($xoopsConfig['bad_ips'] as $bi) {
-                if (!empty($bi) && preg_match('/' . $bi . '/', $ip)) {
-                    exit();
+        if ($xoopsConfig['enable_badips'] == 1 && $ip != '0.0.0.0' && is_array($xoopsConfig['bad_ips'] ?? null)) {
+            // Admin-entered patterns may be malformed (e.g. a CIDR's "/" collides
+            // with the delimiter). Swallow the resulting PCRE warning for the scan
+            // and treat any non-match — including a compile failure — as "allowed",
+            // so a bad pattern neither warns nor blocks the request (SECURITY.md L-19).
+            set_error_handler(static fn (): bool => true);
+            try {
+                foreach ($xoopsConfig['bad_ips'] as $bi) {
+                    // Bound the length to avoid pathological backtracking and block
+                    // only on a definite match.
+                    if (!is_string($bi) || '' === $bi || strlen($bi) > 255) {
+                        continue;
+                    }
+                    if (1 === preg_match('/' . $bi . '/', $ip)) {
+                        exit();
+                    }
                 }
+            } finally {
+                restore_error_handler();
             }
         }
     }

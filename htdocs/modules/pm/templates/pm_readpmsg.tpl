@@ -52,6 +52,8 @@
                     <hr/>
                     <strong><{$message.subject}></strong><br>
                     <br>
+                    <{* msg_text and subject are pre-escaped by getVar('s') in the
+                        controller — do NOT add |escape here, it would double-encode. *}>
                     <{$message.msg_text}><br>
                     <br>
                 </td>

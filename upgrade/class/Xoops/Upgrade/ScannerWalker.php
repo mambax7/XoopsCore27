@@ -50,6 +50,22 @@ class ScannerWalker
     protected $extList = [];
 
     /**
+     * Path fragments (slash-delimited) whose presence excludes a file from the
+     * scan: generated/compiled output and third-party trees that ship Smarty
+     * demo syntax (e.g. `%Y` date_format, `<{php}>`) and would otherwise produce
+     * false positives. Each entry is matched as a path segment, e.g. `/vendor/`.
+     *
+     * @var string[]
+     */
+    protected $skipSegments = [
+        '/vendor/',
+        '/node_modules/',
+        '/.git/',
+        '/templates_c/',
+        '/caches/smarty_compile/',
+    ];
+
+    /**
      * @var ScannerProcess
      */
     private $process;
@@ -100,6 +116,39 @@ class ScannerWalker
     }
 
     /**
+     * Exclude any file whose path contains the given directory name.
+     *
+     * @param string $directory directory name to skip (e.g. 'cache')
+     *
+     * @return void
+     * @throws InvalidArgumentException
+     */
+    public function addSkipDirectory($directory)
+    {
+        Assert::stringNotEmpty($directory, 'Skip directory must be a nonempty string');
+        $this->skipSegments[] = '/' . trim(str_replace('\\', '/', $directory), '/') . '/';
+    }
+
+    /**
+     * Determine whether a file path falls inside a skipped directory.
+     *
+     * @param string $pathname absolute file path
+     *
+     * @return bool
+     */
+    protected function isSkipped($pathname)
+    {
+        $normalized = str_replace('\\', '/', $pathname);
+        foreach ($this->skipSegments as $segment) {
+            if (str_contains($normalized, $segment)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * ScannerWalker::runScan() walks the directories looking for matching extensions.
      * Any matching files will be passed to the ScannerProcess specified for this instance.
      */
@@ -110,6 +159,10 @@ class ScannerWalker
             /** @var SplFileInfo $fileInfo */
             foreach ($iterator as $fileInfo) {
                 if ($fileInfo->isDir() || !$fileInfo->isReadable()) {
+                    continue;
+                }
+
+                if ($this->isSkipped($fileInfo->getPathname())) {
                     continue;
                 }
 

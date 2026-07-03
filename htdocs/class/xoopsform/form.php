@@ -19,6 +19,8 @@
  */
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+require_once __DIR__ . '/formcontainerinterface.php';
+
 /**
  * Abstract base class for forms
  *
@@ -302,17 +304,21 @@ class XoopsForm
             $this->_elements[] = $formElement;
         } elseif (is_subclass_of($formElement, 'XoopsFormElement')) {
             $this->_elements[] = &$formElement;
-            if (!$formElement->isContainer()) {
-                if ($required) {
-                    $formElement->_required = true;
-                    $this->_required[]      = &$formElement;
-                }
-            } else {
+            // Prefer the formal container contract; fall back to the legacy
+            // isContainer() duck-typing so third-party containers that predate
+            // XoopsFormContainerInterface keep bubbling their required elements.
+            if ($formElement instanceof XoopsFormContainerInterface
+                || (method_exists($formElement, 'getRequired')
+                    && method_exists($formElement, 'isContainer')
+                    && $formElement->isContainer())) {
                 $required_elements = &$formElement->getRequired();
-                $count             = count($required_elements);
-                for ($i = 0; $i < $count; ++$i) {
-                    $this->_required[] = &$required_elements[$i];
+                foreach ($required_elements as &$required_element) {
+                    $this->_required[] = &$required_element;
                 }
+                unset($required_element);
+            } elseif ($required) {
+                $formElement->_required = true;
+                $this->_required[]      = &$formElement;
             }
         }
     }
@@ -333,15 +339,18 @@ class XoopsForm
             $count = count($this->_elements);
             for ($i = 0; $i < $count; ++$i) {
                 if (is_object($this->_elements[$i])) {
-                    if (!$this->_elements[$i]->isContainer()) {
-                        $ret[] = &$this->_elements[$i];
-                    } else {
-                        $elements = &$this->_elements[$i]->getElements(true);
-                        $count2   = count($elements);
-                        for ($j = 0; $j < $count2; ++$j) {
-                            $ret[] = &$elements[$j];
+                    $child = $this->_elements[$i];
+                    if ($child instanceof XoopsFormContainerInterface
+                        || (method_exists($child, 'getElements')
+                            && method_exists($child, 'isContainer')
+                            && $child->isContainer())) {
+                        $elements = &$child->getElements(true);
+                        foreach ($elements as &$element) {
+                            $ret[] = &$element;
                         }
-                        unset($elements);
+                        unset($element, $elements);
+                    } else {
+                        $ret[] = &$this->_elements[$i];
                     }
                 }
             }

@@ -1,0 +1,43 @@
+{
+  "name": "xoops/smartyextensions",
+  "description": "XOOPS Smarty template extensions — domain-grouped plugins for Smarty 4/5",
+  "type": "library",
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://xoops.org",
+  "authors": [
+    {
+      "name": "XOOPS Project",
+      "email": "contact@xoops.org",
+      "role": "Maintainer"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "smarty/smarty": "^4.5 || ^5.0",
+    "chillerlan/php-qrcode": "^5.0 || ^6.0"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.0",
+    "phpunit/phpunit": "^11.0",
+    "squizlabs/php_codesniffer": "^3.11"
+  },
+  "autoload": {
+    "psr-4": {
+      "Xoops\\SmartyExtensions\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Xoops\\SmartyExtensions\\Test\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "analyse": "phpstan analyse",
+    "lint": "phpcs",
+    "fix": "phpcbf"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

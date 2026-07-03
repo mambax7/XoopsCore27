@@ -65,8 +65,10 @@ if (false !== $user) {
     $_SESSION                    = [];
     $_SESSION['xoopsUserId']     = $user->getVar('uid');
     $_SESSION['xoopsUserGroups'] = $user->getGroups();
-    $user_theme                  = $user->getVar('theme');
-    if (in_array($user_theme, $xoopsConfig['theme_set_allowed'])) {
+    // Read raw via 'n' format — getVar()'s default 's' escapes '&' to
+    // '&amp;', which the validator's HTML guard would reject.
+    $user_theme                  = xoops_validateThemeName((string) $user->getVar('theme', 'n'));
+    if ($user_theme !== '' && in_array($user_theme, $xoopsConfig['theme_set_allowed'], true)) {
         $_SESSION['xoopsUserTheme'] = $user_theme;
     }
     $xoopsPreload = XoopsPreload::getInstance();
@@ -128,8 +130,10 @@ if (false !== $user) {
 
     redirect_header($url, 1, sprintf(_US_LOGGINGU, $user->getVar('uname')), false);
 } elseif (empty($redirect)) {
-    redirect_header(XOOPS_URL . '/user.php', 5, $xoopsAuth->getHtmlErrors());
+    // Generic message for every credential failure — do not reveal whether the
+    // account exists or which factor failed (user enumeration, SECURITY.md L-3).
+    redirect_header(XOOPS_URL . '/user.php', 5, _US_INCORRECTLOGIN);
 } else {
-    redirect_header(XOOPS_URL . '/user.php?xoops_redirect=' . urlencode($redirect), 5, $xoopsAuth->getHtmlErrors(), false);
+    redirect_header(XOOPS_URL . '/user.php?xoops_redirect=' . urlencode($redirect), 5, _US_INCORRECTLOGIN, false);
 }
 exit();

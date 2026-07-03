@@ -29,7 +29,19 @@ require_once __DIR__ . '/include/common.inc.php';
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
 $pageHasForm = false;
-$diagsOK     = false;
+
+// Mandatory extensions: installation cannot proceed without these (e.g.
+// mysqli has no fallback driver and would fatal on the DB-connection step),
+// so a missing one blocks the Next button.
+$missingRequired = xoInstallerMissingRequired($wizard);
+$blockNext       = !empty($missingRequired);
+
+// Keep the MySQLi requirements row consistent with the gate: use the same
+// configured symbol list so the row cannot show success while Next is blocked
+// (mysqli loaded but mysqli_report()/the mysqli class absent).
+$mysqliSymbols   = $wizard->configs['extensions_required']['mysqli'][1] ?? [];
+$mysqliAvailable = xoInstallerExtensionAvailable('mysqli', $mysqliSymbols);
+$mysqliInfo      = $mysqliAvailable && function_exists('mysqli_get_client_info') ? mysqli_get_client_info() : '';
 
 foreach ($wizard->configs['extensions'] as $ext => $value) {
     if (extension_loaded($ext)) {
@@ -44,6 +56,10 @@ foreach ($wizard->configs['extensions'] as $ext => $value) {
 }
 ob_start();
 ?>
+    <?php if ($blockNext): ?>
+        <?php echo xoInstallerBlockedHtml(implode(', ', $missingRequired)); ?>
+    <?php endif; ?>
+
     <h3><?php echo REQUIREMENTS; ?></h3>
     <table class="table table-hover">
         <tbody>
@@ -59,7 +75,7 @@ ob_start();
 
         <tr>
             <th><?php printf(PHP_EXTENSION, 'MySQLi'); ?></th>
-            <td><?php echo xoDiag(function_exists('mysqli_connect') ? 1 : -1, function_exists('mysqli_get_client_info') ? mysqli_get_client_info() : ''); ?></td>
+            <td><?php echo xoDiag($mysqliAvailable ? 1 : -1, $mysqliInfo); ?></td>
         </tr>
 
         <tr>

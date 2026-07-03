@@ -361,6 +361,9 @@ class DebugbarLogger
             return;
         }
 
+        $helper = Helper::getInstance();
+        $helper->loadLanguage('main');
+
         // Normalize values for display
         foreach ($data as $k => $v) {
             if ($v === '') {

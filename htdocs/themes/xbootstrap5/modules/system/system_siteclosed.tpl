@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="no-js" lang="<{$xoops_langcode}>">
+<html class="no-js" lang="<{$xoops_langcode}>" data-theme="light" data-bs-theme="light">
 <head>
     <{assign var=theme_name value=$xoTheme->folderName}>
     <meta charset="<{$xoops_charset}>">
@@ -11,6 +11,16 @@
     <meta name="generator" content="XOOPS">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function() {
+            var stored = null;
+            try { stored = localStorage.getItem('theme'); } catch (e) {}
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
     <!-- disable zoom in mobile devices:
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     -->
@@ -27,6 +37,7 @@
         !=''}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
     <{include file="$theme_name/tpl/shareaholic-script.tpl"}>
     <{$xoops_module_header|default:''}>
+    <link rel="stylesheet" type="text/css" href="<{$xoops_imageurl}>css/dark-mode.css">
 </head>
 <body class="site-closed-body">
 <div class="container">

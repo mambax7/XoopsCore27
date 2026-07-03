@@ -257,6 +257,12 @@ function imageFilenameCheck($imageUrl)
 $imageId = Request::getInt('id', 0, 'GET');
 $imageUrl = Request::getUrl('url', Request::getString('src', '', 'GET'), 'GET');
 
+// Source-image guards: reject oversized inputs BEFORE decoding so a crafted
+// file or DB blob cannot drive a huge allocation in imagecreatefrom*()
+// (a decode bomb is expensive even when the OUTPUT is later capped) — M-14.
+$imgSrcMaxBytes  = 26214400; // 25 MiB cap on the raw source data
+$imgSrcMaxPixels = 40000000; // ~40 MP cap on the decoded source dimensions
+
 if (!empty($imageId)) {
     // If image is a Xoops image
     /** @var XoopsImageHandler $imageHandler */
@@ -289,9 +295,28 @@ if (!empty($imageId)) {
         $imageData = $image->getVar('image_body');
     } else {
         $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
+        // Cap the file on disk BEFORE reading it into memory (M-14). Treat a
+        // stat failure (filesize() === false) as a rejection, not a pass.
+        $srcBytes = is_file($imagePath) ? filesize($imagePath) : false;
+        if (false === $srcBytes || $srcBytes > $imgSrcMaxBytes) {
+            exitInvalidRequest();
+        }
         $imageData = file_get_contents($imagePath);
     }
+    // Cap the raw blob and its decoded dimensions before allocating (M-14).
+    if (!is_string($imageData) || strlen($imageData) > $imgSrcMaxBytes) {
+        exitInvalidRequest();
+    }
+    $srcInfo = getimagesizefromstring($imageData);
+    if (false === $srcInfo || ($srcInfo[0] * $srcInfo[1]) > $imgSrcMaxPixels) {
+        exitInvalidRequest();
+    }
     $sourceImage = imagecreatefromstring($imageData);
+    // imagesx()/imagesy() require a GdImage; reject a decode failure rather than
+    // passing false into them (a TypeError under PHP 8).
+    if (!($sourceImage instanceof \GdImage)) {
+        exitInvalidRequest();
+    }
     $imageWidth = imagesx($sourceImage);
     $imageHeight = imagesy($sourceImage);
 } elseif (!empty($imageUrl)) {
@@ -316,6 +341,18 @@ if (!empty($imageId)) {
     // Get the size and MIME type of the requested image
     $imageFilename = basename($imagePath);  // image filename
     $imagesize = getimagesize($imagePath);
+    // Reject before decode if the source is unreadable or would decode to an
+    // excessive pixel count (M-14). The byte cap only applies to a local file —
+    // if ONLY_LOCAL_IMAGES is ever disabled, $imagePath may be a remote URL, where
+    // is_file()/filesize() do not apply (the pixel cap from getimagesize() still
+    // does). For a local file a stat failure is a rejection, not a pass.
+    $isLocalSource = is_file($imagePath);
+    $srcBytes      = $isLocalSource ? filesize($imagePath) : false;
+    if (false === $imagesize
+        || ($isLocalSource && (false === $srcBytes || $srcBytes > $imgSrcMaxBytes))
+        || ($imagesize[0] * $imagesize[1]) > $imgSrcMaxPixels) {
+        exitInvalidRequest();
+    }
     $imageWidth = $imagesize[0];
     $imageHeight = $imagesize[1];
     $imageMimetype = $imagesize['mime'];
@@ -337,6 +374,11 @@ if (!empty($imageId)) {
         default:
             exitInvalidRequest();
             break;
+    }
+    // Reject a decode failure before imagesx() further down (parity with the
+    // DB-blob path; avoids a PHP 8 TypeError on a corrupt file).
+    if (!($sourceImage instanceof \GdImage)) {
+        exitInvalidRequest();
     }
 } else {
     // No id, no url, no src parameters
@@ -368,15 +410,28 @@ if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET
 $width = Request::getInt('width', 0, 'GET');
 // height
 $height = Request::getInt('height', 0, 'GET');
-// If either a max width or max height are not specified, we default to something large so the unspecified
-// dimension isn't a constraint on our resized image.
+
+// Hard caps to prevent resource exhaustion via attacker-chosen sizes (SECURITY.md
+// M-14). Reject negative/oversized dimensions before any allocation, and cap the
+// total destination area below.
+$imgMaxDim    = 5000;        // max pixels per side
+$imgMaxPixels = 20000000;    // ~20 MP total destination area
+if ($width < 0 || $width > $imgMaxDim) {
+    $width = 0;
+}
+if ($height < 0 || $height > $imgMaxDim) {
+    $height = 0;
+}
+
+// If either a max width or max height are not specified, we default to the per-side
+// cap so the unspecified dimension isn't a constraint on our resized image.
 // If neither are specified but the color is, we aren't going to be resizing at all, just coloring.
 $max_width = $width;
 $max_height = $height;
 if (!$max_width && $max_height) {
-    $max_width = PHP_INT_MAX;
+    $max_width = $imgMaxDim;   // was PHP_INT_MAX
 } elseif ($max_width && !$max_height) {
-    $max_height = PHP_INT_MAX;
+    $max_height = $imgMaxDim;  // was PHP_INT_MAX
 } elseif (!$max_width && !$max_height) {
     $max_width = $imageWidth;
     $max_height = $imageHeight;
@@ -453,6 +508,12 @@ $quality = Request::getInt('quality', DEFAULT_IMAGE_QUALITY, 'GET') ;
 ini_set('memory_limit', MEMORY_TO_ALLOCATE);
 
 // Set up a blank canvas for our resized image (destination)
+// Final guard before allocation: reject non-positive or over-area destinations so a
+// crafted request cannot drive a huge imagecreatetruecolor() allocation (SECURITY.md M-14).
+if ($tn_width < 1 || $tn_height < 1 || ($tn_width * $tn_height) > $imgMaxPixels) {
+    http_response_code(400);
+    exit();
+}
 $destination_image = imagecreatetruecolor($tn_width, $tn_height);
 
 imagealphablending($destination_image, false);
@@ -558,19 +619,39 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
 
 // Imagefilter
 if (ENABLE_IMAGEFILTER && !empty($filter)) {
+    // Allowlist the supported imagefilter constants and their valid extra-argument
+    // arities. NEVER resolve a request-controlled filter name with constant(): on PHP 8
+    // an unknown constant throws a fatal Error (DoS) and constant() would also resolve
+    // unrelated constants (SECURITY.md L-1). Validating the arg count additionally
+    // prevents an ArgumentCountError from a valid filter with wrong arity.
+    // [filterId, [allowed extra-arg counts]]
+    $allowedFilters = [
+        'IMG_FILTER_NEGATE'         => [IMG_FILTER_NEGATE, [0]],
+        'IMG_FILTER_GRAYSCALE'      => [IMG_FILTER_GRAYSCALE, [0]],
+        'IMG_FILTER_BRIGHTNESS'     => [IMG_FILTER_BRIGHTNESS, [1]],
+        'IMG_FILTER_CONTRAST'       => [IMG_FILTER_CONTRAST, [1]],
+        'IMG_FILTER_COLORIZE'       => [IMG_FILTER_COLORIZE, [3, 4]],
+        'IMG_FILTER_EDGEDETECT'     => [IMG_FILTER_EDGEDETECT, [0]],
+        'IMG_FILTER_EMBOSS'         => [IMG_FILTER_EMBOSS, [0]],
+        'IMG_FILTER_GAUSSIAN_BLUR'  => [IMG_FILTER_GAUSSIAN_BLUR, [0]],
+        'IMG_FILTER_SELECTIVE_BLUR' => [IMG_FILTER_SELECTIVE_BLUR, [0]],
+        'IMG_FILTER_MEAN_REMOVAL'   => [IMG_FILTER_MEAN_REMOVAL, [0]],
+        'IMG_FILTER_SMOOTH'         => [IMG_FILTER_SMOOTH, [1]],
+        'IMG_FILTER_PIXELATE'       => [IMG_FILTER_PIXELATE, [1, 2]], // block size required, advanced-mode flag optional
+    ];
     $filterSet = (array) $filter;
     foreach ($filterSet as $currentFilter) {
-        $rawFilterArgs = explode(',', $currentFilter);
-        $filterConst = constant(array_shift($rawFilterArgs));
-        if (null !== $filterConst) { // skip if unknown constant
-            $filterArgs = [];
-            $filterArgs[] = $destination_image;
-            $filterArgs[] = $filterConst;
-            foreach ($rawFilterArgs as $tempValue) {
-                $filterArgs[] = trim($tempValue);
-            }
-            call_user_func_array('imagefilter', $filterArgs);
+        $rawFilterArgs = explode(',', (string) $currentFilter);
+        $filterName    = trim((string) array_shift($rawFilterArgs));
+        if (!isset($allowedFilters[$filterName])) {
+            continue; // unknown/unsupported filter — skip cleanly, never fatal
         }
+        [$filterId, $validArgCounts] = $allowedFilters[$filterName];
+        $extraArgs = array_map(static fn($v): int => (int) trim((string) $v), $rawFilterArgs);
+        if (!in_array(count($extraArgs), $validArgCounts, true)) {
+            continue; // wrong arity → skip, avoid ArgumentCountError
+        }
+        call_user_func_array('imagefilter', array_merge([$destination_image, $filterId], $extraArgs));
     }
 }
 

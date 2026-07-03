@@ -105,6 +105,16 @@ switch ($op) {
         $selectModules = Request::getString('select_modules', '0');
         $activeModules = Request::getString('active_modules', '0');
         $selectTheme = Request::getString('select_theme', '');
+        // Confine select_theme to a real installed theme leaf name — a separator, ../, or
+        // an EMPTY value would let the generate/write paths below (theme_surcharge =
+        // themes/<x>/modules) escape XOOPS_THEME_PATH or write to the themes/ root
+        // (SECURITY.md A2-M-2). This generate op always requires a valid theme, so the
+        // check is unconditional ('' fails the `+` regex). Covers every downstream write.
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $selectTheme)
+            || !is_dir(XOOPS_THEME_PATH . '/' . $selectTheme)) {
+            redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+            exit();
+        }
         $forceGenerated = Request::getInt('force_generated', 0);
         if (  '0' === $selectModules ||  '1' === $activeModules) {
             //Generate modules
@@ -371,8 +381,21 @@ switch ($op) {
         }
         $clean_path_file = Request::getString('path_file', '', 'POST');
         if (!empty($clean_path_file)) {
-            $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
-            $path_file = str_replace('\\','/',$path_file);
+            // Confine writes to the themes/ tree: realpath() resolves any ../ traversal
+            // in path_file, so reject anything that escapes themes/ — otherwise the editor
+            // can overwrite files anywhere under the XOOPS root (SECURITY.md M-9).
+            $path_file  = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
+            $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            if ($path_file === false || $themesRoot === false) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
+            $path_file  = str_replace('\\', '/', $path_file);
+            $themesRoot = str_replace('\\', '/', $themesRoot);
+            if (!str_starts_with($path_file, $themesRoot . '/')) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
             $pathInfo = pathinfo($path_file);
             if (!in_array($pathInfo['extension'], ['css', 'html', 'tpl'])) {
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);

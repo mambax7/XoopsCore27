@@ -36,6 +36,10 @@ switch ($op) {
 
     // Display post
     case 'display_post':
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            http_response_code(403);
+            exit();
+        }
         global $xoopsDB;
 
         $GLOBALS['xoopsLogger']->activated = false;
@@ -57,7 +61,7 @@ switch ($op) {
                 $tables[] = ['table_name' => 'bb_posts', 'uid_column' => 'uid'];
             }
         }
-        $uid         = Request::getInt('uid', 0);
+        $uid         = Request::getInt('uid', 0, 'POST');
         $total_posts = 0;
         foreach ($tables as $table) {
             $criteria = new CriteriaCompo();

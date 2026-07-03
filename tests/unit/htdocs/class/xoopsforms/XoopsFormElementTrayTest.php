@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__DIR__, 4) . '/bootstrap.php';
 
 xoops_load('XoopsFormElement');
+xoops_load('XoopsFormContainerInterface');
 xoops_load('XoopsFormElementTray');
 xoops_load('XoopsFormText');
 xoops_load('XoopsFormHidden');
@@ -73,6 +74,127 @@ class XoopsFormElementTrayTest extends TestCase
     public function testIsContainerReturnsTrue(): void
     {
         $this->assertTrue($this->tray->isContainer());
+    }
+
+    public function testImplementsContainerInterface(): void
+    {
+        $this->assertInstanceOf(\XoopsFormContainerInterface::class, $this->tray);
+    }
+
+    // ------------------------------------------------------------------
+    //  Container contract: interface path + legacy duck-typed fallback
+    // ------------------------------------------------------------------
+
+    public function testInterfaceContainerBubblesRequiredEvenWhenIsContainerFalse(): void
+    {
+        // A container detected via the interface must be treated as a container
+        // regardless of what isContainer() reports.
+        $req       = new \XoopsFormText('Req', 'iface_req', 25, 100);
+        $container = new class($req) extends \XoopsFormElement implements \XoopsFormContainerInterface {
+            private $list;
+            public function __construct($req)
+            {
+                $this->list = [$req];
+            }
+            public function isContainer()
+            {
+                return false;
+            }
+            public function &getRequired()
+            {
+                return $this->list;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+
+        $this->tray->addElement($container);
+
+        $required = $this->tray->getRequired();
+        $this->assertCount(1, $required);
+        $this->assertSame('iface_req', $required[0]->getName(false));
+    }
+
+    public function testLegacyDuckTypedContainerStillBubblesRequired(): void
+    {
+        // BC: a third-party container that predates the interface (isContainer()
+        // returns true, implements getRequired()/getElements(), but does NOT
+        // implement XoopsFormContainerInterface) must still bubble its required.
+        $req    = new \XoopsFormText('Legacy', 'legacy_req', 25, 100);
+        $legacy = new class($req) extends \XoopsFormElement {
+            private $list;
+            public function __construct($req)
+            {
+                $this->list = [$req];
+            }
+            public function isContainer()
+            {
+                return true;
+            }
+            public function &getRequired()
+            {
+                return $this->list;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+        $this->assertNotInstanceOf(\XoopsFormContainerInterface::class, $legacy);
+
+        $this->tray->addElement($legacy);
+
+        $required = $this->tray->getRequired();
+        $this->assertCount(1, $required);
+        $this->assertSame('legacy_req', $required[0]->getName(false));
+    }
+
+    public function testGetElementsRecursiveFlattensLegacyDuckTypedContainer(): void
+    {
+        // BC: recursive flattening must also honour legacy duck-typed containers.
+        $leaf   = new \XoopsFormText('Leaf', 'legacy_leaf', 25, 100);
+        $legacy = new class($leaf) extends \XoopsFormElement {
+            private $list;
+            public function __construct($leaf)
+            {
+                $this->list = [$leaf];
+            }
+            public function isContainer()
+            {
+                return true;
+            }
+            public function &getRequired()
+            {
+                static $none = [];
+                return $none;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+
+        $this->tray->addElement(new \XoopsFormText('Top', 'top', 25, 100));
+        $this->tray->addElement($legacy);
+
+        $flat = $this->tray->getElements(true);
+        $this->assertCount(2, $flat);
+        $this->assertSame('top', $flat[0]->getName(false));
+        $this->assertSame('legacy_leaf', $flat[1]->getName(false));
     }
 
     // ------------------------------------------------------------------

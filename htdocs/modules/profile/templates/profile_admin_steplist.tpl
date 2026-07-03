@@ -8,7 +8,7 @@
             <td><{$step.step_name}></td>
             <td align="center"><{$step.step_order}></td>
             <td align="center">
-                <a href="step.php?op=toggle&amp;step_save=<{$step.step_save}>&amp;step_id=<{$step.step_id}>"><img
+                <a href="step.php?op=toggle&amp;step_save=<{$step.step_save}>&amp;step_id=<{$step.step_id}>&amp;XOOPS_TOKEN_REQUEST=<{$steps_csrf}>"><img
                             src="<{xoModuleIcons16}><{$step.step_save}>.png" title="<{$smarty.const._PROFILE_AM_SAVESTEP_TOGGLE}>"
                             alt="<{$smarty.const._PROFILE_AM_SAVESTEP_TOGGLE}>"/></a>
             </td>

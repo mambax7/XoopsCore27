@@ -67,9 +67,10 @@ class XoopsCaptchaImageHandler
 
         if ($this->mode === 'bmp') {
             $this->config['num_chars'] = 4;
-            $this->code                = mt_rand(10 ** ($this->config['num_chars'] - 1), (int)str_pad('9', $this->config['num_chars'], '9'));
+            $this->code                = random_int(10 ** ($this->config['num_chars'] - 1), (int)str_pad('9', $this->config['num_chars'], '9'));
         } else {
-            $raw_code = md5(uniqid(mt_rand(), true));
+            // CSPRNG hex challenge string (was md5(uniqid(mt_rand()))); SECURITY.md M-15.
+            $raw_code = bin2hex(random_bytes(16));
             if (!empty($this->config['skip_characters'])) {
                 $valid_code = str_replace($this->config['skip_characters'], '', $raw_code);
                 $this->code = substr($valid_code, 0, $this->config['num_chars']);

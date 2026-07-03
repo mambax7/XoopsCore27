@@ -57,8 +57,32 @@ use Xmf\Jwt\TokenReader;
  * SOFTWARE.
  */
 
-if (\Xmf\Request::hasVar('Authorization', 'POST')) {
+// This runs BEFORE mainfile.php loads the XMF autoloader, so use the raw
+// superglobals here rather than Xmf\Request (which is not defined yet).
+// FineUploader may send the token in the request body or the query string.
+//
+// A Fine Uploader request carries the JWT (validated below, once mainfile has
+// loaded). Protector's pre-checks run during mainfile, before that validation,
+// and false-positive on a legitimate multi-file upload:
+//   - the rapid concurrent POST burst trips the DoS/post-flood filter, and
+//   - check_uploaded_files() rejects ordinary image filenames with more than one
+//     dot ("pngkey.com-….png") and any image getimagesize() cannot parse.
+// This endpoint enforces its own extension + MIME allowlist and stores files
+// under generated single-extension names, so skip those two Protector filters
+// here. The upload is still only processed after the JWT is validated, so a
+// request with a bogus token skips the filters but stores nothing.
+//
+// The JWT cannot be verified this early, but to keep a bare "?Authorization=x"
+// from disabling Protector and hammering this script, require a mutating method
+// and a JWT-shaped value (three base64url segments) before skipping.
+$fuAuthz  = $_POST['Authorization'] ?? $_GET['Authorization'] ?? '';
+$fuMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if (in_array($fuMethod, ['POST', 'DELETE'], true)
+    && is_string($fuAuthz)
+    && 1 === preg_match('~^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$~', $fuAuthz)
+) {
     define('PROTECTOR_SKIP_DOS_CHECK', 1);
+    define('PROTECTOR_SKIP_FILESCHECKER', 1);
 }
 include __DIR__ . '/mainfile.php';
 $xoopsLogger->activated = false;
@@ -116,16 +140,22 @@ $method = get_request_method();
 if ($method === 'POST') {
     header('Content-Type: text/plain');
 
-    // Assumes you have a chunking.success.endpoint set to point here with a query parameter of "done".
-    // For example: /myserver/handlers/endpoint.php?done
-    if (\Xmf\Request::hasVar('done', 'GET')) {
-        $result = $uploader->combineChunks(XOOPS_ROOT_PATH . '/uploads');
-    } else { // Handle upload requests
-        // Call handleUpload() with the name of the folder, relative to PHP's getcwd()
-        $result = $uploader->handleUpload(XOOPS_ROOT_PATH . '/uploads');
+    try {
+        // Assumes you have a chunking.success.endpoint set to point here with a query parameter of "done".
+        // For example: /myserver/handlers/endpoint.php?done
+        if (\Xmf\Request::hasVar('done', 'GET')) {
+            $result = $uploader->combineChunks(XOOPS_ROOT_PATH . '/uploads');
+        } else { // Handle upload requests
+            // Call handleUpload() with the name of the folder, relative to PHP's getcwd()
+            $result = $uploader->handleUpload(XOOPS_ROOT_PATH . '/uploads');
 
-        // To return a name used for uploaded file you can use the following line.
-        $result['uploadName'] = $uploader->getUploadName();
+            // To return a name used for uploaded file you can use the following line.
+            $result['uploadName'] = $uploader->getUploadName();
+        }
+    } catch (\Throwable $e) {
+        // Return JSON only — never emit the exception (it can carry absolute
+        // paths, and on a display_errors host it would corrupt the response).
+        $result = ['success' => false, 'error' => 'Upload rejected.', 'preventRetry' => true];
     }
 
     //====================
@@ -134,7 +164,11 @@ if ($method === 'POST') {
 
     echo json_encode($result);
 } elseif ($method == 'DELETE') { // for delete file requests
-    $result = $uploader->handleDelete('files');
+    try {
+        $result = $uploader->handleDelete('files');
+    } catch (\Throwable $e) {
+        $result = ['success' => false, 'error' => 'Delete rejected.'];
+    }
     echo json_encode($result);
 } else {
     header('HTTP/1.0 405 Method Not Allowed');

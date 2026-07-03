@@ -8,6 +8,17 @@ Download XOOPS 2.7.0 from GitHub: https://github.com/XOOPS/XoopsCore27/releases
 For full documentation on installing or upgrading XOOPS please see:
 https://xoops.github.io/xoops-docs/
 
+Languages
+-----------------------------------
+XOOPS 2.7.0 is available in 37 community translations, maintained at:
+https://github.com/XoopsLanguages
+
+See docs/TRANSLATIONS.md for the full list of languages and direct download
+links for each language pack.
+
+Help wanted: please help us find and fix translation errors, and help us add
+and review more languages. Every correction makes XOOPS better worldwide.
+
 How to contribute
 -----------------------------------
 Bug reports and feature requests: https://github.com/XOOPS/XoopsCore27/issues

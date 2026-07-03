@@ -41,8 +41,9 @@ class VersionTest extends TestCase
 
     public function testXoopsVersionValue()
     {
-        // Verify the version starts with the expected major.minor.patch
-        $this->assertStringStartsWith('XOOPS 2.7.0', XOOPS_VERSION, 'Version should start with XOOPS 2.7.0');
+        // Verify the version starts with the expected major.minor line
+        // (kept at 2.7. so patch/pre-release bumps within the line don't churn this test)
+        $this->assertStringStartsWith('XOOPS 2.7.', XOOPS_VERSION, 'Version should start with XOOPS 2.7.');
     }
 
     public function testXoopsVersionContainsXoopsPrefix()

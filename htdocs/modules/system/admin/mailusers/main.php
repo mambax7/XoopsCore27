@@ -155,6 +155,9 @@ switch ($op) {
 
     // Send
     case 'send':
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            redirect_header('admin.php?fct=mailusers', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        }
         // Define Breadcrumb and tips
         $xoBreadCrumb->addLink(_AM_SYSTEM_MAILUSERS_LIST);
         $xoBreadCrumb->render();

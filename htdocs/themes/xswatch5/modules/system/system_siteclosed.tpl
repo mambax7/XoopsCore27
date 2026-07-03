@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>">
+<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>" data-theme="light" data-bs-theme="light">
 <head>
     <{assign var=theme_name value=$xoTheme->folderName}>
     <meta charset="<{$xoops_charset}>">
@@ -18,9 +18,11 @@
 
     <script>
     (function() {
-        const stored = localStorage.getItem('xswatch-theme');
+        let stored = null;
+        try { stored = localStorage.getItem('xswatch-theme'); } catch (e) {}
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-bs-theme', theme);
     })();
     </script>
@@ -36,6 +38,7 @@
 
     <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{else}><{if !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
     <{$xoops_module_header|default:''}>
+    <link rel="stylesheet" type="text/css" href="<{$xoops_imageurl}>css/dark-mode.css">
 </head>
 <body class="site-closed-body">
 <div class="container">

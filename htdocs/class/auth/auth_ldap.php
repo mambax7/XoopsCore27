@@ -292,7 +292,8 @@ class XoopsAuthLdap extends XoopsAuth
                 $this->setErrors(0, sprintf(_AUTH_LDAP_USER_NOT_FOUND, $uname, $filter, $this->ldap_base_dn));
             }
         } else {
-            $userDN = $this->ldap_loginldap_attr . '=' . $uname . ',' . $this->ldap_base_dn;
+            $userDN = $this->ldap_loginldap_attr . '='
+                . ldap_escape((string) $uname, '', LDAP_ESCAPE_DN) . ',' . $this->ldap_base_dn;
         }
 
         return $userDN;
@@ -306,11 +307,14 @@ class XoopsAuthLdap extends XoopsAuth
      */
     public function getFilter($uname)
     {
+        // Escape the login value for an LDAP search filter so metacharacters such
+        // as * ( ) \ cannot alter the query.
+        $safe   = ldap_escape((string) $uname, '', LDAP_ESCAPE_FILTER);
         $filter = '';
         if ($this->ldap_filter_person != '') {
-            $filter = str_replace('@@loginname@@', $uname, $this->ldap_filter_person);
+            $filter = str_replace('@@loginname@@', $safe, $this->ldap_filter_person);
         } else {
-            $filter = $this->ldap_loginldap_attr . '=' . $uname;
+            $filter = $this->ldap_loginldap_attr . '=' . $safe;
         }
 
         return $filter;

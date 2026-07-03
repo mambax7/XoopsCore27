@@ -188,8 +188,20 @@ class xos_kernel_Xoops2
      */
     public function themeSelect()
     {
-        $themeSelect = \Xmf\Request::getString('xoops_theme_select', '', 'POST');
-        if ($themeSelect !== '' && in_array($themeSelect, xoops_getConfigOption('theme_set_allowed'))) {
+        // Prefer the already-boundary-normalised runtime config so any
+        // var/configs/xoopsconfig.php override survives — those overrides
+        // never reach the XoopsConfigHandler cache that backs
+        // xoops_getConfigOption(). Fall back to the cache only for
+        // partial-init paths that may run before common.php has hydrated
+        // $GLOBALS['xoopsConfig']. The helper is idempotent, so re-resolving
+        // an already-normalised pair is a no-op.
+        $allowedThemes = xoops_resolveThemeConfig($GLOBALS['xoopsConfig'] ?? [
+            'theme_set'         => xoops_getConfigOption('theme_set'),
+            'theme_set_allowed' => xoops_getConfigOption('theme_set_allowed'),
+        ])['theme_set_allowed'];
+
+        $themeSelect = xoops_validateThemeName(\Xmf\Request::getString('xoops_theme_select', '', 'POST'));
+        if ($themeSelect !== '' && in_array($themeSelect, $allowedThemes, true)) {
             xoops_setConfigOption('theme_set', $themeSelect);
             $_SESSION['xoopsUserTheme'] = $themeSelect;
 
@@ -198,8 +210,14 @@ class xos_kernel_Xoops2
                 header('Location: ' . $redirectUrl, true, 303);
                 exit;
             }
-        } elseif (!empty($_SESSION['xoopsUserTheme']) && in_array($_SESSION['xoopsUserTheme'], xoops_getConfigOption('theme_set_allowed'))) {
-            xoops_setConfigOption('theme_set', $_SESSION['xoopsUserTheme']);
+        } else {
+            // xoops_validateThemeValue() — scalar gate + path/HTML
+            // validate; a session poisoned with an array / object is
+            // rejected here without ever reaching the (string) cast.
+            $sessionTheme = xoops_validateThemeValue($_SESSION['xoopsUserTheme'] ?? '');
+            if ($sessionTheme !== '' && in_array($sessionTheme, $allowedThemes, true)) {
+                xoops_setConfigOption('theme_set', $sessionTheme);
+            }
         }
     }
 

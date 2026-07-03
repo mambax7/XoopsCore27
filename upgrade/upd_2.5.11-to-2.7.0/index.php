@@ -724,14 +724,22 @@ class Upgrade_270 extends XoopsUpgrade
             $rows[] = $row;
         }
 
-        // Expect exactly: [('field_name', 1, 64, 0)]
+        // Expect exactly one row: field_name at position 1, UNIQUE (NON_UNIQUE=0),
+        // covering the full 64-char column. MySQL/MariaDB normalise a prefix length
+        // equal to the full column width to "full column" — so a varchar(64) column
+        // with UNIQUE `field_name` (`field_name`(64)) is stored with SUB_PART = NULL,
+        // not 64. Accept NULL or 64 (both index the entire 64-char column); requiring
+        // 64 alone made this check never converge on the canonical shape, wedging the
+        // upgrade queue (apply created the index, but check kept reporting it pending).
         if (1 !== count($rows)) {
             return false;
         }
 
+        $subPart = $rows[0][2];
+
         return 'field_name' === $rows[0][0]
             && 1 === (int) $rows[0][1]
-            && 64 === (int) $rows[0][2]
+            && (null === $subPart || 64 === (int) $subPart)
             && 0 === (int) $rows[0][3];
     }
 

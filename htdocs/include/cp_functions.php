@@ -42,6 +42,12 @@ function xoops_cp_header()
  */
 function xoops_cp_footer()
 {
+    // Emit a request token on every control-panel page so admin AJAX actions
+    // (status toggles, drag/drop ordering, ...) can submit and validate it.
+    if (isset($GLOBALS['xoopsSecurity']) && is_object($GLOBALS['xoopsSecurity'])) {
+        echo '<div id="xo-admin-token" style="display:none">'
+            . $GLOBALS['xoopsSecurity']->getTokenHTML() . '</div>';
+    }
     xoops_load('cpanel', 'system');
     $cpanel = XoopsSystemCpanel::getInstance();
     $cpanel->gui->footer();

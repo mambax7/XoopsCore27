@@ -36,6 +36,8 @@ switch ($op) {
         $criteria->setSort('step_order');
         $criteria->setOrder('ASC');
         $GLOBALS['xoopsTpl']->assign('steps', $handler->getObjects($criteria, true, false));
+        // raw token value for the tokenised toggle action link
+        $GLOBALS['xoopsTpl']->assign('steps_csrf', $GLOBALS['xoopsSecurity']->createToken());
         $template_main = 'profile_admin_steplist.tpl';
         break;
 
@@ -108,6 +110,10 @@ switch ($op) {
         break;
 
     case 'toggle':
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            redirect_header('step.php', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            break;
+        }
         if (Request::hasVar('step_id', 'GET')) {
             $step_id = Request::getInt('step_id', 0, 'GET');
             profile_stepsave_toggle($step_id);

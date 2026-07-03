@@ -189,19 +189,24 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
         $link_extra = '';
         if (isset($comment_config['extraParams']) && \is_array($comment_config['extraParams'])) {
             foreach ($comment_config['extraParams'] as $extra_param) {
-                if (isset(${$extra_param})) {
-                    $link_extra .= '&amp;' . $extra_param . '=' . ${$extra_param};
-                    $hidden_value    = htmlspecialchars(${$extra_param}, ENT_QUOTES | ENT_HTML5);
-                    $extra_param_val = ${$extra_param};
+                $extra_param_val = null;
+                if (isset($GLOBALS[$extra_param])) {
+                    $extra_param_val = $GLOBALS[$extra_param];
                 } elseif (Request::hasVar($extra_param, 'POST')) {
                     $extra_param_val = Request::getString($extra_param, '', 'POST');
                 } elseif (Request::hasVar($extra_param, 'GET')) {
                     $extra_param_val = Request::getString($extra_param, '', 'GET');
                 }
-                if (isset($extra_param_val)) {
-                    $link_extra .= '&amp;' . $extra_param . '=' . $extra_param_val;
-                    $hidden_value = htmlspecialchars($extra_param_val, ENT_QUOTES | ENT_HTML5);
-                    $commentBarHidden .= '<input type="hidden" name="' . $extra_param . '" value="' . $hidden_value . '" />';
+                if (null !== $extra_param_val) {
+                    $extra_param_val = (string) $extra_param_val;
+                    // The value is concatenated into the onclick JS-string href below
+                    // (a JS string inside an HTML attribute). URL-encode it: htmlspecialchars
+                    // is unsafe here because &#039; would be HTML-decoded back to ' inside
+                    // the attribute and break out of the JS string. (SECURITY.md M-2)
+                    $link_extra .= '&amp;' . $extra_param . '=' . rawurlencode($extra_param_val);
+                    // Hidden-input value is a plain HTML attribute → HTML-escape.
+                    $commentBarHidden .= '<input type="hidden" name="' . $extra_param
+                        . '" value="' . htmlspecialchars($extra_param_val, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" />';
                 }
             }
         }

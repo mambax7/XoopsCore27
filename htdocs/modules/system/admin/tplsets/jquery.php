@@ -178,8 +178,11 @@ switch ($op) {
         $themesRoot  = realpath(XOOPS_ROOT_PATH . '/themes');
         $resolved    = realpath($restorePath);
 
-        // Strict prefix check to prevent directory traversal
-        $valid_dir = ($resolved !== false && $themesRoot !== false && strpos($resolved, $themesRoot) === 0);
+        // Require root-plus-separator containment, not a bare prefix: strpos(...) === 0
+        // accepts a sibling dir whose path starts with the themes-root string, e.g.
+        // ".../themes-evil/..." (SECURITY.md A2-M-3). Mirrors the tpls_save guard.
+        $valid_dir = ($resolved !== false && $themesRoot !== false
+            && str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR));
 
         $old_file = $resolved . '.back';
         $new_file = $resolved;

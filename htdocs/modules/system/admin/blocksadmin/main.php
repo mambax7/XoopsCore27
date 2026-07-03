@@ -48,6 +48,14 @@ if ($type === 'preview') {
 
 $bid = Request::getInt('bid', 0);
 
+// The block visibility/drag/order operations arrive via AJAX; validate the
+// request token before any output and stop quietly on mismatch (these endpoints
+// ignore the response body).
+if (in_array($op, ['display', 'drag', 'order'], true) && !$GLOBALS['xoopsSecurity']->check(false)) {
+    http_response_code(403);
+    exit();
+}
+
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_blocks.tpl';
 // Call Header
@@ -287,6 +295,66 @@ switch ($op) {
             $block = $block_handler->get($block_id);
         } else {
             $block = $block_handler->create();
+            // Clone (bid=0): a fresh object has no module metadata. The
+            // source block's binding only survives in the hidden fields
+            // emitted by SystemBlock::getForm('clone'); read them back so
+            // the clone keeps its module association and passes the
+            // not-null name validation. Normal new custom blocks post these
+            // empty/0, which is harmless (isCustom() path ignores them).
+            $clone_dirname   = Request::getString('dirname', '', 'POST');
+            $clone_func_file = Request::getString('func_file', '', 'POST');
+            $clone_template  = Request::getString('template', '', 'POST');
+            $clone_show_func = Request::getString('show_func', '', 'POST');
+            $clone_edit_func = Request::getString('edit_func', '', 'POST');
+
+            // Reject tampered hidden inputs. dirname/func_file are later
+            // used to locate and include_once the module block PHP file,
+            // template is persisted as the block's Smarty template name,
+            // and show/edit_func are called as functions when the block
+            // renders or exposes options. Legitimate clone values come
+            // from a trusted DB row, so these checks never reject real
+            // clones but block path traversal / code injection via a
+            // forged POST.
+            //
+            // dirname is a single module directory segment (never contains
+            // a separator).
+            if ($clone_dirname !== ''
+                && (false !== strpos($clone_dirname, '/')
+                    || false !== strpos($clone_dirname, '\\')
+                    || false !== strpos($clone_dirname, '..')
+                    || false !== strpos($clone_dirname, "\0"))) {
+                redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
+            }
+            // func_file is the block PHP file under modules/<dirname>/blocks/
+            // (a subdirectory is allowed - some modules nest block files);
+            // template is a Smarty template name. Neither legitimately
+            // contains traversal, backslashes, NUL or an absolute path, so
+            // reject those while still permitting an internal '/'.
+            foreach ([$clone_func_file, $clone_template] as $clone_path) {
+                if ($clone_path !== ''
+                    && (false !== strpos($clone_path, '..')
+                        || false !== strpos($clone_path, '\\')
+                        || false !== strpos($clone_path, "\0")
+                        || str_starts_with($clone_path, '/'))) {
+                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
+                }
+            }
+            foreach ([$clone_show_func, $clone_edit_func] as $clone_func) {
+                if ($clone_func !== '' && !preg_match('/^[A-Za-z_]\w*$/', $clone_func)) {
+                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
+                }
+            }
+
+            $block->setVars([
+                'mid'       => Request::getInt('mid', 0, 'POST'),
+                'func_num'  => Request::getInt('func_num', 0, 'POST'),
+                'func_file' => $clone_func_file,
+                'show_func' => $clone_show_func,
+                'edit_func' => $clone_edit_func,
+                'template'  => $clone_template,
+                'dirname'   => $clone_dirname,
+                'name'      => Request::getString('name', '', 'POST'),
+            ]);
         }
         $block_type = Request::getString('block_type', '');
         $block->setVar('block_type', $block_type);

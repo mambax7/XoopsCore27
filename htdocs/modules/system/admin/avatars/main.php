@@ -28,6 +28,13 @@ if (!xoops_getModuleOption('active_avatars', 'system')) {
 // Get Action type
 $op = Request::getString('op', 'list');
 
+// The status toggle arrives via AJAX (system_setStatus); validate the request
+// token before any output so a forged request cannot flip the display flag.
+if ('display' === $op && !$GLOBALS['xoopsSecurity']->check(false)) {
+    http_response_code(403);
+    exit();
+}
+
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_avatars.tpl';
 // Call Header

@@ -1,0 +1,114 @@
+/*
+ * Dark-mode compatibility for XOOPS legacy module output.
+ * Loaded after module CSS so xtailwind2 dark palettes override hard-coded light controls.
+ */
+
+:where(
+    [data-theme="noctis"],
+    [data-theme="velvet"],
+    [data-theme="graphite"]
+) {
+    color-scheme: dark;
+}
+
+:where(
+    [data-theme="noctis"],
+    [data-theme="velvet"],
+    [data-theme="graphite"]
+) :where(
+    input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea,
+    .form-control,
+    .form-select,
+    .custom-select
+) {
+    background-color: hsl(var(--b1));
+    color: hsl(var(--bc));
+    border: 1px solid hsl(var(--b3));
+    border-radius: 0.75rem;
+    box-shadow: none;
+}
+
+:where(
+    [data-theme="noctis"],
+    [data-theme="velvet"],
+    [data-theme="graphite"]
+) :where(select[size], select[multiple]) {
+    background-color: hsl(var(--b1));
+}
+
+:where(
+    [data-theme="noctis"],
+    [data-theme="velvet"],
+    [data-theme="graphite"]
+) :where(option, optgroup) {
+    background-color: hsl(var(--b1));
+    color: hsl(var(--bc));
+}
+
+:where(
+    [data-theme="noctis"],
+    [data-theme="velvet"],
+    [data-theme="graphite"]
+) :where(input::placeholder, textarea::placeholder, .form-control::placeholder) {
+    color: hsl(var(--bc) / 0.52);
+    opacity: 1;
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(
+    .outer,
+    .inner,
+    .head,
+    .even,
+    .odd,
+    .foot,
+    .item,
+    .newbb-thread,
+    .newbb-user-data,
+    .newbb-message-area,
+    .newbb-links,
+    .pagenav
+) {
+    border-color: hsl(var(--b3) / 0.8);
+    color: hsl(var(--bc));
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(
+    .outer,
+    .inner,
+    .item,
+    .newbb-thread,
+    .newbb-user-data,
+    .newbb-message-area,
+    .newbb-links,
+    .pagenav
+) {
+    background-color: hsl(var(--b1) / 0.78);
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.head, .foot, .newbb-forum-title) {
+    background-color: hsl(var(--b2) / 0.82);
+    color: hsl(var(--bc));
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-thread) {
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    border-width: 1px;
+    border-radius: 1.25rem;
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-user-data, .newbb-message-area) {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-message-area p, .newbb-message-area li, .newbb-message-area div) {
+    color: hsl(var(--bc) / 0.88);
+}
+
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-user-signature, .newbb-thread-attachment) {
+    border-top: 1px solid hsl(var(--b3) / 0.75);
+    color: hsl(var(--bc) / 0.68);
+}

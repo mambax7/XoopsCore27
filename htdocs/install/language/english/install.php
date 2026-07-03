@@ -33,6 +33,8 @@ define('RECOMMENDED', 'Recommended');
 define('CURRENT', 'Current');
 define('RECOMMENDED_EXTENSIONS_MSG', 'These extensions are not required for normal use, but may be necessary to explore
     some specific features (like the multi-language or RSS support). Thus, it is recommended to have them installed.');
+define('MISSING_REQUIRED_EXTENSIONS', 'Required PHP extensions are missing');
+define('MISSING_REQUIRED_EXTENSIONS_MSG', 'XOOPS cannot be installed because the following mandatory PHP extension(s) are not available: %s. Enable them in your PHP configuration (php.ini) and restart your web server, then reload this page.');
 define('NONE', 'None');
 define('SUCCESS', 'Success');
 define('WARNING', 'Warning');

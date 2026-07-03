@@ -1,0 +1,87 @@
+name: Changelog
+
+# Generates the root CHANGELOG.md from the conventional-commit history with
+# git-cliff (config: cliff.toml). CHANGELOG.md is a generated artifact and
+# must not be hand-edited. Runs on each published release and can be
+# dispatched manually. The curated narrative notes stay in
+# docs/changelog.270.txt.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # push the automation branch
+  pull-requests: write     # open/update the changelog PR
+
+concurrency:
+  # Fixed group (not keyed by ref): release-tag and manual-dispatch runs
+  # both target the same automation branch / PR. Queue them
+  # (cancel-in-progress: false) so each run finishes and updates the PR
+  # instead of a later run cancelling an in-flight one mid-update.
+  group: changelog
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate CHANGELOG.md
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history + tags)
+        # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # On release: published the default ref is the tag (detached HEAD),
+          # which cannot be pushed back. Always work on the default branch.
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Generate changelog
+        # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          # git-cliff-action reads OUTPUT as an ENV var (run.sh:
+          # OUTPUT=${OUTPUT:="git-cliff/CHANGELOG.md"}); there is no `output`
+          # action input. Do not move this into `with:` — it would be ignored
+          # and the changelog would land at the default git-cliff/ path.
+          OUTPUT: CHANGELOG.md
+
+      - name: Verify changelog was generated at the repo root
+        run: test -s CHANGELOG.md
+
+      - name: Open/update changelog pull request
+        # master is protected (changes must go through a PR), so the bot
+        # cannot push directly. Push a fixed automation branch and let this
+        # action open or update the PR; it no-ops when nothing changed.
+        # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          # Intentional: GITHUB_TOKEN-created PRs do not trigger CI/Sonar
+          # (GitHub recursion-prevention). That is fine here — master's
+          # ruleset requires only 1 approving review, not status checks, and
+          # CI on a generated CHANGELOG.md is low value. A maintainer reviews
+          # and merges the changelog PR. Do not swap in a PAT/App token just
+          # to run checks — it adds a managed elevated secret for no benefit.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ github.event.repository.default_branch }}
+          branch: automation/update-changelog
+          delete-branch: true
+          add-paths: CHANGELOG.md
+          commit-message: "docs(changelog): regenerate CHANGELOG.md"
+          committer: "xoops-ci <ci@xoops.org>"
+          author: "xoops-ci <ci@xoops.org>"
+          title: "docs(changelog): regenerate CHANGELOG.md"
+          body: |
+            Regenerated `CHANGELOG.md` from the commit history via
+            `git-cliff` (config: `cliff.toml`).
+
+            Opened by the **Changelog** workflow — `master` is protected
+            (changes must go through a PR), so the generated file is
+            delivered this way instead of a direct push. Safe to merge
+            once green; it only touches `CHANGELOG.md`.

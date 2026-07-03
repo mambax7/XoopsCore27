@@ -315,8 +315,15 @@ class XoopsImageHandler extends XoopsObjectHandler
         }
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
-            $sort = $criteria->getSort() == '' ? 'image_weight' : $criteria->getSort();
-            $sql .= ' ORDER BY ' . $sort . ' ' . $criteria->getOrder();
+            // Restrict ORDER BY to real columns of this table. xoops_buildOrderBy()
+            // attaches each clause's direction, so the criteria order must NOT be
+            // appended again here (SECURITY.md L-6). When $getbinary joins imagebody,
+            // image_id exists in both tables — force the "i." alias to disambiguate.
+            $orderPrefix = $getbinary ? 'i.' : '';
+            $sql .= ' ORDER BY ' . self::buildOrderBy($criteria->getSort(), $criteria->getOrder(), [
+                'image_id', 'image_name', 'image_nicename', 'image_mimetype',
+                'image_created', 'image_display', 'image_weight', 'imgcat_id',
+            ], 'image_weight', $orderPrefix);
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();
         }

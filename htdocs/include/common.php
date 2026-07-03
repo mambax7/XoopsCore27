@@ -122,6 +122,14 @@ if (file_exists($file = $GLOBALS['xoops']->path('var/configs/xoopsconfig.php')))
     trigger_error('File Path Error: ' . 'var/configs/xoopsconfig.php' . ' does not exist.');
 }
 
+// Boundary normalise theme_set / theme_set_allowed once, so every
+// downstream reader (header.php, site-closed.php, editors, theme
+// factory, the legacy CSS path helpers) sees a validated current
+// theme and a validated allowed list. xoops_getConfigOption() has its
+// own cache and is NOT covered here — the few callers that go through
+// that path must use xoops_resolveThemeConfig() at the call site.
+$xoopsConfig = array_replace($xoopsConfig, xoops_resolveThemeConfig($xoopsConfig));
+
 /**
  * clickjack protection - Add option to HTTP header restricting using site in an iframe
  */
@@ -244,12 +252,12 @@ if (!empty($_SESSION['xoopsUserId'])) {
     } else {
         if (((int) $xoopsUser->getVar('last_login') + 60 * 5) < time()) {
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET last_login = '" . time()
-                   . "' WHERE uid = " . $_SESSION['xoopsUserId'];
+                   . "' WHERE uid = " . (int) $_SESSION['xoopsUserId'];
             try {
                 $xoopsDB->exec($sql);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 throw new \RuntimeException(
-                    \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
+                    \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
                     E_USER_ERROR,
                 );
             }
@@ -262,8 +270,12 @@ if (!empty($_SESSION['xoopsUserId'])) {
             $_SESSION['xoopsUserGroups'] = $xoopsUser->getGroups();
         }
         if (is_object($rememberClaims)) {   // only do during a 'remember me' login
-            $user_theme = $xoopsUser->getVar('theme');
-            if ($user_theme != $xoopsConfig['theme_set'] && in_array($user_theme, $xoopsConfig['theme_set_allowed'])) {
+            // Read raw via 'n' format — getVar()'s default 's' escapes '&'
+            // to '&amp;', which the validator's HTML guard would reject.
+            $user_theme = xoops_validateThemeName((string) $xoopsUser->getVar('theme', 'n'));
+            if ($user_theme !== '' && $user_theme !== $xoopsConfig['theme_set']
+                && in_array($user_theme, $xoopsConfig['theme_set_allowed'], true)
+            ) {
                 $_SESSION['xoopsUserTheme'] = $user_theme;
             }
             // update our remember me cookie
