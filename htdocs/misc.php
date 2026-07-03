@@ -148,17 +148,35 @@ EOAVJS;
                         $errorMessage = $xoopsCaptcha->getMessage();
                     }
                 }
-                // Session-scoped sliding-window rate limit for anonymous senders
-                // (defence-in-depth on top of the CAPTCHA): cap the number of
-                // sends per window so the form cannot be used for bulk relay.
+                // Rate limit anonymous senders (defence-in-depth on top of the
+                // CAPTCHA) so the form cannot be used for bulk mail relay. Two
+                // sliding windows share the same limit: a fast session-scoped one,
+                // and a persistent per-IP one (via XoopsCache) that survives a
+                // client dropping its session cookie. The window/limit are tunable
+                // constants; note the per-IP cap is shared by users behind one NAT.
                 if (!$error && !is_object($xoopsUser)) {
                     $tfNow    = time();
                     $tfWindow = 3600; // 1 hour
                     $tfMax    = 5;
-                    $tfSends  = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
-                    $tfSends  = array_values(array_filter($tfSends, static fn($t) => ($tfNow - (int) $t) < $tfWindow));
+
+                    // Session window.
+                    $tfSends = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
+                    $tfSends = array_values(array_filter($tfSends, static fn($t) => ($tfNow - (int) $t) < $tfWindow));
                     $_SESSION['tellfriend_sends'] = $tfSends;
-                    if (count($tfSends) >= $tfMax) {
+
+                    // Persistent per-IP window, keyed by the connecting address
+                    // (REMOTE_ADDR — not a spoofable X-Forwarded-For header).
+                    $tfIp      = (isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : '';
+                    $tfIpKey   = '' !== $tfIp ? 'tellfriend_rl_' . md5($tfIp) : '';
+                    $tfIpSends = [];
+                    if ('' !== $tfIpKey) {
+                        xoops_load('XoopsCache');
+                        $tfCached  = XoopsCache::read($tfIpKey);
+                        $tfIpSends = is_array($tfCached) ? $tfCached : [];
+                        $tfIpSends = array_values(array_filter($tfIpSends, static fn($t) => ($tfNow - (int) $t) < $tfWindow));
+                    }
+
+                    if (count($tfSends) >= $tfMax || count($tfIpSends) >= $tfMax) {
                         $error        = true;
                         $errorMessage = defined('_MSC_TELLFRIEND_TOOMANY')
                             ? _MSC_TELLFRIEND_TOOMANY
@@ -195,11 +213,18 @@ EOAVJS;
                     $errorMessage = $xoopsMailer->getErrors();
                     $variables['errorMessage'] = $errorMessage;
                 } else {
-                    // Record this send against the anonymous rate-limit window.
+                    // Record this send against both anonymous rate-limit windows.
                     if (!is_object($xoopsUser)) {
+                        $recNow    = time();
                         $tfSends   = is_array($_SESSION['tellfriend_sends'] ?? null) ? $_SESSION['tellfriend_sends'] : [];
-                        $tfSends[] = time();
+                        $tfSends[] = $recNow;
                         $_SESSION['tellfriend_sends'] = $tfSends;
+                        if (!empty($tfIpKey)) {
+                            $tfIpSends   = isset($tfIpSends) && is_array($tfIpSends) ? $tfIpSends : [];
+                            $tfIpSends[] = $recNow;
+                            xoops_load('XoopsCache');
+                            XoopsCache::write($tfIpKey, $tfIpSends, isset($tfWindow) ? $tfWindow : 3600);
+                        }
                     }
                     $variables['successMessage'] = _MSC_REFERENCESENT;
                 }
