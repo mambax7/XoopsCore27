@@ -925,6 +925,7 @@ return array(
     'Xmf\\Database\\SchemaDefinitionException' => $vendorDir . '/xoops/xmf/src/Database/SchemaDefinitionException.php',
     'Xmf\\Database\\TableLoad' => $vendorDir . '/xoops/xmf/src/Database/TableLoad.php',
     'Xmf\\Database\\Tables' => $vendorDir . '/xoops/xmf/src/Database/Tables.php',
+    'Xmf\\Database\\WriteStatementTrait' => $vendorDir . '/xoops/xmf/src/Database/WriteStatementTrait.php',
     'Xmf\\Debug' => $vendorDir . '/xoops/xmf/src/Debug.php',
     'Xmf\\FilterInput' => $vendorDir . '/xoops/xmf/src/FilterInput.php',
     'Xmf\\Highlighter' => $vendorDir . '/xoops/xmf/src/Highlighter.php',

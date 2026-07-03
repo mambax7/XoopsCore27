@@ -1090,6 +1090,7 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
         'Xmf\\Database\\SchemaDefinitionException' => __DIR__ . '/..' . '/xoops/xmf/src/Database/SchemaDefinitionException.php',
         'Xmf\\Database\\TableLoad' => __DIR__ . '/..' . '/xoops/xmf/src/Database/TableLoad.php',
         'Xmf\\Database\\Tables' => __DIR__ . '/..' . '/xoops/xmf/src/Database/Tables.php',
+        'Xmf\\Database\\WriteStatementTrait' => __DIR__ . '/..' . '/xoops/xmf/src/Database/WriteStatementTrait.php',
         'Xmf\\Debug' => __DIR__ . '/..' . '/xoops/xmf/src/Debug.php',
         'Xmf\\FilterInput' => __DIR__ . '/..' . '/xoops/xmf/src/FilterInput.php',
         'Xmf\\Highlighter' => __DIR__ . '/..' . '/xoops/xmf/src/Highlighter.php',
