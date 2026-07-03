@@ -712,6 +712,36 @@ class SystemMaintenance
     }
 
     /**
+     * Absolute path of the SQL-dump directory, created on demand.
+     *
+     * Dumps hold password hashes, e-mail addresses and the full configuration,
+     * so they are written under XOOPS_VAR_PATH (outside the web root) and served
+     * only through the admin-authenticated download action — never as a
+     * directly fetchable file under the web root. A deny-all guard is dropped in
+     * as belt-and-braces in case the data path is misconfigured to be public.
+     *
+     * @return string
+     */
+    public static function dumpDirectory(): string
+    {
+        $base = defined('XOOPS_VAR_PATH') ? XOOPS_VAR_PATH : (defined('XOOPS_ROOT_PATH') ? XOOPS_ROOT_PATH . '/uploads' : \sys_get_temp_dir());
+        $dir  = $base . '/dumps';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0700, true);
+        }
+        $htaccess = $dir . '/.htaccess';
+        if (!file_exists($htaccess)) {
+            @file_put_contents($htaccess, "Require all denied\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n");
+        }
+        $indexHtml = $dir . '/index.html';
+        if (!file_exists($indexHtml)) {
+            @file_put_contents($indexHtml, '');
+        }
+
+        return $dir;
+    }
+
+    /**
      * Dump Write
      *
      * @param array
@@ -719,12 +749,18 @@ class SystemMaintenance
      */
     public function dump_write($ret)
     {
-        $file_name = 'dump_' . date('Y.m.d') . '_' . date('H.i.s') . '.sql';
-        $path_file = './admin/maintenance/dump/' . $file_name;
-        if (file_put_contents($path_file, $ret[0])) {
-            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" align="center"><a href="' . XOOPS_URL . '/modules/system/admin/maintenance/dump/' . $file_name . '">' . $file_name . '</a></td><td  class="xo-actions txtcenter"><img src="' . system_AdminIcons('success.png') . '" /></td><tr></table>';
+        $dir       = self::dumpDirectory();
+        // date component for readability + a CSPRNG suffix so the name cannot be
+        // guessed from the creation time alone.
+        $file_name = 'dump_' . date('Y.m.d_H.i.s') . '_' . bin2hex(random_bytes(8)) . '.sql';
+        $path_file = $dir . '/' . $file_name;
+        if (false !== file_put_contents($path_file, $ret[0])) {
+            @chmod($path_file, 0600);
+            $downloadUrl = XOOPS_URL . '/modules/system/admin.php?fct=maintenance&amp;op=dump_download&amp;file=' . urlencode($file_name);
+            $safeName    = htmlspecialchars($file_name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" align="center"><a href="' . $downloadUrl . '">' . $safeName . '</a></td><td  class="xo-actions txtcenter"><img src="' . system_AdminIcons('success.png') . '" /></td><tr></table>';
         } else {
-            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" class="xo-actions txtcenter">' . $file_name . '</td><td  class="xo-actions txtcenter"><img src="' . system_AdminIcons('cancel.png') . '" /></td><tr></table>';
+            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" class="xo-actions txtcenter">' . htmlspecialchars($file_name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td><td  class="xo-actions txtcenter"><img src="' . system_AdminIcons('cancel.png') . '" /></td><tr></table>';
         }
 
         return $ret;
