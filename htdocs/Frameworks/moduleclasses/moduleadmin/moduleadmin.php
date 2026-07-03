@@ -133,7 +133,8 @@ class ModuleAdmin
      */
     public function loadLanguage()
     {
-        $language = $GLOBALS['xoopsConfig']['language'];
+        // basename() the configured language before it builds an include path.
+        $language = basename((string) $GLOBALS['xoopsConfig']['language']);
         if (!file_exists($fileinc = XOOPS_ROOT_PATH . "/Frameworks/moduleclasses/moduleadmin/language/{$language}/main.php")) {
             if (!file_exists($fileinc = XOOPS_ROOT_PATH . '/Frameworks/moduleclasses/moduleadmin/language/english/main.php')) {
                 return false;
@@ -160,12 +161,17 @@ class ModuleAdmin
         $ret = "<div class=\"rmmenuicon\">\n";
         foreach (array_keys($this->_obj->adminmenu) as $i) {
             if ($this->_obj->adminmenu[$i]['link'] !== 'admin/index.php') {
-                $ret .= "<a href=\"../" . $this->_obj->adminmenu[$i]['link'] . "\" title=\"" . ($this->_obj->adminmenu[$i]['desc'] ?? '') . "\">";
-                //$ret .= "<img src=\"" . $path . $this->_obj->adminmenu[$i]['icon']. "\" alt=\"" . $this->_obj->adminmenu[$i]['title'] . "\" />";
-                //mb for direct URL access to icons in modules Admin
-                $ret .= "<img src=\"" . (filter_var($this->_obj->adminmenu[$i]['icon'], FILTER_VALIDATE_URL) ? $this->_obj->adminmenu[$i]['icon'] : $path . $this->_obj->adminmenu[$i]['icon']) . "\" alt=\"" . $this->_obj->adminmenu[$i]['title'] . "\" />";
-
-                $ret .= '<span>' . $this->_obj->adminmenu[$i]['title'] . '</span>';
+                // Escape the admin-defined menu values before they land in the
+                // href/title/src/alt attribute and text contexts.
+                $menuLink  = htmlspecialchars((string) $this->_obj->adminmenu[$i]['link'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $menuDesc  = htmlspecialchars((string) ($this->_obj->adminmenu[$i]['desc'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $menuTitle = htmlspecialchars((string) $this->_obj->adminmenu[$i]['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                // icon may be a full URL (direct URL access to icons in modules admin).
+                $iconRaw   = filter_var($this->_obj->adminmenu[$i]['icon'], FILTER_VALIDATE_URL) ? $this->_obj->adminmenu[$i]['icon'] : $path . $this->_obj->adminmenu[$i]['icon'];
+                $menuIcon  = htmlspecialchars((string) $iconRaw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $ret .= "<a href=\"../" . $menuLink . "\" title=\"" . $menuDesc . "\">";
+                $ret .= "<img src=\"" . $menuIcon . "\" alt=\"" . $menuTitle . "\" />";
+                $ret .= '<span>' . $menuTitle . '</span>';
                 $ret .= '</a>';
             }
         }
