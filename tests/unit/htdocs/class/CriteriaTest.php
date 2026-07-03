@@ -985,6 +985,15 @@ class CriteriaTest extends TestCase
         $this->assertSame('(|(uid=1)(uid=2)(uid=3))', $result);
     }
 
+    public function testRenderLdapFailsClosedOnInvalidAttribute(): void
+    {
+        // An attribute name outside the allowlist must yield no predicate
+        // rather than a malformed filter like "(=value)".
+        $c = new Criteria('bad attr!', 'value', '=');
+
+        $this->assertSame('', $c->renderLdap());
+    }
+
     // =========================================================================
     // CriteriaCompo — Constructor
     // =========================================================================
