@@ -76,16 +76,16 @@ if ('' === $uname || '' === $pass) {
         }
     }
 
+    // The upgrade wizard is an administrative tool: it must never establish a
+    // session for a non-admin, regardless of closesite. Require webmaster-group
+    // (XOOPS_GROUP_ADMIN) membership and do NOT honour closesite_okgrp here.
+    // Group ids are normalised to int so the strict compare holds whether
+    // getGroups() yields string or int ids (XOOPS_GROUP_ADMIN is the string '1').
     $isAllowed = false;
-    if (is_object($user) && $user->getVar('level') > 0) {
-        $isAllowed = true;
-        if ($xoopsConfig['closesite'] == 1) {
-            $groups = $user->getGroups();
-            if (in_array(XOOPS_GROUP_ADMIN, $groups) || array_intersect($groups, $xoopsConfig['closesite_okgrp'])) {
-                $isAllowed = true;
-            } else {
-                $isAllowed = false;
-            }
+    if (is_object($user) && (int) $user->getVar('level') > 0) {
+        $groups = $user->getGroups();
+        if (is_array($groups) && in_array((int) XOOPS_GROUP_ADMIN, array_map('intval', $groups), true)) {
+            $isAllowed = true;
         }
     }
     if ($isAllowed) {
