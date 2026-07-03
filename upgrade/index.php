@@ -88,7 +88,20 @@ global $xoopsUser;
 if (!$xoopsUser || !$xoopsUser->isAdmin()) {
     include_once __DIR__ . '/login.php';
 } else {
-    $op = Xmf\Request::getCmd('action', '');
+    // Self-contained CSRF token for the schema-mutating apply() path, mirroring
+    // preflight.php's per-session token ($xoopsSecurity is unavailable this early
+    // when upgrading a possibly pre-2.7 site). Read the action from POST only and
+    // require a matching token before any patch is applied.
+    if (empty($_SESSION['preflight_csrf'])) {
+        $_SESSION['preflight_csrf'] = bin2hex(random_bytes(32));
+    }
+    $op = Xmf\Request::getCmd('action', '', 'POST');
+    if ('' !== $op) {
+        $sentToken = Xmf\Request::getString('upgrade_token', '', 'POST');
+        if (!hash_equals((string) $_SESSION['preflight_csrf'], $sentToken)) {
+            $op = '';
+        }
+    }
     if (!$upgradeControl->needUpgrade) {
         $op = '';
     }
@@ -128,7 +141,7 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
             [],
         );
     } else {
-        echo $upgradeControl->oneButtonContinueForm();
+        echo $upgradeControl->oneButtonContinueForm('index.php', ['action' => 'next', 'upgrade_token' => (string) ($_SESSION['preflight_csrf'] ?? '')]);
     }
 }
 $content = ob_get_contents();
