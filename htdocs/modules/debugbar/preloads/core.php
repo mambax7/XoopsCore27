@@ -45,23 +45,32 @@ class DebugbarCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreIncludeCommonStart($args)
     {
-        // Ensure XoopsLogger is loaded — this event fires before common.php loads it
-        if (!class_exists('XoopsLogger', false)) {
-            XoopsLoad::load('xoopslogger');
+        // Preload handlers run on every request and must never throw (R-014):
+        // a fatal here would blank the whole site — front end and admin — before
+        // an admin could disable the module.
+        try {
+            // Ensure XoopsLogger is loaded — this event fires before common.php loads it
+            if (!class_exists('XoopsLogger', false)) {
+                XoopsLoad::load('xoopslogger');
+            }
+
+            // Register PSR-4 autoloader for XoopsModules\Debugbar namespace
+            require_once __DIR__ . '/autoloader.php';
+
+            // Enable DebugbarLogger
+            $logger = DebugbarLogger::getInstance();
+            $logger->enable();
+            $logger->startTime('XOOPS');
+            $logger->startTime('XOOPS Boot');
+
+            // Ray is intentionally NOT enabled here. Enabling it at common.start
+            // (before authentication) let early bootstrap log/SQL entries reach
+            // ray() on anonymous requests before the admin + ray_enable checks
+            // ran. It is now enabled only in eventCoreIncludeCommonAuthSuccess,
+            // after those checks pass.
+        } catch (\Throwable $e) {
+            \trigger_error('debugbar preload (common.start) failed: ' . $e->getMessage(), \E_USER_WARNING);
         }
-
-        // Register PSR-4 autoloader for XoopsModules\Debugbar namespace
-        require_once __DIR__ . '/autoloader.php';
-
-        // Enable DebugbarLogger
-        $logger = DebugbarLogger::getInstance();
-        $logger->enable();
-        $logger->startTime('XOOPS');
-        $logger->startTime('XOOPS Boot');
-
-        // Enable RayLogger (optional — silently does nothing if ray() is not available)
-        $rayLogger = RayLogger::getInstance();
-        $rayLogger->enable();
     }
 
     /**
@@ -113,11 +122,14 @@ class DebugbarCorePreload extends XoopsPreloadItem
             $logger->setQueryLogMode((int) $moduleConfig['query_log_mode']);
         }
 
-        // Check Ray-specific config (disable Ray independently of DebugBar)
-        if (RayLogger::getInstance()->isEnabled()) {
-            if (is_array($moduleConfig) && isset($moduleConfig['ray_enable']) && !$moduleConfig['ray_enable']) {
-                self::disableRay();
-            }
+        // Enable Ray only now (never at common.start): the request has reached
+        // an authenticated admin with debug enabled. Honour the ray_enable
+        // config; RayLogger::enable() itself no-ops unless spatie/ray exists.
+        $rayEnabled = !(is_array($moduleConfig) && isset($moduleConfig['ray_enable']) && !$moduleConfig['ray_enable']);
+        if ($rayEnabled) {
+            RayLogger::getInstance()->enable();
+        } else {
+            self::disableRay();
         }
 
         // If debugbar is active, suppress the legacy XoopsLogger HTML output

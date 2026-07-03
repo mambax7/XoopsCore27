@@ -157,7 +157,10 @@ function mod_loadCacheFile_byGroup($name, $dirname = null, $groups = null)
 function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PATH)
 {
     if (empty($dirname)) {
-        $pattern = $dirname ? "{$dirname}_{$name}.*\.php" : "[^_]+_{$name}.*\.php";
+        // Quote the interpolated values so they cannot inject regex metacharacters
+        // (ReDoS / unintended match) into the file-selection pattern.
+        $nameQuoted = preg_quote((string) $name, '/');
+        $pattern = $dirname ? preg_quote((string) $dirname, '/') . "_{$nameQuoted}.*\.php" : "[^_]+_{$nameQuoted}.*\.php";
         if ($handle = opendir($root_path)) {
             while (false !== ($file = readdir($handle))) {
                 if (is_file($root_path . '/' . $file) && preg_match("/{$pattern}$/", $file)) {

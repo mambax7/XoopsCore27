@@ -25,7 +25,8 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_CONFIG')):
         if (empty($dirname) && empty($GLOBALS['xoopsModule'])) {
             return null;
         }
-        $dirname = !empty($dirname) ? $dirname : $GLOBALS['xoopsModule']->getVar('dirname');
+        // basename() the module dirname before it drives an include path below.
+        $dirname = !empty($dirname) ? basename((string) $dirname) : $GLOBALS['xoopsModule']->getVar('dirname');
 
         if (isset($GLOBALS['xoopsModule']) && is_object($GLOBALS['xoopsModule']) && $GLOBALS['xoopsModule']->getVar('dirname', 'n') == $dirname) {
             if (isset($GLOBALS['xoopsModuleConfig'])) {
