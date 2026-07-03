@@ -72,6 +72,13 @@ if ($admintest != 0) {
 if (false !== $error) {
     $op = Request::getString('op', '');
     if ($op === 'system_activate') {
+        // State-changing toggle (POSTed by system_setStatus with the request
+        // token). Validate it without clearing so repeated toggles on the page
+        // keep working.
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            http_response_code(403);
+            exit('Forbidden');
+        }
         $part           = Request::getString('type', '');
         /** @var XoopsConfigHandler $config_handler */
         $config_handler = xoops_getHandler('config');

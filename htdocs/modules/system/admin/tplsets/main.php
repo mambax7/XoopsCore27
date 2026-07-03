@@ -161,6 +161,9 @@ switch ($op) {
 
                         if (count($tplstats) > 0) {
                             foreach ($tplstats as $moddir => $filecount) {
+                                if (!preg_match('/^[a-zA-Z0-9_-]+$/', (string) $moddir)) {
+                                    continue;
+                                }
                                 $module = $module_handler->getByDirname($moddir);
                                 if (is_object($module)) {
                                     // create module folder
@@ -186,7 +189,7 @@ switch ($op) {
                                     $templates      = $tpltpl_handler->find($tplsetname, 'module', null, $moddir);
                                     $templatesCount = count($templates);
                                     for ($j = 0; $j < $templatesCount; ++$j) {
-                                        $filename = $templates[$j]->getVar('tpl_file');
+                                        $filename = basename((string) $templates[$j]->getVar('tpl_file'));
                                         if ($tplsetname == $tplset) {
                                             $physical_file = XOOPS_THEME_PATH . '/' . $selectTheme . '/modules/' . $moddir . '/' . $filename;
 
@@ -215,7 +218,7 @@ switch ($op) {
                                     $btemplates      = $tpltpl_handler->find($tplsetname, 'block', null, $moddir);
                                     $btemplatesCount = count($btemplates);
                                     for ($k = 0; $k < $btemplatesCount; ++$k) {
-                                        $filename = $btemplates[$k]->getVar('tpl_file');
+                                        $filename = basename((string) $btemplates[$k]->getVar('tpl_file'));
                                         if ($tplsetname == $tplset) {
                                             $physical_file = XOOPS_THEME_PATH . '/' . $selectTheme . '/modules/' . $moddir . '/blocks/' . $filename;
                                             $btplfile      = $tpltpl_handler->get($btemplates[$k]->getVar('tpl_id'), true);
@@ -251,6 +254,9 @@ switch ($op) {
 
                         if (count($tplstats) > 0) {
                             $moddir = $selectModules;
+                            if (!preg_match('/^[a-zA-Z0-9_-]+$/', (string) $moddir)) {
+                                continue;
+                            }
                             $module = $module_handler->getByDirname($moddir);
                             if (is_object($module)) {
                                 // create module folder
@@ -278,7 +284,7 @@ switch ($op) {
                                     $templates      = $tpltpl_handler->find($tplsetname, 'module', null, $moddir);
                                     $templatesCount = count($templates);
                                     for ($j = 0; $j < $templatesCount; ++$j) {
-                                        $filename = $templates[$j]->getVar('tpl_file');
+                                        $filename = basename((string) $templates[$j]->getVar('tpl_file'));
                                         if ($tplsetname == $tplset) {
                                             $physical_file = XOOPS_THEME_PATH . '/' . $selectTheme . '/modules/' . $moddir . '/' . $filename;
 
@@ -309,7 +315,7 @@ switch ($op) {
                                     $btemplates      = $tpltpl_handler->find($tplsetname, 'block', null, $moddir);
                                     $btemplatesCount = count($btemplates);
                                     for ($k = 0; $k < $btemplatesCount; ++$k) {
-                                        $filename = $btemplates[$k]->getVar('tpl_file');
+                                        $filename = basename((string) $btemplates[$k]->getVar('tpl_file'));
                                         if ($tplsetname == $tplset) {
                                             $physical_file = XOOPS_THEME_PATH . '/' . $selectTheme . '/modules/' . $moddir . '/blocks/' . $filename;
                                             $btplfile      = $tpltpl_handler->get($btemplates[$k]->getVar('tpl_id'), true);

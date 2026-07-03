@@ -39,6 +39,14 @@ if (!Request::hasVar('submit', 'POST')) {
 
     $xoBreadcrumbs[] = ['title' => _PROFILE_MA_CHANGEPASSWORD];
 } else {
+    // Validate the CSRF token the form advertises before changing the password.
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        redirect_header(
+            XOOPS_URL . '/modules/' . $GLOBALS['xoopsModule']->getVar('dirname', 'n') . '/userinfo.php?uid=' . $GLOBALS['xoopsUser']->getVar('uid'),
+            3,
+            implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()),
+        );
+    }
     /** @var XoopsConfigHandler $config_handler */
     $config_handler             = xoops_getHandler('config');
     $GLOBALS['xoopsConfigUser'] = $config_handler->getConfigsByCat(XOOPS_CONF_USER);

@@ -51,7 +51,7 @@ if (isset($imgcat_id) && $op === 'listimg') {
 }
 
 // check WRITE right by category before continue
-if (isset($imgcat_id) && ($op === 'addfile' || $op === 'editcat' || $op === 'updatecat' || $op === 'delcatok' || $op === 'delcat')) {
+if (isset($imgcat_id) && ($op === 'addfile' || $op === 'multiupload' || $op === 'editcat' || $op === 'updatecat' || $op === 'delcatok' || $op === 'delcat')) {
     $imgcat_write = $gperm_handler->checkRight('imgcat_write', $imgcat_id, $groups, $xoopsModule->mid());
     if (!$imgcat_write) {
         redirect_header('admin.php?fct=images', 1);
