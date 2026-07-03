@@ -33,7 +33,7 @@ $newname = Request::getArray('newname', [], 'POST');
 // Get Action type
 $op = Request::getString('op', 'list');
 
-if (in_array($op, ['confirm', 'submit', 'install_ok', 'update_ok', 'uninstall_ok'])) {
+if (in_array($op, ['confirm', 'submit', 'install_ok', 'update_ok', 'uninstall_ok'], true)) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
         $op = 'list';
     }
