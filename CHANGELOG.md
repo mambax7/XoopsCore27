@@ -5,6 +5,20 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.1-RC1] - 2026-07-04
+
+### Documentation
+- Regenerate CHANGELOG.md (#106)
+
+### Other
+- Improvements and hardening (#114)
+- Guard optional function calls that fatal on PHP 8.2 +  dependabot[bot] (#113)
+- No buttons area if there are no buttons (#108)
+- Starting 2.7.1 Beta2 cycle (#109)
+
+### Security
+- Require admin group for the upgrade wizard login (#116)
+
 ## [v2.7.1-beta1] - 2026-06-13
 
 ### Bug Fixes
