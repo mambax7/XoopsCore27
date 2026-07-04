@@ -1,16 +1,24 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
-2.7.1 Beta 2                  2026-06
+2.7.1 RC1                     2026-07
 ===================================
 Version and platform:
-- start the 2.7.1 Beta 2 cycle; set XOOPS_VERSION to "XOOPS 2.7.1-Beta2" (mamba)
+- promote the 2.7.1 cycle to RC1; set XOOPS_VERSION to "XOOPS 2.7.1-RC1" (mamba)
+
+Security:
+- harden SQL identifier and ORDER BY channels across Criteria, kernel/block and system admin (mamba) in #114
+- require a security token on the upgrade apply-patch path; move SQL dumps out of the web root and gate the download (mamba) in #114
+- inspect queryF() in the Protector dblayertrap wrapper; escape ModuleAdmin index menu output; basename language file loads (mamba) in #114
+- add CAPTCHA and a persistent per-IP rate limit to the tell-a-friend form (mamba) in #114
+- require admin-group membership for the upgrade wizard login (mamba) in #116
 
 Dependencies:
 - add xoops/helpers ^1.0 and tecnickcom/tcpdf ^6.10 to the bundled libraries (mamba)
 - bump xoops/smartyextensions from ^1.0 to ^1.3 (brings chillerlan/php-qrcode for QR support) (mamba)
-- bump xoops/xmf from ^1.3.0 to ^1.3.1 (mamba)
+- bump xoops/xmf to ^1.3.1 (v1.3.1-RC1; includes the queryF() -> exec() migration) (mamba) in #115
 - update webmozart/assert from 2.4.0 to 2.4.1 (mamba)
+- composer update sweep: php-debugbar 3.8.0, smarty 4.5.7, symfony/var-dumper and symfony/yaml 7.4.14 (mamba) in #115
 
 ===================================
 2.7.1 Beta 1                  2026-05
