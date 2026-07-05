@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace frameworksmoduleclasses;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ModuleAdmin;
@@ -435,6 +436,45 @@ class ModuleAdminTest extends TestCase
 
         $this->assertStringNotContainsString('xoopsmicrobutton.gif', $html, 'About page should not include XOOPS logo');
         $this->assertStringContainsString(_AM_MODULEADMIN_ADMIN_FOOTER, $html, 'About page should still include footer text');
+    }
+
+    // ---------------------------------------------------------------
+    // Changelog sanitizer tests
+    // ---------------------------------------------------------------
+
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function changelogSanitizerProvider(): array
+    {
+        return [
+            'allowed heading survives'      => ['<h5>1.1.0 RC 1</h5>', '<h5>1.1.0 RC 1</h5>'],
+            'allowed strong survives'       => ['<strong>Added</strong>', '<strong>Added</strong>'],
+            'allowed void hr survives'      => ['<hr>', '<hr>'],
+            'self-closing br survives'      => ['line<br/>break', 'line<br/>break'],
+            'uppercase tag normalized'      => ['<H5>Head</H5>', '<h5>Head</h5>'],
+            'disallowed tag kept as text'   => ['Added support for <table> tags', 'Added support for &lt;table&gt; tags'],
+            'literal comparison preserved'  => ['requires PHP <= 8.0 & up', 'requires PHP &lt;= 8.0 &amp; up'],
+            'bare ampersand escaped'        => ['AT&T', 'AT&amp;T'],
+            'attribute on allowed tag inert'=> ['<strong onclick="x()">y</strong>', '&lt;strong onclick=&quot;x()&quot;&gt;y</strong>'],
+            'script tag inert'              => ['<script>alert(1)</script>', '&lt;script&gt;alert(1)&lt;/script&gt;'],
+            'javascript href inert'         => ['<a href="javascript:alert(1)">x</a>', '&lt;a href=&quot;javascript:alert(1)&quot;&gt;x&lt;/a&gt;'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('changelogSanitizerProvider')]
+    public function testSanitizeChangelogLine(string $input, string $expected): void
+    {
+        $this->assertSame($expected, ModuleAdmin::sanitizeChangelogLine($input));
+    }
+
+    #[Test]
+    public function testSanitizeChangelogLineNeverEmitsScriptTag(): void
+    {
+        $output = ModuleAdmin::sanitizeChangelogLine('<script>alert(document.cookie)</script>');
+
+        $this->assertStringNotContainsString('<script>', $output, 'A poisoned changelog must never emit an executable <script> tag');
     }
 
     // ---------------------------------------------------------------
