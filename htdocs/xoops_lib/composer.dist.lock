@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "180946ece1123b70284acca88dfe6365",
+    "content-hash": "2c62ffb9156618f97fa3f0ff81ea9597",
     "packages": [
         {
             "name": "boenrobot/money_format_polyfill",
@@ -1608,16 +1608,16 @@
         },
         {
             "name": "xoops/helpers",
-            "version": "v1.0.0-Beta2",
+            "version": "v1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/helpers.git",
-                "reference": "c62e217090b52b1c80ad919ae32f036134475abd"
+                "reference": "0126ae797d92ea8fef25cae6370e80280e520d54"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/c62e217090b52b1c80ad919ae32f036134475abd",
-                "reference": "c62e217090b52b1c80ad919ae32f036134475abd",
+                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/0126ae797d92ea8fef25cae6370e80280e520d54",
+                "reference": "0126ae797d92ea8fef25cae6370e80280e520d54",
                 "shasum": ""
             },
             "require": {
@@ -1625,13 +1625,15 @@
                 "php": ">=8.2"
             },
             "require-dev": {
+                "ezyang/htmlpurifier": "^4.18",
                 "phpstan/phpstan": "^2.0",
                 "phpunit/phpunit": "^11.0"
             },
             "suggest": {
                 "ext-apcu": "Enables APCu caching backend",
                 "ext-intl": "Required for locale-aware number/date formatting",
-                "ext-zip": "Required for zip/unzip filesystem operations"
+                "ext-zip": "Required for zip/unzip filesystem operations",
+                "ezyang/htmlpurifier": "Required by Service\\HtmlSanitizer; without it every entry point returns null so callers can fall back"
             },
             "type": "library",
             "extra": {
@@ -1663,13 +1665,13 @@
             ],
             "support": {
                 "issues": "https://github.com/XOOPS/helpers/issues",
-                "source": "https://github.com/XOOPS/helpers/tree/v1.0.0-Beta2"
+                "source": "https://github.com/XOOPS/helpers/tree/v1.0.0"
             },
-            "time": "2026-06-16T23:08:20+00:00"
+            "time": "2026-07-22T21:56:27+00:00"
         },
         {
             "name": "xoops/regdom",
-            "version": "v2.1.0-beta1",
+            "version": "v2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/RegDom.git",
@@ -1756,16 +1758,16 @@
         },
         {
             "name": "xoops/smartyextensions",
-            "version": "v1.3.0-Beta2",
+            "version": "v1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/smartyextensions.git",
-                "reference": "5c433150dae481daaa1e3f94c22de0a0862ba35f"
+                "reference": "761fa105f3981fd45d9d743f2a1351907ad11a0e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/smartyextensions/zipball/5c433150dae481daaa1e3f94c22de0a0862ba35f",
-                "reference": "5c433150dae481daaa1e3f94c22de0a0862ba35f",
+                "url": "https://api.github.com/repos/XOOPS/smartyextensions/zipball/761fa105f3981fd45d9d743f2a1351907ad11a0e",
+                "reference": "761fa105f3981fd45d9d743f2a1351907ad11a0e",
                 "shasum": ""
             },
             "require": {
@@ -1799,22 +1801,22 @@
             "homepage": "https://xoops.org",
             "support": {
                 "issues": "https://github.com/XOOPS/smartyextensions/issues",
-                "source": "https://github.com/XOOPS/smartyextensions/tree/v1.3.0-Beta2"
+                "source": "https://github.com/XOOPS/smartyextensions/tree/v1.3.0"
             },
-            "time": "2026-06-17T01:34:48+00:00"
+            "time": "2026-07-22T21:22:14+00:00"
         },
         {
             "name": "xoops/xmf",
-            "version": "v1.3.1-RC1",
+            "version": "v1.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/xmf.git",
-                "reference": "4f8ccea798b3c7f5ff73acf658bbee057da46e76"
+                "reference": "10004e90b74aef995018928b47cad01107ee96c2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/4f8ccea798b3c7f5ff73acf658bbee057da46e76",
-                "reference": "4f8ccea798b3c7f5ff73acf658bbee057da46e76",
+                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/10004e90b74aef995018928b47cad01107ee96c2",
+                "reference": "10004e90b74aef995018928b47cad01107ee96c2",
                 "shasum": ""
             },
             "require": {
@@ -1875,12 +1877,12 @@
                     "type": "opencollective"
                 }
             ],
-            "time": "2026-07-03T06:43:33+00:00"
+            "time": "2026-07-22T10:02:22+00:00"
         }
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "beta",
+    "minimum-stability": "stable",
     "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,

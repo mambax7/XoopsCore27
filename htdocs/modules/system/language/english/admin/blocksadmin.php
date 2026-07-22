@@ -88,4 +88,7 @@ define('_AM_SYSTEM_BLOCKS_TIPS', '<ul>
 define('_AM_SYSTEM_BLOCKS_FOOTER_LEFT', 'Footer Left');
 define('_AM_SYSTEM_BLOCKS_FOOTER_CENTER', 'Footer Center');
 define('_AM_SYSTEM_BLOCKS_FOOTER_RIGHT', 'Footer Right');
+
+//2.7.1
+//Comment-controls block error (used by modules/system/admin/blocks)
 define('_AM_SYSTEM_BLOCKS_INVALID_CLONE', 'Invalid block parameters.');

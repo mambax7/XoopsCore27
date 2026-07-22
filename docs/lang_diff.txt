@@ -4,7 +4,30 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
-2026/05/17: Version 2.7.1-Betas
+2026/07: Version 2.7.1-Final
+================================
+/htdocs/themes/xbootstrap5/language/english/main.php
+- added define('THEME_COMMENT_OPTIONS', 'Comment View Options');
+  (already present in themes/xswatch5; added here for parity)
+
+Private Message constants were renamed to the standard _MD_ / _AM_ / _MI_
+prefixes. The English values are unchanged, so translators only need to
+rename the constants in their own files - no re-translation is required.
+
+/htdocs/language/english/pmsg.php
+- renamed _PM_* -> _MD_PM_* (35 constants, e.g. _PM_DELETED -> _MD_PM_DELETED)
+
+/htdocs/modules/pm/language/english/main.php
+- renamed _PM_* -> _MD_PM_* (69 constants, e.g. _PM_DELETED -> _MD_PM_DELETED)
+
+/htdocs/modules/pm/language/english/admin.php
+- renamed _PM_AM_* -> _AM_PM_* (8 constants, e.g. _PM_AM_PRUNE -> _AM_PM_PRUNE)
+
+/htdocs/modules/pm/language/english/modinfo.php
+- renamed _PM_MI_* -> _MI_PM_* (18 constants, e.g. _PM_MI_NAME -> _MI_PM_NAME)
+
+================================
+2026/05/17: Version 2.7.1-Betas/RC1
 ================================
 /htdocs/modules/system/language/english/admin/blocksadmin.php
 - added define('_AM_SYSTEM_BLOCKS_INVALID_CLONE', 'Invalid block parameters.');
@@ -546,7 +569,7 @@ delete define('_PM_READ', 'Already Read');
 - added define('_MA_USER_SKYPE', 'Skype Link');//TO DO
 
 /modules/pm/language/english/modinfo.php
-- added define("_PM_MI_ABOUT", "About");
+- added define("_MI_PM_ABOUT", "About");
 
 /modules/profile/language/english/admin.php
 - added define('_PROFILE_AM_ACTION', 'Action');
@@ -636,7 +659,7 @@ CHANGED FILES:
 - added /modules/profile/language/english/admin.php _PROFILE_AM_ACTION
 - added /modules/profile/language/english/main.php _PROFILE_MI_ABOUT
 - added /modules/profile/language/english/main.php _PROFILE_MI_HOME
-- added /modules/pm/language/english/modinfo.php _PM_MI_ABOUT
+- added /modules/pm/language/english/modinfo.php _MI_PM_ABOUT
 - added modules/system/language/english/admin/users.php _AM_SYSTEM_USERS_FACEBOOK, _AM_SYSTEM_USERS_SKYPE
 - added language/english/user.php _US_SKYPE, _US_FACEBOOK
 

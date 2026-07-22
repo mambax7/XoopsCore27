@@ -177,6 +177,32 @@ Validation uses `mb_strlen` for `min_length`/`max_length`, ensuring multibyte UT
 
 ---
 
+### TokenExtension
+
+Exposes the XOOPS request token to client-side AJAX code.
+
+**Constructor**: `new TokenExtension(?XoopsSecurity $security)`
+
+| Name | Type | Description |
+|---|---|---|
+| `xoToken` | function | Renders `<meta name="xoops-token" content="…">` |
+
+Place it once in the theme `<head>` so fragment/AJAX handlers can read the token and send it
+as the `X-XOOPS-TOKEN` header on mutating requests:
+
+```smarty
+<head>
+  <{xoToken}>
+</head>
+```
+
+Returns an empty string when no `XoopsSecurity` instance is supplied, so a theme that renders
+outside a XOOPS request emits nothing rather than failing. Retry forms should keep using
+`form_open`'s injected hidden input (see `FormExtension`) — `xoToken` is for the AJAX header
+path only.
+
+---
+
 ### DataExtension
 
 Data manipulation, CSV export, file info, and XML sitemaps.
@@ -267,6 +293,7 @@ src/
     ├── NavigationExtension.php
     ├── SecurityExtension.php
     ├── FormExtension.php
+    ├── TokenExtension.php
     ├── DataExtension.php
     ├── AssetExtension.php
     ├── XoopsCoreExtension.php

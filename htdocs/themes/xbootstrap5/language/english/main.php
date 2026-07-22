@@ -64,3 +64,7 @@ define('THEME_ACCOUNT_MESSAGES', 'Messages');
 define('THEME_ACCOUNT_NOTIFICATIONS', 'Notifications');
 define('THEME_ACCOUNT_REGISTER', 'Sign Up');
 define('THEME_ACCOUNT_TOOLBAR', 'Toolbar');
+
+//2.7.1
+//Comment view options (used by modules/system/system_comments_controls.tpl)
+define('THEME_COMMENT_OPTIONS', 'Comment View Options');

@@ -226,7 +226,7 @@ if (is_object($xoopsUser)) {
                 $subject = _RE . ' ' . $subject;
             }
         }
-        $pmform->addElement(new XoopsFormText(_PM_SUBJECTC, 'subject', 30, 100, $subject), true);
+        $pmform->addElement(new XoopsFormText(_MD_PM_SUBJECTC, 'subject', 30, 100, $subject), true);
 
         $msg_image   = '';
         $icons_radio = new XoopsFormRadio(_MESSAGEICON, 'msg_image', $msg_image);
