@@ -159,8 +159,25 @@ These work anywhere — CLI scripts, cron jobs, unit tests — no XOOPS boot req
 | [`Url`](src/Service/Url.php) | `Url::to()`, `asset()`, `module()`, `theme()` | `Url::use($generator)` |
 | [`Config`](src/Service/Config.php) | `Config::get()`, `set()`, `has()`, `all()`, `registerLoader()` | `Config::setProvider($p)` |
 | [`Cache`](src/Service/Cache.php) | `Cache::get()`, `set()`, `forget()`, `remember()`, `flush()` | `Cache::use($adapter)` |
+| [`HtmlSanitizer`](src/Service/HtmlSanitizer.php) | `HtmlSanitizer::purify()`, `purifier()`, `isAvailable()`, `flush()` — HTMLPurifier front-end with a correctly located definition cache | — |
 
 All facades work immediately using XOOPS constants (`XOOPS_ROOT_PATH`, `XOOPS_URL`, etc.). Override with `::use()` for testing or custom installations. Reset with `::reset()`.
+
+`HtmlSanitizer` requires the optional `ezyang/htmlpurifier` package. When it is absent, `purify()`
+and `purifier()` return `null` rather than throwing, so callers can fall back to their own sanitizer:
+
+```php
+use Xoops\Helpers\Service\HtmlSanitizer;
+
+$safe = HtmlSanitizer::purify($userHtml);
+if (null === $safe) {
+    $safe = $myTextSanitizer->displayTarea($userHtml); // fallback
+}
+```
+
+It resolves its definition-cache directory through `Path::storage('caches/htmlpurifier')`, so the
+serializer never attempts to write inside `vendor/`. Without a writable cache directory it falls
+back to rebuilding definitions in memory.
 
 ### Tier 3 — Providers (Default implementations)
 

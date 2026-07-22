@@ -41,7 +41,6 @@
     "optimize-autoloader": true,
     "classmap-authoritative": true
   },
-  "minimum-stability": "beta",
   "prefer-stable": true,
   "support": {
     "issues": "https://github.com/XOOPS/XoopsCore27/issues",
