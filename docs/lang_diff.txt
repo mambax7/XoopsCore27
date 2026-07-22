@@ -6,9 +6,25 @@ Below are language differences from a version to next version.
 ================================
 2026/07: Version 2.7.1-Final
 ================================
-No English language constants were added, changed, renamed, or removed after
-2.7.1-RC1. Translators updating from 2.7.0 need only the 2.7.1 change listed
-below.
+/htdocs/themes/xbootstrap5/language/english/main.php
+- added define('THEME_COMMENT_OPTIONS', 'Comment View Options');
+  (already present in themes/xswatch5; added here for parity)
+
+Private Message constants were renamed to the standard _MD_ / _AM_ / _MI_
+prefixes. The English values are unchanged, so translators only need to
+rename the constants in their own files - no re-translation is required.
+
+/htdocs/language/english/pmsg.php
+- renamed _PM_* -> _MD_PM_* (35 constants, e.g. _PM_DELETED -> _MD_PM_DELETED)
+
+/htdocs/modules/pm/language/english/main.php
+- renamed _PM_* -> _MD_PM_* (69 constants, e.g. _PM_DELETED -> _MD_PM_DELETED)
+
+/htdocs/modules/pm/language/english/admin.php
+- renamed _PM_AM_* -> _AM_PM_* (8 constants, e.g. _PM_AM_PRUNE -> _AM_PM_PRUNE)
+
+/htdocs/modules/pm/language/english/modinfo.php
+- renamed _PM_MI_* -> _MI_PM_* (18 constants, e.g. _PM_MI_NAME -> _MI_PM_NAME)
 
 ================================
 2026/05/17: Version 2.7.1-Betas/RC1
