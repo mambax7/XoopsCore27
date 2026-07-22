@@ -148,6 +148,22 @@ class XoopsMonologLoggerTest extends TestCase
         );
     }
 
+    #[Test]
+    public function constructorAppliesMinimumLevelToDefaultHandler(): void
+    {
+        $logger = new XoopsMonologLogger('test_minimum_level', [], [], LogLevel::ERROR);
+        $monolog = $logger->getMonolog();
+        $this->assertNotNull($monolog);
+
+        $handlers = $monolog->getHandlers();
+        $this->assertCount(1, $handlers);
+        $this->assertInstanceOf(
+            \Monolog\Handler\RotatingFileHandler::class,
+            $handlers[0]
+        );
+        $this->assertSame(self::level(Logger::ERROR), $handlers[0]->getLevel());
+    }
+
     // ---------------------------------------------------------------
     // log() tests — PSR-3 level coverage
     // ---------------------------------------------------------------
@@ -476,6 +492,36 @@ class XoopsMonologLoggerTest extends TestCase
         // Logger should still be active after quiet()
         $this->logger->log(LogLevel::INFO, 'still active');
         $this->assertTrue($this->testHandler->hasInfoRecords());
+    }
+
+    // ---------------------------------------------------------------
+    // isActive() tests
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function isActiveReturnsTrueWhenMonologInitialized(): void
+    {
+        $this->assertTrue($this->logger->isActive());
+    }
+
+    #[Test]
+    public function isActiveReturnsFalseWhenMonologIsUnavailable(): void
+    {
+        $logger = new XoopsMonologLogger('test', [$this->testHandler]);
+        $property = new \ReflectionProperty($logger, 'monolog');
+        $property->setValue($logger, null);
+
+        $this->assertFalse($logger->isActive());
+    }
+
+    #[Test]
+    public function isActiveReturnsFalseWhenAdapterIsDeactivated(): void
+    {
+        $logger = new XoopsMonologLogger('test', [$this->testHandler]);
+        $property = new \ReflectionProperty($logger, 'activated');
+        $property->setValue($logger, false);
+
+        $this->assertFalse($logger->isActive());
     }
 
     // ---------------------------------------------------------------
