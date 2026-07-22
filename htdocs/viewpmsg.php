@@ -68,7 +68,7 @@ if (!is_object($xoopsUser)) {
     echo "<h4 class='txtcenter'>" . _MD_PM_PRIVATEMESSAGE . "</h4><br><a href='userinfo.php?uid=" . $xoopsUser->getVar('uid') . "'>" . _MD_PM_PROFILE . "</a>&nbsp;<span style='font-weight:bold;'>&raquo;</span>&nbsp;" . _MD_PM_INBOX . '<br><br>';
     echo "<form name='prvmsg' method='post' action='viewpmsg.php'>";
     echo "<table cellspacing='1' cellpadding='4' class='outer width100 bnone'>\n";
-    echo "<tr align='center' valign='middle'><th><input name='allbox' id='allbox' onclick='xoopsCheckAll(\"prvmsg\", \"allbox\");' type='checkbox' value='Check All' /></th><th><img class'bnone' src='images/download.gif' alt=''/></th><th>&nbsp;</th><th>" . _MD_PM_FROM . '</th><th>' . _MD_PM_SUBJECT . "</th><th class='txtcenter'>" . _MD_PM_DATE . "</th></tr>\n";
+    echo "<tr align='center' valign='middle'><th><input name='allbox' id='allbox' onclick='xoopsCheckAll(\"prvmsg\", \"allbox\");' type='checkbox' value='Check All' /></th><th><img class='bnone' src='images/download.gif' alt=''/></th><th>&nbsp;</th><th>" . _MD_PM_FROM . '</th><th>' . _MD_PM_SUBJECT . "</th><th class='txtcenter'>" . _MD_PM_DATE . "</th></tr>\n";
     $total_messages = count($pm_arr);
     if ($total_messages == 0) {
         echo "<tr><td class='even txcenter' colspan='6'>" . _MD_PM_YOUDONTHAVE . '</td></tr> ';
