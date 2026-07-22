@@ -104,7 +104,7 @@
 						</li>
 					<{else}>
 						<li class="page-item disabled">
-							<a class="page-link" href="#"><{$smarty.const._MD_PM_NEXT}> <span class="fa-solid fa-arrow-right"></a>
+							<a class="page-link" href="#"><{$smarty.const._MD_PM_NEXT}> <span class="fa-solid fa-arrow-right"></span></a>
 						</li>
 					<{/if}>
 				</ul>
