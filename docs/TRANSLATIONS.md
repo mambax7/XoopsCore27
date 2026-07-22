@@ -1,6 +1,6 @@
-# XOOPS 2.7.0 — Translations & Available Languages
+# XOOPS 2.7.1 — Translations & Available Languages
 
-XOOPS 2.7.0 ships with English as its source language and is additionally
+XOOPS 2.7.1 ships with English as its source language and is additionally
 available in **37 community translations** (38 language packs in total,
 including the English reference pack).
 
@@ -35,55 +35,63 @@ Every correction makes XOOPS better for users worldwide — thank you.
 
 No build step is required — the packs contain ready-to-use language files.
 
+## Updating a 2.7.0 language pack
+
+XOOPS 2.7.1 adds one English language constant compared with 2.7.0:
+
+`_AM_SYSTEM_BLOCKS_INVALID_CLONE` in
+`htdocs/modules/system/language/english/admin/blocksadmin.php`.
+
+See [`lang_diff.txt`](lang_diff.txt) for the exact definition. No English
+language constants were added, changed, renamed, or removed between 2.7.1-RC1
+and Final.
+
 ## Available languages
 
-Each link points to the `latest` release asset for that language
-(`<language>-core-2.7.0.zip`).
+Language packs are published independently from XOOPS Core. Each link therefore
+points to the repository's current release page, where the asset name and its
+declared XOOPS compatibility can be verified before download.
 
-| Language | Download |
+| Language | Current release |
 |---|---|
-| Arabic | https://github.com/XoopsLanguages/arabic/releases/download/latest/arabic-core-2.7.0.zip |
-| Bosnian | https://github.com/XoopsLanguages/bosnian/releases/download/latest/bosnian-core-2.7.0.zip |
-| Brazilian Portuguese | https://github.com/XoopsLanguages/brazilian/releases/download/latest/brazilian-core-2.7.0.zip |
-| Bulgarian | https://github.com/XoopsLanguages/bulgarian/releases/download/latest/bulgarian-core-2.7.0.zip |
-| Catalan | https://github.com/XoopsLanguages/catalan/releases/download/latest/catalan-core-2.7.0.zip |
-| Croatian | https://github.com/XoopsLanguages/croatian/releases/download/latest/croatian-core-2.7.0.zip |
-| Czech | https://github.com/XoopsLanguages/czech/releases/download/latest/czech-core-2.7.0.zip |
-| Danish | https://github.com/XoopsLanguages/danish/releases/download/latest/danish-core-2.7.0.zip |
-| Dutch | https://github.com/XoopsLanguages/dutch/releases/download/latest/dutch-core-2.7.0.zip |
-| English (reference) | https://github.com/XoopsLanguages/english/releases/download/latest/english-core-2.7.0.zip |
-| Finnish | https://github.com/XoopsLanguages/finnish/releases/download/latest/finnish-core-2.7.0.zip |
-| French | https://github.com/XoopsLanguages/french/releases/download/latest/french-core-2.7.0.zip |
-| Galician | https://github.com/XoopsLanguages/galician/releases/download/latest/galician-core-2.7.0.zip |
-| German | https://github.com/XoopsLanguages/german/releases/download/latest/german-core-2.7.0.zip |
-| Greek | https://github.com/XoopsLanguages/greek/releases/download/latest/greek-core-2.7.0.zip |
-| Gujarati | https://github.com/XoopsLanguages/gujarati/releases/download/latest/gujarati-core-2.7.0.zip |
-| Hebrew | https://github.com/XoopsLanguages/hebrew/releases/download/latest/hebrew-core-2.7.0.zip |
-| Hungarian | https://github.com/XoopsLanguages/hungarian/releases/download/latest/hungarian-core-2.7.0.zip |
-| Italian | https://github.com/XoopsLanguages/italian/releases/download/latest/italian-core-2.7.0.zip |
-| Japanese | https://github.com/XoopsLanguages/japanese/releases/download/latest/japanese-core-2.7.0.zip |
-| Korean | https://github.com/XoopsLanguages/korean/releases/download/latest/korean-core-2.7.0.zip |
-| Malaysian (Malay) | https://github.com/XoopsLanguages/malaysian/releases/download/latest/malaysian-core-2.7.0.zip |
-| Norwegian | https://github.com/XoopsLanguages/norwegian/releases/download/latest/norwegian-core-2.7.0.zip |
-| Persian (Farsi) | https://github.com/XoopsLanguages/persian/releases/download/latest/persian-core-2.7.0.zip |
-| Polish | https://github.com/XoopsLanguages/polish/releases/download/latest/polish-core-2.7.0.zip |
-| Portuguese | https://github.com/XoopsLanguages/portuguese/releases/download/latest/portuguese-core-2.7.0.zip |
-| Romanian | https://github.com/XoopsLanguages/romanian/releases/download/latest/romanian-core-2.7.0.zip |
-| Russian | https://github.com/XoopsLanguages/russian/releases/download/latest/russian-core-2.7.0.zip |
-| Chinese (Simplified) | https://github.com/XoopsLanguages/schinese/releases/download/latest/schinese-core-2.7.0.zip |
-| Slovenian | https://github.com/XoopsLanguages/slovenian/releases/download/latest/slovenian-core-2.7.0.zip |
-| Spanish | https://github.com/XoopsLanguages/spanish/releases/download/latest/spanish-core-2.7.0.zip |
-| Swedish | https://github.com/XoopsLanguages/swedish/releases/download/latest/swedish-core-2.7.0.zip |
-| Chinese (Traditional) | https://github.com/XoopsLanguages/tchinese/releases/download/latest/tchinese-core-2.7.0.zip |
-| Thai | https://github.com/XoopsLanguages/thai/releases/download/latest/thai-core-2.7.0.zip |
-| Turkish | https://github.com/XoopsLanguages/turkish/releases/download/latest/turkish-core-2.7.0.zip |
-| Ukrainian | https://github.com/XoopsLanguages/ukrainian/releases/download/latest/ukrainian-core-2.7.0.zip |
-| Urdu | https://github.com/XoopsLanguages/urdu/releases/download/latest/urdu-core-2.7.0.zip |
-| Vietnamese | https://github.com/XoopsLanguages/vietnamese/releases/download/latest/vietnamese-core-2.7.0.zip |
-
-> Tip: every repository also has a `latest` release page at
-> `https://github.com/XoopsLanguages/<language>/releases/latest` if you
-> prefer to browse assets or changelogs.
+| Arabic | https://github.com/XoopsLanguages/arabic/releases/latest |
+| Bosnian | https://github.com/XoopsLanguages/bosnian/releases/latest |
+| Brazilian Portuguese | https://github.com/XoopsLanguages/brazilian/releases/latest |
+| Bulgarian | https://github.com/XoopsLanguages/bulgarian/releases/latest |
+| Catalan | https://github.com/XoopsLanguages/catalan/releases/latest |
+| Croatian | https://github.com/XoopsLanguages/croatian/releases/latest |
+| Czech | https://github.com/XoopsLanguages/czech/releases/latest |
+| Danish | https://github.com/XoopsLanguages/danish/releases/latest |
+| Dutch | https://github.com/XoopsLanguages/dutch/releases/latest |
+| English (reference) | https://github.com/XoopsLanguages/english-Reference/releases/latest |
+| Finnish | https://github.com/XoopsLanguages/finnish/releases/latest |
+| French | https://github.com/XoopsLanguages/french/releases/latest |
+| Galician | https://github.com/XoopsLanguages/galician/releases/latest |
+| German | https://github.com/XoopsLanguages/german/releases/latest |
+| Greek | https://github.com/XoopsLanguages/greek/releases/latest |
+| Gujarati | https://github.com/XoopsLanguages/gujarati/releases/latest |
+| Hebrew | https://github.com/XoopsLanguages/hebrew/releases/latest |
+| Hungarian | https://github.com/XoopsLanguages/hungarian/releases/latest |
+| Italian | https://github.com/XoopsLanguages/italian/releases/latest |
+| Japanese | https://github.com/XoopsLanguages/japanese/releases/latest |
+| Korean | https://github.com/XoopsLanguages/korean/releases/latest |
+| Malaysian (Malay) | https://github.com/XoopsLanguages/malaysian/releases/latest |
+| Norwegian | https://github.com/XoopsLanguages/norwegian/releases/latest |
+| Persian (Farsi) | https://github.com/XoopsLanguages/persian/releases/latest |
+| Polish | https://github.com/XoopsLanguages/polish/releases/latest |
+| Portuguese | https://github.com/XoopsLanguages/portuguese/releases/latest |
+| Romanian | https://github.com/XoopsLanguages/romanian/releases/latest |
+| Russian | https://github.com/XoopsLanguages/russian/releases/latest |
+| Chinese (Simplified) | https://github.com/XoopsLanguages/schinese/releases/latest |
+| Slovenian | https://github.com/XoopsLanguages/slovenian/releases/latest |
+| Spanish | https://github.com/XoopsLanguages/spanish/releases/latest |
+| Swedish | https://github.com/XoopsLanguages/swedish/releases/latest |
+| Chinese (Traditional) | https://github.com/XoopsLanguages/tchinese/releases/latest |
+| Thai | https://github.com/XoopsLanguages/thai/releases/latest |
+| Turkish | https://github.com/XoopsLanguages/turkish/releases/latest |
+| Ukrainian | https://github.com/XoopsLanguages/ukrainian/releases/latest |
+| Urdu | https://github.com/XoopsLanguages/urdu/releases/latest |
+| Vietnamese | https://github.com/XoopsLanguages/vietnamese/releases/latest |
 
 ## Contributing
 

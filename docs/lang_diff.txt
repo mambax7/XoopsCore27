@@ -4,7 +4,14 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
-2026/05/17: Version 2.7.1-Betas
+2026/07: Version 2.7.1-Final
+================================
+No English language constants were added, changed, renamed, or removed after
+2.7.1-RC1. Translators updating from 2.7.0 need only the 2.7.1 change listed
+below.
+
+================================
+2026/05/17: Version 2.7.1-Betas/RC1
 ================================
 /htdocs/modules/system/language/english/admin/blocksadmin.php
 - added define('_AM_SYSTEM_BLOCKS_INVALID_CLONE', 'Invalid block parameters.');
@@ -546,7 +553,7 @@ delete define('_PM_READ', 'Already Read');
 - added define('_MA_USER_SKYPE', 'Skype Link');//TO DO
 
 /modules/pm/language/english/modinfo.php
-- added define("_PM_MI_ABOUT", "About");
+- added define("_MI_PM_ABOUT", "About");
 
 /modules/profile/language/english/admin.php
 - added define('_PROFILE_AM_ACTION', 'Action');
@@ -636,7 +643,7 @@ CHANGED FILES:
 - added /modules/profile/language/english/admin.php _PROFILE_AM_ACTION
 - added /modules/profile/language/english/main.php _PROFILE_MI_ABOUT
 - added /modules/profile/language/english/main.php _PROFILE_MI_HOME
-- added /modules/pm/language/english/modinfo.php _PM_MI_ABOUT
+- added /modules/pm/language/english/modinfo.php _MI_PM_ABOUT
 - added modules/system/language/english/admin/users.php _AM_SYSTEM_USERS_FACEBOOK, _AM_SYSTEM_USERS_SKYPE
 - added language/english/user.php _US_SKYPE, _US_FACEBOOK
 
