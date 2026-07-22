@@ -84,7 +84,7 @@
 		</div>
 		<div class="mt-3">
 			<div>
-				<ul class="pagination justify-content-end"">
+				<ul class="pagination justify-content-end">
 					<{if ( $previous >= 0 ) }>
 						<li class="page-item">
 							<a class="page-link" href='readpmsg.php?start=<{$previous}>&amp;total_messages=<{$total_messages}>&amp;op=<{$op}>' title='<{$smarty.const._MD_PM_PREVIOUS}>'>

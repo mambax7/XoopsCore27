@@ -68,9 +68,9 @@
                         <input type='checkbox' id='msg_id_<{$message.msg_id|escape}>' name='msg_id[]' value='<{$message.msg_id|escape}>'/>
                     </td>
                     <{if $message.read_msg == 1}>
-                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_read.png'}>' alt='<{$smarty.const._MD_PM_READ}>'title='<{$smarty.const._MD_PM_READ}>'/></td>
+                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_read.png'}>' alt='<{$smarty.const._MD_PM_READ}> 'title='<{$smarty.const._MD_PM_READ}>'/></td>
                     <{else}>
-                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_notread.png'}>' alt='<{$smarty.const._MD_PM_NOTREAD}>'title='<{$smarty.const._MD_PM_NOTREAD}>'/></td>
+                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_notread.png'}>' alt='<{$smarty.const._MD_PM_NOTREAD}> 'title='<{$smarty.const._MD_PM_NOTREAD}>'/></td>
                     <{/if}>
                     <td class='aligntop width5 txtcenter'>
                         <{if !empty($message.msg_image)}>

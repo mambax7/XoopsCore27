@@ -24,7 +24,7 @@
 </blockquote>
 
 <div class="row message-body">
-    <form name="<{$pmform.name}>" id="<{$pmform.name}>" action="<{$pmform.action}>" method="<{$pmform.method}>" <{$pmform.extra}>="">
+    <form name="<{$pmform.name}>" id="<{$pmform.name}>" action="<{$pmform.action}>" method="<{$pmform.method}>" <{$pmform.extra}>>
     <div class="col-4 col-md-4 sender-info">
     <{if $op==out}><strong><{$smarty.const._MD_PM_TO}>: </strong><{else}><strong><{$smarty.const._MD_PM_FROM}>: </strong><{/if}>
     <{if ( $poster != false ) }>

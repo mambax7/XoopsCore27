@@ -186,7 +186,7 @@ if (is_object($xoopsUser)) {
                 }
                 $pm_uname = XoopsUser::getUnameFromId($pm->getVar('from_userid'));
                 $message  = "[quote]\n";
-                $message .= sprintf(_PM_USERWROTE, $pm_uname);
+                $message .= sprintf(_MD_PM_USERWROTE, $pm_uname);
                 $message .= "\n" . $pm->getVar('msg_text', 'E') . "\n[/quote]";
             } else {
                 unset($pm);
@@ -210,13 +210,13 @@ if (is_object($xoopsUser)) {
         }
         $pmform = new XoopsThemeForm('', 'coolsus', 'pmlite.php', 'post', true);
         if (1 == $reply) {
-            $pmform->addElement(new XoopsFormLabel(_PM_TO, $pm_uname));
+            $pmform->addElement(new XoopsFormLabel(_MD_PM_TO, $pm_uname));
             $pmform->addElement(new XoopsFormHidden('to_userid', $pm->getVar('from_userid')));
         } elseif (1 == $send2) {
             $pmform->addElement(new XoopsFormHidden('to_userid', $to_userid));
-            $pmform->addElement(new XoopsFormLabel(_PM_TO, $to_username));
+            $pmform->addElement(new XoopsFormLabel(_MD_PM_TO, $to_username));
         } else {
-            $pmform->addElement(new XoopsFormSelectUser(_PM_TO, 'to_userid', false, $to_userid, 1, false, corePmGetAllowedGroups(), ['module_read' => 'pm']));
+            $pmform->addElement(new XoopsFormSelectUser(_MD_PM_TO, 'to_userid', false, $to_userid, 1, false, corePmGetAllowedGroups(), ['module_read' => 'pm']));
         }
 
         if (1 == $reply) {
@@ -237,7 +237,7 @@ if (is_object($xoopsUser)) {
         $icons_radio->addOptionArray($subjectImages);
         $pmform->addElement($icons_radio);
 
-        $pmform->addElement(new XoopsFormDhtmlTextArea(_PM_MESSAGEC, 'message', $message, 8, 37), true);
+        $pmform->addElement(new XoopsFormDhtmlTextArea(_MD_PM_MESSAGEC, 'message', $message, 8, 37), true);
 
         $pmform->addElement(new XoopsFormHidden('op', 'submit'));
         $elementTray = new XoopsFormElementTray('', '', 'tray');
