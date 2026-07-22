@@ -43,6 +43,37 @@ rm -r vendor/smottt/wideimage/test
 vendor/bin/update-psl.php
 ```
 
+The `--prefer-dist` and `-a` flags duplicate `preferred-install` and
+`classmap-authoritative` in the `config` block of `composer.dist.json`. Pass them
+anyway, so the command still produces an authoritative autoloader if that block is
+ever trimmed.
+
+#### After every build: stage new vendor files explicitly
+
+`vendor/` is committed, so an upgrade that adds a class adds an **untracked** file.
+`git commit -am` and `git add -u` both skip untracked files, so the regenerated
+`autoload_classmap.php` would reference a class whose file is not in the commit.
+With `classmap-authoritative: true` there is no PSR-4 fallback, so that class simply
+fails to load on a fresh checkout — and nothing in the build output warns you.
+
+List anything new and add it by name before committing:
+
+```bash
+git ls-files --others --exclude-standard -- htdocs/xoops_lib/vendor/
+git add htdocs/xoops_lib/vendor/<each path listed above>
+git add -u htdocs/xoops_lib/          # modifications and deletions
+```
+
+Do not `git add htdocs/xoops_lib/` wholesale — it also sweeps up local scratch files
+(`composer0.json`, `*.travis0.yml`, and similar) that are deliberately untracked.
+
+Verify before pushing that every mapped class resolves:
+
+```bash
+php -r '$m = include "htdocs/xoops_lib/vendor/composer/autoload_classmap.php";
+        foreach ($m as $c => $p) { if (!file_exists($p)) { echo "MISSING: $c\n"; } }'
+```
+
 ### Managed Libraries
 
 All runtime dependencies are defined in `composer.dist.json`. Key packages include:
