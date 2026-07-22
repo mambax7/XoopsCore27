@@ -40,14 +40,14 @@ include_once $fileinc;
 $adminmenu = [];
 
 $i                      = 1;
-$adminmenu[$i]['title'] = _PM_MI_INDEX;
+$adminmenu[$i]['title'] = _MI_PM_INDEX;
 $adminmenu[$i]['link']  = 'admin/admin.php';
 $adminmenu[$i]['icon']  = $pathIcon32 . '/home.png';
 ++$i;
-$adminmenu[$i]['title'] = _PM_MI_PRUNE;
+$adminmenu[$i]['title'] = _MI_PM_PRUNE;
 $adminmenu[$i]['link']  = 'admin/prune.php';
 $adminmenu[$i]['icon']  = $pathIcon32 . '/prune.png';
 ++$i;
-$adminmenu[$i]['title'] = _PM_MI_ABOUT;
+$adminmenu[$i]['title'] = _MI_PM_ABOUT;
 $adminmenu[$i]['link']  = 'admin/about.php';
 $adminmenu[$i]['icon']  = $pathIcon32 . '/about.png';

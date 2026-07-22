@@ -1,4 +1,4 @@
-<h4><{$smarty.const._PM_PRIVATEMESSAGE}></h4>
+<h4><{$smarty.const._MD_PM_PRIVATEMESSAGE}></h4>
 <{if isset($op)}>
 	<{if isset($msg)}>
 		<div class="alert alert-success alert-dismissable">
@@ -28,17 +28,17 @@
 		<div class="row mb-3">
 			<div class="col-12 btn-group" role="group" aria-label="Basic example">
 				<{if $op == "in" || (!($op == "out") && !($op == "save"))}>
-					<a class="btn btn-primary" href="viewpmsg.php?op=in" title="<{$smarty.const._PM_INBOX}>"><span class="fa-solid fa-inbox fa-2x fa-fw"></span><br /><{$smarty.const._PM_INBOX}></a>
-					<a class="btn btn-secondary" href="viewpmsg.php?op=out" title="<{$smarty.const._PM_OUTBOX}>"><span class="fa-solid fa-paper-plane fa-2x fa-fw"></span><br /><{$smarty.const._PM_OUTBOX}></a>
-					<a class="btn btn-secondary" href="viewpmsg.php?op=save" title="<{$smarty.const._PM_SAVEBOX}>"><span class="fa-solid fa-box-archive fa-2x fa-fw"></span><br /><{$smarty.const._PM_SAVEBOX}></a>
+					<a class="btn btn-primary" href="viewpmsg.php?op=in" title="<{$smarty.const._MD_PM_INBOX}>"><span class="fa-solid fa-inbox fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_INBOX}></a>
+					<a class="btn btn-secondary" href="viewpmsg.php?op=out" title="<{$smarty.const._MD_PM_OUTBOX}>"><span class="fa-solid fa-paper-plane fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_OUTBOX}></a>
+					<a class="btn btn-secondary" href="viewpmsg.php?op=save" title="<{$smarty.const._MD_PM_SAVEBOX}>"><span class="fa-solid fa-box-archive fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_SAVEBOX}></a>
 				<{elseif $op == "out"}>
-					<a class="btn btn-secondary" href="viewpmsg.php?op=in" title="<{$smarty.const._PM_INBOX}>"><span class="fa-solid fa-inbox fa-2x fa-fw"></span><br /><{$smarty.const._PM_INBOX}></a>
-					<a class="btn btn-primary" href="viewpmsg.php?op=out" title="<{$smarty.const._PM_OUTBOX}>"><span class="fa-solid fa-paper-plane fa-2x fa-fw"></span><br /><{$smarty.const._PM_OUTBOX}></a>
-					<a class="btn btn-secondary" href="viewpmsg.php?op=save" title="<{$smarty.const._PM_SAVEBOX}>"><span class="fa-solid fa-box-archive fa-2x fa-fw"></span><br /><{$smarty.const._PM_SAVEBOX}></a>
+					<a class="btn btn-secondary" href="viewpmsg.php?op=in" title="<{$smarty.const._MD_PM_INBOX}>"><span class="fa-solid fa-inbox fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_INBOX}></a>
+					<a class="btn btn-primary" href="viewpmsg.php?op=out" title="<{$smarty.const._MD_PM_OUTBOX}>"><span class="fa-solid fa-paper-plane fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_OUTBOX}></a>
+					<a class="btn btn-secondary" href="viewpmsg.php?op=save" title="<{$smarty.const._MD_PM_SAVEBOX}>"><span class="fa-solid fa-box-archive fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_SAVEBOX}></a>
 				<{elseif $op == "save"}>
-					<a class="btn btn-secondary" href="viewpmsg.php?op=in" title="<{$smarty.const._PM_INBOX}>"><span class="fa-solid fa-inbox fa-2x fa-fw"></span><br /><{$smarty.const._PM_INBOX}></a>
-					<a class="btn btn-secondary" href="viewpmsg.php?op=out" title="<{$smarty.const._PM_OUTBOX}>"><span class="fa-solid fa-paper-plane fa-2x fa-fw"></span><br /><{$smarty.const._PM_OUTBOX}></a>
-					<a class="btn btn-primary" href="viewpmsg.php?op=save" title="<{$smarty.const._PM_SAVEBOX}>"><span class="fa-solid fa-box-archive fa-2x fa-fw"></span><br /><{$smarty.const._PM_SAVEBOX}></a>
+					<a class="btn btn-secondary" href="viewpmsg.php?op=in" title="<{$smarty.const._MD_PM_INBOX}>"><span class="fa-solid fa-inbox fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_INBOX}></a>
+					<a class="btn btn-secondary" href="viewpmsg.php?op=out" title="<{$smarty.const._MD_PM_OUTBOX}>"><span class="fa-solid fa-paper-plane fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_OUTBOX}></a>
+					<a class="btn btn-primary" href="viewpmsg.php?op=save" title="<{$smarty.const._MD_PM_SAVEBOX}>"><span class="fa-solid fa-box-archive fa-2x fa-fw"></span><br /><{$smarty.const._MD_PM_SAVEBOX}></a>
 				<{/if}>
 			</div>
 		</div>
@@ -50,19 +50,19 @@
 						<th class="text-center"><input name='allbox' id='allbox' onclick='xoopsCheckAll("<{$pmform.name}>", "allbox");' type='checkbox' value='Check All' title="<{$smarty.const.THEME_SELECT_ALL}>"/></th>
 						<th class="text-center d-none d-sm-table-cell"><span class="fa-solid fa-envelope text-primary"></span> <span class="fa-solid fa-envelope-open text-secondary"></span></th>
 						<{if isset($op) && $op == "out"}>
-							<th class="text-center"><{$smarty.const._PM_TO}></th>
+							<th class="text-center"><{$smarty.const._MD_PM_TO}></th>
 						<{else}>
-							<th class="text-center"><{$smarty.const._PM_FROM}></th>
+							<th class="text-center"><{$smarty.const._MD_PM_FROM}></th>
 						<{/if}>
-						<th class='d-none d-sm-table-cell'><{$smarty.const._PM_SUBJECT}></th>
-						<th class='d-table-cell d-sm-none'><{$smarty.const._PM_SUBJECT}> / <{$smarty.const._PM_DATE}></th>
-						<th class='d-none d-sm-table-cell'><{$smarty.const._PM_DATE}></th>
+						<th class='d-none d-sm-table-cell'><{$smarty.const._MD_PM_SUBJECT}></th>
+						<th class='d-table-cell d-sm-none'><{$smarty.const._MD_PM_SUBJECT}> / <{$smarty.const._MD_PM_DATE}></th>
+						<th class='d-none d-sm-table-cell'><{$smarty.const._MD_PM_DATE}></th>
 					</tr>
 					<!-- Table - End Head -->
 
 					<{if isset($total_messages) && $total_messages == 0}>
 						<tr>
-							<td class='even text-center bg-secondary' colspan='6'><{$smarty.const._PM_YOUDONTHAVE}></td>
+							<td class='even text-center bg-secondary' colspan='6'><{$smarty.const._MD_PM_YOUDONTHAVE}></td>
 						</tr>
 					<{/if}>
 

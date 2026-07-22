@@ -41,13 +41,13 @@ $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id
 // PM-specific methods (setTodelete etc.) used below.
 //
 // In the "No Module is loaded" case the PM language file may not be loaded
-// yet, so _PM_ACTION_ERROR can itself fatal as an undefined constant on
+// yet, so _MD_PM_ACTION_ERROR can itself fatal as an undefined constant on
 // PHP 8+. Try to load the PM main language file, then resolve a safe
 // fallback BEFORE the try/catch so both redirect paths can rely on it.
-if (!defined('_PM_ACTION_ERROR')) {
+if (!defined('_MD_PM_ACTION_ERROR')) {
     xoops_loadLanguage('main', 'pm');
 }
-$pmActionError = defined('_PM_ACTION_ERROR') ? constant('_PM_ACTION_ERROR') : 'Operation failed';
+$pmActionError = defined('_MD_PM_ACTION_ERROR') ? constant('_MD_PM_ACTION_ERROR') : 'Operation failed';
 try {
     /** @var PmMessageHandler $pm_handler */
     $pm_handler = xoops_getModuleHandler('message');
@@ -75,7 +75,7 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
     if (Request::hasVar('email_message', 'POST')) {
         $res = $pm_handler->sendEmail($pm, $GLOBALS['xoopsUser']);
     } elseif (Request::hasVar('move_message', 'POST') && $op !== 'save' && !$GLOBALS['xoopsUser']->isAdmin() && $pm_handler->getSavecount() >= $GLOBALS['xoopsModuleConfig']['max_save']) {
-        $res_message = sprintf(_PM_SAVED_PART, $GLOBALS['xoopsModuleConfig']['max_save'], 0);
+        $res_message = sprintf(_MD_PM_SAVED_PART, $GLOBALS['xoopsModuleConfig']['max_save'], 0);
     } else {
         switch ($op) {
             case 'out':
@@ -186,7 +186,7 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 break;
         }
     }
-    $res_message ??= $res ? _PM_ACTION_DONE : _PM_ACTION_ERROR;
+    $res_message ??= $res ? _MD_PM_ACTION_DONE : _MD_PM_ACTION_ERROR;
     redirect_header('viewpmsg.php?op=' . htmlspecialchars($op, ENT_QUOTES | ENT_HTML5), 2, $res_message);
 }
 $start                        = Request::getInt('start', 0, 'GET');
@@ -232,13 +232,13 @@ $pmform  = new XoopsForm('', 'pmform', 'readpmsg.php', 'post', true);
 $message = null;
 if (is_object($pm) && !empty($pm)) {
     if ($pm->getVar('from_userid') != $GLOBALS['xoopsUser']->getVar('uid')) {
-        $reply_button = new XoopsFormButton('', 'send', _PM_REPLY);
+        $reply_button = new XoopsFormButton('', 'send', _MD_PM_REPLY);
         $reply_button->setExtra("onclick='javascript:openWithSelfMain(\"" . XOOPS_URL . '/modules/pm/pmlite.php?reply=1&msg_id=' . $pm->getVar('msg_id') . "\", \"pmlite\", 565,500);'");
         $pmform->addElement($reply_button);
     }
-    $pmform->addElement(new XoopsFormButton('', 'delete_message', _PM_DELETE, 'submit'));
-    $pmform->addElement(new XoopsFormButton('', 'move_message', ($op === 'save') ? _PM_UNSAVE : _PM_TOSAVE, 'submit'));
-    $pmform->addElement(new XoopsFormButton('', 'email_message', _PM_EMAIL, 'submit'));
+    $pmform->addElement(new XoopsFormButton('', 'delete_message', _MD_PM_DELETE, 'submit'));
+    $pmform->addElement(new XoopsFormButton('', 'move_message', ($op === 'save') ? _MD_PM_UNSAVE : _MD_PM_TOSAVE, 'submit'));
+    $pmform->addElement(new XoopsFormButton('', 'email_message', _MD_PM_EMAIL, 'submit'));
     $pmform->addElement(new XoopsFormHidden('msg_id', $pm->getVar('msg_id')));
     $pmform->addElement(new XoopsFormHidden('op', $op));
     $pmform->addElement(new XoopsFormHidden('action', 1));

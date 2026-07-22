@@ -7,4 +7,4 @@ Version 1.07
 ----------------
 modinfo.php
 ----------
-define("_PM_MI_ABOUT", "About")
+define("_MI_PM_ABOUT", "About")

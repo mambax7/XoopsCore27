@@ -1,4 +1,4 @@
-<h4><{$smarty.const._PM_PRIVATEMESSAGE}></h4>
+<h4><{$smarty.const._MD_PM_PRIVATEMESSAGE}></h4>
 
 <{if $msg|default:''}>
     <div class="alert alert-success alert-dismissible fade show">
@@ -28,9 +28,9 @@
 
     <div class="row mb-3">
         <div class="col-12 btn-group" role="group">
-            <a class="btn <{if $op == 'in' || ($op != 'out' && $op != 'save')}>btn-primary<{else}>btn-outline-secondary<{/if}>" href="viewpmsg.php?op=in"><span class="fa-solid fa-inbox fa-fw"></span> <{$smarty.const._PM_INBOX}></a>
-            <a class="btn <{if $op == 'out'}>btn-primary<{else}>btn-outline-secondary<{/if}>" href="viewpmsg.php?op=out"><span class="fa-solid fa-paper-plane fa-fw"></span> <{$smarty.const._PM_OUTBOX}></a>
-            <a class="btn <{if $op == 'save'}>btn-primary<{else}>btn-outline-secondary<{/if}>" href="viewpmsg.php?op=save"><span class="fa-solid fa-box-archive fa-fw"></span> <{$smarty.const._PM_SAVEBOX}></a>
+            <a class="btn <{if $op == 'in' || ($op != 'out' && $op != 'save')}>btn-primary<{else}>btn-outline-secondary<{/if}>" href="viewpmsg.php?op=in"><span class="fa-solid fa-inbox fa-fw"></span> <{$smarty.const._MD_PM_INBOX}></a>
+            <a class="btn <{if $op == 'out'}>btn-primary<{else}>btn-outline-secondary<{/if}>" href="viewpmsg.php?op=out"><span class="fa-solid fa-paper-plane fa-fw"></span> <{$smarty.const._MD_PM_OUTBOX}></a>
+            <a class="btn <{if $op == 'save'}>btn-primary<{else}>btn-outline-secondary<{/if}>" href="viewpmsg.php?op=save"><span class="fa-solid fa-box-archive fa-fw"></span> <{$smarty.const._MD_PM_SAVEBOX}></a>
         </div>
     </div>
 
@@ -44,18 +44,18 @@
                     <span class="fa-solid fa-envelope text-primary"></span>
                 </th>
                 <{if $op == "out"}>
-                    <th><{$smarty.const._PM_TO}></th>
+                    <th><{$smarty.const._MD_PM_TO}></th>
                 <{else}>
-                    <th><{$smarty.const._PM_FROM}></th>
+                    <th><{$smarty.const._MD_PM_FROM}></th>
                 <{/if}>
-                <th><{$smarty.const._PM_SUBJECT}></th>
-                <th class="d-none d-md-table-cell"><{$smarty.const._PM_DATE}></th>
+                <th><{$smarty.const._MD_PM_SUBJECT}></th>
+                <th class="d-none d-md-table-cell"><{$smarty.const._MD_PM_DATE}></th>
             </tr>
         </thead>
         <tbody>
             <{if $total_messages == 0}>
                 <tr>
-                    <td colspan="5" class="text-center text-muted py-3"><{$smarty.const._PM_YOUDONTHAVE}></td>
+                    <td colspan="5" class="text-center text-muted py-3"><{$smarty.const._MD_PM_YOUDONTHAVE}></td>
                 </tr>
             <{/if}>
 

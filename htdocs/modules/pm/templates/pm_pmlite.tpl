@@ -2,15 +2,15 @@
 <form name="<{$pmform.name}>" id="<{$pmform.name}>" action="<{$pmform.action}>" method="<{$pmform.method}>" <{$pmform.extra}> >
     <table class='outer txtcenter width100'>
         <tr>
-            <td class='head width30 txtright'><{$smarty.const._PM_TO}></td>
+            <td class='head width30 txtright'><{$smarty.const._MD_PM_TO}></td>
             <td class='even txtleft'><{if $pmform.elements.to_userid.hidden != 1}><{$pmform.elements.to_userid.body}><{/if}><{$to_username|default:''}></td>
         </tr>
         <tr>
-            <td class='head width30 txtright'><{$smarty.const._PM_SUBJECTC}></td>
+            <td class='head width30 txtright'><{$smarty.const._MD_PM_SUBJECTC}></td>
             <td class='even txtleft'><{$pmform.elements.subject.body}></td>
         </tr>
         <tr>
-            <td class='head width30 txtright'><{$smarty.const._PM_SUBJECT_ICONS}></td>
+            <td class='head width30 txtright'><{$smarty.const._MD_PM_SUBJECT_ICONS}></td>
             <td class='even txtleft'>
 
                 <{foreach item=icon from=$radio_icons|default:null}>
@@ -18,11 +18,11 @@
                 <{/foreach}>  </td>
         </tr>
         <tr class='aligntop'>
-            <td class='head width30 txtright'><{$smarty.const._PM_MESSAGEC}></td>
+            <td class='head width30 txtright'><{$smarty.const._MD_PM_MESSAGEC}></td>
             <td class='even txtleft'><{$pmform.elements.message.body}></td>
         </tr>
         <tr class='aligntop'>
-            <td class='head width30'><{$smarty.const._PM_SAVEINOUTBOX}></td>
+            <td class='head width30'><{$smarty.const._MD_PM_SAVEINOUTBOX}></td>
             <td class='even'><{$pmform.elements.savecopy.body}></td>
         </tr>
         <tr>

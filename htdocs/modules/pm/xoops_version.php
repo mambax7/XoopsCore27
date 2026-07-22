@@ -17,16 +17,10 @@
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  */
 
-/**
- * This is a temporary solution for merging XOOPS 2.0 and 2.2 series
- * A thorough solution will be available in XOOPS 3.0
- *
- */
-
 $modversion                   = [];
 $modversion['version']        = '1.1.4';
-$modversion['name']           = _PM_MI_NAME;
-$modversion['description']    = _PM_MI_DESC;
+$modversion['name']           = _MI_PM_NAME;
+$modversion['description']    = _MI_PM_DESC;
 $modversion['author']         = 'Jan Pedersen, Taiwen Jiang';
 $modversion['credits']        = 'The XOOPS Project, Wanikoo';
 $modversion['help']           = 'page=help';
@@ -84,8 +78,8 @@ $modversion['hasMain'] = 1;
 $modversion['config']   = [];
 $modversion['config'][] = [
     'name'        => 'perpage',
-    'title'       => '_PM_MI_PERPAGE',
-    'description' => '_PM_MI_PERPAGE_DESC',
+    'title'       => '_MI_PM_PERPAGE',
+    'description' => '_MI_PM_PERPAGE_DESC',
     'formtype'    => 'textbox',
     'valuetype'   => 'int',
     'default'     => 20,
@@ -93,8 +87,8 @@ $modversion['config'][] = [
 
 $modversion['config'][] = [
     'name'        => 'max_save',
-    'title'       => '_PM_MI_MAXSAVE',
-    'description' => '_PM_MI_MAXSAVE_DESC',
+    'title'       => '_MI_PM_MAXSAVE',
+    'description' => '_MI_PM_MAXSAVE_DESC',
     'formtype'    => 'textbox',
     'valuetype'   => 'int',
     'default'     => 10,
@@ -102,18 +96,18 @@ $modversion['config'][] = [
 
 $modversion['config'][] = [
     'name'        => 'prunesubject',
-    'title'       => '_PM_MI_PRUNESUBJECT',
-    'description' => '_PM_MI_PRUNESUBJECT_DESC',
+    'title'       => '_MI_PM_PRUNESUBJECT',
+    'description' => '_MI_PM_PRUNESUBJECT_DESC',
     'formtype'    => 'textbox',
     'valuetype'   => 'text',
-    'default'     => _PM_MI_PRUNESUBJECTDEFAULT,
+    'default'     => _MI_PM_PRUNESUBJECTDEFAULT,
 ];
 
 $modversion['config'][] = [
     'name'        => 'prunemessage',
-    'title'       => '_PM_MI_PRUNEMESSAGE',
-    'description' => '_PM_MI_PRUNEMESSAGE_DESC',
+    'title'       => '_MI_PM_PRUNEMESSAGE',
+    'description' => '_MI_PM_PRUNEMESSAGE_DESC',
     'formtype'    => 'textarea',
     'valuetype'   => 'text',
-    'default'     => _PM_MI_PRUNEMESSAGEDEFAULT,
+    'default'     => _MI_PM_PRUNEMESSAGEDEFAULT,
 ];

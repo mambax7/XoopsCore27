@@ -180,17 +180,17 @@ class PmMessageHandler extends XoopsPersistableObjectHandler
         if (!is_object($user)) {
             $user =& $GLOBALS['xoopsUser'];
         }
-        $msg = sprintf(_PM_EMAIL_DESC, $user->getVar('uname'));
+        $msg = sprintf(_MD_PM_EMAIL_DESC, $user->getVar('uname'));
         $msg .= "\n\n";
         $msg .= formatTimestamp($pm->getVar('msg_time'));
         $msg .= "\n";
         $from = new XoopsUser($pm->getVar('from_userid'));
         $to   = new XoopsUser($pm->getVar('to_userid'));
-        $msg .= sprintf(_PM_EMAIL_FROM, $from->getVar('uname') . ' (' . XOOPS_URL . '/userinfo.php?uid=' . $pm->getVar('from_userid') . ')');
+        $msg .= sprintf(_MD_PM_EMAIL_FROM, $from->getVar('uname') . ' (' . XOOPS_URL . '/userinfo.php?uid=' . $pm->getVar('from_userid') . ')');
         $msg .= "\n";
-        $msg .= sprintf(_PM_EMAIL_TO, $to->getVar('uname') . ' (' . XOOPS_URL . '/userinfo.php?uid=' . $pm->getVar('to_userid') . ')');
+        $msg .= sprintf(_MD_PM_EMAIL_TO, $to->getVar('uname') . ' (' . XOOPS_URL . '/userinfo.php?uid=' . $pm->getVar('to_userid') . ')');
         $msg .= "\n";
-        $msg .= _PM_EMAIL_MESSAGE . ":\n";
+        $msg .= _MD_PM_EMAIL_MESSAGE . ":\n";
         $msg .= "\n" . $pm->getVar('subject') . "\n";
         $msg .= "\n" . strip_tags(str_replace(['<p>', '</p>', '<br>', '<br>'], "\n", $pm->getVar('msg_text'))) . "\n\n";
         $msg .= "--------------\n";
@@ -201,7 +201,7 @@ class PmMessageHandler extends XoopsPersistableObjectHandler
         $xoopsMailer->setToEmails($user->getVar('email'));
         $xoopsMailer->setFromEmail($xoopsConfig['adminmail']);
         $xoopsMailer->setFromName($xoopsConfig['sitename']);
-        $xoopsMailer->setSubject(sprintf(_PM_EMAIL_SUBJECT, $pm->getVar('subject')));
+        $xoopsMailer->setSubject(sprintf(_MD_PM_EMAIL_SUBJECT, $pm->getVar('subject')));
         $xoopsMailer->setBody($msg);
 
         return $xoopsMailer->send();
@@ -215,13 +215,13 @@ class PmMessageHandler extends XoopsPersistableObjectHandler
     public function getPruneForm()
     {
         include_once XOOPS_ROOT_PATH . '/class/xoopsformloader.php';
-        $form = new XoopsThemeForm(_PM_AM_PRUNE, 'form', 'prune.php', 'post', true);
+        $form = new XoopsThemeForm(_AM_PM_PRUNE, 'form', 'prune.php', 'post', true);
 
-        $form->addElement(new XoopsFormDateTime(_PM_AM_PRUNEAFTER, 'after'));
-        $form->addElement(new XoopsFormDateTime(_PM_AM_PRUNEBEFORE, 'before'));
-        $form->addElement(new XoopsFormRadioYN(_PM_AM_ONLYREADMESSAGES, 'onlyread', 1));
-        $form->addElement(new XoopsFormRadioYN(_PM_AM_INCLUDESAVE, 'includesave', 0));
-        $form->addElement(new XoopsFormRadioYN(_PM_AM_NOTIFYUSERS, 'notifyusers', 0));
+        $form->addElement(new XoopsFormDateTime(_AM_PM_PRUNEAFTER, 'after'));
+        $form->addElement(new XoopsFormDateTime(_AM_PM_PRUNEBEFORE, 'before'));
+        $form->addElement(new XoopsFormRadioYN(_AM_PM_ONLYREADMESSAGES, 'onlyread', 1));
+        $form->addElement(new XoopsFormRadioYN(_AM_PM_INCLUDESAVE, 'includesave', 0));
+        $form->addElement(new XoopsFormRadioYN(_AM_PM_NOTIFYUSERS, 'notifyusers', 0));
 
         $form->addElement(new XoopsFormHidden('op', 'prune'));
         $form->addElement(new XoopsFormButton('', 'submit', _SUBMIT, 'submit'));
