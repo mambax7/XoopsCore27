@@ -101,7 +101,9 @@
 
     <div class="row mb10">
         <div class="col-sm-6 col-md-6">
+            <{if $forum_reply|default:''}>
             <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/reply.php?topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_FORUM_REPLY}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_REPLY}></a>
+            <{/if}>
 
             <{if isset($viewer_level) && $viewer_level > 1}>
                 <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/newtopic.php?forum=<{$forum_id}>" title="<{$smarty.const.THEME_FORUM_NEWTOPIC}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_NEWTOPIC}></a>
@@ -113,7 +115,9 @@
                 <span class="fa-solid fa-magnifying-glass"></span>
             </a>
 
+            <{if $forum_addpoll|default:''}>
             <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/polls.php?op=add&topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_ADD_POLL}>" class="btn btn-info"><{$smarty.const.THEME_ADD_POLL}></a>
+            <{/if}>
 
         </div>
 
@@ -208,7 +212,9 @@
     <div class="newbb-viewtopic-footer">
     <div class="row mb10">
         <div class="col-sm-6 col-md-6 d-none d-sm-block">
-            <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/reply.php?topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_FORUM_REPLY}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_REPLY}></a>
+            <{if $forum_reply|default:''}>
+                <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/reply.php?topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_FORUM_REPLY}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_REPLY}></a>
+            <{/if}>
 
             <{if isset($viewer_level) && $viewer_level > 1}>
                 <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/newtopic.php?forum=<{$forum_id}>" title="<{$smarty.const.THEME_FORUM_NEWTOPIC}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_NEWTOPIC}></a>
@@ -220,7 +226,9 @@
                 <a href="#quickReply" data-bs-toggle="collapse" title="" class="btn btn-info">Quick Reply</a>
             <{/if}>
 
-            <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/polls.php?op=add&topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_ADD_POLL}>" class="btn btn-info"><{$smarty.const.THEME_ADD_POLL}></a>
+            <{if $forum_addpoll|default:''}>
+                <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/polls.php?op=add&topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_ADD_POLL}>" class="btn btn-info"><{$smarty.const.THEME_ADD_POLL}></a>
+            <{/if}>
         </div>
 
         <div class="xoopsform col-sm-4 col-md-4">
