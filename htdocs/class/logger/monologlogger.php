@@ -2,7 +2,7 @@
 /**
  * XOOPS Monolog Logger Adapter
  *
- * Wraps Monolog 2.x as a PSR-3 compatible logger that integrates with
+ * Wraps Monolog 2.x/3.x as a PSR-3 compatible logger that integrates with
  * XoopsLogger via the addLogger() composite pattern (ported from XOOPS 2.6).
  *
  * @copyright       (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -43,10 +43,11 @@ class XoopsMonologLogger
      * Constructor — creates a Monolog logger with sensible defaults.
      *
      * @param string $channelName  Monolog channel name (default: 'xoops')
-     * @param array  $handlers     Optional array of Monolog handlers; if empty, defaults to a RotatingFileHandler
-     * @param array  $processors   Optional array of Monolog processors
+     * @param array<int, \Monolog\Handler\HandlerInterface> $handlers Optional handlers
+     * @param array<int, callable> $processors Optional processors
+     * @param string $minimumLevel Minimum level for the default file handler
      */
-    public function __construct($channelName = 'xoops', array $handlers = [], array $processors = [])
+    public function __construct($channelName = 'xoops', array $handlers = [], array $processors = [], $minimumLevel = LogLevel::WARNING)
     {
         if (!class_exists('Monolog\Logger')) {
             $this->activated = false;
@@ -72,7 +73,7 @@ class XoopsMonologLogger
                     }
                 }
                 $logFile = $logDir . '/xoops.log';
-                $handler = new RotatingFileHandler($logFile, 30, Logger::DEBUG);
+                $handler = new RotatingFileHandler($logFile, 30, $this->normalizeLevel($minimumLevel));
                 $this->monolog->pushHandler($handler);
             } else {
                 foreach ($handlers as $handler) {
@@ -93,7 +94,7 @@ class XoopsMonologLogger
      *
      * @param mixed  $level    PSR-3 log level string or Monolog integer level
      * @param string $message  log message
-     * @param array  $context  context array
+     * @param array<array-key, mixed> $context context array
      * @return void
      */
     public function log($level, $message, array $context = [])
@@ -103,7 +104,7 @@ class XoopsMonologLogger
         }
 
         // Strip the 'channel' key used for DebugBar routing — not relevant for file logging
-        $logContext = $context;
+        $logContext = $this->sanitizeContext($context);
         unset($logContext['channel']);
 
         try {
@@ -133,29 +134,71 @@ class XoopsMonologLogger
         return $this->monolog;
     }
 
+    /** Whether Monolog initialized successfully. */
+    public function isActive(): bool
+    {
+        return $this->activated && null !== $this->monolog;
+    }
+
     /**
-     * Normalize a PSR-3 string level to a Monolog integer level.
+     * Normalize levels to PSR-3 names accepted by both Monolog 2 and 3.
      *
      * @param mixed $level  PSR-3 level string or integer
-     * @return int  Monolog level constant
+     * @return 'emergency'|'alert'|'critical'|'error'|'warning'|'notice'|'info'|'debug'
      */
     private function normalizeLevel($level)
     {
-        if (is_int($level)) {
-            return $level;
-        }
-
         $map = [
-            LogLevel::EMERGENCY => Logger::EMERGENCY,
-            LogLevel::ALERT     => Logger::ALERT,
-            LogLevel::CRITICAL  => Logger::CRITICAL,
-            LogLevel::ERROR     => Logger::ERROR,
-            LogLevel::WARNING   => Logger::WARNING,
-            LogLevel::NOTICE    => Logger::NOTICE,
-            LogLevel::INFO      => Logger::INFO,
-            LogLevel::DEBUG     => Logger::DEBUG,
+            Logger::EMERGENCY => LogLevel::EMERGENCY,
+            Logger::ALERT     => LogLevel::ALERT,
+            Logger::CRITICAL  => LogLevel::CRITICAL,
+            Logger::ERROR     => LogLevel::ERROR,
+            Logger::WARNING   => LogLevel::WARNING,
+            Logger::NOTICE    => LogLevel::NOTICE,
+            Logger::INFO      => LogLevel::INFO,
+            Logger::DEBUG     => LogLevel::DEBUG,
         ];
+        if (is_int($level)) {
+            return isset($map[$level]) ? $map[$level] : LogLevel::DEBUG;
+        }
+        $level = strtolower((string) $level);
+        return in_array($level, $map, true) ? $level : LogLevel::DEBUG;
+    }
 
-        return isset($map[$level]) ? $map[$level] : Logger::DEBUG;
+    /**
+     * Bound legacy context and prevent credentials or object graphs reaching disk.
+     * @param array<array-key, mixed> $context
+     * @return array<array-key, mixed>
+     */
+    private function sanitizeContext(array $context, int $depth = 0): array
+    {
+        if ($depth >= 4) {
+            return ['_truncated' => 'maximum context depth reached'];
+        }
+        $safe = [];
+        $count = 0;
+        foreach ($context as $key => $value) {
+            if (++$count > 25) {
+                $safe['_truncated'] = 'additional context items omitted';
+                break;
+            }
+            $name = (string) $key;
+            if (preg_match('/(?:password|passwd|token|secret|cookie|authorization|api[_-]?key)/i', $name)) {
+                $safe[$key] = '[redacted]';
+            } elseif (is_array($value)) {
+                $safe[$key] = $this->sanitizeContext($value, $depth + 1);
+            } elseif ($value instanceof \Throwable) {
+                $safe[$key] = get_class($value) . ': ' . substr($value->getMessage(), 0, 2000);
+            } elseif (is_object($value)) {
+                $safe[$key] = '[object ' . get_class($value) . ']';
+            } elseif (is_resource($value)) {
+                $safe[$key] = '[resource ' . get_resource_type($value) . ']';
+            } elseif (is_string($value) && strlen($value) > 2000) {
+                $safe[$key] = substr($value, 0, 2000) . '… [truncated]';
+            } else {
+                $safe[$key] = $value;
+            }
+        }
+        return $safe;
     }
 }
