@@ -1,29 +1,29 @@
-<h4 class="txtcenter"><{$smarty.const._PM_PRIVATEMESSAGE}></h4>
+<h4 class="txtcenter"><{$smarty.const._MD_PM_PRIVATEMESSAGE}></h4>
  <{if !empty($op)}>
     <br>
     <div class="floatright txtright" style="width: 18%;">
         <{if isset($op)}>
             <{if $op == "out"}>
-                <a href='viewpmsg.php?op=in' title='<{$smarty.const._PM_INBOX}>'><{$smarty.const._PM_INBOX}></a>
+                <a href='viewpmsg.php?op=in' title='<{$smarty.const._MD_PM_INBOX}>'><{$smarty.const._MD_PM_INBOX}></a>
                 |
-                <a href='viewpmsg.php?op=save' title='<{$smarty.const._PM_SAVEBOX}>'><{$smarty.const._PM_SAVEBOX}></a>
+                <a href='viewpmsg.php?op=save' title='<{$smarty.const._MD_PM_SAVEBOX}>'><{$smarty.const._MD_PM_SAVEBOX}></a>
             <{elseif $op == "save"}>
-                <a href='viewpmsg.php?op=in' title='<{$smarty.const._PM_INBOX}>'><{$smarty.const._PM_INBOX}></a>
+                <a href='viewpmsg.php?op=in' title='<{$smarty.const._MD_PM_INBOX}>'><{$smarty.const._MD_PM_INBOX}></a>
                 |
-                <a href='viewpmsg.php?op=out' title='<{$smarty.const._PM_OUTBOX}>'><{$smarty.const._PM_OUTBOX}></a>
+                <a href='viewpmsg.php?op=out' title='<{$smarty.const._MD_PM_OUTBOX}>'><{$smarty.const._MD_PM_OUTBOX}></a>
             <{elseif $op == "in"}>
-                <a href='viewpmsg.php?op=out' title='<{$smarty.const._PM_OUTBOX}>'><{$smarty.const._PM_OUTBOX}></a>
+                <a href='viewpmsg.php?op=out' title='<{$smarty.const._MD_PM_OUTBOX}>'><{$smarty.const._MD_PM_OUTBOX}></a>
                 |
-                <a href='viewpmsg.php?op=save' title='<{$smarty.const._PM_SAVEBOX}>'><{$smarty.const._PM_SAVEBOX}></a>
+                <a href='viewpmsg.php?op=save' title='<{$smarty.const._MD_PM_SAVEBOX}>'><{$smarty.const._MD_PM_SAVEBOX}></a>
             <{/if}>
         <{/if}>
     </div>
     <div class="floatleft width80">
         <{if isset($op)}>
-            <{if $op == "out"}><{$smarty.const._PM_OUTBOX}>
-            <{elseif $op == "save"}><{$smarty.const._PM_SAVEBOX}>
+            <{if $op == "out"}><{$smarty.const._MD_PM_OUTBOX}>
+            <{elseif $op == "save"}><{$smarty.const._MD_PM_SAVEBOX}>
             <{/if}>
-        <{else}><{$smarty.const._PM_INBOX}>
+        <{else}><{$smarty.const._MD_PM_INBOX}>
         <{/if}>
     </div>
     <br>
@@ -49,17 +49,17 @@
                 <th><img class='bnone' src='<{xoAppUrl 'images/download.gif'}>' alt=''/></th>
                 <th>&nbsp;</th>
                 <{if isset($op) && $op == "out"}>
-                    <th><{$smarty.const._PM_TO}></th>
+                    <th><{$smarty.const._MD_PM_TO}></th>
                 <{else}>
-                    <th><{$smarty.const._PM_FROM}></th>
+                    <th><{$smarty.const._MD_PM_FROM}></th>
                 <{/if}>
-                <th><{$smarty.const._PM_SUBJECT}></th>
-                <th class='txtcenter'><{$smarty.const._PM_DATE}></th>
+                <th><{$smarty.const._MD_PM_SUBJECT}></th>
+                <th class='txtcenter'><{$smarty.const._MD_PM_DATE}></th>
             </tr>
 
             <{if isset($total_messages) && $total_messages == 0}>
                 <tr>
-                    <td class='even txtcenter' colspan='6'><{$smarty.const._PM_YOUDONTHAVE}></td>
+                    <td class='even txtcenter' colspan='6'><{$smarty.const._MD_PM_YOUDONTHAVE}></td>
                 </tr>
             <{/if}>
             <{foreach item=message from=$messages|default:null}>
@@ -68,9 +68,9 @@
                         <input type='checkbox' id='msg_id_<{$message.msg_id|escape}>' name='msg_id[]' value='<{$message.msg_id|escape}>'/>
                     </td>
                     <{if $message.read_msg == 1}>
-                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_read.png'}>' alt='<{$smarty.const._PM_READ}>'title='<{$smarty.const._PM_READ}>'/></td>
+                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_read.png'}>' alt='<{$smarty.const._MD_PM_READ}> 'title='<{$smarty.const._MD_PM_READ}>'/></td>
                     <{else}>
-                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_notread.png'}>' alt='<{$smarty.const._PM_NOTREAD}>'title='<{$smarty.const._PM_NOTREAD}>'/></td>
+                        <td class='aligntop width5 txtcenter'><img src='<{xoModuleIcons16 'mail_notread.png'}>' alt='<{$smarty.const._MD_PM_NOTREAD}> 'title='<{$smarty.const._MD_PM_NOTREAD}>'/></td>
                     <{/if}>
                     <td class='aligntop width5 txtcenter'>
                         <{if !empty($message.msg_image)}>

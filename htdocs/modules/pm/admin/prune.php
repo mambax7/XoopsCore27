@@ -80,7 +80,7 @@ switch ($op) {
         }
         $deletedrows = $pm_handler->deleteAll($criteria);
         if ($deletedrows === false) {
-            redirect_header('prune.php', 2, _PM_AM_ERRORWHILEPRUNING);
+            redirect_header('prune.php', 2, _AM_PM_ERRORWHILEPRUNING);
         }
         if ($notifyusers) {
             $errors   = false;
@@ -104,7 +104,7 @@ switch ($op) {
                 exit();
             }
         }
-        redirect_header('admin.php', 2, sprintf(_PM_AM_MESSAGESPRUNED, $deletedrows));
+        redirect_header('admin.php', 2, sprintf(_AM_PM_MESSAGESPRUNED, $deletedrows));
         break;
 }
 include_once __DIR__ . '/admin_footer.php';

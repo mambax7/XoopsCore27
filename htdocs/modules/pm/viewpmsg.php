@@ -48,7 +48,7 @@ if (Request::hasVar('delete_messages', 'POST') && (Request::hasVar('msg_id', 'PO
         $postedIds  = array_values(array_unique(array_map('intval', Request::getArray('msg_id', [], 'POST'))));
         $currentUid = (int) $xoopsUser->getVar('uid');
         // Bulk-fetch selected PMs in one query instead of N+1
-        $confirmMsg = _PM_SURE_TO_DELETE;
+        $confirmMsg = _MD_PM_SURE_TO_DELETE;
         $allowedIds = [];
         if (!empty($postedIds)) {
             $criteria = new Criteria('msg_id', '(' . implode(',', $postedIds) . ')', 'IN');
@@ -101,7 +101,7 @@ if (Request::hasVar('delete_messages', 'POST') && (Request::hasVar('msg_id', 'PO
             }
             unset($pm);
         }
-        $GLOBALS['xoopsTpl']->assign('msg', _PM_DELETED);
+        $GLOBALS['xoopsTpl']->assign('msg', _MD_PM_DELETED);
     }
 }
 if (Request::hasVar('move_messages', 'POST') && Request::hasVar('msg_id', 'POST')) {
@@ -148,11 +148,11 @@ if (Request::hasVar('move_messages', 'POST') && Request::hasVar('msg_id', 'POST'
             }
         }
         if ($op === 'save') {
-            $GLOBALS['xoopsTpl']->assign('msg', _PM_UNSAVED);
+            $GLOBALS['xoopsTpl']->assign('msg', _MD_PM_UNSAVED);
         } elseif (isset($total_save) && !$GLOBALS['xoopsUser']->isAdmin()) {
-            $GLOBALS['xoopsTpl']->assign('msg', sprintf(_PM_SAVED_PART, $GLOBALS['xoopsModuleConfig']['max_save'], $i));
+            $GLOBALS['xoopsTpl']->assign('msg', sprintf(_MD_PM_SAVED_PART, $GLOBALS['xoopsModuleConfig']['max_save'], $i));
         } else {
-            $GLOBALS['xoopsTpl']->assign('msg', _PM_SAVED_ALL);
+            $GLOBALS['xoopsTpl']->assign('msg', _MD_PM_SAVED_ALL);
         }
     }
 }
@@ -163,7 +163,7 @@ if (Request::hasVar('empty_messages', 'POST')) {
             $GLOBALS['xoopsSecurity']->getErrors()
         )));
     } elseif (Request::getInt('ok', 0, 'POST') === 0) {
-        xoops_confirm(['ok' => 1, 'empty_messages' => 1, 'op' => $op], $_SERVER['REQUEST_URI'], _PM_RUSUREEMPTY);
+        xoops_confirm(['ok' => 1, 'empty_messages' => 1, 'op' => $op], $_SERVER['REQUEST_URI'], _MD_PM_RUSUREEMPTY);
         include $GLOBALS['xoops']->path('footer.php');
         exit();
     } else {
@@ -209,7 +209,7 @@ if (Request::hasVar('empty_messages', 'POST')) {
                 }
             }
         }
-        $GLOBALS['xoopsTpl']->assign('msg', _PM_EMPTIED);
+        $GLOBALS['xoopsTpl']->assign('msg', _MD_PM_EMPTIED);
     }
 }
 
@@ -280,11 +280,11 @@ if (count($pm_arr) > 0) {
 }
 
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');
-$send_button = new XoopsFormButton('', 'send', _PM_SEND);
+$send_button = new XoopsFormButton('', 'send', _MD_PM_SEND);
 $send_button->setExtra("onclick='javascript:openWithSelfMain(\"" . XOOPS_URL . "/modules/pm/pmlite.php?send=1\", \"pmlite\", 565, 500);'");
-$delete_button = new XoopsFormButton('', 'delete_messages', _PM_DELETE, 'submit');
-$move_button   = new XoopsFormButton('', 'move_messages', ($op === 'save') ? _PM_UNSAVE : _PM_TOSAVE, 'submit');
-$empty_button  = new XoopsFormButton('', 'empty_messages', _PM_EMPTY, 'submit');
+$delete_button = new XoopsFormButton('', 'delete_messages', _MD_PM_DELETE, 'submit');
+$move_button   = new XoopsFormButton('', 'move_messages', ($op === 'save') ? _MD_PM_UNSAVE : _MD_PM_TOSAVE, 'submit');
+$empty_button  = new XoopsFormButton('', 'empty_messages', _MD_PM_EMPTY, 'submit');
 
 $pmform = new XoopsForm('', 'pmform', 'viewpmsg.php', 'post', true);
 $pmform->addElement($send_button);

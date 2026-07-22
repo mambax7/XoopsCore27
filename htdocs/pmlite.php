@@ -53,7 +53,7 @@ $safeMethods = ['GET', 'HEAD'];
 if (!in_array($method, $safeMethods)) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
         echo '<br><br><div><h4>' . _ERRORS . '</h4><br>';
-        echo "[ <a href='javascript:history.go(-1)' title=''>" . _PM_GOBACK . '</a> ]</div>';
+        echo "[ <a href='javascript:history.go(-1)' title=''>" . _MD_PM_GOBACK . '</a> ]</div>';
         xoops_footer();
         exit;
     }
@@ -95,9 +95,9 @@ function corePmCanMessageUser(int $uid): bool
 function corePmRenderInvalidRecipient(): void
 {
     xoops_loadLanguage('main', 'pm');
-    $noPermMsg = defined('_PM_USERNOPERM') ? _PM_USERNOPERM : 'The selected user cannot receive private messages.';
-    $tryAgain  = defined('_PM_PLZTRYAGAIN') ? _PM_PLZTRYAGAIN : 'Please try again.';
-    $goBack    = defined('_PM_GOBACK') ? _PM_GOBACK : 'Go back';
+    $noPermMsg = defined('_MD_PM_USERNOPERM') ? _MD_PM_USERNOPERM : 'The selected user cannot receive private messages.';
+    $tryAgain  = defined('_MD_PM_PLZTRYAGAIN') ? _MD_PM_PLZTRYAGAIN : 'Please try again.';
+    $goBack    = defined('_MD_PM_GOBACK') ? _MD_PM_GOBACK : 'Go back';
     echo '<br><br><div><h4>' . $noPermMsg . '<br>';
     echo $tryAgain . '</h4><br>';
     echo "[ <a href='javascript:history.go(-1)' title=''>" . $goBack . '</a> ]</div>';
@@ -146,9 +146,9 @@ if (is_object($xoopsUser)) {
         }
         [$count] = $xoopsDB->fetchRow($result);
         if (1 != $count) {
-            echo '<br><br><div><h4>' . _PM_USERNOEXIST . '<br>';
-            echo _PM_PLZTRYAGAIN . '</h4><br>';
-            echo "[ <a href='javascript:history.go(-1)' title=''>" . _PM_GOBACK . '</a> ]</div>';
+            echo '<br><br><div><h4>' . _MD_PM_USERNOEXIST . '<br>';
+            echo _MD_PM_PLZTRYAGAIN . '</h4><br>';
+            echo "[ <a href='javascript:history.go(-1)' title=''>" . _MD_PM_GOBACK . '</a> ]</div>';
         } elseif (!corePmCanMessageUser($recipientId)) {
             corePmRenderInvalidRecipient();
         } else {
@@ -164,9 +164,9 @@ if (is_object($xoopsUser)) {
             $pm->setVar('from_userid', $xoopsUser->getVar('uid'));
             if (!$pm_handler->insert($pm)) {
                 echo $pm->getHtmlErrors();
-                echo "<br><a href='javascript:history.go(-1)' title=''>" . _PM_GOBACK . '</a>';
+                echo "<br><a href='javascript:history.go(-1)' title=''>" . _MD_PM_GOBACK . '</a>';
             } else {
-                echo "<br><br><div style='text-align:center;'><h4>" . _PM_MESSAGEPOSTED . "</h4><br><a href=\"javascript:window.opener.location='" . XOOPS_URL . "/viewpmsg.php';window.close();\" title=\"\">" . _PM_CLICKHERE . '</a><br><br><a href="javascript:window.close();" title="">' . _PM_ORCLOSEWINDOW . '</a></div>';
+                echo "<br><br><div style='text-align:center;'><h4>" . _MD_PM_MESSAGEPOSTED . "</h4><br><a href=\"javascript:window.opener.location='" . XOOPS_URL . "/viewpmsg.php';window.close();\" title=\"\">" . _MD_PM_CLICKHERE . '</a><br><br><a href="javascript:window.close();" title="">' . _MD_PM_ORCLOSEWINDOW . '</a></div>';
             }
         }
     } elseif (1 == $reply || 1 == $send || 1 == $send2) {
@@ -186,7 +186,7 @@ if (is_object($xoopsUser)) {
                 }
                 $pm_uname = XoopsUser::getUnameFromId($pm->getVar('from_userid'));
                 $message  = "[quote]\n";
-                $message .= sprintf(_PM_USERWROTE, $pm_uname);
+                $message .= sprintf(_MD_PM_USERWROTE, $pm_uname);
                 $message .= "\n" . $pm->getVar('msg_text', 'E') . "\n[/quote]";
             } else {
                 unset($pm);
@@ -196,9 +196,9 @@ if (is_object($xoopsUser)) {
         if (1 == $send2) {
             $to_username = XoopsUser::getUnameFromId($to_userid);
             if (empty($to_username)) {
-                echo '<br><br><div><h4>' . _PM_USERNOEXIST . '<br>';
-                echo _PM_PLZTRYAGAIN . '</h4><br>';
-                echo "[ <a href='javascript:history.go(-1)' title=''>" . _PM_GOBACK . '</a> ]</div>';
+                echo '<br><br><div><h4>' . _MD_PM_USERNOEXIST . '<br>';
+                echo _MD_PM_PLZTRYAGAIN . '</h4><br>';
+                echo "[ <a href='javascript:history.go(-1)' title=''>" . _MD_PM_GOBACK . '</a> ]</div>';
                 xoops_footer();
                 exit;
             }
@@ -210,13 +210,13 @@ if (is_object($xoopsUser)) {
         }
         $pmform = new XoopsThemeForm('', 'coolsus', 'pmlite.php', 'post', true);
         if (1 == $reply) {
-            $pmform->addElement(new XoopsFormLabel(_PM_TO, $pm_uname));
+            $pmform->addElement(new XoopsFormLabel(_MD_PM_TO, $pm_uname));
             $pmform->addElement(new XoopsFormHidden('to_userid', $pm->getVar('from_userid')));
         } elseif (1 == $send2) {
             $pmform->addElement(new XoopsFormHidden('to_userid', $to_userid));
-            $pmform->addElement(new XoopsFormLabel(_PM_TO, $to_username));
+            $pmform->addElement(new XoopsFormLabel(_MD_PM_TO, $to_username));
         } else {
-            $pmform->addElement(new XoopsFormSelectUser(_PM_TO, 'to_userid', false, $to_userid, 1, false, corePmGetAllowedGroups(), ['module_read' => 'pm']));
+            $pmform->addElement(new XoopsFormSelectUser(_MD_PM_TO, 'to_userid', false, $to_userid, 1, false, corePmGetAllowedGroups(), ['module_read' => 'pm']));
         }
 
         if (1 == $reply) {
@@ -237,14 +237,14 @@ if (is_object($xoopsUser)) {
         $icons_radio->addOptionArray($subjectImages);
         $pmform->addElement($icons_radio);
 
-        $pmform->addElement(new XoopsFormDhtmlTextArea(_PM_MESSAGEC, 'message', $message, 8, 37), true);
+        $pmform->addElement(new XoopsFormDhtmlTextArea(_MD_PM_MESSAGEC, 'message', $message, 8, 37), true);
 
         $pmform->addElement(new XoopsFormHidden('op', 'submit'));
         $elementTray = new XoopsFormElementTray('', '', 'tray');
-        $elementTray->addElement(new XoopsFormButton('', 'submit', _PM_SUBMIT, 'submit'));
-        $elementTray->addElement(new XoopsFormButton('', 'reset', _PM_CLEAR, 'reset'));
+        $elementTray->addElement(new XoopsFormButton('', 'submit', _MD_PM_SUBMIT, 'submit'));
+        $elementTray->addElement(new XoopsFormButton('', 'reset', _MD_PM_CLEAR, 'reset'));
 
-        $cancel_send = new XoopsFormButton('', 'cancel', _PM_CANCELSEND, 'button');
+        $cancel_send = new XoopsFormButton('', 'cancel', _MD_PM_CANCELSEND, 'button');
         $cancel_send->setExtra("onclick='javascript:window.close();'");
         $elementTray->addElement($cancel_send);
         $pmform->addElement($elementTray);
@@ -253,7 +253,7 @@ if (is_object($xoopsUser)) {
 
     }
 } else {
-    echo _PM_SORRY . "<br><br><a href='" . XOOPS_URL . "/register.php' title=''>" . _PM_REGISTERNOW . '</a>.';
+    echo _MD_PM_SORRY . "<br><br><a href='" . XOOPS_URL . "/register.php' title=''>" . _MD_PM_REGISTERNOW . '</a>.';
 }
 
 xoops_footer();
