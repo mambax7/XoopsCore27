@@ -1,6 +1,6 @@
 {
   "name": "xoopscore27/libraries",
-  "description": "Libraries for XOOPS 2.7.1 (meta-package, no code)",
+  "description": "Libraries for XOOPS 2.7.2 (meta-package, no code)",
   "type": "metapackage",
   "license": "GPL-2.0-or-later",
   "homepage": "https://xoops.org",
