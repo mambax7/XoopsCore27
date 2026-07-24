@@ -16,8 +16,8 @@ Download XOOPS 2.7.2:
 
 ## Why 2.7.2
 
-Shortly after 2.7.1 Final, a fresh install on PHP 8.1 and later was reported to
-fail during the "Creating tables" step with a fatal `mysqli_sql_exception`
+Shortly after 2.7.1 Final, a fresh install on PHP 8.2 was reported to fail
+during the "Creating tables" step with a fatal `mysqli_sql_exception`
 ([#126](https://github.com/XOOPS/XoopsCore27/issues/126)). Investigating it
 surfaced a small cluster of related installer problems affecting fresh installs,
 re-installs, and the front page of a newly installed site. 2.7.2 fixes all of
@@ -27,13 +27,15 @@ them.
 
 ## What's fixed
 
-### Fresh install no longer fatals on PHP 8.1+
+### Fresh install no longer fatals on PHP 8.2+
 
-`install_isInstalled()` probed for the users table before it existed. Under PHP
-8.1 and later, mysqli defaults to exception mode and the `@` silence operator
-does **not** suppress those exceptions, so the probe threw a fatal
-`mysqli_sql_exception` ("Table '…_users' doesn't exist") on every fresh install.
-The probe is now guarded so a missing table simply means "not installed".
+`install_isInstalled()` probed for the users table before it existed. Since PHP
+8.1, mysqli defaults to exception mode — and XOOPS runs on PHP 8.2 and later —
+where the `@` silence operator does **not** suppress those exceptions, so the
+probe threw a fatal `mysqli_sql_exception` ("Table '…_users' doesn't exist") on
+every fresh install. The probe is now guarded so that only a confirmed missing
+table means "not installed", and any other database error keeps the installer
+locked.
 
 ### The wizard no longer locks itself out mid-install
 
