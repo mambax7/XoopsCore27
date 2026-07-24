@@ -313,9 +313,16 @@ class Db_manager
         $ret   = false;
         if ($table != '') {
             $this->db->connect();
-            $sql = 'SELECT COUNT(*) FROM ' . $this->db->prefix($table);
-            $ret = $this->db->query($sql);
-            $ret = !empty($ret);  //return false on error or $table not found
+            $fullTable = $this->db->prefix($table);
+            // Probe existence without provoking a logged "table doesn't exist"
+            // [1146] error: SHOW TABLES LIKE returns an empty result set (a
+            // success, not an error) when the table is absent — unlike
+            // SELECT COUNT(*), which errors and is recorded by the DB logger on
+            // a fresh install. Escape LIKE wildcards in the identifier so a
+            // similarly-named table cannot produce a false match.
+            $like   = str_replace(['\\', '_', '%'], ['\\\\', '\\_', '\\%'], $fullTable);
+            $result = $this->db->query("SHOW TABLES LIKE '" . $like . "'");
+            $ret    = $this->db->isResultSet($result) && $this->db->getRowsNum($result) > 0;
         }
 
         return $ret;
