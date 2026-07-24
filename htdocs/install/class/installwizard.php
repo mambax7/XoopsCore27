@@ -130,7 +130,14 @@ class XoopsInstallWizard
 
         $installUserCookie = $_COOKIE['xo_install_user'] ?? '';
         if (empty($GLOBALS['xoopsUser']) && is_string($installUserCookie) && $installUserCookie !== '') {
-            return install_acceptUser();
+            if (install_acceptUser()) {
+                return true;
+            }
+            // Stale/invalid install cookie — e.g. signed with a previous
+            // attempt's prefix-derived key after a re-install. Clear it and
+            // fall through to normal authentication instead of hard-failing
+            // xoInit() with 'Init Error'.
+            xoops_setcookie('xo_install_user', '', 0, '', '');
         }
         if (empty($GLOBALS['xoopsUser'])) {
             redirect_header('../user.php');

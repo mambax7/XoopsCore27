@@ -77,7 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $sql = 'SELECT COUNT(*) FROM ' . $dbm->db->prefix('users');
-    $result = $dbm->db->query($sql);
+    // Use the dbmanager query() wrapper: it calls connect() (which selects the
+    // database) before running the query. isConnectable() above only performed
+    // connect(false) — a server-reachability check that selects NO database —
+    // so querying $dbm->db directly here fails with "[1046] No database selected".
+    $result = $dbm->query($sql);
     if ($dbm->db->isResultSet($result)) {
         [$isadmin] = $dbm->db->fetchRow($result);
     }

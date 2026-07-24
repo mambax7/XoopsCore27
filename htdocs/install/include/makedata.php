@@ -205,7 +205,7 @@ function system_menu_install_add_category_fk($dbm): bool
  */
 function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $groups)
 {
-    $defaultTheme = 'xswatch4';
+    $defaultTheme = 'xbootstrap5';
     // $xoopsDB = Database::getInstance();
     // $dbm = new Db_manager;
     $tables = [];

@@ -55,6 +55,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $_SESSION['settings'] = [];
 xoops_setcookie('xo_install_user', '', 0, '', '');
 
+// Housekeeping: each install attempt mints one JWT key file, named
+// {prefix-derived-secret}-key-install.php (Xmf\Key\FileStorage), because the
+// wizard auto-generates a new random DB prefix per run. Left behind, they
+// accumulate as orphans and a stale one can break a later run. Also drop any
+// read-only license.php from a prior completed install. Guarded on a known
+// data path (present whenever mainfile.php still exists during a re-install).
+if (defined('XOOPS_VAR_PATH') && XOOPS_VAR_PATH !== '' && is_dir(XOOPS_VAR_PATH . '/data')) {
+    foreach (glob(XOOPS_VAR_PATH . '/data/*-key-install.php') ?: [] as $staleKeyFile) {
+        @chmod($staleKeyFile, 0644);
+        @unlink($staleKeyFile);
+    }
+    $staleLicense = XOOPS_VAR_PATH . '/data/license.php';
+    if (is_file($staleLicense)) {
+        @chmod($staleLicense, 0644);
+        @unlink($staleLicense);
+    }
+}
+
 $pageHasForm = true;
 $title = LANGUAGE_SELECTION;
 $label = 'Available Languages';

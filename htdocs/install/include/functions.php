@@ -123,23 +123,32 @@ function install_isInstalled(): bool
     if (!$mysqli) {
         return false;
     }
-    @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 3);
-    $pass      = defined('XOOPS_DB_PASS') ? (string) XOOPS_DB_PASS : '';
-    $connected = @mysqli_real_connect($mysqli, $cprefix . $host, (string) XOOPS_DB_USER, $pass, (string) XOOPS_DB_NAME, $port);
-    if (!$connected) {
-        @mysqli_close($mysqli);
-        return false;
-    }
-
+    // PHP 8.1+ defaults mysqli to exception mode (MYSQLI_REPORT_ERROR |
+    // MYSQLI_REPORT_STRICT), and the '@' operator does NOT suppress those
+    // exceptions. On a fresh install the users table does not exist yet, so
+    // the probe below would otherwise throw a fatal mysqli_sql_exception
+    // ("Table '<db>.<prefix>_users' doesn't exist"). This check is
+    // best-effort: any connection or query failure simply means the site is
+    // not installed, so catch it and report "not installed".
     $installed = false;
-    $table     = XOOPS_DB_PREFIX . '_users';
-    $result    = @mysqli_query($mysqli, 'SELECT COUNT(*) FROM `' . str_replace('`', '``', $table) . '`');
-    if ($result instanceof \mysqli_result) {
-        $row       = mysqli_fetch_row($result);
-        $installed = !empty($row) && (int) $row[0] > 0;
-        mysqli_free_result($result);
+    try {
+        @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 3);
+        $pass      = defined('XOOPS_DB_PASS') ? (string) XOOPS_DB_PASS : '';
+        $connected = @mysqli_real_connect($mysqli, $cprefix . $host, (string) XOOPS_DB_USER, $pass, (string) XOOPS_DB_NAME, $port);
+        if ($connected) {
+            $table  = XOOPS_DB_PREFIX . '_users';
+            $result = mysqli_query($mysqli, 'SELECT COUNT(*) FROM `' . str_replace('`', '``', $table) . '`');
+            if ($result instanceof \mysqli_result) {
+                $row       = mysqli_fetch_row($result);
+                $installed = !empty($row) && (int) $row[0] > 0;
+                mysqli_free_result($result);
+            }
+        }
+    } catch (\mysqli_sql_exception $e) {
+        $installed = false;
+    } finally {
+        @mysqli_close($mysqli);
     }
-    @mysqli_close($mysqli);
 
     return $installed;
 }
@@ -167,6 +176,19 @@ function install_denyIfInstalled(): void
     // already-installed site has neither flag and is blocked before it can
     // reach the destructive pages.
     if (!empty($_SESSION['UserLogin']) || !empty($_SESSION['settings']['authorized'])) {
+        return;
+    }
+
+    // The admin-gated wizard pages (configsite, theme, moduleinstaller) set
+    // $xoopsOption['hascommon'], so common.inc.php boots full XOOPS instead of
+    // starting the installer's own PHP session — which swaps the session store
+    // and hides the flags checked above. On those pages the in-progress admin
+    // is authenticated first (XoopsInstallWizard::xoInit -> checkAccess ->
+    // install_acceptUser, via the signed xo_install_user JWT), which runs
+    // before this gate. A logged-in admin here is therefore a legitimate
+    // in-progress install and must be allowed through.
+    if (isset($GLOBALS['xoopsUser']) && is_object($GLOBALS['xoopsUser'])
+        && method_exists($GLOBALS['xoopsUser'], 'isAdmin') && $GLOBALS['xoopsUser']->isAdmin()) {
         return;
     }
 
