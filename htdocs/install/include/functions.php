@@ -40,6 +40,13 @@ function install_acceptUser()
     $users = $memberHandler->getUsers(new Criteria('uname', $uname));
     $user = array_pop($users);
 
+    // The install token only ever names the administrator created during
+    // installation. Accept it only when it still resolves to an existing
+    // administrator, so a token can never authenticate a non-admin identity.
+    if (!is_object($user) || !$user->isAdmin()) {
+        return false;
+    }
+
     if (is_object($GLOBALS['xoops']) && method_exists($GLOBALS['xoops'], 'acceptUser')) {
         $res = $GLOBALS['xoops']->acceptUser($uname, true, '');
 
@@ -123,29 +130,43 @@ function install_isInstalled(): bool
     if (!$mysqli) {
         return false;
     }
-    // PHP 8.1+ defaults mysqli to exception mode (MYSQLI_REPORT_ERROR |
-    // MYSQLI_REPORT_STRICT), and the '@' operator does NOT suppress those
-    // exceptions. On a fresh install the users table does not exist yet, so
-    // the probe below would otherwise throw a fatal mysqli_sql_exception
-    // ("Table '<db>.<prefix>_users' doesn't exist"). This check is
-    // best-effort: any connection or query failure simply means the site is
-    // not installed, so catch it and report "not installed".
-    $installed = false;
+    // This probe runs BEFORE the XOOPS database handler is bootstrapped, so it
+    // must talk to mysqli directly (a parameterized handler does not exist this
+    // early). Two hardening rules apply:
+    //
+    //  1. Fail closed. The state defaults to "installed" and is only cleared on
+    //     a positive "users table absent" result (ER_NO_SUCH_TABLE, 1146). A
+    //     connection, authentication, permission or timeout failure must NEVER
+    //     unlock the installer on a live site.
+    //  2. PHP 8.1+ defaults mysqli to exception mode (MYSQLI_REPORT_ERROR |
+    //     MYSQLI_REPORT_STRICT) and the '@' operator does NOT suppress those
+    //     exceptions, so the missing-table probe on a fresh install is caught
+    //     below (rule 1) instead of fatalling.
+    //
+    // XOOPS_DB_PREFIX is a trusted, install-validated identifier; it is
+    // re-validated as a bare identifier and its backticks are doubled before it
+    // is concatenated into this unavoidable pre-bootstrap raw query.
+    $installed = true;
+    $prefix    = (string) XOOPS_DB_PREFIX;
     try {
         @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 3);
         $pass      = defined('XOOPS_DB_PASS') ? (string) XOOPS_DB_PASS : '';
         $connected = @mysqli_real_connect($mysqli, $cprefix . $host, (string) XOOPS_DB_USER, $pass, (string) XOOPS_DB_NAME, $port);
-        if ($connected) {
-            $table  = XOOPS_DB_PREFIX . '_users';
+        if ($connected && ('' === $prefix || preg_match('/^[A-Za-z0-9_]+$/', $prefix))) {
+            $table  = $prefix . '_users';
             $result = mysqli_query($mysqli, 'SELECT COUNT(*) FROM `' . str_replace('`', '``', $table) . '`');
             if ($result instanceof \mysqli_result) {
                 $row       = mysqli_fetch_row($result);
                 $installed = !empty($row) && (int) $row[0] > 0;
                 mysqli_free_result($result);
+            } else {
+                // Non-exception mode: query returned false. Only a missing
+                // users table means "not installed"; anything else stays locked.
+                $installed = (1146 !== mysqli_errno($mysqli));
             }
         }
     } catch (\mysqli_sql_exception $e) {
-        $installed = false;
+        $installed = (1146 !== $e->getCode());
     } finally {
         @mysqli_close($mysqli);
     }
@@ -182,12 +203,21 @@ function install_denyIfInstalled(): void
     // The admin-gated wizard pages (configsite, theme, moduleinstaller) set
     // $xoopsOption['hascommon'], so common.inc.php boots full XOOPS instead of
     // starting the installer's own PHP session — which swaps the session store
-    // and hides the flags checked above. On those pages the in-progress admin
-    // is authenticated first (XoopsInstallWizard::xoInit -> checkAccess ->
-    // install_acceptUser, via the signed xo_install_user JWT), which runs
-    // before this gate. A logged-in admin here is therefore a legitimate
-    // in-progress install and must be allowed through.
-    if (isset($GLOBALS['xoopsUser']) && is_object($GLOBALS['xoopsUser'])
+    // and hides the flags checked above. Those pages authenticate the
+    // in-progress admin via the signed one-time xo_install_user JWT
+    // (XoopsInstallWizard::xoInit -> checkAccess -> install_acceptUser), which
+    // runs before this gate. Recognise that SAME in-progress marker here: a
+    // *valid* install token PLUS an authenticated administrator is a legitimate
+    // mid-install run and is allowed through. An ordinary logged-in
+    // administrator WITHOUT an install token must NOT bypass the lock, so the
+    // installed-site guard still holds on a live site.
+    // TokenReader::fromCookie() reads and verifies the xo_install_user cookie
+    // itself (returning false when it is absent, expired, or fails signature /
+    // claim checks), so the in-progress marker is confirmed without touching
+    // $_COOKIE directly.
+    if (class_exists(\Xmf\Jwt\TokenReader::class)
+        && false !== \Xmf\Jwt\TokenReader::fromCookie('install', 'xo_install_user', ['sub' => 'xoopsinstall'])
+        && isset($GLOBALS['xoopsUser']) && is_object($GLOBALS['xoopsUser'])
         && method_exists($GLOBALS['xoopsUser'], 'isAdmin') && $GLOBALS['xoopsUser']->isAdmin()) {
         return;
     }
