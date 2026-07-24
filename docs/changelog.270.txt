@@ -1,6 +1,18 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.2 Final                   2026-07
+===================================
+Installer:
+- guard the users-table probe in install_isInstalled() so a fresh install no longer fatals with a mysqli_sql_exception under PHP 8.1+ exception mode (the '@' operator does not suppress it) (mamba)
+- let the authenticated in-progress admin past the "already installed" lock on the configsite/theme/module pages, which boot full XOOPS and swap the session store (mamba)
+- set the default theme to xbootstrap5; the previous xswatch4 default is not shipped and broke the front page with "Theme not found" (mamba)
+- make license.php writable before rewriting it so a re-install no longer fails with "Make ... Writable" (mamba)
+- clear a stale xo_install_user JWT cookie and re-authenticate instead of aborting with "Init Error" after a re-install (mamba)
+- remove orphaned per-attempt *-key-install.php files at the start of an install run (mamba)
+- select the database before the admin-exists probe on the initial settings page, fixing a "No database selected" query error (mamba)
+
+===================================
 2.7.1 Final                   2026-07
 ===================================
 Distribution:
