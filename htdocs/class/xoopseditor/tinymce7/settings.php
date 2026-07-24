@@ -32,7 +32,6 @@ return [
 	'relative_urls' => false,
 	'body_class' => 'tinymce7-body',
 	'menubar' => true,
-//	'content_css' => 'https://diversitybridge.net/themes/xswatch4/style.css', // newly added
 	'content_css' => XOOPS_THEME_URL . '/' . $GLOBALS['xoopsConfig']['theme_set'] . '/style.css',
 	'width' => '100%', // newly added
 	'height' => '400px', // newly added
