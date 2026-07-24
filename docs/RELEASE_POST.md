@@ -1,108 +1,82 @@
-# XOOPS 2.7.1 Final — safer upgrades, stronger foundations
+# XOOPS 2.7.2 Final — installer fixes
 
-The XOOPS Development Team is pleased to announce **XOOPS 2.7.1 Final**. This
-maintenance release builds on XOOPS 2.7.0 with another security-hardening pass,
-more reliable upgrade tooling, form and theme improvements, and refreshed
-dependencies for current PHP environments.
+The XOOPS Development Team is pleased to announce **XOOPS 2.7.2 Final**. This is
+a focused patch release that repairs the installer so fresh installations and
+re-installations complete reliably on current PHP versions. It contains no
+database, template, or API changes.
 
-Download XOOPS 2.7.1:
+Existing XOOPS 2.7.1 sites do not need to upgrade unless they intend to run the
+installer again; 2.7.2 changes only the `install/` wizard and the version
+string.
+
+Download XOOPS 2.7.2:
 **[https://github.com/XOOPS/XoopsCore27/releases](https://github.com/XOOPS/XoopsCore27/releases)**
 
 ---
 
-## Highlights
+## Why 2.7.2
 
-### Security and upgrade hardening
-
-- The upgrade wizard now requires administrator-group membership, and the
-  apply-patch path requires a valid security token.
-- Upgrade SQL dumps are stored outside the public web root and their download
-  path is access-controlled.
-- SQL identifier and `ORDER BY` handling was tightened across Criteria, kernel
-  blocks, and system administration.
-- Protector's database wrapper now inspects `queryF()` calls, language-file
-  loading is constrained to safe basenames, and module-administration output is
-  escaped more consistently.
-- The tell-a-friend form now uses CAPTCHA and persistent per-IP rate limiting.
-
-These changes continue the secure-by-default work begun in XOOPS 2.7.0 while
-preserving compatibility with existing modules.
-
-### Forms, templates, and themes
-
-- `XoopsFormTabTray` provides a native tabbed form container with theme-aware
-  renderers.
-- `XoopsFormContainerInterface` formalises the contract shared by form
-  containers.
-- SmartyExtensions are registered across the supplied themes.
-- xBootstrap5, xSwatch5, and xTailwind2 include dark-mode support.
-- TinyMCE 7 language mapping now preserves locale casing such as `zh_TW` and
-  resolves the correct language-pack filename.
-- Cloned blocks retain their module binding and validated callback fields.
-
-### Refreshed dependencies
-
-The bundled dependency set has been refreshed, including php-debugbar 3.8.0,
-Smarty 4.5.7, Webmozart Assert 2.4.1, and Symfony VarDumper and YAML 7.4.14.
-XOOPS Helpers and TCPDF are now included directly, and SmartyExtensions was
-updated for QR-code support.
+Shortly after 2.7.1 Final, a fresh install on PHP 8.1 and later was reported to
+fail during the "Creating tables" step with a fatal `mysqli_sql_exception`
+([#126](https://github.com/XOOPS/XoopsCore27/issues/126)). Investigating it
+surfaced a small cluster of related installer problems affecting fresh installs,
+re-installs, and the front page of a newly installed site. 2.7.2 fixes all of
+them.
 
 ---
 
-## Debugbar is now a standalone module
+## What's fixed
 
-The **Debugbar module is no longer bundled in the XOOPS Core download**. Moving
-the module to its own repository lets it publish fixes and improvements without
-waiting for a core release.
+### Fresh install no longer fatals on PHP 8.1+
 
-The underlying `php-debugbar/php-debugbar` library remains bundled in
-`xoops_lib`, so users do not need to run a separate Composer installation.
+`install_isInstalled()` probed for the users table before it existed. Under PHP
+8.1 and later, mysqli defaults to exception mode and the `@` silence operator
+does **not** suppress those exceptions, so the probe threw a fatal
+`mysqli_sql_exception` ("Table '…_users' doesn't exist") on every fresh install.
+The probe is now guarded so a missing table simply means "not installed".
 
-To install Debugbar:
+### The wizard no longer locks itself out mid-install
 
-1. Download the current release from the
-   [XOOPS Debugbar releases page](https://github.com/XoopsModules27x/debugbar/releases/latest).
-2. Copy the included `debugbar` directory to `htdocs/modules/debugbar`.
-3. Install the module from **System Admin → Modules**.
+The site-configuration, theme, and module-installation pages boot the full XOOPS
+environment, which swaps the installer's session for XOOPS's own session store.
+That hid the in-progress installation flags and caused the "This site is already
+installed" lock to fire in the middle of a legitimate install. The lock now also
+recognises the authenticated in-progress administrator — already established on
+those pages via a signed one-time token — so the wizard runs to completion.
 
-If Debugbar is already installed, replace its module files with the standalone
-release and run **Update** in System Admin. Do not uninstall it first unless you
-intentionally want to remove its saved settings and profiles.
+### Default theme is a shipped theme
 
-An overlay upgrade does not delete the old `htdocs/modules/debugbar` directory.
-Existing sites must replace those files explicitly so they do not continue
-running the older copy that was previously bundled with core.
+A new install set its default theme to `xswatch4`, which is not shipped, so the
+front page failed with "Theme not found". The default is now `xbootstrap5`.
 
-The core Monolog adapter now exposes `isActive()` and accepts a fourth
-constructor argument for the default file handler's minimum log level, matching
-the standalone module's integration contract. It also supports Monolog 2 and 3
-level handling and bounds or redacts sensitive file-log context.
+### Re-installing over an existing site works
+
+- `license.php`, left read-only by a previous install, is made writable again
+  before it is rewritten, instead of failing with "Make … Writable".
+- A stale one-time install cookie from an earlier attempt is cleared and
+  re-authenticated, instead of aborting the wizard with "Init Error".
+- Per-attempt installer key files are cleaned up at the start of a run so they
+  no longer accumulate.
+
+### Cleaner install log
+
+The initial-settings page ran its "does an administrator already exist?" check
+on a connection that had not selected the database, logging a spurious
+"No database selected" error. It now uses the database-aware query path.
 
 ---
 
 ## Upgrading
 
-### From XOOPS 2.7.0
+### From XOOPS 2.7.1
 
-1. Back up the database and site files.
-2. Test the upgrade on a staging copy first.
-3. Turn the site off from **System Options → Preferences → General Settings**.
-4. Copy the new `htdocs/` files over the web root, including the updated
-   `xoops_lib` and `xoops_data` contents for relocated directories.
-5. Copy `/upgrade/` to the XOOPS root and run the upgrade wizard.
-6. Update the **system**, **pm**, **profile**, and **protector** modules from
-   **System Admin → Modules**.
-7. Restore or update the standalone Debugbar module if the site uses it.
-8. Turn the site back on and review the logs.
+2.7.2 has no database or template changes and does not require the upgrade
+wizard. To move an existing 2.7.1 site to 2.7.2, copy the new `htdocs/` files
+over the web root. There is nothing else to do.
 
-### From XOOPS 2.5.x
+### Installing fresh or from older versions
 
-Sites older than XOOPS 2.5.11 should upgrade to 2.5.11 first. Run
-`/upgrade/preflight.php` before copying the 2.7.1 files; it identifies Smarty 4
-template incompatibilities and other items that need attention before the main
-upgrade.
-
-Full installation and upgrade documentation:
+Follow the standard installation and upgrade guidance:
 [https://xoops.github.io/xoops-docs/](https://xoops.github.io/xoops-docs/)
 
 ---
@@ -117,34 +91,15 @@ Full installation and upgrade documentation:
 
 ---
 
-## Translations — 37 languages and counting
+## Translations
 
-Beyond the English source, XOOPS is maintained in **37 community translations**
-under the [XoopsLanguages](https://github.com/XoopsLanguages) organization.
-Language packs are released independently; the current release page for every
-language is listed in [`docs/TRANSLATIONS.md`](TRANSLATIONS.md).
-
-XOOPS 2.7.1 adds one English language constant compared with 2.7.0:
-`_AM_SYSTEM_BLOCKS_INVALID_CLONE`. Translators can find its exact definition in
-[`docs/lang_diff.txt`](lang_diff.txt). No additional English constants changed
-between 2.7.1-RC1 and Final.
-
-Please help review existing translations, report mistakes, or add a missing
-language. Every correction helps the whole community.
+XOOPS 2.7.2 introduces no new or changed English language constants, so no
+translation updates are required. XOOPS remains maintained in **37 community
+translations** under the [XoopsLanguages](https://github.com/XoopsLanguages)
+organization; see [`docs/TRANSLATIONS.md`](TRANSLATIONS.md) for the current
+release page of each language.
 
 ---
-
-## What changed since 2.7.1-RC1
-
-- The Debugbar module moved to its standalone distribution while its supporting
-  PHP library remained in core.
-- `XoopsMonologLogger` gained the standalone module's required activation and
-  minimum-level APIs, with direct core tests.
-- Module About pages now render the safe subset of HTML used in changelog text.
-- The SonarQube scan action was updated from 8.2.0 to 8.2.1.
-
-For the complete release history, see
-[`docs/changelog.270.txt`](changelog.270.txt).
 
 ## Reporting issues
 
@@ -156,17 +111,15 @@ For the complete release history, see
 
 ## Thank you
 
-Thank you to everyone who submitted pull requests, reported issues, tested the
-Beta and RC packages, translated strings, reviewed security findings, and helped
-other XOOPS users.
+Thank you to everyone who reported the installation problems, tested the fixes,
+and helped confirm the release. Bug reports like
+[#126](https://github.com/XOOPS/XoopsCore27/issues/126) make XOOPS better for
+everyone.
 
-A special thank-you to the maintainers of the XOOPS modules, language packs, XMF,
-RegDom, and the wider dependency ecosystem. 
+We also thank [JetBrains](https://www.jetbrains.com/) for supporting the project
+with [PhpStorm](https://www.jetbrains.com/phpstorm/) licenses.
 
-We also thank [JetBrains](https://www.jetbrains.com/) for supporting the project with
-[PhpStorm](https://www.jetbrains.com/phpstorm/) licenses.
-
-**Download XOOPS 2.7.1:**
+**Download XOOPS 2.7.2:**
 [https://github.com/XOOPS/XoopsCore27/releases](https://github.com/XOOPS/XoopsCore27/releases)
 
 ---
