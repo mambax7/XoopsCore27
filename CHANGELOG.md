@@ -5,6 +5,17 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.2] - 2026-07-24
+
+### Bug Fixes
+- Repair fresh install and re-install on PHP 8.1+ (2.7.2) (#128)
+
+### Documentation
+- Regenerate CHANGELOG.md (#125)
+
+### Other
+- Merge pull request #127 from XOOPS/dependabot/github_actions/actions/checkout-7.0.1
+
 ## [v2.7.1] - 2026-07-22
 
 ### Bug Fixes
