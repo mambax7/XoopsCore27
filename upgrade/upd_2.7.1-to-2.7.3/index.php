@@ -1,14 +1,29 @@
 <?php
 
+/*
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ */
+
 use Xoops\Upgrade\UpgradeControl;
 use Xoops\Upgrade\XoopsUpgrade;
 
 /**
- * XOOPS Upgrade 2.7.1 -> 2.7.3
+ * Upgrade from 2.7.1 to 2.7.3
  *
  * Carries the schema and configuration changes that a fresh install already gets from
  * install/sql/mysql.structure.sql and install/include/makedata.php. Without this patch an
  * upgraded site silently diverges from a freshly installed one.
+ *
+ * Tasks (both idempotent, order irrelevant):
+ *  1. commentsindex  — add idx_status_created(com_status, com_created) to xoopscomments and
+ *                      drop the single-column com_status key it prefixes.
+ *  2. onlinetracking — insert the enable_online_tracking core preference.
  *
  * UpgradeControl scans every "*-to-*" directory and asks each patch's check_ methods
  * whether it applies (UpgradeControl.php:229-250) — applicability is NOT decided by
@@ -16,10 +31,13 @@ use Xoops\Upgrade\XoopsUpgrade;
  * 2.7.2 or later, which is exactly what is wanted: they are corrective, and both are
  * idempotent. 2.7.2 is already released, so sites sitting on it still pick these up.
  *
+ * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license      GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @package      XOOPS
+ * @link         https://xoops.org
  * @since        2.7.3
+ * @author       XOOPS Team
  */
 class Upgrade_273 extends XoopsUpgrade
 {
@@ -76,8 +94,23 @@ class Upgrade_273 extends XoopsUpgrade
         }
 
         if ($this->indexExists($table, 'com_status')) {
-            // Failure here is not fatal: the new index is what matters.
-            $this->db->exec('ALTER TABLE `' . $table . '` DROP INDEX `com_status`');
+            // Not fatal: the composite index is what this task exists to create, and the site
+            // is correct with the redundant key still present — it only costs writes. But the
+            // schema then differs from a fresh install, so say so loudly rather than silently.
+            if (false === $this->db->exec('ALTER TABLE `' . $table . '` DROP INDEX `com_status`')
+                || $this->indexExists($table, 'com_status')) {
+                trigger_error(
+                    sprintf(
+                        'Upgrade 2.7.3: could not drop the redundant `com_status` index on `%s`. '
+                        . 'The new idx_status_created index is in place and the site is correct, '
+                        . 'but this table now differs from a fresh install. Drop it by hand: '
+                        . 'ALTER TABLE `%s` DROP INDEX `com_status`;',
+                        $table,
+                        $table
+                    ),
+                    E_USER_WARNING
+                );
+            }
         }
 
         return $this->indexExists($table, 'idx_status_created');
@@ -158,15 +191,20 @@ class Upgrade_273 extends XoopsUpgrade
     }
 
     /**
-     * Does a core config row with this name exist?
+     * Does a CORE config row with this name exist?
+     *
+     * Scoped to conf_modid = 0 because that is what apply_onlinetracking() inserts. Matching
+     * on conf_name alone would let any module preference of the same name satisfy the check,
+     * so the core row would never be created and the preference would silently go missing.
      *
      * @param  string $name conf_name
-     * @return bool
+     * @return bool true when the core row exists
      */
     protected function configExists(string $name): bool
     {
         $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . '`'
-             . " WHERE conf_name = '" . $this->db->escape($name) . "'";
+             . ' WHERE conf_modid = 0'
+             . " AND conf_name = '" . $this->db->escape($name) . "'";
 
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
