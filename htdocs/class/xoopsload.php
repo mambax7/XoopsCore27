@@ -186,6 +186,7 @@ class XoopsLoad
             'xoopskernel'                => XOOPS_ROOT_PATH . '/class/xoopskernel.php',
             'xoopssecurity'              => XOOPS_ROOT_PATH . '/class/xoopssecurity.php',
             'xoopslogger'                => XOOPS_ROOT_PATH . '/class/logger/xoopslogger.php',
+            'filelogger'                 => XOOPS_ROOT_PATH . '/class/logger/filelogger.php',
             'xoopspagenav'               => XOOPS_ROOT_PATH . '/class/pagenav.php',
             'xoopslists'                 => XOOPS_ROOT_PATH . '/class/xoopslists.php',
             'xoopslocal'                 => XOOPS_ROOT_PATH . '/include/xoopslocal.php',

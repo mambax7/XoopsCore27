@@ -364,6 +364,11 @@ class XoopsLogger
                 'errno'   => $errno,
                 'errfile' => $errfile,
                 'errline' => $errline,
+                // Passed through so a logger can record where the error came from. Only
+                // forwarded when a caller supplied one -- building a backtrace here for
+                // every notice would cost more than the logging is worth, so a logger that
+                // wants one and did not get one captures its own.
+                'trace'   => $trace,
             ]);
         }
 
