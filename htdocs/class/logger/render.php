@@ -100,7 +100,16 @@ if (empty($mode) || $mode === 'errors') {
         $ret .= "\n<tr><td class='$class'>";
         $ret .= $types[$error['errno']] ?? _LOGGER_UNKNOWN;
         $ret .= ': ';
-        $ret .= sprintf(_LOGGER_FILELINE, $this->sanitizePath($error['errstr']), $this->sanitizePath($error['errfile']), $error['errline']);
+        // sanitizePath() strips filesystem paths; it does NOT escape HTML. An error
+        // string is routinely attacker-influenced -- a PHP warning quotes the offending
+        // value, so a crafted request parameter arrives here verbatim and would execute
+        // as markup in the administrator's browser.
+        $ret .= sprintf(
+            _LOGGER_FILELINE,
+            htmlspecialchars($this->sanitizePath((string) $error['errstr']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            htmlspecialchars($this->sanitizePath((string) $error['errfile']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            htmlspecialchars((string) $error['errline'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+        );
         $ret .= "<br>\n</td></tr>";
         $class = ($class === 'odd') ? 'even' : 'odd';
     }
@@ -130,7 +139,14 @@ if (empty($mode) || $mode === 'queries') {
         $query_time = isset($q['query_time']) ? sprintf('%0.6f - ', $q['query_time']) : '';
 
         if (isset($q['error'])) {
-            $ret .= '<tr class="' . $class . '"><td><span style="color:#ff0000;">' . $query_time . htmlentities($sql, ENT_QUOTES | ENT_HTML5) . '<br><strong>Error number:</strong> ' . $q['errno'] . '<br><strong>Error message:</strong> ' . $q['error'] . '</span></td></tr>';
+            // The SQL was already escaped; the database error message was not. It quotes
+            // the offending value, so a crafted input reaches this line unescaped.
+            $ret .= '<tr class="' . $class . '"><td><span style="color:#ff0000;">' . $query_time
+                . htmlentities($sql, ENT_QUOTES | ENT_HTML5)
+                . '<br><strong>Error number:</strong> ' . (int) $q['errno']
+                . '<br><strong>Error message:</strong> '
+                . htmlspecialchars((string) $q['error'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                . '</span></td></tr>';
         } else {
             $ret .= '<tr class="' . $class . '"><td>' . $query_time . htmlentities($sql, ENT_QUOTES | ENT_HTML5) . '</td></tr>';
         }
@@ -144,9 +160,11 @@ if (empty($mode) || $mode === 'blocks') {
     $ret .= '<table id="xo-logger-blocks" class="outer"><tr><th colspan="2">' . _LOGGER_BLOCKS . '</th></tr>';
     foreach ($this->blocks as $b) {
         if ($b['cached']) {
-            $ret .= '<tr><td class="' . $class . '"><strong>' . $b['name'] . ':</strong> ' . sprintf(_LOGGER_CACHED, (int)$b['cachetime']) . '</td></tr>';
+            // A block name comes from the database and is administrator-editable, so it
+            // is not trustworthy markup either.
+            $ret .= '<tr><td class="' . $class . '"><strong>' . htmlspecialchars((string) $b['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ':</strong> ' . sprintf(_LOGGER_CACHED, (int)$b['cachetime']) . '</td></tr>';
         } else {
-            $ret .= '<tr><td class="' . $class . '"><strong>' . $b['name'] . ':</strong> ' . _LOGGER_NOT_CACHED . '</td></tr>';
+            $ret .= '<tr><td class="' . $class . '"><strong>' . htmlspecialchars((string) $b['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ':</strong> ' . _LOGGER_NOT_CACHED . '</td></tr>';
         }
         $class = ($class === 'odd') ? 'even' : 'odd';
     }

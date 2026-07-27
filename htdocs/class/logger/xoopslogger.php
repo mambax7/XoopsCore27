@@ -289,7 +289,12 @@ class XoopsLogger
                 // Check if 'file' and 'line' exist in the current trace step
                 $file = $trace['file'] ?? '(unknown file)';
                 $line = $trace['line'] ?? '(unknown line)';
-                $miniTrace .= $file . ':' . $line . "<br>";
+                // Escaped as it is built. This string is stored pre-rendered, mixing the
+                // <br> separators below with values from outside, and render.php emits it
+                // as raw HTML -- so escaping has to happen here, at the point each value
+                // enters the markup, rather than on the finished string.
+                $miniTrace .= htmlspecialchars((string) $file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    . ':' . htmlspecialchars((string) $line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '<br>';
             }
             // Replace paths to keep the output clean. Guarded so a deprecation raised before
             // mainfile.php finishes cannot turn into an "Undefined constant" fatal of its own.
@@ -303,9 +308,14 @@ class XoopsLogger
                 $miniTrace = str_replace($paths, '', $miniTrace);
             }
 
-            $this->deprecated[] = $msg . $miniTrace;
+            // $msg is escaped here, not in render.php. The array entry is a pre-rendered
+            // HTML fragment -- caller text followed by the <br>-separated trace above --
+            // so the renderer cannot tell the two apart and escaping there would either
+            // miss the message or destroy the trace markup.
+            $this->deprecated[] = htmlspecialchars((string) $msg, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $miniTrace;
 
-            // Dispatch to registered loggers
+            // Dispatched with the RAW message: a file or PSR-3 logger wants the text, not
+            // HTML entities.
             $this->log('warning', $msg, ['channel' => 'Deprecated']);
         }
     }
