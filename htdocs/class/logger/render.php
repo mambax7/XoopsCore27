@@ -108,7 +108,10 @@ if (empty($mode) || $mode === 'errors') {
             _LOGGER_FILELINE,
             htmlspecialchars($this->sanitizePath((string) $error['errstr']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             htmlspecialchars($this->sanitizePath((string) $error['errfile']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
-            htmlspecialchars((string) $error['errline'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            // A line number is numeric by contract -- every caller passes __LINE__,
+            // Exception::getLine(), or PHP's own handler argument. Casting states that
+            // contract and cannot emit markup, so it needs no escaping.
+            (int) $error['errline']
         );
         $ret .= "<br>\n</td></tr>";
         $class = ($class === 'odd') ? 'even' : 'odd';
@@ -138,19 +141,21 @@ if (empty($mode) || $mode === 'queries') {
         $sql        = preg_replace($pattern, '', $q['sql']);
         $query_time = isset($q['query_time']) ? sprintf('%0.6f - ', $q['query_time']) : '';
 
+        // The SQL was escaped before, but with htmlentities() and no explicit charset --
+        // it followed default_charset and needlessly entity-encoded every non-ASCII byte.
+        $escapedSql = htmlspecialchars((string) $sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
         if (isset($q['error'])) {
-            // The SQL was escaped before, but with htmlentities() and no explicit
-            // charset -- it followed default_charset and needlessly entity-encoded every
-            // non-ASCII byte. The database error message was not escaped at all: it
-            // quotes the offending value, so crafted input reached this line verbatim.
+            // The database error message was not escaped at all: it quotes the offending
+            // value, so crafted input reached this line verbatim.
             $ret .= '<tr class="' . $class . '"><td><span style="color:#ff0000;">' . $query_time
-                . htmlspecialchars((string) $sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                . $escapedSql
                 . '<br><strong>Error number:</strong> ' . (int) $q['errno']
                 . '<br><strong>Error message:</strong> '
                 . htmlspecialchars((string) $q['error'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
                 . '</span></td></tr>';
         } else {
-            $ret .= '<tr class="' . $class . '"><td>' . $query_time . htmlspecialchars((string) $sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td></tr>';
+            $ret .= '<tr class="' . $class . '"><td>' . $query_time . $escapedSql . '</td></tr>';
         }
 
         $class = ($class === 'odd') ? 'even' : 'odd';

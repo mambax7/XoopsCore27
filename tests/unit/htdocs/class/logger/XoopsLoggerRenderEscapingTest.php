@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace xoopslogger;
 
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -19,8 +18,13 @@ use XoopsLogger;
  * markup therefore has to be escaped.
  *
  * Four of the six channels were not, which is what these tests lock down.
+ *
+ * Deliberately carries no #[CoversClass(XoopsLogger::class)]. The markup is built by
+ * class/logger/render.php, procedural code included into XoopsLogger::render(); its lines
+ * live in a different file from the class declaration, so CoversClass would discard every
+ * one of them and report this file as untested. Measured: of the lines one of these tests
+ * executes, 14 are in xoopslogger.php and 78 in render.php.
  */
-#[CoversClass(XoopsLogger::class)]
 class XoopsLoggerRenderEscapingTest extends TestCase
 {
     private const PAYLOAD = '<script>alert(1)</script>';
@@ -73,7 +77,6 @@ class XoopsLoggerRenderEscapingTest extends TestCase
             // channel, marker proving the entry rendered at all
             'error string'          => ['errstr', 'Undefined array key'],
             'error file'            => ['errfile', 'in file'],
-            'error line'            => ['errline', 'an error'],
             'database error'        => ['queryerror', 'Unknown column'],
             'query sql'             => ['querysql', 'SELECT'],
             'cached block name'     => ['block', 'a block'],
@@ -108,14 +111,6 @@ class XoopsLoggerRenderEscapingTest extends TestCase
                     'errline' => '42',
                 ];
                 break;
-            case 'errline':
-                $logger->errors[] = [
-                    'errno'   => E_WARNING,
-                    'errstr'  => 'an error',
-                    'errfile' => '/some/file.php',
-                    'errline' => '42' . self::PAYLOAD,
-                ];
-                break;
             case 'queryerror':
                 $logger->queries[] = [
                     'sql'   => 'SELECT 1',
@@ -143,6 +138,30 @@ class XoopsLoggerRenderEscapingTest extends TestCase
         self::assertStringContainsString($marker, $out, 'the entry should still be rendered');
         self::assertStringNotContainsString(self::PAYLOAD, $out, 'raw markup must never reach the panel');
         self::assertStringContainsString(self::ESCAPED, $out, 'the value should appear, escaped');
+    }
+
+    #[Test]
+    public function anErrorLineIsCoercedToANumberRatherThanEscaped(): void
+    {
+        // errline is numeric by contract: callers pass __LINE__, Exception::getLine(),
+        // or PHP's handler argument. Casting is what enforces that, so the guarantee here
+        // is stronger than escaping -- unexpected text cannot reach the markup in any
+        // form, escaped or otherwise.
+        $logger            = new XoopsLogger();
+        $logger->activated = true;
+        $logger->errors[]  = [
+            'errno'   => E_WARNING,
+            'errstr'  => 'an error',
+            'errfile' => '/some/file.php',
+            'errline' => '42' . self::PAYLOAD,
+        ];
+
+        $out = $this->render($logger);
+
+        self::assertStringContainsString('an error', $out, 'the entry should still be rendered');
+        self::assertStringNotContainsString(self::PAYLOAD, $out, 'raw markup must never reach the panel');
+        self::assertStringNotContainsString(self::ESCAPED, $out, 'the text should be dropped, not escaped');
+        self::assertStringContainsString('line 42', $out, 'the numeric prefix survives the cast');
     }
 
     #[Test]
