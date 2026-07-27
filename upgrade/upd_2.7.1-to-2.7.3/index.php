@@ -116,6 +116,9 @@ class Upgrade_273 extends XoopsUpgrade
                     E_USER_WARNING
                 );
             } catch (\Throwable $ignored) {
+                // Intentionally empty. Reporting the problem has itself failed, and
+                // there is nowhere left to report that to. The task result below is
+                // what actually matters.
             }
 
             return false;
@@ -159,6 +162,8 @@ class Upgrade_273 extends XoopsUpgrade
                         E_USER_WARNING
                     );
                 } catch (\Throwable $ignored) {
+                    // Intentionally empty, as above: the diagnostic is optional and
+                    // the task has already done what it exists to do.
                 }
             }
         }

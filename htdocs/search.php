@@ -134,6 +134,46 @@ if ($action !== 'showallbyuser') {
         $queries = [$xoopsDB->escape($query)];
     }
 }
+/**
+ * Reduce whatever a module's search callback returned to rows this file can safely render.
+ *
+ * XoopsModule::search() is documented as returning mixed and simply hands back whatever the
+ * module supplies, so nothing about the shape is guaranteed. Validating the outer array, or
+ * even each element, was not enough: a row like ['link' => []] survives an is_array() check
+ * and then reaches preg_match() and string concatenation below, where an array argument is
+ * a TypeError on PHP 8 -- raised OUTSIDE the try/catch, which is exactly the failure the
+ * guard exists to prevent.
+ *
+ * 'link' and 'title' are required and must be scalar because they are concatenated and
+ * pattern-matched. 'image', 'uid' and 'time' are optional, so a non-scalar value is dropped
+ * rather than rejecting the whole row.
+ *
+ * @param  mixed $rows raw return value from a module search callback
+ * @return array<int, array> rows safe to render
+ */
+$xoopsNormaliseSearchRows = static function ($rows) {
+    if (!is_array($rows)) {
+        return [];
+    }
+    $clean = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)
+            || !isset($row['link'], $row['title'])
+            || !is_scalar($row['link'])
+            || !is_scalar($row['title'])) {
+            continue;
+        }
+        foreach (['image', 'uid', 'time'] as $optional) {
+            if (isset($row[$optional]) && !is_scalar($row[$optional])) {
+                unset($row[$optional]);
+            }
+        }
+        $clean[] = $row;
+    }
+
+    return $clean;
+};
+
 switch ($action) {
     case 'results':
         /** @var XoopsModuleHandler $module_handler */
@@ -195,14 +235,10 @@ switch ($action) {
                     // string, an object) would reach count() below, which is a TypeError on
                     // PHP 8 raised OUTSIDE this try, defeating the whole guard. Normalise
                     // here, where a misbehaving module is still contained.
-                    if (!is_array($results)) {
-                        $results = [];
-                    }
-                    // Per ELEMENT too. Normalising only the outer array still let a
-                    // string or object element reach $results[$i]['link'] further
-                    // down -- outside this try -- which is a TypeError on PHP 8 and
-                    // defeated the guard just as completely.
-                    $results = array_values(array_filter($results, 'is_array'));
+                    // Rows are validated by FIELD, not merely by type -- see the
+                    // normaliser above. Anything unusable is dropped here, inside the
+                    // try, where a misbehaving module is still contained.
+                    $results = $xoopsNormaliseSearchRows($results);
                 } catch (\Throwable $e) {
                     // A broken module must not take down the whole search page.
                     $GLOBALS['xoopsLogger']->handleError(
@@ -289,30 +325,27 @@ switch ($action) {
         }
         // Resolve the label BEFORE the try: the catch must never dereference $module,
         // or a failure there throws a second, uncaught error.
+        //
+        // No blind cast either: getVar() can return an array, and converting that raises a
+        // notice HERE, before the try, which an ErrorException handler would turn into an
+        // escape from the very guard below.
         $moduleDirname = $module->getVar('dirname', 'n');
-                // No blind cast: getVar() can return an array, and converting that
-                // raises a notice here, BEFORE the try -- which an ErrorException
-                // handler would turn into an escape from the very guard below.
-                $moduleLabel = is_scalar($moduleDirname) ? (string) $moduleDirname : 'mid:' . $mid;
+        $moduleLabel   = is_scalar($moduleDirname) ? (string) $moduleDirname : 'mid:' . $mid;
         try {
             $next_results = [];
             $results      = $module->search($queries, $andor, 20, $start, $uid);
             // search() returns mixed. A truthy non-array would reach count() further down,
             // outside this try, and a TypeError there would bypass the guard entirely.
-            if (!is_array($results)) {
-                $results = [];
-            }
-            // Per element too -- see the results route above.
-            $results = array_values(array_filter($results, 'is_array'));
+            // Validated by FIELD -- see the normaliser above the switch.
+            $results = $xoopsNormaliseSearchRows($results);
             // The next-page probe exists only to decide whether to render a "next" link,
             // which is meaningless when this page is already empty. Running it
             // unconditionally doubled the module and database work on every no-match
             // search, and gave a failing module a second chance to throw.
             if ([] !== $results) {
-                $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
-                if (!is_array($next_results)) {
-                    $next_results = [];
-                }
+                $next_results = $xoopsNormaliseSearchRows(
+                    $module->search($queries, $andor, 1, $start + 20, $uid)
+                );
             }
         } catch (\Throwable $e) {
             // A broken module must not take down the whole search page.
