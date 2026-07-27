@@ -177,6 +177,17 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
         $commentTpl->assign('commentRefreshButton', $commentRefreshButton);
 
         unset($postcomment_link);
+
+        // Assigned unconditionally. system_comment.tpl:50 reads $anon_canpost for EVERY comment
+        // row, but this was only ever assigned when anonymous posting is enabled or the visitor
+        // is logged in. A guest on a site with anonymous posting off therefore produced, once
+        // per comment:
+        //   Undefined array key "anon_canpost"
+        //   Attempt to read property "value" on null
+        // 253 such pairs in nine minutes of xoops.org guest traffic -- the single largest
+        // source of noise in the log. false is exactly what the template's "== true" wants.
+        $xoopsTpl->assign('anon_canpost', false);
+
         if (!empty($xoopsModuleConfig['com_anonpost']) || is_object($xoopsUser)) {
             $postcomment_link = 'comment_new.php?com_itemid=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode;
 
