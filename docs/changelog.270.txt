@@ -1,6 +1,53 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.3 Beta 1                  2026-07
+===================================
+Debugging and logging:
+- add a central, opt-in debug configuration file (xoops_data/data/debug.php, copied from debug.dist.php) so error display, error_reporting and query logging are set in one place instead of being edited into mainfile.php. Nothing changes until an administrator creates the file: only the dist template ships, and an absent or malformed one leaves debugging off (mamba) in #139
+- add a rotating file logger recording notices, warnings, errors and SQL with a backtrace, so problems that leave no trace on screen — a blank page from a fatal, an error on a redirect — can still be read afterwards (mamba) in #139
+- keep the log out of reach: the filename is restricted to a plain .log name, a log resolving below the document root is refused, the file is created 0640, and directory guards ship alongside it (mamba) in #139
+- redact what reaches the file: server paths, session ids, and the session table's own rows, so a debug log cannot become a source of live CSRF token seeds or a hijacking primitive (mamba) in #139
+- strip control characters from every untrusted value written, so a crafted URI or SQL fragment cannot forge additional log lines (mamba) in #139
+- note for upgrades: mainfile.php is not replaced by an upgrade, so an existing site picks this up only once its mainfile.php is updated from the new dist; fresh installs get it automatically (mamba) in #139
+
+Security:
+- escape the untrusted values rendered in the logger's debug panel; a PHP warning quotes the offending request value and a database error quotes the offending column, so crafted input reached the administrator's browser as live markup through the error, query, block and deprecation channels (mamba) in #140
+- strip the deployment root from a deprecation backtrace before HTML-encoding it, not after; an installation path containing a character htmlspecialchars rewrites stopped matching once encoded and published the full server path (mamba) in #140
+
+Compatibility:
+- accept scalars in XoopsTextSanitizer::htmlSpecialChars(); the signature declared "string" while the body cast to string anyway, so any module declaring strict_types and passing an id, count or timestamp got an uncaught TypeError instead of coercion. This blanked the front page on xoops.org when a block passed an int (mamba) in #130
+- guard each XOOPS_COMMENT_* constant definition individually, so a second include no longer emits "already defined" warnings; redefinition is a hard error in PHP 9 (mamba) in #130
+
+Search:
+- contain a failing module instead of aborting the whole results page; one module with PHP4-style constructors took global search down for every visitor on xoops.org. Each module's search() is now wrapped and logged by dirname (mamba) in #130
+- assign "showing" and "module_name" even when a module returns nothing, so an empty showall page stops emitting Undefined array key warnings (mamba) in #130
+- require both isactive and hassearch on the showall route, and normalise the rows a module returns before they reach the template (mamba) in #130
+
+Comments:
+- assign anon_canpost even when anonymous posting is disabled; a guest on such a module produced two warnings per comment row, 253 pairs in nine minutes of xoops.org traffic and the single largest source of log noise (mamba) in #130
+
+Kernel:
+- stop xoops_getrank() fataling when no rank row matches, whether the rank_id no longer exists, the post count falls in a gap between rank_min and rank_max, or no ranks are defined; every page rendering such a user died (mamba) in #130
+- memoise the unfiltered group list per request, removing roughly 48 identical "SELECT * FROM groups" queries per page (mamba) in #130
+
+Caching:
+- stop the length-repair pass corrupting valid payloads (mamba) in #130
+- keep the speculative unserialize() probe out of the error log (mamba) in #130
+
+Database:
+- name the handler and table on query errors, and fail fast when the table is unset, so a failure identifies itself instead of surfacing as an anonymous error (mamba) in #130
+
+Who's online:
+- record who is online outside the block that displays it, so tracking no longer depends on the block being rendered on the page (mamba) in #130
+
+Upgrade:
+- carry the 2.7.3 schema changes on the upgrade path, including the comments status/created index that took a listing query from 541ms to 0.5ms (mamba) in #130
+
+Build:
+- let Dependabot track the npm build tooling in the Tailwind themes, not just GitHub Actions, and stop it proposing Tailwind and DaisyUI major bumps (mamba) in #131, #138
+
+===================================
 2.7.2 Final                   2026-07
 ===================================
 Installer:
