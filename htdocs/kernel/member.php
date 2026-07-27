@@ -61,6 +61,21 @@ class XoopsMemberHandler
     protected $membersWorkingList = [];
 
     /**
+     * Per-request memo for getGroupList() when called without criteria.
+     *
+     * The unfiltered list is requested repeatedly during a single render — the xoops2020
+     * theme drives publisher's ItemHandler once per section and each call asked again,
+     * producing ~50 identical "SELECT * FROM groups" per page. The set cannot change
+     * mid-request except through insertGroup()/deleteGroup(), which both clear this.
+     *
+     * Only the no-criteria case is memoised; filtered calls (3 sites in the tree) still
+     * query, so no criteria-keying subtleties are introduced.
+     *
+     * @var array<int,string>|null
+     */
+    protected $groupListCache;
+
+    /**
      * Constructor
      * @param XoopsDatabase $db Database connection object
      */
@@ -125,6 +140,7 @@ class XoopsMemberHandler
         $criteria = $this->createSafeInCriteria('groupid', $group->getVar('groupid'));
         $s1 = $this->membershipHandler->deleteAll($criteria);
         $s2 = $this->groupHandler->delete($group);
+        $this->groupListCache = null;   // the memoised list is now stale
         return ($s1 && $s2);
     }
 
@@ -148,6 +164,7 @@ class XoopsMemberHandler
      */
     public function insertGroup(XoopsGroup $group)
     {
+        $this->groupListCache = null;   // name may have changed, or this is a new group
         return $this->groupHandler->insert($group);
     }
 
@@ -191,11 +208,22 @@ class XoopsMemberHandler
      */
     public function getGroupList($criteria = null)
     {
+        // Unfiltered calls dominate (57 of 60 in this tree) and are the ones repeated
+        // dozens of times per page, so memoise just those for the life of the request.
+        if (null === $criteria && null !== $this->groupListCache) {
+            return $this->groupListCache;
+        }
+
         $groups = $this->groupHandler->getObjects($criteria, true);
         $ret = [];
         foreach (array_keys($groups) as $i) {
             $ret[$i] = $groups[$i]->getVar('name');
         }
+
+        if (null === $criteria) {
+            $this->groupListCache = $ret;
+        }
+
         return $ret;
     }
 

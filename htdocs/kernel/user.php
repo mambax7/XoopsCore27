@@ -40,7 +40,12 @@ class XoopsUser extends XoopsObject
      */
     public $_isAdmin;
     /**
-     * @var string user's rank
+     * User's rank as returned by xoops_getrank(): title, image and id.
+     *
+     * Documented as a string historically, but xoops_getrank() has always returned an
+     * array and rank() assigns its result directly.
+     *
+     * @var array{title: string, image: string, id: int}|null
      * @access private
      */
     public $_rank;

@@ -536,13 +536,28 @@ class MyTextSanitizer
     /**
      * Convert special characters to HTML entities
      *
-     * @param  string $text    string being converted
+     * $text accepts any scalar, not just string. Callers legitimately pass ints, floats and
+     * bools -- ids, counts, years, timestamps, flags -- and the body has always cast to string
+     * on the first line, so the value was never used as anything but a string. A bare "string"
+     * declaration made that cast unreachable for such callers: strict_types is decided by the
+     * CALLING file, so any module with declare(strict_types=1) got an uncaught
+     *   TypeError: Argument #1 ($text) must be of type string, int given
+     * instead of the intended coercion. That took the xoops.org front page down from
+     * wgtimelines/blocks/timelines.php, and this was the only method in this class carrying
+     * such a declaration -- every sibling sanitizer is untyped.
+     *
+     * The union covers exactly what (string) handles predictably: bool casts to '1'/'',
+     * null to ''. Arrays and objects are still rejected, which is the check actually worth
+     * keeping.
+     *
+     * @param  string|int|float|bool|null $text string being converted
      * @param  int|null    $quote_style
      * @param  string|null $charset character set used in conversion
      * @param  bool   $double_encode
      * @return string
+     * @since  2.7.3 widened from string
      */
-    public function htmlSpecialChars(string $text, ?int $quote_style = null, ?string $charset = null, $double_encode = true)
+    public function htmlSpecialChars(string|int|float|bool|null $text, ?int $quote_style = null, ?string $charset = null, $double_encode = true)
     {
         if ($quote_style === null) {
             $quote_style = ENT_QUOTES;

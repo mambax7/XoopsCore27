@@ -24,10 +24,20 @@ require_once XOOPS_ROOT_PATH . '/include/theme_config.php';
 /**
  * xoops_getHandler()
  *
- * @param string $name
- * @param bool   $optional
+ * Returns the kernel handler for $name, or false when it cannot be loaded and $optional
+ * is true. (With $optional false, failure raises E_USER_ERROR, which XoopsLogger turns
+ * into exit() — not a Throwable, so it cannot be caught.)
  *
- * @return XoopsObjectHandler|false
+ * NOT every handler extends XoopsObjectHandler. XoopsOnlineHandler, XoopsSessionHandler,
+ * XoopsMemberHandler and XoopsConfigHandler are plain classes with their own APIs, so the
+ * previous XoopsObjectHandler|false was inaccurate: static analysis concluded that
+ * "$handler instanceof XoopsOnlineHandler" could never be true, and that methods such as
+ * XoopsOnlineHandler::write() did not exist on the returned value. Callers that need a
+ * specific handler should assert it with instanceof and let that narrow the type.
+ *
+ * @param  string $name     handler name, e.g. 'member', 'online', 'module'
+ * @param  bool   $optional return false instead of raising a fatal when unavailable
+ * @return XoopsObjectHandler|object|false
  */
 function xoops_getHandler($name, $optional = false)
 {
@@ -970,9 +980,13 @@ function xoops_getMailer()
 /**
  * xoops_getrank()
  *
- * @param integer $rank_id
- * @param mixed   $posts
- * @return
+ * Resolves a user's rank, either the one explicitly assigned to them or the special
+ * rank matching their post count. Always returns the full shape: when no row matches,
+ * the title and image are empty strings rather than the array being absent.
+ *
+ * @param  integer $rank_id
+ * @param  mixed   $posts
+ * @return array{title: string, image: string, id: int}
  */
 function xoops_getrank($rank_id = 0, $posts = 0)
 {
@@ -992,8 +1006,21 @@ function xoops_getrank($rank_id = 0, $posts = 0)
             E_USER_ERROR,
         );
     }
-    $rank          = $db->fetchArray($result);
-    $rank['title'] = $myts->htmlSpecialChars($rank['title']);
+    $rank = $db->fetchArray($result);
+
+    // No row matches when the user's rank_id no longer exists, or when their post count
+    // falls outside every non-special rank range (a gap between rank_min/rank_max, or no
+    // ranks defined at all). fetchArray() then returns false, and this went straight on to
+    // $rank['title'] — "Trying to access array offset on false" — passing the resulting
+    // null into htmlSpecialChars(), which is a TypeError and therefore fatal on PHP 8.
+    // That killed every page rendering such a user; on xoops.org it took down newbb topic
+    // pages through XoopsUser::rank().
+    if (!is_array($rank)) {
+        $rank = ['title' => '', 'image' => ''];
+    }
+
+    $rank['title'] = $myts->htmlSpecialChars((string) ($rank['title'] ?? ''));
+    $rank['image'] = (string) ($rank['image'] ?? '');
     $rank['id']    = $rank_id;
 
     return $rank;

@@ -291,8 +291,17 @@ class XoopsLogger
                 $line = $trace['line'] ?? '(unknown line)';
                 $miniTrace .= $file . ':' . $line . "<br>";
             }
-            // Replace paths to keep the output clean
-            $miniTrace = str_replace([XOOPS_VAR_PATH, XOOPS_PATH, XOOPS_ROOT_PATH], '', $miniTrace);
+            // Replace paths to keep the output clean. Guarded so a deprecation raised before
+            // mainfile.php finishes cannot turn into an "Undefined constant" fatal of its own.
+            $paths = [];
+            foreach (['XOOPS_VAR_PATH', 'XOOPS_PATH', 'XOOPS_ROOT_PATH'] as $pathConstant) {
+                if (defined($pathConstant)) {
+                    $paths[] = constant($pathConstant);
+                }
+            }
+            if ([] !== $paths) {
+                $miniTrace = str_replace($paths, '', $miniTrace);
+            }
 
             $this->deprecated[] = $msg . $miniTrace;
 
@@ -345,9 +354,17 @@ class XoopsLogger
                 $includeTrace  = false;
                 $errstr = substr($errstr, 8);
             }
-            echo sprintf(_XOOPS_FATAL_MESSAGE, htmlspecialchars((string) $errstr, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+            // Guarded: an E_USER_ERROR can be raised before the language files are loaded,
+            // and an "Undefined constant" here would replace the real fatal with a useless
+            // one. Fall back to the constant name's plain-English intent.
+            $fatalMessage = defined('_XOOPS_FATAL_MESSAGE') ? _XOOPS_FATAL_MESSAGE : '%s';
+            echo sprintf($fatalMessage, htmlspecialchars((string) $errstr, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
             if ($includeTrace) {
-                echo "<div style='color:#f0f0f0;background-color:#f0f0f0;'>" . _XOOPS_FATAL_BACKTRACE . ':<br>';
+                $backtraceLabel = defined('_XOOPS_FATAL_BACKTRACE') ? _XOOPS_FATAL_BACKTRACE : 'Backtrace';
+                // Escaped like every other value echoed here. It is a language constant
+                // today, but translations are user-editable files.
+                $backtraceLabel = htmlspecialchars((string) $backtraceLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                echo "<div style='color:#f0f0f0;background-color:#f0f0f0;'>" . $backtraceLabel . ':<br>';
                 if ($trace === null && function_exists('debug_backtrace')) {
                     $trace = \debug_backtrace();
                     array_shift($trace);  // Remove the first element, which is this function itself
@@ -355,7 +372,10 @@ class XoopsLogger
                 foreach ($trace as $step) {
                     if (isset($step['file'])) {
                         echo htmlspecialchars($this->sanitizePath($step['file']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                        echo ' (' . $step['line'] . ")\n<br>";
+                        // The line number is escaped too. Engine-generated traces give an
+                        // int, but handleError() is public and $trace is untyped, so a
+                        // caller can supply any string here.
+                        echo ' (' . htmlspecialchars((string) ($step['line'] ?? '?'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ")\n<br>";
                     }
                 }
                 echo '</div>';
@@ -417,9 +437,15 @@ class XoopsLogger
      */
     protected function sanitizeDbMessage($message)
     {
-        // XOOPS_DB_PREFIX  XOOPS_DB_NAME
-        $message = str_replace(XOOPS_DB_PREFIX . '_', '', $message);
-        $message = str_replace(XOOPS_DB_NAME . '.', '', $message);
+        // Guarded: this runs from the exception handler, which must survive an error raised
+        // BEFORE mainfile.php has defined the database constants. Unguarded, the handler
+        // itself fataled on "Undefined constant XOOPS_DB_PREFIX" and masked the real error.
+        if (defined('XOOPS_DB_PREFIX')) {
+            $message = str_replace(XOOPS_DB_PREFIX . '_', '', $message);
+        }
+        if (defined('XOOPS_DB_NAME')) {
+            $message = str_replace(XOOPS_DB_NAME . '.', '', $message);
+        }
 
         return $message;
     }

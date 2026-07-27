@@ -134,6 +134,46 @@ if ($action !== 'showallbyuser') {
         $queries = [$xoopsDB->escape($query)];
     }
 }
+/**
+ * Reduce whatever a module's search callback returned to rows this file can safely render.
+ *
+ * XoopsModule::search() is documented as returning mixed and simply hands back whatever the
+ * module supplies, so nothing about the shape is guaranteed. Validating the outer array, or
+ * even each element, was not enough: a row like ['link' => []] survives an is_array() check
+ * and then reaches preg_match() and string concatenation below, where an array argument is
+ * a TypeError on PHP 8 -- raised OUTSIDE the try/catch, which is exactly the failure the
+ * guard exists to prevent.
+ *
+ * 'link' and 'title' are required and must be scalar because they are concatenated and
+ * pattern-matched. 'image', 'uid' and 'time' are optional, so a non-scalar value is dropped
+ * rather than rejecting the whole row.
+ *
+ * @param  mixed $rows raw return value from a module search callback
+ * @return array<int, array> rows safe to render
+ */
+$xoopsNormaliseSearchRows = static function ($rows) {
+    if (!is_array($rows)) {
+        return [];
+    }
+    $clean = [];
+    foreach ($rows as $row) {
+        if (!is_array($row)
+            || !isset($row['link'], $row['title'])
+            || !is_scalar($row['link'])
+            || !is_scalar($row['title'])) {
+            continue;
+        }
+        foreach (['image', 'uid', 'time'] as $optional) {
+            if (isset($row[$optional]) && !is_scalar($row[$optional])) {
+                unset($row[$optional]);
+            }
+        }
+        $clean[] = $row;
+    }
+
+    return $clean;
+};
+
 switch ($action) {
     case 'results':
         /** @var XoopsModuleHandler $module_handler */
@@ -174,8 +214,42 @@ switch ($action) {
         foreach ($mids as $mid) {
             $mid = (int) $mid;
             if (in_array($mid, $available_modules)) {
-                $module  = $modules[$mid];
-                $results = $module->search($queries, $andor, 5, 0);
+                // $mids can come straight from the query string, and $modules only holds
+                // modules that are active AND searchable. A readable-but-not-searchable
+                // mid (e.g. mids[]=1) would otherwise index a missing key and yield null.
+                if (!isset($modules[$mid]) || !is_object($modules[$mid])) {
+                    continue;
+                }
+                $module = $modules[$mid];
+                // Resolve the label BEFORE the try: the catch must never dereference
+                // $module, or a failure there throws a second, uncaught error.
+                $moduleDirname = $module->getVar('dirname', 'n');
+                // No blind cast: getVar() can return an array, and converting that
+                // raises a notice here, BEFORE the try -- which an ErrorException
+                // handler would turn into an escape from the very guard below.
+                $moduleLabel = is_scalar($moduleDirname) ? (string) $moduleDirname : 'mid:' . $mid;
+                try {
+                    $results = $module->search($queries, $andor, 5, 0);
+                    // XoopsModule::search() returns mixed -- it hands off to whatever the
+                    // module's search callback returns. A truthy non-array (true, an error
+                    // string, an object) would reach count() below, which is a TypeError on
+                    // PHP 8 raised OUTSIDE this try, defeating the whole guard. Normalise
+                    // here, where a misbehaving module is still contained.
+                    // Rows are validated by FIELD, not merely by type -- see the
+                    // normaliser above. Anything unusable is dropped here, inside the
+                    // try, where a misbehaving module is still contained.
+                    $results = $xoopsNormaliseSearchRows($results);
+                } catch (\Throwable $e) {
+                    // A broken module must not take down the whole search page.
+                    $GLOBALS['xoopsLogger']->handleError(
+                        E_USER_WARNING,
+                        sprintf('Search failed in module "%s": %s', $moduleLabel, $e->getMessage()),
+                        basename($e->getFile()),
+                        $e->getLine()
+                    );
+                    unset($module);
+                    continue;
+                }
                 if (empty($results)) {
                     $count = 0;
                 } else {
@@ -236,10 +310,64 @@ switch ($action) {
         $module_handler = xoops_getHandler('module');
         /** @var XoopsModule $module */
         $module      = $module_handler->get($mid);
-        $results = $module->search($queries, $andor, 20, $start, $uid);
+        // get() returns false for an unknown mid, and the mid arrives straight from the
+        // query string, so /search.php?action=showall&mid=999999 is reachable by anyone.
+        //
+        // The checks must match the 'results' branch above, which selects modules with
+        // hassearch = 1 AND isactive = 1 AND module_read permission. Testing only the
+        // permission here would let this route run search() for a module the administrator
+        // has deactivated, or one that never declared search support at all.
+        if (!is_object($module)
+            || !in_array((int) $mid, $available_modules, true)
+            || 1 !== (int) $module->getVar('isactive')
+            || 1 !== (int) $module->getVar('hassearch')) {
+            redirect_header(XOOPS_URL . '/search.php', 2, _SR_NOMATCH);
+        }
+        // Resolve the label BEFORE the try: the catch must never dereference $module,
+        // or a failure there throws a second, uncaught error.
+        //
+        // No blind cast either: getVar() can return an array, and converting that raises a
+        // notice HERE, before the try, which an ErrorException handler would turn into an
+        // escape from the very guard below.
+        $moduleDirname = $module->getVar('dirname', 'n');
+        $moduleLabel   = is_scalar($moduleDirname) ? (string) $moduleDirname : 'mid:' . $mid;
+        try {
+            $next_results = [];
+            $results      = $module->search($queries, $andor, 20, $start, $uid);
+            // search() returns mixed. A truthy non-array would reach count() further down,
+            // outside this try, and a TypeError there would bypass the guard entirely.
+            // Validated by FIELD -- see the normaliser above the switch.
+            $results = $xoopsNormaliseSearchRows($results);
+            // The next-page probe exists only to decide whether to render a "next" link,
+            // which is meaningless when this page is already empty. Running it
+            // unconditionally doubled the module and database work on every no-match
+            // search, and gave a failing module a second chance to throw.
+            if ([] !== $results) {
+                $next_results = $xoopsNormaliseSearchRows(
+                    $module->search($queries, $andor, 1, $start + 20, $uid)
+                );
+            }
+        } catch (\Throwable $e) {
+            // A broken module must not take down the whole search page.
+            $GLOBALS['xoopsLogger']->handleError(
+                E_USER_WARNING,
+                sprintf('Search failed in module "%s": %s', $moduleLabel, $e->getMessage()),
+                basename($e->getFile()),
+                $e->getLine()
+            );
+            $results      = [];
+            $next_results = [];
+        }
+        // Assigned unconditionally. The showall block in system_search.tpl renders even when
+        // there are no results, so leaving these unset produced, on every empty showall page:
+        //   Undefined array key "showing" / "module_name"
+        //   Attempt to read property "value" on null   (Smarty's compiled tpl_vars access)
+        // The results branch below overwrites 'showing' with the real range.
+        $xoopsTpl->assign('module_name', $module->getVar('name'));
+        $xoopsTpl->assign('showing', '');
+
         $results ? $count = count($results) : $count = 0;
         if (is_array($results) && $count > 0) {
-            $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
             $next_count   = count($next_results);
             $has_next     = false;
             if (is_array($next_results) && $next_count == 1) {
@@ -258,7 +386,6 @@ switch ($action) {
                 $xoopsTpl->assign('keywords', $keywords);
             }
             $xoopsTpl->assign('showing', sprintf(_SR_SHOWING, $start + 1, $start + $count));
-            $xoopsTpl->assign('module_name', $module->getVar('name'));
             $results_arr = [];
             for ($i = 0; $i < $count; ++$i) {
                 if (isset($results[$i]['image']) && $results[$i]['image'] != '') {

@@ -143,6 +143,36 @@ class XoopsModelAbstract
     }
 
     /**
+     * Fail fast when the handler was never given a table name.
+     *
+     * XoopsPersistableObjectHandler::__construct() defaults $table to '' and
+     * XoopsDatabase::prefix('') returns the bare prefix, so a handler that never ran
+     * its constructor silently points every query at a table literally named after the
+     * DB prefix. The resulting "Table 'xyz' doesn't exist" gives no hint which handler
+     * is at fault. The usual cause is a PHP4-style constructor (a method named after
+     * the class), which PHP 8 no longer treats as a constructor.
+     *
+     * Checked here rather than in the handler constructor on purpose: some legitimate
+     * subclasses call parent::__construct($db) and assign $this->table themselves, and
+     * a constructor-time check would report those as broken.
+     *
+     * @throws RuntimeException
+     * @return void
+     */
+    protected function assertTableConfigured()
+    {
+        $table = (string) $this->handler->table;
+        if ('' === $table || $table === $this->handler->db->prefix()) {
+            throw new \RuntimeException(sprintf(
+                '%s has no table configured: its constructor never supplied a table name. '
+                . 'A PHP4-style constructor (a method named after the class) is ignored by '
+                . 'PHP 8 — rename it to __construct().',
+                get_class($this->handler)
+            ));
+        }
+    }
+
+    /**
      * XoopsModelAbstract::setVars()
      *
      * @param  mixed $args

@@ -27,24 +27,15 @@ function b_system_online_show()
     global $xoopsUser, $xoopsModule;
     /** @var XoopsOnlineHandler $online_handler */
     $online_handler = xoops_getHandler('online');
-    // set gc probability to 10% for now..
-    if (mt_rand(1, 100) < 11) {
-        $online_handler->gc(300);
-    }
-    if (is_object($xoopsUser)) {
-        $uid   = $xoopsUser->getVar('uid');
-        $uname = $xoopsUser->getVar('uname');
-    } else {
-        $uid   = 0;
-        $uname = '';
-    }
-    $requestIp = \Xmf\IPAddress::fromRequest()->asReadable();
-    $requestIp = (false === $requestIp) ? '0.0.0.0' : $requestIp;
-    if (is_object($xoopsModule)) {
-        $online_handler->write($uid, $uname, time(), $xoopsModule->getVar('mid'), $requestIp);
-    } else {
-        $online_handler->write($uid, $uname, time(), 0, $requestIp);
-    }
+
+    // This block is READ-ONLY. Recording the visitor happens in
+    // SystemCorePreload::eventCoreIncludeCommonEnd() (modules/system/preloads/core.php).
+    //
+    // It used to write here, which made tracking depend on the block being rendered:
+    // the block's group permissions then decided who was counted, so with the block
+    // visible to admins only the table recorded admins only and the block reported
+    // "Guests: 0". Pages without the block recorded nobody at all.
+
     $onlines = $online_handler->getAll();
     if (!empty($onlines)) {
         $total   = count($onlines);
@@ -223,8 +214,10 @@ function b_system_user_show()
 
 
 function checkPendingContent($module, $table, $condition, $adminlink, $lang_linkname, &$block, $xoopsDB) {
-    $module_handler = xoops_getHandler('module');
-    if (xoops_isActiveModule($module) && $module_handler->getCount(new Criteria('dirname', $module))) {
+    // xoops_isActiveModule() already proves the module is installed AND active (it reads
+    // the cached active-module list), so the getCount() that used to follow it was a
+    // wasted query per module — and several callers repeat both checks before calling in.
+    if (xoops_isActiveModule($module)) {
         $sql = "SELECT COUNT(*) FROM " . $xoopsDB->prefix($table);
         if ('' !== $condition) {
             $sql .= " WHERE $condition";
@@ -467,6 +460,10 @@ function b_system_comments_show($options)
     }
     // Check modules permissions
 
+    // NOTE: XoopsCommentHandler is a legacy XoopsObjectHandler — it has no getAll() and
+    // no field-list support, so this is necessarily SELECT *. That is acceptable now that
+    // idx_status_created(com_status, com_created) lets the LIMIT stop after 5 rows instead
+    // of sorting the whole table.
     $comments       = $comment_handler->getObjects($criteria, true);
     /** @var XoopsMemberHandler $member_handler */
     $member_handler = xoops_getHandler('member');
@@ -476,10 +473,19 @@ function b_system_comments_show($options)
     $comment_config = [];
     foreach (array_keys($comments) as $i) {
         $mid           = $comments[$i]->getVar('com_modid');
-        $com['module'] = '<a href="' . XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname') . '/">' . $modules[$mid]->getVar('name') . '</a>';
+        // $comments is filtered by module_read permission while $modules only holds
+        // modules with hascomments=1, so a comment can outlive its module (uninstalled,
+        // or comments turned off). Dereferencing it unguarded was a fatal.
+        if (!isset($modules[$mid])) {
+            continue;
+        }
         if (!isset($comment_config[$mid])) {
             $comment_config[$mid] = $modules[$mid]->getInfo('comments');
         }
+        if (empty($comment_config[$mid]['pageName']) || empty($comment_config[$mid]['itemName'])) {
+            continue;
+        }
+        $com['module'] = '<a href="' . XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname') . '/">' . $modules[$mid]->getVar('name') . '</a>';
         $com['id']    = $i;
         $com['title'] = '<a href="' . XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname') . '/' . $comment_config[$mid]['pageName'] . '?' . $comment_config[$mid]['itemName'] . '=' . $comments[$i]->getVar('com_itemid') . '&amp;com_id=' . $i . '&amp;com_rootid=' . $comments[$i]->getVar('com_rootid') . '&amp;' . htmlspecialchars((string) $comments[$i]->getVar('com_exparams'), ENT_QUOTES | ENT_HTML5) . '#comment' . $i . '">' . $comments[$i]->getVar('com_title') . '</a>';
         $com['icon']  = htmlspecialchars((string) $comments[$i]->getVar('com_icon'), ENT_QUOTES | ENT_HTML5);

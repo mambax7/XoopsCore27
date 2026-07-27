@@ -38,6 +38,7 @@ class XoopsModelRead extends XoopsModelAbstract
      */
     public function &getAll(?CriteriaElement $criteria = null, $fields = null, $asObject = true, $id_as_key = true)
     {
+        $this->assertTableConfigured();
         if (!empty($fields) && \is_array($fields)) {
             if (!in_array($this->handler->keyName, $fields)) {
                 $fields[] = $this->handler->keyName;
@@ -63,7 +64,8 @@ class XoopsModelRead extends XoopsModelAbstract
         $result = $this->handler->db->query($sql, $limit, $start);
         if (!$this->handler->db->isResultSet($result)) {
             throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->handler->db->error(),
+                \sprintf(_DB_QUERY_ERROR, $sql) . $this->handler->db->error()
+                . \sprintf(' [handler: %s, table: %s]', get_class($this->handler), $this->handler->table),
                 E_USER_ERROR,
             );
         }
@@ -123,6 +125,7 @@ class XoopsModelRead extends XoopsModelAbstract
      */
     public function getList(?CriteriaElement $criteria = null, $limit = 0, $start = 0)
     {
+        $this->assertTableConfigured();
         $ret = [];
         if ($criteria == null) {
             $criteria = new CriteriaCompo();
@@ -167,6 +170,7 @@ class XoopsModelRead extends XoopsModelAbstract
      */
     public function &getIds(?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         $ret   = [];
         $sql   = "SELECT `{$this->handler->keyName}` FROM `{$this->handler->table}`";
         $limit = $start = null;

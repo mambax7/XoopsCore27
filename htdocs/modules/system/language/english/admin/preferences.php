@@ -310,3 +310,7 @@ define('_AM_SYSTEM_PREFERENCES_SETTINGS', 'System Module Settings');
 //2.7.0
 define('_MD_AM_SENDMAIL_NOT_FOUND', 'Sendmail binary not found. Please check your server configuration.');
 define('_MD_AM_SENDMAIL_HELP_MISSING_BIN', 'No valid sendmail-compatible binary was detected. Install an MTA (e.g. Postfix, msmtp) or switch to SMTP in Preferences.');
+
+// 2.7.3
+define('_MD_AM_ONLINETRACKING', 'Track who is online?');
+define('_MD_AM_ONLINETRACKINGDSC', 'Records each visitor in the online table so the "Who is Online" block and the online list can report member and guest counts. Costs a couple of small queries per page view. Turn this off if you do not need those figures - the block will then show nothing rather than wrong numbers.');
