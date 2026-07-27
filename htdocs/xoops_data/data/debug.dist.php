@@ -31,8 +31,29 @@
  *
  * NEVER enable this on a production site that serves real visitors:
  * display_errors reveals paths and query fragments to anyone who triggers an
- * error. The shipped .htaccess denies web access to debug.php, but that only
- * protects Apache installs — on nginx or IIS, confirm the rule yourself.
+ * error.
+ *
+ * ---------------------------------------------------------------------------
+ * READ THIS FIRST: is your log directory reachable over the web?
+ * ---------------------------------------------------------------------------
+ * The log records SQL, user ids, backtraces and file paths. XOOPS ships
+ * .htaccess files denying web access to this file and to xoops_data/logs, but
+ * .htaccess works on APACHE ONLY, and only where AllowOverride permits it. On
+ * nginx, IIS, or Apache with AllowOverride None, those files do nothing at all.
+ *
+ * The reliable fix is to keep xoops_data OUTSIDE the document root, which many
+ * installations already do. If it sits under the web root, add the equivalent
+ * rule yourself, then verify by requesting the log URL in a browser:
+ *
+ *   nginx:
+ *     location ^~ /xoops_data/ { deny all; return 404; }
+ *
+ *   IIS (web.config): add "xoops_data" to requestFiltering/hiddenSegments.
+ *
+ * The log filename is restricted to a plain "*.log" name, and any other value
+ * silently falls back to debug.log. That restriction is deliberate: log content
+ * is written verbatim, so a *.php log could be made to hold executable code.
+ * ---------------------------------------------------------------------------
  *
  * This is INDEPENDENT of Admin -> Preferences -> Debug Mode, which controls the
  * in-page debug output shown to administrators. Either can be used alone.

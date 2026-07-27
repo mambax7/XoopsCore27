@@ -33,16 +33,38 @@ if (!defined('XOOPS_ROOT_PATH')) {
  * that actually renders. When a request dies before output, or fails for a guest, or
  * only misbehaves under real traffic, the file is the only record.
  *
- * Two things are deliberately not written:
- *  - the session id, which would let anyone reading the log hijack a session;
- *  - absolute server paths, which are reduced to installation-relative form.
+ * SAFETY RULES, each of which exists because a log file is an attacker's best friend:
+ *  - the filename is restricted to a plain "*.log". Anything else, notably any
+ *    PHP-executable extension, is refused: log content is written verbatim, so a logged
+ *    statement containing PHP tags inside a *.php log would be stored, executable code;
+ *  - neither the log file nor its directory may be a symlink, so a planted link cannot
+ *    redirect appends onto mainfile.php or any other writable file;
+ *  - session ids are replaced with a short hash wherever they appear, including in the
+ *    request URI, and including before session_start() has run;
+ *  - session-table SQL is never recorded, because serialised session data carries CSRF
+ *    token seeds and module state;
+ *  - absolute server paths are reduced to installation-relative form;
+ *  - backtraces render file, line and function only. Arguments are never emitted.
  */
 class XoopsFileLogger
 {
+    /** Only a plain "name.log" is accepted. Anything else falls back to the default. */
+    private const FILENAME_PATTERN = '/^[A-Za-z0-9_-]{1,64}\.log$/';
+
+    private const DEFAULT_FILENAME = 'debug.log';
+
+    /** Rotation bounds. An unbounded max_files would spin the rotation loop for ever. */
+    private const MIN_SIZE  = 65536;        // 64 KB
+    private const MAX_SIZE  = 536870912;    // 512 MB
+    private const MAX_FILES = 20;
+
+    /** Hard cap for a single entry, so one enormous statement cannot defeat rotation. */
+    private const MAX_ENTRY = 65536;
+
     /** @var string absolute path of the current log file */
     protected $file;
 
-    /** @var int rotate once the file exceeds this many bytes */
+    /** @var int rotate once the file would exceed this many bytes */
     protected $maxSize;
 
     /** @var int how many rotated files to keep */
@@ -74,26 +96,46 @@ class XoopsFileLogger
      */
     public function __construct(array $config = [])
     {
-        $dir = XOOPS_VAR_PATH . '/logs';
-        $name = isset($config['file']) ? basename((string) $config['file']) : 'debug.log';
-        if ('' === $name || '.' === $name[0]) {
-            $name = 'debug.log';
+        $name = isset($config['file']) && is_string($config['file'])
+            ? basename($config['file'])
+            : self::DEFAULT_FILENAME;
+
+        // basename() alone is NOT enough. It stops directory traversal but happily returns
+        // "debug.php", and this class writes attacker-influenced text verbatim.
+        if (1 !== preg_match(self::FILENAME_PATTERN, $name)) {
+            $name = self::DEFAULT_FILENAME;
         }
 
-        $this->file                  = $dir . '/' . $name;
-        $this->maxSize               = max(0, (int) ($config['max_size'] ?? 8388608));
-        $this->maxFiles              = max(0, (int) ($config['max_files'] ?? 5));
-        $this->channels              = (array) ($config['channels'] ?? ['messages', 'Queries', 'Deprecated']);
+        $this->file     = XOOPS_VAR_PATH . '/logs/' . $name;
+        $this->maxSize  = $this->clamp($config['max_size'] ?? 8388608, self::MIN_SIZE, self::MAX_SIZE);
+        $this->maxFiles = $this->clamp($config['max_files'] ?? 5, 1, self::MAX_FILES);
+
+        $channels       = $config['channels'] ?? ['messages', 'Queries', 'Deprecated'];
+        $this->channels = is_array($channels) ? array_values(array_filter($channels, 'is_string')) : [];
+
         $this->queriesWithErrorsOnly = (bool) ($config['queries_with_errors_only'] ?? true);
         $this->backtrace             = (bool) ($config['backtrace'] ?? true);
-        $this->backtraceLimit        = max(1, (int) ($config['backtrace_limit'] ?? 12));
+        $this->backtraceLimit        = $this->clamp($config['backtrace_limit'] ?? 12, 1, 50);
         $this->requestId             = substr(md5(uniqid('', true)), 0, 8);
     }
 
     /**
-     * Receive one event from XoopsLogger.
+     * Coerce a setting into a sane range rather than trusting the file.
      *
-     * Signature matches the PSR-3 shape XoopsLogger dispatches with.
+     * @param  mixed $value
+     * @param  int   $min
+     * @param  int   $max
+     * @return int
+     */
+    protected function clamp($value, $min, $max)
+    {
+        $value = is_numeric($value) ? (int) $value : $min;
+
+        return max($min, min($max, $value));
+    }
+
+    /**
+     * Receive one event from XoopsLogger.
      *
      * @param  string $level   psr-3 level
      * @param  string $message
@@ -110,8 +152,15 @@ class XoopsFileLogger
         if (!in_array($channel, $this->channels, true)) {
             return;
         }
-        if ('Queries' === $channel && $this->queriesWithErrorsOnly && empty($context['error'])) {
-            return;
+        if ('Queries' === $channel) {
+            if ($this->queriesWithErrorsOnly && empty($context['error'])) {
+                return;
+            }
+            // Session rows hold serialised session state, which includes XOOPS security
+            // token seeds. Recording that statement would put live CSRF secrets in a file.
+            if ($this->touchesSessionTable((string) ($context['sql'] ?? $message))) {
+                return;
+            }
         }
 
         $this->write($this->format($level, (string) $message, $channel, $context));
@@ -120,14 +169,26 @@ class XoopsFileLogger
     /**
      * Stop writing for the remainder of the request.
      *
-     * XoopsLogger calls this for output-sensitive requests such as AJAX. The file is not
-     * output, but honouring it keeps behaviour consistent with the other loggers.
-     *
      * @return void
      */
     public function quiet()
     {
         $this->quiet = true;
+    }
+
+    /**
+     * Does this statement read or write the session table?
+     *
+     * @param  string $sql
+     * @return bool
+     */
+    protected function touchesSessionTable($sql)
+    {
+        if (!defined('XOOPS_DB_PREFIX')) {
+            return false;
+        }
+
+        return false !== stripos($sql, XOOPS_DB_PREFIX . '_session');
     }
 
     /**
@@ -142,22 +203,30 @@ class XoopsFileLogger
     protected function format($level, $message, $channel, array $context)
     {
         $head = sprintf(
-            "[%s] %s.%s req=%s uri=%s uid=%s",
+            '[%s] %s.%s req=%s uri=%s uid=%s',
             date('Y-m-d H:i:s'),
             $channel,
             strtoupper($level),
             $this->requestId,
-            $this->currentUri(),
+            $this->sanitize($this->currentUri()),
             $this->currentUid()
         );
 
-        $body = '  ' . $this->sanitize($message);
+        $message = $this->sanitize($message);
+        $body    = '  ' . $message;
 
         $detail = [];
         foreach (['errno', 'errfile', 'errline', 'sql', 'error', 'query_time'] as $key) {
-            if (isset($context[$key]) && '' !== $context[$key] && is_scalar($context[$key])) {
-                $detail[] = $key . '=' . $this->sanitize((string) $context[$key]);
+            if (!isset($context[$key]) || '' === $context[$key] || !is_scalar($context[$key])) {
+                continue;
             }
+            $value = $this->sanitize((string) $context[$key]);
+            // addQuery() passes the SQL as BOTH the message and context['sql']; writing it
+            // twice doubles the file size and the time spent holding the lock.
+            if ('sql' === $key && $value === $message) {
+                continue;
+            }
+            $detail[] = $key . '=' . $value;
         }
         if ([] !== $detail) {
             $body .= "\n  " . implode(' ', $detail);
@@ -170,11 +239,22 @@ class XoopsFileLogger
             }
         }
 
-        return $head . "\n" . $body . "\n";
+        $entry = $head . "\n" . $body . "\n";
+
+        // One entry must never be able to defeat rotation on its own.
+        if (strlen($entry) > self::MAX_ENTRY) {
+            $entry = substr($entry, 0, self::MAX_ENTRY) . "\n  ...[truncated]\n";
+        }
+
+        return $entry;
     }
 
     /**
      * Render a backtrace, preferring one supplied by the producer.
+     *
+     * Only file, line and function are emitted. Arguments are never rendered, and the
+     * self-captured trace uses DEBUG_BACKTRACE_IGNORE_ARGS, so a database password
+     * passed to a connect call cannot reach the file.
      *
      * @param  array|null $trace
      * @return string
@@ -186,7 +266,6 @@ class XoopsFileLogger
                 return '';
             }
             $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $this->backtraceLimit + 6);
-            // Drop the frames belonging to the logger itself.
             $trace = array_values(array_filter($trace, function ($frame) {
                 return !isset($frame['class']) || !in_array($frame['class'], [self::class, 'XoopsLogger'], true);
             }));
@@ -194,7 +273,7 @@ class XoopsFileLogger
 
         $lines = [];
         foreach (array_slice($trace, 0, $this->backtraceLimit) as $frame) {
-            if (!isset($frame['file'])) {
+            if (!is_array($frame) || !isset($frame['file'])) {
                 continue;
             }
             $lines[] = '    ' . $this->sanitize((string) $frame['file'])
@@ -216,9 +295,9 @@ class XoopsFileLogger
         // Both separator styles must be replaced. The constants normally hold forward
         // slashes while PHP reports __FILE__ and backtrace frames with the platform
         // separator, so matching only the constant's own form silently leaks the full
-        // server path on Windows -- and in backtraces on any platform where the two
-        // disagree. Longest first, so XOOPS_ROOT_PATH cannot truncate a longer
-        // XOOPS_TRUST_PATH that lives beneath it.
+        // server path on Windows. realpath() variants cover a symlinked installation.
+        // Longest first, so XOOPS_ROOT_PATH cannot truncate a longer XOOPS_TRUST_PATH
+        // that lives beneath it.
         $paths = [];
         foreach (['XOOPS_VAR_PATH', 'XOOPS_PATH', 'XOOPS_TRUST_PATH', 'XOOPS_ROOT_PATH'] as $constant) {
             if (!defined($constant)) {
@@ -228,8 +307,12 @@ class XoopsFileLogger
             if ('' === $value) {
                 continue;
             }
-            $paths[] = str_replace('\\', '/', $value);
-            $paths[] = str_replace('/', '\\', $value);
+            foreach ([$value, realpath($value)] as $candidate) {
+                if (is_string($candidate) && '' !== $candidate) {
+                    $paths[] = str_replace('\\', '/', $candidate);
+                    $paths[] = str_replace('/', '\\', $candidate);
+                }
+            }
         }
         if ([] !== $paths) {
             $paths = array_unique($paths);
@@ -239,16 +322,22 @@ class XoopsFileLogger
             $text = str_replace($paths, '', $text);
         }
 
+        // Anything still absolute came from outside the installation -- a shared include
+        // directory, a temp file, a vendor path outside the tree. Reduce it to its
+        // basename rather than publishing the server's directory layout.
+        $text = preg_replace('#\b[A-Za-z]:[\\\\/][^\s"\'<>()]*[\\\\/]([^\\\\/\s"\'<>()]+)#', '.../$1', (string) $text);
+        $text = preg_replace('#(?<![\w:])/(?:home|usr|var|opt|srv|tmp|etc|root)/[^\s"\'<>()]*/([^/\s"\'<>()]+)#', '.../$1', (string) $text);
+
         // A session id in a log file is a hijacking primitive. Keep a short hash so
         // entries from one visitor can still be correlated.
         if (function_exists('session_id')) {
             $sid = session_id();
             if (is_string($sid) && strlen($sid) > 7) {
-                $text = str_replace($sid, 'sid#' . substr(md5($sid), 0, 8), $text);
+                $text = str_replace($sid, 'sid#' . substr(md5($sid), 0, 8), (string) $text);
             }
         }
 
-        return $text;
+        return (string) $text;
     }
 
     /**
@@ -260,8 +349,22 @@ class XoopsFileLogger
             return 'cli';
         }
         $uri = $_SERVER['REQUEST_URI'] ?? '-';
+        if (!is_string($uri)) {
+            return '-';
+        }
 
-        return is_string($uri) ? substr($uri, 0, 300) : '-';
+        // A URL-borne session id has to go even before session_start() has run, when
+        // session_id() is still empty and the hash replacement below cannot match it.
+        $name = function_exists('session_name') ? (string) session_name() : 'PHPSESSID';
+        if ('' !== $name) {
+            $uri = preg_replace(
+                '/([?&])' . preg_quote($name, '/') . '=[^&]*/i',
+                '$1' . $name . '=sid%23redacted',
+                $uri
+            );
+        }
+
+        return substr((string) $uri, 0, 300);
     }
 
     /**
@@ -275,10 +378,10 @@ class XoopsFileLogger
     }
 
     /**
-     * Append to the log, rotating first when it has grown past max_size.
+     * Append to the log, rotating first when the entry would push it past max_size.
      *
-     * A failure here disables this logger for the rest of the request rather than
-     * repeating a warning for every subsequent event.
+     * A failure disables this logger for the rest of the request rather than repeating a
+     * warning for every subsequent event.
      *
      * @param  string $entry
      * @return void
@@ -292,32 +395,48 @@ class XoopsFileLogger
             return;
         }
 
-        $this->rotateIfNeeded();
-
-        if (false === @file_put_contents($this->file, $entry, FILE_APPEND | LOCK_EX)) {
+        // A symlinked directory or log file would let an append land on any writable file
+        // the web user owns -- mainfile.php being the obvious target. basename() does not
+        // protect against this at all.
+        if (is_link($dir) || is_link($this->file)) {
             $this->writeFailed = true;
+
+            return;
         }
+
+        $this->rotateIfNeeded(strlen($entry));
+
+        $handle = @fopen($this->file, 'ab');
+        if (false === $handle) {
+            $this->writeFailed = true;
+
+            return;
+        }
+        // Non-blocking: a lock held by a stalled process must not park this request in a
+        // queue behind it. Losing one debug line beats holding a worker.
+        if (flock($handle, LOCK_EX | LOCK_NB)) {
+            fwrite($handle, $entry);
+            flock($handle, LOCK_UN);
+        }
+        fclose($handle);
     }
 
     /**
-     * Roll debug.log to debug.log.1, shifting existing rotations along and
-     * discarding the oldest.
+     * Roll debug.log to debug.log.1, shifting existing rotations along and discarding
+     * the oldest.
      *
+     * @param  int $incoming size of the entry about to be appended
      * @return void
      */
-    protected function rotateIfNeeded()
+    protected function rotateIfNeeded($incoming = 0)
     {
-        if ($this->maxSize <= 0 || !is_file($this->file)) {
+        if (!is_file($this->file)) {
             return;
         }
         $size = @filesize($this->file);
-        if (false === $size || $size < $this->maxSize) {
-            return;
-        }
-
-        if ($this->maxFiles < 1) {
-            @unlink($this->file);
-
+        // Projected size, so an entry that would push the file past the limit rotates
+        // before it is written rather than after.
+        if (false === $size || ($size + $incoming) < $this->maxSize) {
             return;
         }
 

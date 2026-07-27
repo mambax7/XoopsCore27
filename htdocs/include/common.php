@@ -179,11 +179,21 @@ if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     $xoopsLogger->enableRendering();
     $xoopsLogger->usePopup = ($xoopsConfig['debug_mode'] == 2);
 } elseif ([] !== $xoopsDebugConfig) {
-    // File logging without the in-page output: the logger must stay ACTIVE and errors
-    // must still be reported, or there is nothing for it to record. Rendering is left
-    // off deliberately, so enabling this cannot change what a visitor sees.
+    // File logging WITHOUT the in-page output.
+    //
+    // errors must still be reported or there is nothing to record, and rendering stays
+    // off so enabling this cannot change what a visitor sees.
+    //
+    // activated stays FALSE on purpose. It gates the in-memory collectors ($queries,
+    // $blocks, $extra) that exist only to be rendered into the page -- and nothing is
+    // going to render here. Leaving it true accumulated every statement of every request
+    // for a dump that never happens, which a long import would turn into an out-of-memory
+    // failure. Dispatch to registered loggers is deliberately outside that guard in
+    // addQuery/addBlock/addExtra/handleError, so the file logger still receives
+    // everything.
     xoops_loadLanguage('logger');
     xoops_applyDebugConfig();
+    $xoopsLogger->activated = false;
 } else {
     error_reporting(0);
     $xoopsLogger->activated = false;

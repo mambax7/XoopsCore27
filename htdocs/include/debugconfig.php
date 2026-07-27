@@ -57,10 +57,32 @@ if (!function_exists('xoops_getDebugConfig')) {
             return $config;
         }
 
-        $loaded = include $file;
-        if (!is_array($loaded) || empty($loaded['enabled'])) {
+        // A hand-edited file WILL eventually contain a syntax error or throw. Without this
+        // boundary that becomes an uncaught ParseError during bootstrap -- a debugging aid
+        // taking the whole site down. Failing closed, to production behaviour, is the only
+        // acceptable outcome.
+        try {
+            $loaded = include $file;
+        } catch (\Throwable $e) {
+            trigger_error(
+                'xoops_data/data/debug.php could not be loaded (' . get_class($e)
+                . '); continuing with debugging disabled.',
+                E_USER_WARNING
+            );
+
             return $config;
         }
+
+        // 'enabled' must be a real boolean. A string from an environment-backed config is
+        // truthy whatever it happens to say, so 'false' would switch debugging ON.
+        if (!is_array($loaded) || true !== ($loaded['enabled'] ?? false)) {
+            return $config;
+        }
+
+        // Normalise the nested shapes now, so nothing downstream has to defend itself
+        // against an object or a string where an array belongs.
+        $loaded['log']      = isset($loaded['log']) && is_array($loaded['log']) ? $loaded['log'] : [];
+        $loaded['database'] = isset($loaded['database']) && is_array($loaded['database']) ? $loaded['database'] : [];
 
         $config = $loaded;
 
@@ -84,12 +106,20 @@ if (!function_exists('xoops_applyDebugConfig')) {
             return false;
         }
 
+        // Strict booleans only: a string such as 'false' is truthy and would turn
+        // display_errors ON against the stated intent.
         if (array_key_exists('display_errors', $config)) {
-            ini_set('display_errors', $config['display_errors'] ? '1' : '0');
+            ini_set('display_errors', true === $config['display_errors'] ? '1' : '0');
         }
-        if (array_key_exists('error_reporting', $config)) {
-            error_reporting((int) $config['error_reporting']);
-        }
+
+        // error_reporting defaults to E_ALL when debugging is enabled but the key is
+        // absent or not an integer. Leaving php.ini's value in place would silently
+        // produce an enabled logger that records nothing -- if error_reporting is 0,
+        // XoopsLogger::handleError() discards every error before it reaches a logger.
+        // A string like 'E_ALL' casts to 0, which is exactly that trap, so only a real
+        // integer is honoured.
+        $reporting = $config['error_reporting'] ?? null;
+        error_reporting(is_int($reporting) ? $reporting : E_ALL);
 
         return true;
     }

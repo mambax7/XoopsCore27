@@ -1,7 +1,13 @@
-<Files "secure.php">
-Deny from all
-</Files>
-
-<Files "debug.php">
-Deny from all
-</Files>
+# secure.php holds the database credentials; debug.php controls error display and
+# logging. Neither may ever be served.
+#
+# Apache only -- on nginx or IIS these directives are ignored.
+<FilesMatch "^(secure|debug)\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
