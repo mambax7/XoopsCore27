@@ -191,7 +191,7 @@ switch ($action) {
                     $GLOBALS['xoopsLogger']->handleError(
                         E_USER_WARNING,
                         sprintf('Search failed in module "%s": %s', $moduleLabel, $e->getMessage()),
-                        $e->getFile(),
+                        basename($e->getFile()),
                         $e->getLine()
                     );
                     unset($module);
@@ -259,8 +259,15 @@ switch ($action) {
         $module      = $module_handler->get($mid);
         // get() returns false for an unknown mid, and the mid arrives straight from the
         // query string, so /search.php?action=showall&mid=999999 is reachable by anyone.
-        // Also refuse a module the current user may not read.
-        if (!is_object($module) || !in_array((int) $mid, $available_modules, true)) {
+        //
+        // The checks must match the 'results' branch above, which selects modules with
+        // hassearch = 1 AND isactive = 1 AND module_read permission. Testing only the
+        // permission here would let this route run search() for a module the administrator
+        // has deactivated, or one that never declared search support at all.
+        if (!is_object($module)
+            || !in_array((int) $mid, $available_modules, true)
+            || 1 !== (int) $module->getVar('isactive')
+            || 1 !== (int) $module->getVar('hassearch')) {
             redirect_header(XOOPS_URL . '/search.php', 2, _SR_NOMATCH);
         }
         // Resolve the label BEFORE the try: the catch must never dereference $module,
@@ -274,7 +281,7 @@ switch ($action) {
             $GLOBALS['xoopsLogger']->handleError(
                 E_USER_WARNING,
                 sprintf('Search failed in module "%s": %s', $moduleLabel, $e->getMessage()),
-                $e->getFile(),
+                basename($e->getFile()),
                 $e->getLine()
             );
             $results      = [];
