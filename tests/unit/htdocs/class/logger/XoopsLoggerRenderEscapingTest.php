@@ -71,11 +71,16 @@ class XoopsLoggerRenderEscapingTest extends TestCase
     {
         return [
             // channel, marker proving the entry rendered at all
-            'error string'         => ['errstr', 'Undefined array key'],
-            'error file'           => ['errfile', 'in file'],
-            'database error'       => ['queryerror', 'Unknown column'],
-            'block name'           => ['block', 'a block'],
-            'deprecation message'  => ['deprecated', 'Legacy API'],
+            'error string'          => ['errstr', 'Undefined array key'],
+            'error file'            => ['errfile', 'in file'],
+            'error line'            => ['errline', 'an error'],
+            'database error'        => ['queryerror', 'Unknown column'],
+            'query sql'             => ['querysql', 'SELECT'],
+            'cached block name'     => ['block', 'a block'],
+            // render.php formats cached and uncached blocks in separate branches, so both
+            // need covering or a regression in one of them goes unnoticed.
+            'uncached block name'   => ['blockuncached', 'a block'],
+            'deprecation message'   => ['deprecated', 'Legacy API'],
         ];
     }
 
@@ -103,6 +108,14 @@ class XoopsLoggerRenderEscapingTest extends TestCase
                     'errline' => '42',
                 ];
                 break;
+            case 'errline':
+                $logger->errors[] = [
+                    'errno'   => E_WARNING,
+                    'errstr'  => 'an error',
+                    'errfile' => '/some/file.php',
+                    'errline' => '42' . self::PAYLOAD,
+                ];
+                break;
             case 'queryerror':
                 $logger->queries[] = [
                     'sql'   => 'SELECT 1',
@@ -110,8 +123,15 @@ class XoopsLoggerRenderEscapingTest extends TestCase
                     'errno' => 1054,
                 ];
                 break;
+            case 'querysql':
+                // The statement itself is echoed back; a value interpolated into it reaches the panel.
+                $logger->queries[] = ['sql' => "SELECT * FROM t WHERE name = '" . self::PAYLOAD . "'"];
+                break;
             case 'block':
                 $logger->blocks[] = ['name' => 'a block ' . self::PAYLOAD, 'cached' => true, 'cachetime' => 300];
+                break;
+            case 'blockuncached':
+                $logger->blocks[] = ['name' => 'a block ' . self::PAYLOAD, 'cached' => false, 'cachetime' => 0];
                 break;
             case 'deprecated':
                 $logger->addDeprecated('Legacy API ' . self::PAYLOAD . ' used');

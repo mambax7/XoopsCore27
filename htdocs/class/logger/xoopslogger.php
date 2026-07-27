@@ -283,29 +283,38 @@ class XoopsLogger
     public function addDeprecated($msg)
     {
         if ($this->activated) {
-            $backTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $miniTrace = "<br> trace: ";
-            foreach ($backTrace as $i => $trace) {
-                // Check if 'file' and 'line' exist in the current trace step
-                $file = $trace['file'] ?? '(unknown file)';
-                $line = $trace['line'] ?? '(unknown line)';
-                // Escaped as it is built. This string is stored pre-rendered, mixing the
-                // <br> separators below with values from outside, and render.php emits it
-                // as raw HTML -- so escaping has to happen here, at the point each value
-                // enters the markup, rather than on the finished string.
-                $miniTrace .= htmlspecialchars((string) $file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                    . ':' . htmlspecialchars((string) $line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '<br>';
-            }
-            // Replace paths to keep the output clean. Guarded so a deprecation raised before
-            // mainfile.php finishes cannot turn into an "Undefined constant" fatal of its own.
+            // Deployment roots to strip, resolved once. Guarded so a deprecation raised
+            // before mainfile.php finishes cannot turn into an "Undefined constant" fatal
+            // of its own.
             $paths = [];
             foreach (['XOOPS_VAR_PATH', 'XOOPS_PATH', 'XOOPS_ROOT_PATH'] as $pathConstant) {
                 if (defined($pathConstant)) {
                     $paths[] = constant($pathConstant);
                 }
             }
-            if ([] !== $paths) {
-                $miniTrace = str_replace($paths, '', $miniTrace);
+
+            $backTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+            $miniTrace = "<br> trace: ";
+            foreach ($backTrace as $i => $trace) {
+                // Check if 'file' and 'line' exist in the current trace step
+                $file = $trace['file'] ?? '(unknown file)';
+                $line = $trace['line'] ?? '(unknown line)';
+
+                // Strip the deployment root BEFORE escaping. Doing it afterwards, on the
+                // finished string, silently stops matching when an installation path
+                // contains a character htmlspecialchars rewrites -- /var/www/AT&T/... is
+                // escaped to AT&amp;T, the raw root no longer matches, and the full server
+                // path is published in the debug panel.
+                if ([] !== $paths) {
+                    $file = str_replace($paths, '', (string) $file);
+                }
+
+                // Escaped as each value enters the markup. The string is stored
+                // pre-rendered, mixing these values with the <br> separators, and
+                // render.php emits it as raw HTML -- so escaping cannot be deferred to
+                // the renderer without destroying the separators.
+                $miniTrace .= htmlspecialchars((string) $file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    . ':' . htmlspecialchars((string) $line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '<br>';
             }
 
             // $msg is escaped here, not in render.php. The array entry is a pre-rendered

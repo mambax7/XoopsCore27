@@ -139,16 +139,18 @@ if (empty($mode) || $mode === 'queries') {
         $query_time = isset($q['query_time']) ? sprintf('%0.6f - ', $q['query_time']) : '';
 
         if (isset($q['error'])) {
-            // The SQL was already escaped; the database error message was not. It quotes
-            // the offending value, so a crafted input reaches this line unescaped.
+            // The SQL was escaped before, but with htmlentities() and no explicit
+            // charset -- it followed default_charset and needlessly entity-encoded every
+            // non-ASCII byte. The database error message was not escaped at all: it
+            // quotes the offending value, so crafted input reached this line verbatim.
             $ret .= '<tr class="' . $class . '"><td><span style="color:#ff0000;">' . $query_time
-                . htmlentities($sql, ENT_QUOTES | ENT_HTML5)
+                . htmlspecialchars((string) $sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
                 . '<br><strong>Error number:</strong> ' . (int) $q['errno']
                 . '<br><strong>Error message:</strong> '
                 . htmlspecialchars((string) $q['error'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
                 . '</span></td></tr>';
         } else {
-            $ret .= '<tr class="' . $class . '"><td>' . $query_time . htmlentities($sql, ENT_QUOTES | ENT_HTML5) . '</td></tr>';
+            $ret .= '<tr class="' . $class . '"><td>' . $query_time . htmlspecialchars((string) $sql, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td></tr>';
         }
 
         $class = ($class === 'odd') ? 'even' : 'odd';
@@ -175,7 +177,7 @@ if (empty($mode) || $mode === 'extra') {
     $ret .= '<table id="xo-logger-extra" class="outer"><tr><th colspan="2">' . _LOGGER_EXTRA . '</th></tr>';
     foreach ($this->extra as $ex) {
         $ret .= '<tr><td class="' . $class . '"><strong>';
-        $ret .= htmlspecialchars($ex['name'], ENT_QUOTES | ENT_HTML5) . ':</strong> ' . htmlspecialchars($ex['msg'], ENT_QUOTES | ENT_HTML5);
+        $ret .= htmlspecialchars((string) $ex['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ':</strong> ' . htmlspecialchars((string) $ex['msg'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $ret .= '</td></tr>';
         $class = ($class === 'odd') ? 'even' : 'odd';
     }
@@ -186,7 +188,7 @@ if (empty($mode) || $mode === 'timers') {
     $ret .= '<table id="xo-logger-timers" class="outer"><tr><th colspan="2">' . _LOGGER_TIMERS . '</th></tr>';
     foreach ($this->logstart as $k => $v) {
         $ret .= '<tr><td class="' . $class . '"><strong>';
-        $ret .= sprintf(_LOGGER_TIMETOLOAD, htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . '</strong>', '<span style="color:#ff0000;">' . sprintf('%.03f', $this->dumpTime($k)) . '</span>');
+        $ret .= sprintf(_LOGGER_TIMETOLOAD, htmlspecialchars((string) $k, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</strong>', '<span style="color:#ff0000;">' . sprintf('%.03f', $this->dumpTime($k)) . '</span>');
         $ret .= '</td></tr>';
         $class = ($class === 'odd') ? 'even' : 'odd';
     }
