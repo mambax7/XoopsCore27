@@ -31,6 +31,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # Tailwind 4 and DaisyUI 5 are MIGRATIONS, not upgrades. See the note at the
+    # bottom of this file before removing either entry.
+    ignore:
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "daisyui"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/htdocs/themes/xtailwind2"
@@ -47,3 +54,41 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "daisyui"
+        update-types: ["version-update:semver-major"]
+
+# -----------------------------------------------------------------------------
+# Why tailwindcss and daisyui majors are ignored
+# -----------------------------------------------------------------------------
+# Security updates are NOT affected: they come from vulnerability alerts and
+# ignore this file entirely, so a patched Tailwind still reaches us. Only routine
+# major version-bump PRs are suppressed.
+#
+# Moving the xtailwind themes from Tailwind 3 to 4 is a port, not a version bump.
+# Four separate things break, and the last one breaks silently:
+#
+#   1. The CLI is gone from the package. tailwindcss@3 ships
+#      bin: {tailwind, tailwindcss}; tailwindcss@4 ships no bin at all -- it moved
+#      to @tailwindcss/cli. Both themes build with
+#      "tailwindcss -i ./css/input.css -o ./css/styles.css", so `npm run build`
+#      fails at the first command.
+#   2. css/input.css opens with @tailwind base/components/utilities, replaced in
+#      v4 by @import "tailwindcss".
+#   3. tailwind.config.js is a CommonJS export. v4 is CSS-first and needs an
+#      explicit @config directive to read a JS config at all.
+#   4. tailwind.config.js carries a 30+ entry `safelist`, which v4 removed in
+#      favour of @source inline(...). Those classes are listed precisely because
+#      XoopsFormRendererTailwind emits them at REQUEST time, where the JIT scanner
+#      cannot see them. Losing the safelist does not fail the build -- it produces
+#      a stylesheet missing every form class, so forms render unstyled while CI
+#      stays green.
+#
+# DaisyUI 5 targets Tailwind 4 and is loaded with @plugin "daisyui" from CSS
+# rather than the JS plugins array, so the two have to move together.
+#
+# Remove these ignore entries as part of a deliberate port that updates the build
+# script, input.css, the config format and the safelist together.
+# -----------------------------------------------------------------------------
