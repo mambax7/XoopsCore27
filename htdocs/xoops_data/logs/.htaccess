@@ -1,0 +1,5 @@
+# Log files may contain query fragments, user ids and backtraces.
+# They must never be readable over the web.
+<FilesMatch "\.(log|txt)(\.[0-9]+)?$">
+Deny from all
+</FilesMatch>

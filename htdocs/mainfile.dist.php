@@ -73,13 +73,19 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
         }
     }
 
-    // Production: disable logging for performance
-    define('XOOPS_DB_LEGACY_LOG', false);
-    define('XOOPS_DEBUG', false);
+    // Debug settings are read from xoops_data/data/debug.php when that file exists.
+    // Copy debug.dist.php beside it to switch debugging on, instead of editing this
+    // file -- mainfile.php also holds your database credentials and is never replaced
+    // on upgrade, which is what made the old approach awkward.
+    //
+    // No debug.php present means production behaviour, exactly as before.
+    include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
+    $xoopsDebugConfig = xoops_getDebugConfig();
+    xoops_applyDebugConfig();
 
-    // Development/Staging: enable to track legacy usage
-    //    define('XOOPS_DB_LEGACY_LOG', true);
-    //    define('XOOPS_DEBUG', true); // Also shows E_USER_DEPRECATED notices
+    define('XOOPS_DB_LEGACY_LOG', !empty($xoopsDebugConfig['database']['legacy_log']));
+    define('XOOPS_DEBUG', [] !== $xoopsDebugConfig); // Also shows E_USER_DEPRECATED notices
+    unset($xoopsDebugConfig);
 
     // Secure file
     require XOOPS_VAR_PATH . '/data/secure.php';

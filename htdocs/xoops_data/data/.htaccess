@@ -1,3 +1,7 @@
 <Files "secure.php">
 Deny from all
 </Files>
+
+<Files "debug.php">
+Deny from all
+</Files>

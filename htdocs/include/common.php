@@ -157,16 +157,52 @@ $xoops->gzipCompression();
 
 /**
  * Start of Error Reporting.
+ *
+ * Two independent switches feed this:
+ *  - $xoopsConfig['debug_mode'], set in Admin -> Preferences, drives the in-page debug
+ *    output shown to administrators;
+ *  - xoops_data/data/debug.php, if present, drives file logging and PHP error settings.
+ *
+ * Either can be used alone. A site is normally left with debug_mode off and no
+ * debug.php, which is the historical behaviour and costs nothing.
+ *
+ * mainfile.php already loaded the config on a 2.7.3+ install; loading it again here is
+ * free (the result is cached) and is what lets an install whose mainfile.php predates
+ * 2.7.3 still get file logging, even though its XOOPS_DEBUG constant was fixed earlier.
  */
+include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
+$xoopsDebugConfig = xoops_getDebugConfig();
+
 if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     xoops_loadLanguage('logger');
     error_reporting(E_ALL);
     $xoopsLogger->enableRendering();
     $xoopsLogger->usePopup = ($xoopsConfig['debug_mode'] == 2);
+} elseif ([] !== $xoopsDebugConfig) {
+    // File logging without the in-page output: the logger must stay ACTIVE and errors
+    // must still be reported, or there is nothing for it to record. Rendering is left
+    // off deliberately, so enabling this cannot change what a visitor sees.
+    xoops_loadLanguage('logger');
+    xoops_applyDebugConfig();
 } else {
     error_reporting(0);
     $xoopsLogger->activated = false;
 }
+
+/**
+ * Attach the file logger when xoops_data/data/debug.php asks for it.
+ *
+ * It registers in the same seat DebugBar uses, so it receives every event the in-page
+ * output receives -- notices, warnings, errors, deprecations and SQL -- and records them
+ * even when the request dies before rendering anything.
+ */
+if ([] !== $xoopsDebugConfig && !empty($xoopsDebugConfig['log']['enabled'])) {
+    XoopsLoad::load('filelogger');
+    if (class_exists('XoopsFileLogger', false)) {
+        $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+    }
+}
+unset($xoopsDebugConfig);
 
 /**
  * Check Bad Ip Addressed against database and block bad ones, requires configs loaded
