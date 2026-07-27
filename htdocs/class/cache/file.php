@@ -211,9 +211,25 @@ class XoopsCacheFile extends XoopsCacheEngine
         $data = $this->file->read(true);
         if (!empty($data) && !empty($this->settings['serialize'])) {
             $data = stripslashes($data);
-            // $data = preg_replace('!s:(\d+):"(.*?)";!se', "'s:'.strlen('$2').':\"$2\";'", $data);
-            $data = preg_replace_callback('!s:(\d+):"(.*?)";!s', function ($m) { return 's:' . strlen($m[2]) . ':"' . $m[2] . '";'; }, $data);
-            $data = unserialize($data, ['allowed_classes' => false]);
+
+            // Try the payload as-is first. The length-repair pass below exists for
+            // magic_quotes-era data, but its pattern is non-greedy: a stored string
+            // containing '";' terminates the match early, so the rewritten length is
+            // too short and unserialize() then fails at an offset. That silently
+            // turned every affected cache entry into a permanent miss.
+            $unserialized = unserialize($data, ['allowed_classes' => false]);
+
+            if (false === $unserialized && 'b:0;' !== $data) {
+                // Genuinely malformed: fall back to the legacy length repair.
+                $repaired = preg_replace_callback(
+                    '!s:(\d+):"(.*?)";!s',
+                    static function ($m) { return 's:' . strlen($m[2]) . ':"' . $m[2] . '";'; },
+                    $data
+                );
+                $unserialized = unserialize($repaired, ['allowed_classes' => false]);
+            }
+
+            $data = $unserialized;
             if (is_array($data)) {
                 XoopsLoad::load('XoopsUtility');
                 $data = XoopsUtility::recursive('stripslashes', $data);
