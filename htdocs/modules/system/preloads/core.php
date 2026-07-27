@@ -60,7 +60,12 @@ class SystemCorePreload extends XoopsPreloadItem
      *
      * Turn it off with the "Track who is online?" preference under General Settings.
      *
-     * @param $args
+     * Never throws. Every failure path — an unloadable handler, a failed write, a corrupt
+     * table — is caught and downgraded to E_USER_WARNING, because this runs on EVERY request
+     * and statistics must never be able to take down a page. Hence no @throws tag: propagating
+     * an exception from here would be a defect, not part of the contract.
+     *
+     * @param  mixed $args event arguments (unused)
      * @return void
      */
     public static function eventCoreIncludeCommonEnd($args)
@@ -119,19 +124,19 @@ class SystemCorePreload extends XoopsPreloadItem
             // write() returns false rather than throwing on a failed INSERT/UPDATE, so a
             // read-only account or a corrupt table would otherwise stop tracking silently.
             if (false === $onlineHandler->write($uid, $uname, time(), $mid, $requestIp)) {
-                $GLOBALS['xoopsLogger']->handleError(
-                    E_USER_WARNING,
-                    'Online tracking: write to the online table failed',
-                    __FILE__,
-                    __LINE__
-                );
+                trigger_error('Online tracking: write to the online table failed', E_USER_WARNING);
             }
         } catch (\Throwable $e) {
-            $GLOBALS['xoopsLogger']->handleError(
-                E_USER_WARNING,
-                'Online tracking failed: ' . $e->getMessage(),
-                $e->getFile(),
-                $e->getLine()
+            // basename() only: the logger output is visible wherever debug rendering is on,
+            // and absolute server paths do not belong there.
+            trigger_error(
+                sprintf(
+                    'Online tracking failed: %s (%s:%d)',
+                    $e->getMessage(),
+                    basename($e->getFile()),
+                    $e->getLine()
+                ),
+                E_USER_WARNING
             );
         }
     }
