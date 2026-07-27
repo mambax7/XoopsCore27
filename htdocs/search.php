@@ -174,8 +174,29 @@ switch ($action) {
         foreach ($mids as $mid) {
             $mid = (int) $mid;
             if (in_array($mid, $available_modules)) {
-                $module  = $modules[$mid];
-                $results = $module->search($queries, $andor, 5, 0);
+                // $mids can come straight from the query string, and $modules only holds
+                // modules that are active AND searchable. A readable-but-not-searchable
+                // mid (e.g. mids[]=1) would otherwise index a missing key and yield null.
+                if (!isset($modules[$mid]) || !is_object($modules[$mid])) {
+                    continue;
+                }
+                $module = $modules[$mid];
+                // Resolve the label BEFORE the try: the catch must never dereference
+                // $module, or a failure there throws a second, uncaught error.
+                $moduleLabel = $module->getVar('dirname', 'n');
+                try {
+                    $results = $module->search($queries, $andor, 5, 0);
+                } catch (\Throwable $e) {
+                    // A broken module must not take down the whole search page.
+                    $GLOBALS['xoopsLogger']->handleError(
+                        E_USER_WARNING,
+                        sprintf('Search failed in module "%s": %s', $moduleLabel, $e->getMessage()),
+                        $e->getFile(),
+                        $e->getLine()
+                    );
+                    unset($module);
+                    continue;
+                }
                 if (empty($results)) {
                     $count = 0;
                 } else {
@@ -236,10 +257,39 @@ switch ($action) {
         $module_handler = xoops_getHandler('module');
         /** @var XoopsModule $module */
         $module      = $module_handler->get($mid);
-        $results = $module->search($queries, $andor, 20, $start, $uid);
+        // get() returns false for an unknown mid, and the mid arrives straight from the
+        // query string, so /search.php?action=showall&mid=999999 is reachable by anyone.
+        // Also refuse a module the current user may not read.
+        if (!is_object($module) || !in_array((int) $mid, $available_modules, true)) {
+            redirect_header(XOOPS_URL . '/search.php', 2, _SR_NOMATCH);
+        }
+        // Resolve the label BEFORE the try: the catch must never dereference $module,
+        // or a failure there throws a second, uncaught error.
+        $moduleLabel = $module->getVar('dirname', 'n');
+        try {
+            $results      = $module->search($queries, $andor, 20, $start, $uid);
+            $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
+        } catch (\Throwable $e) {
+            // A broken module must not take down the whole search page.
+            $GLOBALS['xoopsLogger']->handleError(
+                E_USER_WARNING,
+                sprintf('Search failed in module "%s": %s', $moduleLabel, $e->getMessage()),
+                $e->getFile(),
+                $e->getLine()
+            );
+            $results      = [];
+            $next_results = [];
+        }
+        // Assigned unconditionally. The showall block in system_search.tpl renders even when
+        // there are no results, so leaving these unset produced, on every empty showall page:
+        //   Undefined array key "showing" / "module_name"
+        //   Attempt to read property "value" on null   (Smarty's compiled tpl_vars access)
+        // The results branch below overwrites 'showing' with the real range.
+        $xoopsTpl->assign('module_name', $module->getVar('name'));
+        $xoopsTpl->assign('showing', '');
+
         $results ? $count = count($results) : $count = 0;
         if (is_array($results) && $count > 0) {
-            $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
             $next_count   = count($next_results);
             $has_next     = false;
             if (is_array($next_results) && $next_count == 1) {
@@ -258,7 +308,6 @@ switch ($action) {
                 $xoopsTpl->assign('keywords', $keywords);
             }
             $xoopsTpl->assign('showing', sprintf(_SR_SHOWING, $start + 1, $start + $count));
-            $xoopsTpl->assign('module_name', $module->getVar('name'));
             $results_arr = [];
             for ($i = 0; $i < $count; ++$i) {
                 if (isset($results[$i]['image']) && $results[$i]['image'] != '') {
