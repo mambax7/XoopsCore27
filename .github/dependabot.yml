@@ -8,3 +8,42 @@ updates:
       - "dependencies"
       - "github-actions"
     open-pull-requests-limit: 5
+
+  # npm here builds the Tailwind theme CSS -- none of it is served at runtime.
+  #
+  # Dependabot SECURITY updates ignore this file entirely: they fire from vulnerability
+  # alerts alone, which is why the nanoid/postcss advisory produced a PR while this config
+  # listed only github-actions. Routine VERSION updates do read this file, so without the
+  # entries below those lockfiles drift until an advisory forces them forward.
+  - package-ecosystem: "npm"
+    directory: "/htdocs/themes/xtailwind"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "javascript"
+    open-pull-requests-limit: 3
+    groups:
+      # Build tooling moves together; one grouped PR beats a stream of single bumps.
+      npm-build:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "npm"
+    directory: "/htdocs/themes/xtailwind2"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "javascript"
+    open-pull-requests-limit: 3
+    groups:
+      npm-build:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
