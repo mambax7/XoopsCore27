@@ -35,6 +35,7 @@ class XoopsModelStats extends XoopsModelAbstract
      */
     public function getCount(?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         $field   = '';
         $groupby = false;
         if (isset($criteria) && is_subclass_of($criteria, 'CriteriaElement')) {
@@ -75,6 +76,7 @@ class XoopsModelStats extends XoopsModelAbstract
      */
     public function getCounts(?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         $ret         = [];
         $sql_where   = '';
         $limit       = null;

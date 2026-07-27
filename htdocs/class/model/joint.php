@@ -69,6 +69,7 @@ class XoopsModelJoint extends XoopsModelAbstract
      */
     public function getByLink(?CriteriaElement $criteria = null, $fields = null, $asObject = true, $field_link = null, $field_object = null)
     {
+        $this->assertTableConfigured();
         $ret = [];
         if (!empty($field_link)) {
             $this->handler->field_link = $field_link;
@@ -139,6 +140,7 @@ class XoopsModelJoint extends XoopsModelAbstract
      */
     public function getCountByLink(?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         if (!$this->validateLinks()) {
             return null;
         }
@@ -164,6 +166,7 @@ class XoopsModelJoint extends XoopsModelAbstract
      */
     public function getCountsByLink(?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         if (!$this->validateLinks()) {
             return null;
         }
@@ -194,6 +197,7 @@ class XoopsModelJoint extends XoopsModelAbstract
      */
     public function updateByLink($data, ?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         if (!$this->validateLinks()) {
             return null;
         }
@@ -217,6 +221,7 @@ class XoopsModelJoint extends XoopsModelAbstract
      */
     public function deleteByLink(?CriteriaElement $criteria = null)
     {
+        $this->assertTableConfigured();
         if (!$this->validateLinks()) {
             return null;
         }
