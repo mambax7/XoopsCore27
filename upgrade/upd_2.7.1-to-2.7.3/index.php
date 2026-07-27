@@ -41,6 +41,12 @@ use Xoops\Upgrade\XoopsUpgrade;
  */
 class Upgrade_273 extends XoopsUpgrade
 {
+    /** Name of the composite index the recent-comments block needs. */
+    private const COMMENTS_INDEX = 'idx_status_created';
+
+    /** Its columns, in index order. Order matters: reversed, it does not serve the query. */
+    private const COMMENTS_INDEX_COLUMNS = ['com_status', 'com_created'];
+
     /**
      * @param XoopsMySQLDatabase $db      database connection
      * @param UpgradeControl     $control upgrade control instance
@@ -70,7 +76,8 @@ class Upgrade_273 extends XoopsUpgrade
      */
     public function check_commentsindex(): bool
     {
-        return $this->indexExists($this->db->prefix('xoopscomments'), 'idx_status_created');
+        return self::COMMENTS_INDEX_COLUMNS
+            === $this->indexColumns($this->db->prefix('xoopscomments'), self::COMMENTS_INDEX);
     }
 
     /**
@@ -84,10 +91,32 @@ class Upgrade_273 extends XoopsUpgrade
      */
     public function apply_commentsindex(): bool
     {
-        $table = $this->db->prefix('xoopscomments');
+        $table   = $this->db->prefix('xoopscomments');
+        $columns = $this->indexColumns($table, self::COMMENTS_INDEX);
 
-        if (!$this->indexExists($table, 'idx_status_created')) {
-            $sql = 'ALTER TABLE `' . $table . '` ADD INDEX `idx_status_created` (`com_status`, `com_created`)';
+        if (null === $columns) {
+            // Could not inspect the schema. Issuing DDL blindly here would either fail on a
+            // duplicate index or, worse, appear to succeed while the final verification
+            // still cannot confirm anything -- leaving the task pending on every rerun.
+            trigger_error(
+                'Upgrade 2.7.3: cannot read information_schema.STATISTICS, so the '
+                . '`' . self::COMMENTS_INDEX . '` index on `' . $table . '` cannot be verified '
+                . 'or safely created. Grant access, or add it by hand: ALTER TABLE `' . $table
+                . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (`com_status`, `com_created`);',
+                E_USER_WARNING
+            );
+
+            return false;
+        }
+
+        if (self::COMMENTS_INDEX_COLUMNS !== $columns) {
+            // An index of the right NAME but the wrong shape does not serve the query, so
+            // drop it before recreating. [] means simply absent, and nothing to drop.
+            if ([] !== $columns
+                && false === $this->db->exec('ALTER TABLE `' . $table . '` DROP INDEX `' . self::COMMENTS_INDEX . '`')) {
+                return false;
+            }
+            $sql = 'ALTER TABLE `' . $table . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (`com_status`, `com_created`)';
             if (false === $this->db->exec($sql)) {
                 return false;
             }
@@ -113,7 +142,10 @@ class Upgrade_273 extends XoopsUpgrade
             }
         }
 
-        return $this->indexExists($table, 'idx_status_created');
+        // Verified by SHAPE, not by name, and identical to check_commentsindex() -- a task
+        // that reports success on a weaker condition than its own check would re-queue for
+        // ever.
+        return self::COMMENTS_INDEX_COLUMNS === $this->indexColumns($table, self::COMMENTS_INDEX);
     }
 
     // =========================================================================
@@ -164,10 +196,51 @@ class Upgrade_273 extends XoopsUpgrade
     // =========================================================================
 
     /**
-     * Does $indexName exist on $table?
+     * Which columns does $indexName cover on $table, in index order?
      *
-     * Uses information_schema rather than SHOW INDEX so the answer is unambiguous, and
-     * returns false when the question cannot be answered — a check_ that cannot verify
+     * Three distinct answers, which the callers must not conflate:
+     *   null  the question could not be answered (information_schema restricted, proxy
+     *         rejected the query). NEVER treat this as "absent" and issue blind DDL.
+     *   []    the index does not exist.
+     *   [...] the column names, ordered by SEQ_IN_INDEX.
+     *
+     * Column order matters: an index named idx_status_created that happens to cover
+     * (com_created, com_status) does not serve "com_status = ? ORDER BY com_created" at
+     * all, so checking the name alone would report a performance fix that is not present.
+     *
+     * @param  string $table     fully prefixed table name
+     * @param  string $indexName index to inspect
+     * @return array<int, string>|null
+     */
+    protected function indexColumns(string $table, string $indexName): ?array
+    {
+        $sql = 'SELECT COLUMN_NAME FROM information_schema.STATISTICS'
+             . ' WHERE TABLE_SCHEMA = DATABASE()'
+             . " AND TABLE_NAME = '" . $this->db->escape($table) . "'"
+             . " AND INDEX_NAME = '" . $this->db->escape($indexName) . "'"
+             . ' ORDER BY SEQ_IN_INDEX';
+
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result)) {
+            return null;
+        }
+        // isResultSet() above already proved this is a result set, but static analysis
+        // cannot narrow through a helper, so state it explicitly.
+        /** @var mysqli_result $result */
+        $columns = [];
+        while (false !== ($row = $this->db->fetchRow($result))) {
+            if (is_array($row) && isset($row[0])) {
+                $columns[] = (string) $row[0];
+            }
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Does $indexName exist on $table, whatever its shape?
+     *
+     * Returns false when the question cannot be answered — a check_ that cannot verify
      * must not report success.
      *
      * @param  string $table     fully prefixed table name
@@ -176,21 +249,9 @@ class Upgrade_273 extends XoopsUpgrade
      */
     protected function indexExists(string $table, string $indexName): bool
     {
-        $sql = 'SELECT COUNT(*) FROM information_schema.STATISTICS'
-             . ' WHERE TABLE_SCHEMA = DATABASE()'
-             . " AND TABLE_NAME = '" . $this->db->escape($table) . "'"
-             . " AND INDEX_NAME = '" . $this->db->escape($indexName) . "'";
+        $columns = $this->indexColumns($table, $indexName);
 
-        $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
-            return false;
-        }
-        // isResultSet() above already proved this is a result set, but static analysis
-        // cannot narrow through a helper, so state it explicitly.
-        /** @var mysqli_result $result */
-        $row = $this->db->fetchRow($result);
-
-        return is_array($row) && (int)$row[0] > 0;
+        return is_array($columns) && [] !== $columns;
     }
 
     /**

@@ -94,12 +94,18 @@ class SystemCorePreload extends XoopsPreloadItem
             // run and the whole page would simply stop. With $optional = true the same
             // condition is an E_USER_WARNING and the call returns false, which the
             // is_object() check then absorbs.
-            // Annotated with the union xoops_getHandler() itself documents. Naming the
-            // concrete XoopsOnlineHandler here instead made static analysis collapse the
-            // union to false and report the is_object() check as always failing.
-            /** @var XoopsObjectHandler|false $onlineHandler */
             $onlineHandler = xoops_getHandler('online', true);
-            if (!is_object($onlineHandler)) {
+
+            // instanceof rather than is_object(): write() and gc() below are declared on
+            // XoopsOnlineHandler, not on the XoopsObjectHandler base that xoops_getHandler()
+            // is documented to return, so only the concrete type makes this call safe. It
+            // also removes the need for a @var annotation -- annotating the base type left
+            // the calls unresolvable, and annotating the concrete type made the false half
+            // of the union unresolvable instead.
+            //
+            // Safe even when the class was never loaded: instanceof against an undefined
+            // class is simply false, and false is what $optional = true returns.
+            if (!($onlineHandler instanceof XoopsOnlineHandler)) {
                 return;
             }
 
@@ -136,15 +142,25 @@ class SystemCorePreload extends XoopsPreloadItem
             // rendered whenever debug display is on. The class plus file:line is enough to
             // find the fault; online tracking is statistics, so losing the detail here
             // costs nothing that matters.
-            trigger_error(
-                sprintf(
-                    'Online tracking failed: %s at %s:%d',
-                    get_class($e),
-                    basename($e->getFile()),
-                    $e->getLine()
-                ),
-                E_USER_WARNING
-            );
+            //
+            // Nested try: a module or framework may install an error handler that converts
+            // E_USER_WARNING into an ErrorException. Without this, reporting the failure
+            // would itself throw -- from the catch block, where nothing else can contain it
+            // -- turning an optional statistics failure into an uncaught exception on every
+            // single request. That is precisely the outage this method exists to prevent.
+            try {
+                trigger_error(
+                    sprintf(
+                        'Online tracking failed: %s at %s:%d',
+                        get_class($e),
+                        basename($e->getFile()),
+                        $e->getLine()
+                    ),
+                    E_USER_WARNING
+                );
+            } catch (\Throwable $ignored) {
+                // Nothing left to do: reporting the failure has itself failed.
+            }
         }
     }
 

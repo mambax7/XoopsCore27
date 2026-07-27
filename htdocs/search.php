@@ -186,6 +186,14 @@ switch ($action) {
                 $moduleLabel = (string) $module->getVar('dirname', 'n');
                 try {
                     $results = $module->search($queries, $andor, 5, 0);
+                    // XoopsModule::search() returns mixed -- it hands off to whatever the
+                    // module's search callback returns. A truthy non-array (true, an error
+                    // string, an object) would reach count() below, which is a TypeError on
+                    // PHP 8 raised OUTSIDE this try, defeating the whole guard. Normalise
+                    // here, where a misbehaving module is still contained.
+                    if (!is_array($results)) {
+                        $results = [];
+                    }
                 } catch (\Throwable $e) {
                     // A broken module must not take down the whole search page.
                     $GLOBALS['xoopsLogger']->handleError(
@@ -276,6 +284,14 @@ switch ($action) {
         try {
             $results      = $module->search($queries, $andor, 20, $start, $uid);
             $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
+            // search() returns mixed. A truthy non-array would reach count() further down,
+            // outside this try, and a TypeError there would bypass the guard entirely.
+            if (!is_array($results)) {
+                $results = [];
+            }
+            if (!is_array($next_results)) {
+                $next_results = [];
+            }
         } catch (\Throwable $e) {
             // A broken module must not take down the whole search page.
             $GLOBALS['xoopsLogger']->handleError(
