@@ -53,6 +53,20 @@ class XoopsFileLogger
 
     private const DEFAULT_FILENAME = 'debug.log';
 
+    /**
+     * Windows treats these stems as devices whatever extension follows: "NUL.log" opens
+     * the null device and silently swallows every entry, "COM1.log" talks to a serial
+     * port. They satisfy FILENAME_PATTERN, so they need rejecting separately.
+     */
+    private const RESERVED_STEMS = [
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9',
+    ];
+
+    /** Cap on any single field before sanitising, so a huge value cannot exhaust memory. */
+    private const MAX_FIELD = 8192;
+
     /** Rotation bounds. An unbounded max_files would spin the rotation loop for ever. */
     private const MIN_SIZE  = 65536;        // 64 KB
     private const MAX_SIZE  = 536870912;    // 512 MB
@@ -105,8 +119,23 @@ class XoopsFileLogger
         if (1 !== preg_match(self::FILENAME_PATTERN, $name)) {
             $name = self::DEFAULT_FILENAME;
         }
+        if (in_array(strtoupper((string) strtok($name, '.')), self::RESERVED_STEMS, true)) {
+            $name = self::DEFAULT_FILENAME;
+        }
 
-        $this->file     = XOOPS_VAR_PATH . '/logs/' . $name;
+        $this->file = XOOPS_VAR_PATH . '/logs/' . $name;
+
+        // Fail CLOSED when the log directory is reachable over the web.
+        //
+        // The shipped .htaccess protects Apache only; on nginx, IIS, or Apache with
+        // AllowOverride None it does nothing, and /xoops_data/logs/debug.log is then a
+        // plain static file full of SQL, user ids and paths. Documentation alone is not a
+        // control, so logging is refused unless the administrator has either moved
+        // xoops_data outside the document root -- the right answer -- or explicitly
+        // accepted the risk in debug.php.
+        if (empty($config['allow_web_accessible_log']) && $this->isBelowDocumentRoot()) {
+            $this->writeFailed = true;
+        }
         $this->maxSize  = $this->clamp($config['max_size'] ?? 8388608, self::MIN_SIZE, self::MAX_SIZE);
         $this->maxFiles = $this->clamp($config['max_files'] ?? 5, 1, self::MAX_FILES);
 
@@ -117,6 +146,43 @@ class XoopsFileLogger
         $this->backtrace             = (bool) ($config['backtrace'] ?? true);
         $this->backtraceLimit        = $this->clamp($config['backtrace_limit'] ?? 12, 1, 50);
         $this->requestId             = substr(md5(uniqid('', true)), 0, 8);
+    }
+
+    /**
+     * Cut a single field down to MAX_FIELD before any further processing.
+     *
+     * @param  string $value
+     * @return string
+     */
+    protected function trim($value)
+    {
+        return strlen($value) > self::MAX_FIELD
+            ? substr($value, 0, self::MAX_FIELD) . '...[' . strlen($value) . ' bytes]'
+            : $value;
+    }
+
+    /**
+     * Does the log directory sit inside the served document root?
+     *
+     * XOOPS_ROOT_PATH *is* the document root by definition, so a log directory beneath it
+     * is web-reachable unless the server is configured to refuse it.
+     *
+     * @return bool true when the log would be publicly fetchable on an unprotected server
+     */
+    protected function isBelowDocumentRoot()
+    {
+        if (!defined('XOOPS_ROOT_PATH')) {
+            return false;
+        }
+        $root = realpath(XOOPS_ROOT_PATH);
+        $dir  = realpath(dirname($this->file)) ?: realpath(XOOPS_VAR_PATH);
+        if (!is_string($root) || !is_string($dir) || '' === $root || '' === $dir) {
+            return false;
+        }
+        $root = rtrim(str_replace('\\', '/', $root), '/') . '/';
+        $dir  = rtrim(str_replace('\\', '/', $dir), '/') . '/';
+
+        return 0 === stripos($dir, $root);
     }
 
     /**
@@ -212,7 +278,10 @@ class XoopsFileLogger
             $this->currentUid()
         );
 
-        $message = $this->sanitize($message);
+        // Truncate BEFORE sanitising. MAX_ENTRY alone was not enough: a 16 MB SQL string
+        // was regex-processed and concatenated first, and the peak allocation of that
+        // exhausted the memory limit long before the finished entry could be trimmed.
+        $message = $this->sanitize($this->trim($message));
         $body    = '  ' . $message;
 
         $detail = [];
@@ -220,7 +289,7 @@ class XoopsFileLogger
             if (!isset($context[$key]) || '' === $context[$key] || !is_scalar($context[$key])) {
                 continue;
             }
-            $value = $this->sanitize((string) $context[$key]);
+            $value = $this->sanitize($this->trim((string) $context[$key]));
             // addQuery() passes the SQL as BOTH the message and context['sql']; writing it
             // twice doubles the file size and the time spent holding the lock.
             if ('sql' === $key && $value === $message) {
@@ -354,14 +423,27 @@ class XoopsFileLogger
         }
 
         // A URL-borne session id has to go even before session_start() has run, when
-        // session_id() is still empty and the hash replacement below cannot match it.
+        // session_id() is still empty and the hash replacement in sanitize() cannot match.
+        //
+        // Redacting on the RAW string was not enough: PHP decodes query keys, so
+        // "?PHP%53ESSID=secret" is a live session id that a literal-name regex walks
+        // straight past. The query is parsed and rebuilt from DECODED keys instead, which
+        // catches every encoding of the name. Rebuilding normalises the encoding, which is
+        // of no consequence in a log line.
         $name = function_exists('session_name') ? (string) session_name() : 'PHPSESSID';
-        if ('' !== $name) {
-            $uri = preg_replace(
-                '/([?&])' . preg_quote($name, '/') . '=[^&]*/i',
-                '$1' . $name . '=sid%23redacted',
-                $uri
-            );
+        $split = explode('?', $uri, 2);
+        if ('' !== $name && isset($split[1]) && '' !== $split[1]) {
+            parse_str($split[1], $params);
+            $touched = false;
+            foreach (array_keys($params) as $key) {
+                if (0 === strcasecmp((string) $key, $name)) {
+                    $params[$key] = 'sid#redacted';
+                    $touched      = true;
+                }
+            }
+            if ($touched) {
+                $uri = $split[0] . '?' . urldecode(http_build_query($params));
+            }
         }
 
         return substr((string) $uri, 0, 300);

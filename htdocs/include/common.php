@@ -74,6 +74,30 @@ $xoopsLogger->startTime();
 $xoopsLogger->startTime('XOOPS Boot');
 
 /**
+ * Attach the file logger IMMEDIATELY when xoops_data/data/debug.php asks for it.
+ *
+ * Deliberately here and not beside the debug_mode block further down: everything between
+ * the two points -- the database connection, config loading, the theme resolve -- is
+ * where a broken site actually fails, and those are precisely the errors and queries
+ * worth having. Registering after them meant the most useful diagnostics were never
+ * written.
+ *
+ * Only XOOPS_VAR_PATH is required, which mainfile.php has already defined. The logger
+ * takes the same seat DebugBar uses, so it receives notices, warnings, errors,
+ * deprecations and SQL with no change to any producer. With no debug.php this is one
+ * file_exists() and nothing more.
+ */
+include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
+$xoopsDebugConfig = xoops_getDebugConfig();
+if ([] !== $xoopsDebugConfig && !empty($xoopsDebugConfig['log']['enabled'])) {
+    XoopsLoad::load('filelogger');
+    if (class_exists('XoopsFileLogger', false)) {
+        $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+    }
+}
+unset($xoopsDebugConfig);
+
+/**
  * Include Required Files
  */
 include_once $xoops->path('kernel/object.php');
@@ -199,20 +223,6 @@ if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     $xoopsLogger->activated = false;
 }
 
-/**
- * Attach the file logger when xoops_data/data/debug.php asks for it.
- *
- * It registers in the same seat DebugBar uses, so it receives every event the in-page
- * output receives -- notices, warnings, errors, deprecations and SQL -- and records them
- * even when the request dies before rendering anything.
- */
-if ([] !== $xoopsDebugConfig && !empty($xoopsDebugConfig['log']['enabled'])) {
-    XoopsLoad::load('filelogger');
-    if (class_exists('XoopsFileLogger', false)) {
-        $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
-    }
-}
-unset($xoopsDebugConfig);
 
 /**
  * Check Bad Ip Addressed against database and block bad ones, requires configs loaded

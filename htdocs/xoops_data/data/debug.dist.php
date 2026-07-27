@@ -87,7 +87,18 @@ return [
     'log' => [
         'enabled' => true,
 
+        // Logging REFUSES to run while xoops_data sits inside the document root, because
+        // the log would then be a plain fetchable file on any server where .htaccess is
+        // ignored — nginx, IIS, or Apache with AllowOverride None. Documentation is not a
+        // control, so this fails closed.
+        //
+        // The right fix is to move xoops_data outside the web root. If instead you have
+        // added a server rule yourself AND verified it by requesting the log URL, set
+        // this to true to accept the remaining risk.
+        'allow_web_accessible_log' => false,
+
         // Written to xoops_data/logs/. Rotated files get .1, .2 … suffixes.
+        // Must be a plain "*.log" name; anything else falls back to debug.log.
         'file' => 'debug.log',
 
         // Rotate once the file passes this size, keeping this many older files.

@@ -84,6 +84,13 @@ if (!function_exists('xoops_getDebugConfig')) {
         $loaded['log']      = isset($loaded['log']) && is_array($loaded['log']) ? $loaded['log'] : [];
         $loaded['database'] = isset($loaded['database']) && is_array($loaded['database']) ? $loaded['database'] : [];
 
+        // The nested switches need the same strict treatment as the top-level one.
+        // Downstream reads them with !empty(), and the string 'false' is not empty, so
+        // 'enabled' => 'false' switched logging ON -- precisely the trap closed above,
+        // one level further down.
+        $loaded['log']['enabled']         = true === ($loaded['log']['enabled'] ?? false);
+        $loaded['database']['legacy_log'] = true === ($loaded['database']['legacy_log'] ?? false);
+
         $config = $loaded;
 
         return $config;
