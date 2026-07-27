@@ -217,7 +217,19 @@ class XoopsCacheFile extends XoopsCacheEngine
             // containing '";' terminates the match early, so the rewritten length is
             // too short and unserialize() then fails at an offset. That silently
             // turned every affected cache entry into a permanent miss.
-            $unserialized = unserialize($data, ['allowed_classes' => false]);
+            //
+            // This first parse is SPECULATIVE, so its failure is expected for genuine
+            // legacy payloads and must not reach the error log. unserialize() emits an
+            // E_WARNING on malformed input, so swallow it for the duration of the probe
+            // only — the fallback below runs unguarded and still reports real problems.
+            set_error_handler(static function () {
+                return true;
+            }, E_WARNING | E_NOTICE);
+            try {
+                $unserialized = unserialize($data, ['allowed_classes' => false]);
+            } finally {
+                restore_error_handler();
+            }
 
             if (false === $unserialized && 'b:0;' !== $data) {
                 // Genuinely malformed: fall back to the legacy length repair.
