@@ -183,7 +183,11 @@ switch ($action) {
                 $module = $modules[$mid];
                 // Resolve the label BEFORE the try: the catch must never dereference
                 // $module, or a failure there throws a second, uncaught error.
-                $moduleLabel = (string) $module->getVar('dirname', 'n');
+                $moduleDirname = $module->getVar('dirname', 'n');
+                // No blind cast: getVar() can return an array, and converting that
+                // raises a notice here, BEFORE the try -- which an ErrorException
+                // handler would turn into an escape from the very guard below.
+                $moduleLabel = is_scalar($moduleDirname) ? (string) $moduleDirname : 'mid:' . $mid;
                 try {
                     $results = $module->search($queries, $andor, 5, 0);
                     // XoopsModule::search() returns mixed -- it hands off to whatever the
@@ -194,6 +198,11 @@ switch ($action) {
                     if (!is_array($results)) {
                         $results = [];
                     }
+                    // Per ELEMENT too. Normalising only the outer array still let a
+                    // string or object element reach $results[$i]['link'] further
+                    // down -- outside this try -- which is a TypeError on PHP 8 and
+                    // defeated the guard just as completely.
+                    $results = array_values(array_filter($results, 'is_array'));
                 } catch (\Throwable $e) {
                     // A broken module must not take down the whole search page.
                     $GLOBALS['xoopsLogger']->handleError(
@@ -280,7 +289,11 @@ switch ($action) {
         }
         // Resolve the label BEFORE the try: the catch must never dereference $module,
         // or a failure there throws a second, uncaught error.
-        $moduleLabel = (string) $module->getVar('dirname', 'n');
+        $moduleDirname = $module->getVar('dirname', 'n');
+                // No blind cast: getVar() can return an array, and converting that
+                // raises a notice here, BEFORE the try -- which an ErrorException
+                // handler would turn into an escape from the very guard below.
+                $moduleLabel = is_scalar($moduleDirname) ? (string) $moduleDirname : 'mid:' . $mid;
         try {
             $next_results = [];
             $results      = $module->search($queries, $andor, 20, $start, $uid);
@@ -289,6 +302,8 @@ switch ($action) {
             if (!is_array($results)) {
                 $results = [];
             }
+            // Per element too -- see the results route above.
+            $results = array_values(array_filter($results, 'is_array'));
             // The next-page probe exists only to decide whether to render a "next" link,
             // which is meaningless when this page is already empty. Running it
             // unconditionally doubled the module and database work on every no-match

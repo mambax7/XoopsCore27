@@ -372,7 +372,10 @@ class XoopsLogger
                 foreach ($trace as $step) {
                     if (isset($step['file'])) {
                         echo htmlspecialchars($this->sanitizePath($step['file']), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                        echo ' (' . $step['line'] . ")\n<br>";
+                        // The line number is escaped too. Engine-generated traces give an
+                        // int, but handleError() is public and $trace is untyped, so a
+                        // caller can supply any string here.
+                        echo ' (' . htmlspecialchars((string) ($step['line'] ?? '?'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ")\n<br>";
                     }
                 }
                 echo '</div>';

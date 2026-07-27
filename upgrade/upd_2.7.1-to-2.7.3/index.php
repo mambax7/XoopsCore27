@@ -104,26 +104,37 @@ class Upgrade_273 extends XoopsUpgrade
             // Could not inspect the schema. Issuing DDL blindly here would either fail on a
             // duplicate index or, worse, appear to succeed while the final verification
             // still cannot confirm anything -- leaving the task pending on every rerun.
-            trigger_error(
-                'Upgrade 2.7.3: cannot read information_schema.STATISTICS, so the '
-                . '`' . self::COMMENTS_INDEX . '` index on `' . $table . '` cannot be verified '
-                . 'or safely created. Grant access, or add it by hand: ALTER TABLE `' . $table
-                . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (' . $columnList . ');',
-                E_USER_WARNING
-            );
+            // Contained: a handler that converts E_USER_WARNING into an ErrorException
+            // would otherwise throw out of a method whose contract is to return false,
+            // aborting the upgrade over a diagnostic message.
+            try {
+                trigger_error(
+                    'Upgrade 2.7.3: cannot read information_schema.STATISTICS, so the '
+                    . '`' . self::COMMENTS_INDEX . '` index on `' . $table . '` cannot be verified '
+                    . 'or safely created. Grant access, or add it by hand: ALTER TABLE `' . $table
+                    . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (' . $columnList . ');',
+                    E_USER_WARNING
+                );
+            } catch (\Throwable $ignored) {
+            }
 
             return false;
         }
 
         if (self::COMMENTS_INDEX_COLUMNS !== $columns) {
             // An index of the right NAME but the wrong shape does not serve the query, so
-            // drop it before recreating. [] means simply absent, and nothing to drop.
-            if ([] !== $columns
+            // drop it before recreating. The name-only check matters here: indexColumns()
+            // filters by shape, so a UNIQUE or prefixed index reports as absent, and
+            // skipping the drop would make ADD INDEX fail on a duplicate name.
+            if ($this->indexExists($table, self::COMMENTS_INDEX)
                 && false === $this->db->exec('ALTER TABLE `' . $table . '` DROP INDEX `' . self::COMMENTS_INDEX . '`')) {
                 return false;
             }
             if (false === $this->db->exec($addIndex)) {
-                return false;
+                // A concurrent applier may have created it between the inspection above and
+                // this statement. Re-verify rather than reporting failure for a schema that
+                // is now correct.
+                return self::COMMENTS_INDEX_COLUMNS === $this->indexColumns($table, self::COMMENTS_INDEX);
             }
         }
 
@@ -133,17 +144,22 @@ class Upgrade_273 extends XoopsUpgrade
             // schema then differs from a fresh install, so say so loudly rather than silently.
             if (false === $this->db->exec('ALTER TABLE `' . $table . '` DROP INDEX `com_status`')
                 || $this->indexExists($table, 'com_status')) {
-                trigger_error(
-                    sprintf(
-                        'Upgrade 2.7.3: could not drop the redundant `com_status` index on `%s`. '
-                        . 'The new idx_status_created index is in place and the site is correct, '
-                        . 'but this table now differs from a fresh install. Drop it by hand: '
-                        . 'ALTER TABLE `%s` DROP INDEX `com_status`;',
-                        $table,
-                        $table
-                    ),
-                    E_USER_WARNING
-                );
+                // Contained for the same reason as above: this is a diagnostic, and the
+                // task has already succeeded at what it exists to do.
+                try {
+                    trigger_error(
+                        sprintf(
+                            'Upgrade 2.7.3: could not drop the redundant `com_status` index on `%s`. '
+                            . 'The new idx_status_created index is in place and the site is correct, '
+                            . 'but this table now differs from a fresh install. Drop it by hand: '
+                            . 'ALTER TABLE `%s` DROP INDEX `com_status`;',
+                            $table,
+                            $table
+                        ),
+                        E_USER_WARNING
+                    );
+                } catch (\Throwable $ignored) {
+                }
             }
         }
 
@@ -219,10 +235,20 @@ class Upgrade_273 extends XoopsUpgrade
      */
     protected function indexColumns(string $table, string $indexName): ?array
     {
+        // NON_UNIQUE = 1 and INDEX_TYPE = BTREE are part of the shape, not decoration.
+        // A UNIQUE index of the same name over exactly these columns would otherwise be
+        // accepted, silently imposing a constraint that REJECTS any two comments sharing
+        // (com_status, com_created) -- data loss dressed up as a performance fix. SUB_PART
+        // must be NULL too: a prefixed index like (com_status(4), com_created) does not
+        // serve the query. Anything not matching is reported as the wrong shape, so
+        // apply_ drops and recreates it.
         $sql = 'SELECT COLUMN_NAME FROM information_schema.STATISTICS'
              . ' WHERE TABLE_SCHEMA = DATABASE()'
              . " AND TABLE_NAME = '" . $this->db->escape($table) . "'"
              . " AND INDEX_NAME = '" . $this->db->escape($indexName) . "'"
+             . ' AND NON_UNIQUE = 1'
+             . " AND INDEX_TYPE = 'BTREE'"
+             . ' AND SUB_PART IS NULL'
              . ' ORDER BY SEQ_IN_INDEX';
 
         $result = $this->db->query($sql);
@@ -254,9 +280,23 @@ class Upgrade_273 extends XoopsUpgrade
      */
     protected function indexExists(string $table, string $indexName): bool
     {
-        $columns = $this->indexColumns($table, $indexName);
+        // Deliberately NOT built on indexColumns(): that one filters by shape, so a UNIQUE
+        // or prefixed index of the same name reports as absent. This answers the different
+        // question "is the NAME taken", which is what decides whether a DROP is needed
+        // before recreating -- without it, ADD INDEX would fail on a duplicate name.
+        $sql = 'SELECT COUNT(*) FROM information_schema.STATISTICS'
+             . ' WHERE TABLE_SCHEMA = DATABASE()'
+             . " AND TABLE_NAME = '" . $this->db->escape($table) . "'"
+             . " AND INDEX_NAME = '" . $this->db->escape($indexName) . "'";
 
-        return is_array($columns) && [] !== $columns;
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result)) {
+            return false;
+        }
+        /** @var mysqli_result $result */
+        $row = $this->db->fetchRow($result);
+
+        return is_array($row) && (int) $row[0] > 0;
     }
 
     /**
