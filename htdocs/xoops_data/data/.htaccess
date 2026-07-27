@@ -1,8 +1,10 @@
 # secure.php holds the database credentials; debug.php controls error display and
-# logging. Neither may ever be served.
+# logging. Neither may ever be served -- nor the editor leftovers that copying and
+# hand-editing a dist file reliably produces (debug.php~, debug.php.bak, .debug.php.swp),
+# which most servers hand out as plain text.
 #
 # Apache only -- on nginx or IIS these directives are ignored.
-<FilesMatch "^(secure|debug)\.php$">
+<FilesMatch "^\.?(secure|debug)\.php($|[~.])">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

@@ -119,7 +119,8 @@ class XoopsFileLogger
         if (1 !== preg_match(self::FILENAME_PATTERN, $name)) {
             $name = self::DEFAULT_FILENAME;
         }
-        if (in_array(strtoupper((string) strtok($name, '.')), self::RESERVED_STEMS, true)) {
+        $stem = strtoupper((string) strstr($name, '.', true));
+        if (in_array($stem, self::RESERVED_STEMS, true)) {
             $name = self::DEFAULT_FILENAME;
         }
 
@@ -140,7 +141,12 @@ class XoopsFileLogger
         $this->maxFiles = $this->clamp($config['max_files'] ?? 5, 1, self::MAX_FILES);
 
         $channels       = $config['channels'] ?? ['messages', 'Queries', 'Deprecated'];
-        $this->channels = is_array($channels) ? array_values(array_filter($channels, 'is_string')) : [];
+        // Compared case-insensitively: debug.php is hand-edited and the channel names
+        // are themselves inconsistent ( messages lowercase, Queries/Blocks/Extra/
+        // Deprecated capitalised ), so a reasonable-looking 'queries' would otherwise
+        // produce a logger that silently records nothing.
+        $channels       = is_array($channels) ? array_filter($channels, 'is_string') : [];
+        $this->channels = array_values(array_map('strtolower', $channels));
 
         $this->queriesWithErrorsOnly = (bool) ($config['queries_with_errors_only'] ?? true);
         $this->backtrace             = (bool) ($config['backtrace'] ?? true);
@@ -171,13 +177,26 @@ class XoopsFileLogger
      */
     protected function isBelowDocumentRoot()
     {
+        // Fails CLOSED. Every branch that cannot answer the question returns true, i.e.
+        // "assume web-reachable", so logging is refused rather than permitted. Returning
+        // false here would have been a fail-OPEN default, made worse by write() creating
+        // the directory recursively — an unresolvable path would have produced a fresh,
+        // unprotected log directory.
         if (!defined('XOOPS_ROOT_PATH')) {
-            return false;
+            return true;
         }
         $root = realpath(XOOPS_ROOT_PATH);
-        $dir  = realpath(dirname($this->file)) ?: realpath(XOOPS_VAR_PATH);
-        if (!is_string($root) || !is_string($dir) || '' === $root || '' === $dir) {
-            return false;
+        if (false === $root || '' === $root) {
+            return true;
+        }
+        // The log directory may legitimately not exist yet on a first run, so fall back
+        // to its parent and then to XOOPS_VAR_PATH before giving up.
+        $dir = realpath(dirname($this->file));
+        if (false === $dir) {
+            $dir = realpath(XOOPS_VAR_PATH);
+        }
+        if (false === $dir || '' === $dir) {
+            return true;
         }
         $root = rtrim(str_replace('\\', '/', $root), '/') . '/';
         $dir  = rtrim(str_replace('\\', '/', $dir), '/') . '/';
@@ -215,7 +234,7 @@ class XoopsFileLogger
         }
 
         $channel = (string) ($context['channel'] ?? 'messages');
-        if (!in_array($channel, $this->channels, true)) {
+        if (!in_array(strtolower($channel), $this->channels, true)) {
             return;
         }
         if ('Queries' === $channel) {
@@ -406,7 +425,11 @@ class XoopsFileLogger
             }
         }
 
-        return (string) $text;
+        // Every untrusted value reaches the file through here, so this is the one place
+        // to strip control characters. A newline inside a message, a URI or an SQL
+        // fragment would otherwise let a crafted request forge additional log lines --
+        // the entry structure below is the only thing allowed to introduce them.
+        return (string) preg_replace('/[\x00-\x08\x0A-\x1F\x7F]/', ' ', (string) $text);
     }
 
     /**
@@ -418,19 +441,31 @@ class XoopsFileLogger
             return 'cli';
         }
         $uri = $_SERVER['REQUEST_URI'] ?? '-';
-        if (!is_string($uri)) {
-            return '-';
-        }
 
-        // A URL-borne session id has to go even before session_start() has run, when
-        // session_id() is still empty and the hash replacement in sanitize() cannot match.
-        //
-        // Redacting on the RAW string was not enough: PHP decodes query keys, so
-        // "?PHP%53ESSID=secret" is a live session id that a literal-name regex walks
-        // straight past. The query is parsed and rebuilt from DECODED keys instead, which
-        // catches every encoding of the name. Rebuilding normalises the encoding, which is
-        // of no consequence in a log line.
-        $name = function_exists('session_name') ? (string) session_name() : 'PHPSESSID';
+        return is_string($uri) ? $this->redactSessionId($uri) : '-';
+    }
+
+    /**
+     * Remove a URL-borne session id from a request URI.
+     *
+     * Split out from currentUri() so it can be exercised directly: currentUri() short
+     * circuits to 'cli' under a CLI SAPI, and a test suite runs under exactly that, so
+     * asserting on its output would confirm nothing at all.
+     *
+     * This has to work even before session_start() has run, when session_id() is still
+     * empty and the hash replacement in sanitize() has nothing to match.
+     *
+     * Redacting the RAW string was not enough: PHP decodes query keys, so
+     * "?PHP%53ESSID=secret" carries a live session id that a literal-name regex walks
+     * straight past. The query is parsed and rebuilt from DECODED keys instead, which
+     * catches every encoding of the name.
+     *
+     * @param  string $uri raw request uri
+     * @return string
+     */
+    protected function redactSessionId($uri)
+    {
+        $name  = function_exists('session_name') ? (string) session_name() : 'PHPSESSID';
         $split = explode('?', $uri, 2);
         if ('' !== $name && isset($split[1]) && '' !== $split[1]) {
             parse_str($split[1], $params);
@@ -442,7 +477,11 @@ class XoopsFileLogger
                 }
             }
             if ($touched) {
-                $uri = $split[0] . '?' . urldecode(http_build_query($params));
+                // NOT run through urldecode(). http_build_query() percent-encodes its
+                // output, and decoding it again reinstates every raw byte of the original
+                // attacker-supplied query -- including %0A, which lets a crafted request
+                // forge entire log entries. The encoded form is less pretty and safe.
+                $uri = $split[0] . '?' . http_build_query($params);
             }
         }
 
@@ -522,12 +561,23 @@ class XoopsFileLogger
             return;
         }
 
-        @unlink($this->file . '.' . $this->maxFiles);
+        // Failures are tolerated but not ignored. Losing an old rotation costs nothing,
+        // so those are best-effort; failing to move the LIVE file is different -- the
+        // next append would go straight back onto an already-oversized file -- so that
+        // one disables the logger for the request rather than growing without bound.
+        if (is_file($this->file . '.' . $this->maxFiles) && !@unlink($this->file . '.' . $this->maxFiles)) {
+            $this->writeFailed = true;
+
+            return;
+        }
         for ($i = $this->maxFiles - 1; $i >= 1; --$i) {
             if (is_file($this->file . '.' . $i)) {
+                // Best effort: an unmovable intermediate rotation just stays where it is.
                 @rename($this->file . '.' . $i, $this->file . '.' . ($i + 1));
             }
         }
-        @rename($this->file, $this->file . '.1');
+        if (!@rename($this->file, $this->file . '.1')) {
+            $this->writeFailed = true;
+        }
     }
 }

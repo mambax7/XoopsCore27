@@ -77,6 +77,14 @@ return [
     'display_errors'  => true,
     'error_reporting' => E_ALL,
 
+    'database' => [
+        // Sets XOOPS_DB_LEGACY_LOG, which makes the database layer report legacy call
+        // patterns (deprecated Criteria forms, queryF() for writes, and similar). Useful
+        // when modernising a module, noisy otherwise — it is off in the production
+        // mainfile.php default for exactly that reason.
+        'legacy_log' => false,
+    ],
+
     /*
      * Persistent log file.
      *

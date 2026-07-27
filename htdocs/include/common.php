@@ -89,10 +89,19 @@ $xoopsLogger->startTime('XOOPS Boot');
  */
 include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
 $xoopsDebugConfig = xoops_getDebugConfig();
-if ([] !== $xoopsDebugConfig && !empty($xoopsDebugConfig['log']['enabled'])) {
-    XoopsLoad::load('filelogger');
-    if (class_exists('XoopsFileLogger', false)) {
-        $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+if ([] !== $xoopsDebugConfig) {
+    // Applied HERE as well as further down. On an install whose mainfile.php predates
+    // 2.7.3 nothing has raised error_reporting yet, so php.ini still governs -- and if
+    // that is restrictive, handleError() discards the early errors before any logger sees
+    // them. Attaching the logger early is pointless unless reporting is raised with it.
+    // The call is idempotent and the config is cached, so repeating it costs nothing.
+    xoops_applyDebugConfig();
+
+    if (!empty($xoopsDebugConfig['log']['enabled'])) {
+        XoopsLoad::load('filelogger');
+        if (class_exists('XoopsFileLogger', false)) {
+            $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+        }
     }
 }
 unset($xoopsDebugConfig);
@@ -190,11 +199,11 @@ $xoops->gzipCompression();
  * Either can be used alone. A site is normally left with debug_mode off and no
  * debug.php, which is the historical behaviour and costs nothing.
  *
- * mainfile.php already loaded the config on a 2.7.3+ install; loading it again here is
- * free (the result is cached) and is what lets an install whose mainfile.php predates
+ * The loader was already included above, where the file logger is attached; the result is
+ * cached, so reading it again here is free. That earlier point is also what lets an
+ * install whose mainfile.php predates
  * 2.7.3 still get file logging, even though its XOOPS_DEBUG constant was fixed earlier.
  */
-include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
 $xoopsDebugConfig = xoops_getDebugConfig();
 
 if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
@@ -222,6 +231,9 @@ if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     error_reporting(0);
     $xoopsLogger->activated = false;
 }
+// Not left in the global scope: this array would otherwise be visible to every template
+// and module that reaches into globals. The earlier block unsets it for the same reason.
+unset($xoopsDebugConfig);
 
 
 /**

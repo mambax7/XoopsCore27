@@ -79,9 +79,18 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
     // on upgrade, which is what made the old approach awkward.
     //
     // No debug.php present means production behaviour, exactly as before.
-    include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
-    $xoopsDebugConfig = xoops_getDebugConfig();
-    xoops_applyDebugConfig();
+    // Guarded: include_once only WARNS on a missing file, and calling the function would
+    // then be a fatal "Call to undefined function" -- taking the whole site down before
+    // secure.php is even read. mainfile.php survives upgrades while include/ is replaced,
+    // so a partial or interrupted upgrade can genuinely produce this pairing.
+    $xoopsDebugConfig = [];
+    if (is_readable(XOOPS_ROOT_PATH . '/include/debugconfig.php')) {
+        include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
+        if (function_exists('xoops_getDebugConfig')) {
+            $xoopsDebugConfig = xoops_getDebugConfig();
+            xoops_applyDebugConfig();
+        }
+    }
 
     define('XOOPS_DB_LEGACY_LOG', !empty($xoopsDebugConfig['database']['legacy_log']));
     define('XOOPS_DEBUG', [] !== $xoopsDebugConfig); // Also shows E_USER_DEPRECATED notices
