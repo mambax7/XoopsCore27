@@ -358,6 +358,24 @@ class XoopsFileLoggerTest extends TestCase
         self::assertFalse($this->property($logger, 'writeFailed'));
     }
 
+    #[Test]
+    public function aFreshLogFileIsNotWorldReadable(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX file modes only; Windows reports 0666 regardless');
+        }
+
+        $logger = $this->makeLogger();
+        $logger->log('error', 'first entry', ['channel' => 'messages']);
+
+        clearstatcache(true, $this->logDir . '/phpunit.log');
+
+        // This also pins where the is_file() check that drives the chmod sits: below
+        // rotateIfNeeded(), so a log that was just rotated away counts as new and is
+        // tightened too. Moving it back above would leave that file at the umask default.
+        self::assertSame(0640, fileperms($this->logDir . '/phpunit.log') & 0777);
+    }
+
     // -----------------------------------------------------------------
     // Configuration is clamped, not trusted
     // -----------------------------------------------------------------
