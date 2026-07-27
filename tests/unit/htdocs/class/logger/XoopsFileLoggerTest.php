@@ -370,10 +370,35 @@ class XoopsFileLoggerTest extends TestCase
 
         clearstatcache(true, $this->logDir . '/phpunit.log');
 
-        // This also pins where the is_file() check that drives the chmod sits: below
-        // rotateIfNeeded(), so a log that was just rotated away counts as new and is
-        // tightened too. Moving it back above would leave that file at the umask default.
         self::assertSame(0640, fileperms($this->logDir . '/phpunit.log') & 0777);
+    }
+
+    #[Test]
+    public function aLogFileRecreatedByRotationIsAlsoNotWorldReadable(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX file modes only; Windows reports 0666 regardless');
+        }
+
+        // The case the fresh-file test above cannot reach. With no log present, is_file()
+        // is false both before and after rotateIfNeeded(), so that test passes wherever
+        // the $isNew check sits. Here the file exists and is rotated away mid-write, so
+        // only a check made AFTER rotation sees the replacement as new and tightens it.
+        $live = $this->logDir . '/phpunit.log';
+        file_put_contents($live, str_repeat('L', 70000));
+        chmod($live, 0666);
+
+        $logger = $this->makeLogger(['max_size' => 65536, 'max_files' => 3]);
+        $logger->log('error', 'after rotation', ['channel' => 'messages']);
+
+        clearstatcache();
+
+        self::assertFileExists($live . '.1', 'the oversized log should have been rotated away');
+        self::assertStringContainsString('after rotation', (string) file_get_contents($live));
+        // The rotated file keeps the loose mode it was given, which is what shows the
+        // assertion below is reading a genuinely new file rather than the original.
+        self::assertSame(0666, fileperms($live . '.1') & 0777);
+        self::assertSame(0640, fileperms($live) & 0777);
     }
 
     // -----------------------------------------------------------------
