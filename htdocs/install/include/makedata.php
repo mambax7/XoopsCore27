@@ -478,6 +478,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', $cfgCols . " VALUES (136, 0, 1, 'session_cookie_samesite', '_MD_AM_SESSSAMESITE', 'Lax', '_MD_AM_SESSSAMESITE_DSC', 'select', 'text', 43)");
     $dbm->insert('config', $cfgCols . " VALUES (137, 0, 1, 'session_cookie_secure', '_MD_AM_SESSSECURE', '0', '_MD_AM_SESSSECURE_DSC', 'yesno', 'int', 44)");
     $dbm->insert('config', $cfgCols . " VALUES (138, 1, 0, 'active_menus', '_MI_SYSTEM_MENUS_ACTIVE', '1', '_MI_SYSTEM_MENUS_ACTIVE_DESC', 'yesno', 'int', 145)");
+    $dbm->insert('config', $cfgCols . " VALUES (139, 0, 1, 'enable_online_tracking', '_MD_AM_ONLINETRACKING', '1', '_MD_AM_ONLINETRACKINGDSC', 'yesno', 'int', 45)");
 
     require_once XOOPS_ROOT_PATH . '/class/xoopslists.php';
     $editors = XoopsLists::getDirListAsArray(XOOPS_ROOT_PATH . '/class/xoopseditor');

@@ -125,9 +125,12 @@ CREATE TABLE xoopscomments (
   KEY `com_itemid` (`com_itemid`),
   KEY `com_uid` (`com_uid`),
   KEY `com_title` (`com_title`(40)),
-  KEY `com_status` (`com_status`),
   KEY `com_user` (`com_user`),
-  KEY `com_email` (`com_email`)
+  KEY `com_email` (`com_email`),
+  # Serves the "recent comments" block: equality on com_status then com_created in
+  # index order, so the LIMIT stops early instead of filesorting the whole table.
+  # Replaces the old single-column KEY `com_status`, which this index prefixes.
+  KEY `idx_status_created` (`com_status`, `com_created`)
 ) ENGINE=MyISAM;
 # --------------------------------------------------------
 
