@@ -970,9 +970,13 @@ function xoops_getMailer()
 /**
  * xoops_getrank()
  *
- * @param integer $rank_id
- * @param mixed   $posts
- * @return
+ * Resolves a user's rank, either the one explicitly assigned to them or the special
+ * rank matching their post count. Always returns the full shape: when no row matches,
+ * the title and image are empty strings rather than the array being absent.
+ *
+ * @param  integer $rank_id
+ * @param  mixed   $posts
+ * @return array{title: string, image: string, id: int}
  */
 function xoops_getrank($rank_id = 0, $posts = 0)
 {

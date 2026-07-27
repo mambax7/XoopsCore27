@@ -185,6 +185,9 @@ class Upgrade_273 extends XoopsUpgrade
         if (!$this->db->isResultSet($result)) {
             return false;
         }
+        // isResultSet() above already proved this is a result set, but static analysis
+        // cannot narrow through a helper, so state it explicitly.
+        /** @var mysqli_result $result */
         $row = $this->db->fetchRow($result);
 
         return is_array($row) && (int)$row[0] > 0;
@@ -210,6 +213,9 @@ class Upgrade_273 extends XoopsUpgrade
         if (!$this->db->isResultSet($result)) {
             return false;
         }
+        // isResultSet() above already proved this is a result set, but static analysis
+        // cannot narrow through a helper, so state it explicitly.
+        /** @var mysqli_result $result */
         $row = $this->db->fetchRow($result);
 
         return is_array($row) && (int)$row[0] > 0;

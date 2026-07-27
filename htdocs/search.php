@@ -183,7 +183,7 @@ switch ($action) {
                 $module = $modules[$mid];
                 // Resolve the label BEFORE the try: the catch must never dereference
                 // $module, or a failure there throws a second, uncaught error.
-                $moduleLabel = $module->getVar('dirname', 'n');
+                $moduleLabel = (string) $module->getVar('dirname', 'n');
                 try {
                     $results = $module->search($queries, $andor, 5, 0);
                 } catch (\Throwable $e) {
@@ -272,7 +272,7 @@ switch ($action) {
         }
         // Resolve the label BEFORE the try: the catch must never dereference $module,
         // or a failure there throws a second, uncaught error.
-        $moduleLabel = $module->getVar('dirname', 'n');
+        $moduleLabel = (string) $module->getVar('dirname', 'n');
         try {
             $results      = $module->search($queries, $andor, 20, $start, $uid);
             $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);

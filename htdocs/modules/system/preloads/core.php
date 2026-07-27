@@ -94,7 +94,10 @@ class SystemCorePreload extends XoopsPreloadItem
             // run and the whole page would simply stop. With $optional = true the same
             // condition is an E_USER_WARNING and the call returns false, which the
             // is_object() check then absorbs.
-            /** @var XoopsOnlineHandler|false $onlineHandler */
+            // Annotated with the union xoops_getHandler() itself documents. Naming the
+            // concrete XoopsOnlineHandler here instead made static analysis collapse the
+            // union to false and report the is_object() check as always failing.
+            /** @var XoopsObjectHandler|false $onlineHandler */
             $onlineHandler = xoops_getHandler('online', true);
             if (!is_object($onlineHandler)) {
                 return;
@@ -127,12 +130,16 @@ class SystemCorePreload extends XoopsPreloadItem
                 trigger_error('Online tracking: write to the online table failed', E_USER_WARNING);
             }
         } catch (\Throwable $e) {
-            // basename() only: the logger output is visible wherever debug rendering is on,
-            // and absolute server paths do not belong there.
+            // Report the exception CLASS and location, never its message. A message can
+            // carry SQL fragments, credentials or absolute paths, and this runs on every
+            // request, so it is the worst possible place to leak one into output that is
+            // rendered whenever debug display is on. The class plus file:line is enough to
+            // find the fault; online tracking is statistics, so losing the detail here
+            // costs nothing that matters.
             trigger_error(
                 sprintf(
-                    'Online tracking failed: %s (%s:%d)',
-                    $e->getMessage(),
+                    'Online tracking failed: %s at %s:%d',
+                    get_class($e),
                     basename($e->getFile()),
                     $e->getLine()
                 ),
