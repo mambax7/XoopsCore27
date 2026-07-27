@@ -233,11 +233,16 @@ class XoopsFileLogger
             return;
         }
 
-        $channel = (string) ($context['channel'] ?? 'messages');
-        if (!in_array(strtolower($channel), $this->channels, true)) {
+        // Compared in one normalised form throughout. The membership test below was
+        // already case-insensitive, so a producer dispatching 'queries' reached the guards
+        // that follow -- and an exact-case comparison there would skip them, including the
+        // session-table exclusion, which is a privacy control rather than a volume one.
+        $channel    = (string) ($context['channel'] ?? 'messages');
+        $normalised = strtolower($channel);
+        if (!in_array($normalised, $this->channels, true)) {
             return;
         }
-        if ('Queries' === $channel) {
+        if ('queries' === $normalised) {
             if ($this->queriesWithErrorsOnly && empty($context['error'])) {
                 return;
             }
@@ -527,11 +532,22 @@ class XoopsFileLogger
 
         $this->rotateIfNeeded(strlen($entry));
 
+        // Checked before the append, and after rotateIfNeeded() has possibly renamed the
+        // live file away, so a freshly rotated log is treated as new too.
+        $isNew  = !is_file($this->file);
         $handle = @fopen($this->file, 'ab');
         if (false === $handle) {
             $this->writeFailed = true;
 
             return;
+        }
+        // Owner and group only. The contents are precisely what the redaction above works
+        // to keep unreachable, and on shared hosting the file mode is the last control
+        // standing once xoops_data has been moved out of the web root as the docs advise.
+        // Left best-effort deliberately: the file exists either way by this point, so
+        // refusing to write would not make a mode we failed to tighten any safer.
+        if ($isNew) {
+            @chmod($this->file, 0640);
         }
         // Non-blocking: a lock held by a stalled process must not park this request in a
         // queue behind it. Losing one debug line beats holding a worker.
@@ -561,19 +577,27 @@ class XoopsFileLogger
             return;
         }
 
-        // Failures are tolerated but not ignored. Losing an old rotation costs nothing,
-        // so those are best-effort; failing to move the LIVE file is different -- the
-        // next append would go straight back onto an already-oversized file -- so that
-        // one disables the logger for the request rather than growing without bound.
+        // Every step of the cascade is checked, because none of them can be shrugged off:
+        // once a move fails, the following one renames onto the slot that failed to empty
+        // and destroys it. A failure therefore stops rotation and disables the logger for
+        // the request, rather than silently discarding data or appending to a file that
+        // is already over the limit.
         if (is_file($this->file . '.' . $this->maxFiles) && !@unlink($this->file . '.' . $this->maxFiles)) {
             $this->writeFailed = true;
 
             return;
         }
         for ($i = $this->maxFiles - 1; $i >= 1; --$i) {
-            if (is_file($this->file . '.' . $i)) {
-                // Best effort: an unmovable intermediate rotation just stays where it is.
-                @rename($this->file . '.' . $i, $this->file . '.' . ($i + 1));
+            if (!is_file($this->file . '.' . $i)) {
+                continue;
+            }
+            // Stopping here loses nothing. Carrying on would: the next iteration moves
+            // .($i - 1) onto .$i, overwriting the rotation that just failed to move --
+            // and that is newer data than the one the cascade set out to discard.
+            if (!@rename($this->file . '.' . $i, $this->file . '.' . ($i + 1))) {
+                $this->writeFailed = true;
+
+                return;
             }
         }
         if (!@rename($this->file, $this->file . '.1')) {

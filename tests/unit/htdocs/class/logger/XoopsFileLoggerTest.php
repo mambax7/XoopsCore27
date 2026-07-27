@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use ReflectionProperty;
 use XoopsFileLogger;
 
@@ -29,6 +30,9 @@ class XoopsFileLoggerTest extends TestCase
 {
     private string $logDir;
 
+    /** @var string|null REQUEST_URI as found, so a forged one cannot outlive its test */
+    private ?string $originalRequestUri = null;
+
     protected function setUp(): void
     {
         require_once XOOPS_ROOT_PATH . '/class/logger/filelogger.php';
@@ -36,11 +40,17 @@ class XoopsFileLoggerTest extends TestCase
         if (!is_dir($this->logDir)) {
             mkdir($this->logDir, 0775, true);
         }
+        $this->originalRequestUri = $_SERVER['REQUEST_URI'] ?? null;
         $this->cleanUp();
     }
 
     protected function tearDown(): void
     {
+        if (null === $this->originalRequestUri) {
+            unset($_SERVER['REQUEST_URI']);
+        } else {
+            $_SERVER['REQUEST_URI'] = $this->originalRequestUri;
+        }
         $this->cleanUp();
     }
 
@@ -195,12 +205,24 @@ class XoopsFileLoggerTest extends TestCase
     #[Test]
     public function aNewlineInTheUriCannotForgeAnEntry(): void
     {
-        $_SERVER['REQUEST_URI'] = "/index.php?x=1\n[2026-01-01 00:00:00] messages.ERROR FORGED";
+        $forged                 = "/index.php?x=1\n[2026-01-01 00:00:00] messages.ERROR FORGED";
+        $_SERVER['REQUEST_URI'] = $forged;
         $logger                 = $this->makeLogger();
-        $logger->log('warning', 'a message', ['channel' => 'messages']);
 
-        // Whatever currentUri() yields, sanitize() strips control characters, so the entry
-        // is a header plus one body line and nothing more.
+        // Asserted through sanitize() rather than the finished entry. currentUri() returns
+        // 'cli' under this SAPI, so the URI never reaches the file here and a count of the
+        // entry's newlines would hold even with the control-character strip removed.
+        $sanitize = new ReflectionMethod(XoopsFileLogger::class, 'sanitize');
+        $sanitize->setAccessible(true);
+        $clean = (string) $sanitize->invoke($logger, $forged);
+
+        self::assertStringNotContainsString("\n", $clean, 'a newline would open a second log line');
+        // The payload text is not censored -- it is disarmed. The newline becomes a space,
+        // so the forged header stays inside the line it was injected into.
+        self::assertStringContainsString('/index.php?x=1 [2026-01-01', $clean);
+
+        // The entry itself is still a header plus one body line and nothing more.
+        $logger->log('warning', 'a message', ['channel' => 'messages']);
         self::assertSame(2, substr_count($this->readLog(), "\n"));
     }
 
@@ -253,6 +275,87 @@ class XoopsFileLoggerTest extends TestCase
         $body = $this->readLog();
         self::assertStringNotContainsString('sess_data', $body);
         self::assertStringContainsString('somewhere_else', $body);
+    }
+
+    #[Test]
+    public function aLowercaseQueriesChannelStillSkipsSessionRows(): void
+    {
+        if (!defined('XOOPS_DB_PREFIX')) {
+            self::markTestSkipped('XOOPS_DB_PREFIX is not defined in this bootstrap');
+        }
+
+        // The channel filter has always been case-insensitive, so 'queries' reaches the
+        // guards that follow. When those compared exact-case, a producer spelling the
+        // channel this way walked straight past the session exclusion -- which protects
+        // CSRF token seeds, so it must not depend on how the channel was capitalised.
+        $logger = $this->makeLogger([
+            'channels'                 => ['Queries'],
+            'queries_with_errors_only' => false,
+        ]);
+        $sessionSql = 'INSERT INTO ' . XOOPS_DB_PREFIX . "_session (sess_id, sess_data) VALUES ('a', 'secret')";
+        $logger->log('debug', $sessionSql, ['channel' => 'queries', 'sql' => $sessionSql]);
+        $logger->log('debug', 'SELECT 1 FROM somewhere_else', ['channel' => 'queries', 'sql' => 'SELECT 1 FROM somewhere_else']);
+
+        $body = $this->readLog();
+        self::assertStringNotContainsString('sess_data', $body);
+        self::assertStringContainsString('somewhere_else', $body, 'ordinary SQL must still be recorded');
+    }
+
+    // -----------------------------------------------------------------
+    // Rotation must not destroy what it is shifting
+    // -----------------------------------------------------------------
+
+    #[Test]
+    public function aFailedRotationStopsInsteadOfOverwritingTheNextSlot(): void
+    {
+        // .2 cannot move to .3 because .3 is a non-empty directory. Carrying on would
+        // rename .1 onto .2 and destroy it -- newer data than the rotation the cascade
+        // set out to discard -- so the cascade has to stop at the first failure.
+        $live    = $this->logDir . '/phpunit.log';
+        $blocked = $live . '.3';
+        file_put_contents($live, str_repeat('L', 70000));
+        file_put_contents($live . '.1', 'ROTATION-1');
+        file_put_contents($live . '.2', 'ROTATION-2');
+        if (!is_dir($blocked)) {
+            mkdir($blocked);
+        }
+        file_put_contents($blocked . '/blocker', 'x');
+
+        try {
+            $logger = $this->makeLogger(['max_size' => 65536, 'max_files' => 3]);
+            $rotate = new ReflectionMethod(XoopsFileLogger::class, 'rotateIfNeeded');
+            $rotate->setAccessible(true);
+            $rotate->invoke($logger, 1000);
+
+            $survived = false;
+            foreach (glob($live . '.*') ?: [] as $candidate) {
+                if (is_file($candidate) && file_get_contents($candidate) === 'ROTATION-2') {
+                    $survived = true;
+                }
+            }
+            self::assertTrue($survived, 'the rotation that could not move must not be overwritten');
+            self::assertTrue($this->property($logger, 'writeFailed'), 'a stalled rotation disables the logger');
+        } finally {
+            @unlink($blocked . '/blocker');
+            @rmdir($blocked);
+        }
+    }
+
+    #[Test]
+    public function aHealthyRotationStillShiftsEverythingAlong(): void
+    {
+        $live = $this->logDir . '/phpunit.log';
+        file_put_contents($live, str_repeat('L', 70000));
+        file_put_contents($live . '.1', 'ROTATION-1');
+
+        $logger = $this->makeLogger(['max_size' => 65536, 'max_files' => 3]);
+        $rotate = new ReflectionMethod(XoopsFileLogger::class, 'rotateIfNeeded');
+        $rotate->setAccessible(true);
+        $rotate->invoke($logger, 1000);
+
+        self::assertSame('ROTATION-1', file_get_contents($live . '.2'));
+        self::assertStringStartsWith('LLL', (string) file_get_contents($live . '.1'));
+        self::assertFalse($this->property($logger, 'writeFailed'));
     }
 
     // -----------------------------------------------------------------
