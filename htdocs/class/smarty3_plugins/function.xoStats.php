@@ -59,25 +59,13 @@ function xoStatsRegen()
     // Getting Total Online Users
     /** @var \XoopsOnlineHandler $onlineHandler */
     $onlineHandler = xoops_getHandler('online');
-    // set gc probability to 10% for now..
-    if (mt_rand(1, 100) < 11) {
-        $onlineHandler->gc(300);
-    }
-    if (is_object($xoopsUser)) {
-        $uid   = $xoopsUser->getVar('uid');
-        $uname = $xoopsUser->getVar('uname');
-    } else {
-        $uid   = 0;
-        $uname = '';
-    }
 
-    $requestIp = IPAddress::fromRequest()->asReadable();
-    $requestIp = (false === $requestIp) ? '0.0.0.0' : $requestIp;
-    if (is_object($xoopsModule)) {
-        $onlineHandler->write($uid, $uname, time(), $xoopsModule->getVar('mid'), $requestIp);
-    } else {
-        $onlineHandler->write($uid, $uname, time(), 0, $requestIp);
-    }
+    // READ-ONLY, like the Who is Online block. Recording the visitor is done once per
+    // request by SystemCorePreload::eventCoreIncludeCommonEnd(). Writing here as well
+    // meant the online row was rewritten (and gc run) a second time on any theme that
+    // used this plugin, and it ran inside a 30 second cacheRead() callback, so it only
+    // fired on cache regeneration anyway.
+
     $onlines = $onlineHandler->getAll();
     if (empty($onlines)) {
         $stats['totalOnline'] = 0;

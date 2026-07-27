@@ -44,6 +44,99 @@ class SystemCorePreload extends XoopsPreloadItem
     }
 
     /**
+     * Record the current visitor in the online table.
+     *
+     * This used to live inside b_system_online_show() in the system module's blocks.
+     * That made tracking a side effect of RENDERING a block, so it only ran when the
+     * "Who is Online" block happened to be displayed — which meant the block's group
+     * permissions silently decided who got counted, and any page without the block
+     * (including whole modules with page caching on) recorded nobody at all. A block
+     * permission is meant to control who can SEE a block, not who is measured.
+     *
+     * Fires on core.include.common.end, which is after authentication (so $xoopsUser
+     * is resolved) and after the module is resolved at include/common.php:343 (so the
+     * "browsing <module>" figure still works), and before any page cache short-circuit
+     * in header.php — so cached pages are counted too.
+     *
+     * Turn it off with the "Track who is online?" preference under General Settings.
+     *
+     * @param $args
+     * @return void
+     */
+    public static function eventCoreIncludeCommonEnd($args)
+    {
+        // Default to enabled so an install that predates the preference keeps working.
+        if (isset($GLOBALS['xoopsConfig']['enable_online_tracking'])
+            && !$GLOBALS['xoopsConfig']['enable_online_tracking']) {
+            return;
+        }
+
+        // Only track real HTTP visitors. A CLI or cron script that includes mainfile.php
+        // would otherwise be recorded as a guest at 0.0.0.0 (IPAddress::fromRequest()
+        // falls back to that when REMOTE_ADDR is absent) and, if it runs often enough,
+        // would sit in "Who is Online" permanently.
+        if ('cli' === PHP_SAPI || 'phpdbg' === PHP_SAPI || empty($_SERVER['REMOTE_ADDR'])) {
+            return;
+        }
+
+        // EVERYTHING below is inside the try. Statistics must never take down a page, and
+        // that includes acquiring the handler (xoops_getHandler raises E_USER_ERROR when
+        // the class cannot be loaded) and the garbage collection sweep — not just write().
+        try {
+            // The second argument is $optional. Without it a missing or broken
+            // XoopsOnlineHandler raises E_USER_ERROR, and XoopsLogger's handler calls
+            // exit() on that — exit() is not a Throwable, so the catch below would never
+            // run and the whole page would simply stop. With $optional = true the same
+            // condition is an E_USER_WARNING and the call returns false, which the
+            // is_object() check then absorbs.
+            /** @var XoopsOnlineHandler|false $onlineHandler */
+            $onlineHandler = xoops_getHandler('online', true);
+            if (!is_object($onlineHandler)) {
+                return;
+            }
+
+            // Probabilistic garbage collection: roughly one request in ten clears out
+            // anything older than five minutes.
+            if (mt_rand(1, 100) < 11) {
+                $onlineHandler->gc(300);
+            }
+
+            $xoopsUser = $GLOBALS['xoopsUser'] ?? null;
+            if ($xoopsUser instanceof XoopsUser) {
+                $uid   = $xoopsUser->getVar('uid');
+                $uname = $xoopsUser->getVar('uname');
+            } else {
+                $uid   = 0;
+                $uname = '';
+            }
+
+            $requestIp = \Xmf\IPAddress::fromRequest()->asReadable();
+            $requestIp = (false === $requestIp) ? '0.0.0.0' : $requestIp;
+
+            $xoopsModule = $GLOBALS['xoopsModule'] ?? null;
+            $mid         = is_object($xoopsModule) ? $xoopsModule->getVar('mid') : 0;
+
+            // write() returns false rather than throwing on a failed INSERT/UPDATE, so a
+            // read-only account or a corrupt table would otherwise stop tracking silently.
+            if (false === $onlineHandler->write($uid, $uname, time(), $mid, $requestIp)) {
+                $GLOBALS['xoopsLogger']->handleError(
+                    E_USER_WARNING,
+                    'Online tracking: write to the online table failed',
+                    __FILE__,
+                    __LINE__
+                );
+            }
+        } catch (\Throwable $e) {
+            $GLOBALS['xoopsLogger']->handleError(
+                E_USER_WARNING,
+                'Online tracking failed: ' . $e->getMessage(),
+                $e->getFile(),
+                $e->getLine()
+            );
+        }
+    }
+
+    /**
      * @param $args
      */
     public static function eventCoreHeaderCheckcache($args)
