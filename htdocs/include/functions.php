@@ -24,10 +24,20 @@ require_once XOOPS_ROOT_PATH . '/include/theme_config.php';
 /**
  * xoops_getHandler()
  *
- * @param string $name
- * @param bool   $optional
+ * Returns the kernel handler for $name, or false when it cannot be loaded and $optional
+ * is true. (With $optional false, failure raises E_USER_ERROR, which XoopsLogger turns
+ * into exit() — not a Throwable, so it cannot be caught.)
  *
- * @return XoopsObjectHandler|false
+ * NOT every handler extends XoopsObjectHandler. XoopsOnlineHandler, XoopsSessionHandler,
+ * XoopsMemberHandler and XoopsConfigHandler are plain classes with their own APIs, so the
+ * previous XoopsObjectHandler|false was inaccurate: static analysis concluded that
+ * "$handler instanceof XoopsOnlineHandler" could never be true, and that methods such as
+ * XoopsOnlineHandler::write() did not exist on the returned value. Callers that need a
+ * specific handler should assert it with instanceof and let that narrow the type.
+ *
+ * @param  string $name     handler name, e.g. 'member', 'online', 'module'
+ * @param  bool   $optional return false instead of raising a fatal when unavailable
+ * @return XoopsObjectHandler|object|false
  */
 function xoops_getHandler($name, $optional = false)
 {

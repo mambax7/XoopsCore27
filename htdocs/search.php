@@ -282,15 +282,22 @@ switch ($action) {
         // or a failure there throws a second, uncaught error.
         $moduleLabel = (string) $module->getVar('dirname', 'n');
         try {
+            $next_results = [];
             $results      = $module->search($queries, $andor, 20, $start, $uid);
-            $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
             // search() returns mixed. A truthy non-array would reach count() further down,
             // outside this try, and a TypeError there would bypass the guard entirely.
             if (!is_array($results)) {
                 $results = [];
             }
-            if (!is_array($next_results)) {
-                $next_results = [];
+            // The next-page probe exists only to decide whether to render a "next" link,
+            // which is meaningless when this page is already empty. Running it
+            // unconditionally doubled the module and database work on every no-match
+            // search, and gave a failing module a second chance to throw.
+            if ([] !== $results) {
+                $next_results = $module->search($queries, $andor, 1, $start + 20, $uid);
+                if (!is_array($next_results)) {
+                    $next_results = [];
+                }
             }
         } catch (\Throwable $e) {
             // A broken module must not take down the whole search page.

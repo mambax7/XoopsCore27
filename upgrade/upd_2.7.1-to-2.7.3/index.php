@@ -94,6 +94,12 @@ class Upgrade_273 extends XoopsUpgrade
         $table   = $this->db->prefix('xoopscomments');
         $columns = $this->indexColumns($table, self::COMMENTS_INDEX);
 
+        // Derived from the constant, never hand-written: a column list that drifts from
+        // COMMENTS_INDEX_COLUMNS would recreate the index in a shape check_ rejects, and
+        // the task would re-queue for ever while reintroducing the very bug it fixes.
+        $columnList = '`' . implode('`, `', self::COMMENTS_INDEX_COLUMNS) . '`';
+        $addIndex   = 'ALTER TABLE `' . $table . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (' . $columnList . ')';
+
         if (null === $columns) {
             // Could not inspect the schema. Issuing DDL blindly here would either fail on a
             // duplicate index or, worse, appear to succeed while the final verification
@@ -102,7 +108,7 @@ class Upgrade_273 extends XoopsUpgrade
                 'Upgrade 2.7.3: cannot read information_schema.STATISTICS, so the '
                 . '`' . self::COMMENTS_INDEX . '` index on `' . $table . '` cannot be verified '
                 . 'or safely created. Grant access, or add it by hand: ALTER TABLE `' . $table
-                . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (`com_status`, `com_created`);',
+                . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (' . $columnList . ');',
                 E_USER_WARNING
             );
 
@@ -116,8 +122,7 @@ class Upgrade_273 extends XoopsUpgrade
                 && false === $this->db->exec('ALTER TABLE `' . $table . '` DROP INDEX `' . self::COMMENTS_INDEX . '`')) {
                 return false;
             }
-            $sql = 'ALTER TABLE `' . $table . '` ADD INDEX `' . self::COMMENTS_INDEX . '` (`com_status`, `com_created`)';
-            if (false === $this->db->exec($sql)) {
+            if (false === $this->db->exec($addIndex)) {
                 return false;
             }
         }

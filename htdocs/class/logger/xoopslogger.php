@@ -361,6 +361,9 @@ class XoopsLogger
             echo sprintf($fatalMessage, htmlspecialchars((string) $errstr, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
             if ($includeTrace) {
                 $backtraceLabel = defined('_XOOPS_FATAL_BACKTRACE') ? _XOOPS_FATAL_BACKTRACE : 'Backtrace';
+                // Escaped like every other value echoed here. It is a language constant
+                // today, but translations are user-editable files.
+                $backtraceLabel = htmlspecialchars((string) $backtraceLabel, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 echo "<div style='color:#f0f0f0;background-color:#f0f0f0;'>" . $backtraceLabel . ':<br>';
                 if ($trace === null && function_exists('debug_backtrace')) {
                     $trace = \debug_backtrace();
