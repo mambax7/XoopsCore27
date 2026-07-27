@@ -992,8 +992,21 @@ function xoops_getrank($rank_id = 0, $posts = 0)
             E_USER_ERROR,
         );
     }
-    $rank          = $db->fetchArray($result);
-    $rank['title'] = $myts->htmlSpecialChars($rank['title']);
+    $rank = $db->fetchArray($result);
+
+    // No row matches when the user's rank_id no longer exists, or when their post count
+    // falls outside every non-special rank range (a gap between rank_min/rank_max, or no
+    // ranks defined at all). fetchArray() then returns false, and this went straight on to
+    // $rank['title'] — "Trying to access array offset on false" — passing the resulting
+    // null into htmlSpecialChars(), which is a TypeError and therefore fatal on PHP 8.
+    // That killed every page rendering such a user; on xoops.org it took down newbb topic
+    // pages through XoopsUser::rank().
+    if (!is_array($rank)) {
+        $rank = ['title' => '', 'image' => ''];
+    }
+
+    $rank['title'] = $myts->htmlSpecialChars((string) ($rank['title'] ?? ''));
+    $rank['image'] = (string) ($rank['image'] ?? '');
     $rank['id']    = $rank_id;
 
     return $rank;
