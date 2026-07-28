@@ -28,7 +28,7 @@ Comments:
 - assign anon_canpost even when anonymous posting is disabled; a guest on such a module produced two warnings per comment row, 253 pairs in nine minutes of xoops.org traffic and the single largest source of log noise (mamba) in #130
 
 Kernel:
-- stop xoops_getrank() fataling when no rank row matches, whether the rank_id no longer exists, the post count falls in a gap between rank_min and rank_max, or no ranks are defined; every page rendering such a user died (mamba) in #130
+- stop xoops_getrank() causing a fatal error when no rank row matches, whether the rank_id no longer exists, the post count falls in a gap between rank_min and rank_max, or no ranks are defined; every page rendering such a user died (mamba) in #130
 - memoise the unfiltered group list per request, removing roughly 48 identical "SELECT * FROM groups" queries per page (mamba) in #130
 
 Caching:
@@ -45,7 +45,7 @@ Upgrade:
 - carry the 2.7.3 schema changes on the upgrade path, including the comments status/created index that took a listing query from 541ms to 0.5ms (mamba) in #130
 
 Build:
-- let Dependabot track the npm build tooling in the Tailwind themes, not just GitHub Actions, and stop it proposing Tailwind and DaisyUI major bumps (mamba) in #131, #138
+- let Dependabot track the npm build tooling in the Tailwind themes, not just GitHub Actions, and stop it from proposing Tailwind and DaisyUI major bumps (mamba) in #131, #138
 
 ===================================
 2.7.2 Final                   2026-07
