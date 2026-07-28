@@ -322,11 +322,16 @@ class XoopsLogger
             // so the renderer cannot tell the two apart and escaping there would either
             // miss the message or destroy the trace markup.
             $this->deprecated[] = htmlspecialchars((string) $msg, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $miniTrace;
-
-            // Dispatched with the RAW message: a file or PSR-3 logger wants the text, not
-            // HTML entities.
-            $this->log('warning', $msg, ['channel' => 'Deprecated']);
         }
+
+        // Dispatched OUTSIDE the activated guard, matching addQuery/addBlock/addExtra.
+        // activated gates the in-memory collectors that feed the in-page dump; a
+        // registered logger writing to a file has nothing to do with that, and a
+        // file-logging-only configuration switches the collectors off to save memory.
+        //
+        // Dispatched with the RAW message: a file or PSR-3 logger wants the text, not the
+        // HTML entities the panel entry above needs.
+        $this->log('warning', $msg, ['channel' => 'Deprecated']);
     }
 
     /**
@@ -364,6 +369,11 @@ class XoopsLogger
                 'errno'   => $errno,
                 'errfile' => $errfile,
                 'errline' => $errline,
+                // Passed through so a logger can record where the error came from. Only
+                // forwarded when a caller supplied one -- building a backtrace here for
+                // every notice would cost more than the logging is worth, so a logger that
+                // wants one and did not get one captures its own.
+                'trace'   => $trace,
             ]);
         }
 

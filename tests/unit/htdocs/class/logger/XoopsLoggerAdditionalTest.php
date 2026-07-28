@@ -660,17 +660,32 @@ class XoopsLoggerAdditionalTest extends TestCase
     }
 
     #[Test]
-    public function addDeprecatedDoesNotDispatchWhenDeactivated(): void
+    public function addDeprecatedDispatchesToLoggersEvenWhenDeactivated(): void
     {
         $collector = new \stdClass();
         $collector->received = [];
         $this->logger->addLogger(new AdditionalLogCollectorMock($collector));
         $this->logger->activated = false;
 
-        $this->logger->addDeprecated('should not dispatch');
+        $this->logger->addDeprecated('still dispatches');
 
-        // addDeprecated wraps dispatch inside the activated check
-        self::assertEmpty($collector->received);
+        // Same contract as addQuery, addBlock, addExtra and handleError, each of which
+        // has its own ...EvenWhenDeactivated test: `activated` gates the IN-MEMORY
+        // collectors that exist only to be rendered into the page, not dispatch to
+        // registered loggers.
+        //
+        // addDeprecated was the one producer that wrapped its dispatch inside that
+        // guard. The previous test asserted that as if it were the contract, but it
+        // only described the implementation -- and the effect was that a logger writing
+        // to a file lost every deprecation whenever in-page rendering was off, which is
+        // the normal production state.
+
+        // Not stored in the deprecated array
+        self::assertCount(0, $this->logger->deprecated);
+        // But still dispatched to loggers
+        self::assertCount(1, $collector->received);
+        self::assertSame('warning', $collector->received[0]['level']);
+        self::assertSame('Deprecated', $collector->received[0]['context']['channel']);
     }
 
     #[Test]

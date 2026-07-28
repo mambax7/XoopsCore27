@@ -74,6 +74,39 @@ $xoopsLogger->startTime();
 $xoopsLogger->startTime('XOOPS Boot');
 
 /**
+ * Attach the file logger IMMEDIATELY when xoops_data/data/debug.php asks for it.
+ *
+ * Deliberately here and not beside the debug_mode block further down: everything between
+ * the two points -- the database connection, config loading, the theme resolve -- is
+ * where a broken site actually fails, and those are precisely the errors and queries
+ * worth having. Registering after them meant the most useful diagnostics were never
+ * written.
+ *
+ * Only XOOPS_VAR_PATH is required, which mainfile.php has already defined. The logger
+ * takes the same seat DebugBar uses, so it receives notices, warnings, errors,
+ * deprecations and SQL with no change to any producer. With no debug.php this is one
+ * file_exists() and nothing more.
+ */
+include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
+$xoopsDebugConfig = xoops_getDebugConfig();
+if ([] !== $xoopsDebugConfig) {
+    // Applied HERE as well as further down. On an install whose mainfile.php predates
+    // 2.7.3 nothing has raised error_reporting yet, so php.ini still governs -- and if
+    // that is restrictive, handleError() discards the early errors before any logger sees
+    // them. Attaching the logger early is pointless unless reporting is raised with it.
+    // The call is idempotent and the config is cached, so repeating it costs nothing.
+    xoops_applyDebugConfig();
+
+    if (!empty($xoopsDebugConfig['log']['enabled'])) {
+        XoopsLoad::load('filelogger');
+        if (class_exists('XoopsFileLogger', false)) {
+            $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+        }
+    }
+}
+unset($xoopsDebugConfig);
+
+/**
  * Include Required Files
  */
 include_once $xoops->path('kernel/object.php');
@@ -157,16 +190,51 @@ $xoops->gzipCompression();
 
 /**
  * Start of Error Reporting.
+ *
+ * Two independent switches feed this:
+ *  - $xoopsConfig['debug_mode'], set in Admin -> Preferences, drives the in-page debug
+ *    output shown to administrators;
+ *  - xoops_data/data/debug.php, if present, drives file logging and PHP error settings.
+ *
+ * Either can be used alone. A site is normally left with debug_mode off and no
+ * debug.php, which is the historical behaviour and costs nothing.
+ *
+ * The loader was already included above, where the file logger is attached; the result is
+ * cached, so reading it again here is free. That earlier point is also what lets an
+ * install whose mainfile.php predates
+ * 2.7.3 still get file logging, even though its XOOPS_DEBUG constant was fixed earlier.
  */
+$xoopsDebugConfig = xoops_getDebugConfig();
+
 if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     xoops_loadLanguage('logger');
     error_reporting(E_ALL);
     $xoopsLogger->enableRendering();
     $xoopsLogger->usePopup = ($xoopsConfig['debug_mode'] == 2);
+} elseif ([] !== $xoopsDebugConfig) {
+    // File logging WITHOUT the in-page output.
+    //
+    // errors must still be reported or there is nothing to record, and rendering stays
+    // off so enabling this cannot change what a visitor sees.
+    //
+    // activated stays FALSE on purpose. It gates the in-memory collectors ($queries,
+    // $blocks, $extra) that exist only to be rendered into the page -- and nothing is
+    // going to render here. Leaving it true accumulated every statement of every request
+    // for a dump that never happens, which a long import would turn into an out-of-memory
+    // failure. Dispatch to registered loggers is deliberately outside that guard in
+    // addQuery/addBlock/addExtra/handleError, so the file logger still receives
+    // everything.
+    xoops_loadLanguage('logger');
+    xoops_applyDebugConfig();
+    $xoopsLogger->activated = false;
 } else {
     error_reporting(0);
     $xoopsLogger->activated = false;
 }
+// Not left in the global scope: this array would otherwise be visible to every template
+// and module that reaches into globals. The earlier block unsets it for the same reason.
+unset($xoopsDebugConfig);
+
 
 /**
  * Check Bad Ip Addressed against database and block bad ones, requires configs loaded
