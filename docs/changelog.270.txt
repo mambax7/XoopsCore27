@@ -14,9 +14,6 @@ Debugging and logging:
 - note for upgrades: file logging needs no change to mainfile.php, because include/common.php reads debug.php itself. Updating mainfile.php from the new dist adds two further things: the XOOPS_DEBUG and XOOPS_DB_LEGACY_LOG constants, and error reporting raised earlier than common.php runs, which matters only for failures during bootstrap (mamba) in #139
 - note on visibility: display_errors from debug.php is applied at include/common.php, while the debugLevel setting in xoops_data/configs/xoopsconfig.php clamps error_reporting to 0 for non-admins later in the same file, after authentication. Errors raised before that point — the database connection, config loading, preloads — are therefore still displayed to any visitor. Set display_errors to false on a public site and read the log instead; it records the same bootstrap window (mamba) in #139
 
-Database:
-- return the documented failure value instead of fataling when a result-set method is handed something that is not one. A failed query returns false and a mis-wired caller can pass the SQL string itself; PHP 8 turns both into an uncaught TypeError inside mysqli, so one bad call from one module blanked the whole page. Observed on xoops.org from modules/core/brokenfile.php. The misuse is still reported, so the caller's bug stays visible (mamba)
-
 Security:
 - escape the untrusted values rendered in the logger's debug panel; a PHP warning quotes the offending request value and a database error quotes the offending column, so crafted input reached the administrator's browser as live markup through the error, query, block and deprecation channels (mamba) in #140
 - strip the deployment root from a deprecation backtrace before HTML-encoding it, not after; an installation path containing a character htmlspecialchars rewrites stopped matching once encoded and published the full server path (mamba) in #140
@@ -42,7 +39,11 @@ Caching:
 - keep the speculative unserialize() probe out of the error log (mamba) in #130
 
 Database:
+- return the documented failure value instead of fataling when a result-set method is handed something that is not one. A failed query returns false and a mis-wired caller can pass the SQL string itself; PHP 8 turns both into an uncaught TypeError inside mysqli, so one bad call from one module blanked the whole page. Observed on xoops.org from modules/core/brokenfile.php. The misuse is still reported, so the caller's bug stays visible (mamba) in #143
 - name the handler and table on query errors, and fail fast when the table is unset, so a failure identifies itself instead of surfacing as an anonymous error (mamba) in #130
+
+Redirects:
+- stop the login redirect accumulating escaped ampersands. redirect_header() used the HTML entity "&amp;" as a query separator, which names the following parameter "amp;xoops_redirect" to anything that parses the URL rather than renders it. A browser decodes the entity before requesting, so the fault hid for exactly one hop; once a semicolon had been percent-encoded along the chain the browser could no longer collapse it and every later escape added a layer. xoops.org was logging "?start=0&amp%3Bamp%3Bamp%3Bforum=0" for a URL that should read "?start=0&forum=0". An incoming URI that already carries the damage is now healed rather than passed on (mamba) in #145
 
 Who's online:
 - record who is online outside the block that displays it, so tracking no longer depends on the block being rendered on the page (mamba) in #130
