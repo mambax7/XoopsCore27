@@ -262,30 +262,6 @@ if (!function_exists('xoops_isLocalUrl')) {
      * @param string $url candidate URL
      * @return bool true when the target is same-origin or a root-relative path
      */
-    /**
-     * Collapse escaped-ampersand layers in a URL back to a single separator.
-     *
-     * A URL is not HTML, so "&amp;" in a query string is already wrong: it names the
-     * following parameter "amp;name" to anything that parses the URL rather than renders
-     * it. It went unnoticed because a browser decodes the entity before requesting, which
-     * hides the fault for exactly one hop.
-     *
-     * It stops hiding once a semicolon has been percent-encoded somewhere along the chain.
-     * "&amp%3B" is not a complete entity, so the browser can no longer collapse it, and
-     * every later escape adds another layer. xoops.org was logging
-     *
-     *     ?start=0&amp%3Bamp%3Bamp%3Bforum=0
-     *
-     * for a URL that should read "?start=0&forum=0" -- three rounds of escaping deep, and
-     * growing by one on every pass through the login redirect.
-     *
-     * Both spellings are collapsed, so a URI that already carries the damage is healed
-     * rather than carried forward. A parameter genuinely named "amp" is untouched: the
-     * pattern only matches "amp;" or "amp%3B" immediately following an ampersand.
-     *
-     * @param string $url candidate URL
-     * @return string the URL with "&amp;"/"&amp%3B" runs reduced to "&"
-     */
     function xoops_isLocalUrl($url)
     {
         $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
