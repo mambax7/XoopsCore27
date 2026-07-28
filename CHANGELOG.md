@@ -5,12 +5,17 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
-## [Unreleased]
+## [v2.7.3-Beta1] - 2026-07-28
+
+### Bug Fixes
+- **core**: Stop the login redirect accumulating escaped ampersands (#145)
+- **database**: Return the documented failure value for a non-result argument (#143)
 
 ### Compatibility
 - PHP 8.5 hardening and who-is-online tracking for 2.7.3-Beta1 (#130)
 
 ### Features
+- **logger**: Make debug.log readable at a glance (#144)
 - **debug**: Central debug config and a rotating file logger (#139)
 
 ### Miscellaneous
