@@ -423,7 +423,8 @@ class XoopsFileLogger
         // What went wrong and where, directly under the timestamp. This is the reason you
         // opened the file; everything below it is supporting detail, and on a warning
         // raised inside a compiled Smarty template the location is most of the answer.
-        foreach ($this->summary($message, $channel, $context) as $key => $value) {
+        $summary = $this->summary($message, $channel, $context);
+        foreach ($summary as $key => $value) {
             $entry .= '  ' . str_pad($key, 7) . '= ' . $value . "\n";
         }
         $entry .= "-------\n";
@@ -453,6 +454,12 @@ class XoopsFileLogger
         $detail = [];
         foreach (['errno', 'errfile', 'errline', 'sql', 'error', 'query_time'] as $key) {
             if (!isset($context[$key]) || '' === $context[$key] || !is_scalar($context[$key])) {
+                continue;
+            }
+            // Already stated above. A compiled Smarty template path runs past a hundred
+            // characters, so repeating errfile and errline here doubled the bulk of the
+            // entry for nothing.
+            if (isset($summary[$key])) {
                 continue;
             }
             $value = $this->sanitize($this->trim((string) $context[$key]));

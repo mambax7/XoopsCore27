@@ -529,6 +529,31 @@ class XoopsFileLoggerTest extends TestCase
         }
     }
 
+    #[Test]
+    public function aFieldStatedInTheSummaryIsNotRepeatedBelow(): void
+    {
+        // A compiled Smarty template path runs past a hundred characters. Printing it in
+        // the summary and again in the detail line doubled the bulk of the entry for no
+        // added information, which is much of what made the file hard to read.
+        $path   = '/caches/smarty_compile/12f84838_themes_xoops2020_default^c604781_0.db.themes_item.tpl.php';
+        $logger = $this->makeLogger();
+        $logger->log('warning', 'Attempt to read property "value" on null', [
+            'channel' => 'messages',
+            'errno'   => 2,
+            'errfile' => $path,
+            'errline' => 110,
+        ]);
+
+        $body = $this->readLog();
+
+        self::assertSame(1, substr_count($body, $path), 'errfile belongs in the summary only');
+        self::assertStringContainsString('  errfile= ' . $path, $body);
+        self::assertStringContainsString('  errline= 110', $body);
+        // errno is not in the summary, so it still belongs in the detail line below.
+        self::assertStringContainsString("\n  errno=2\n", $body);
+        self::assertSame(1, substr_count($body, 'Attempt to read property'));
+    }
+
     public static function labelProvider(): array
     {
         return [
