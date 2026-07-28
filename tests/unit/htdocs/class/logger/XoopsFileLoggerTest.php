@@ -221,9 +221,15 @@ class XoopsFileLoggerTest extends TestCase
         // so the forged header stays inside the line it was injected into.
         self::assertStringContainsString('/index.php?x=1 [2026-01-01', $clean);
 
-        // The entry itself is still a header plus one body line and nothing more.
+        // And the entry itself gains no extra line. Counted as the lines the entry adds
+        // beyond its own fixed furniture -- the leading blank, the divider, the header and
+        // the uri line -- so this still fails if a forged newline ever opens one.
         $logger->log('warning', 'a message', ['channel' => 'messages']);
-        self::assertSame(2, substr_count($this->readLog(), "\n"));
+        $lines = array_values(array_filter(explode("\n", trim($this->readLog())), 'strlen'));
+
+        self::assertCount(4, $lines, 'divider, header, uri and one body line');
+        self::assertStringStartsWith('=====', $lines[0]);
+        self::assertStringNotContainsString('FORGED', implode("\n", array_slice($lines, 1)));
     }
 
     // -----------------------------------------------------------------
@@ -493,7 +499,49 @@ class XoopsFileLoggerTest extends TestCase
         self::assertStringContainsString('messages.WARNING', $body);
         self::assertStringContainsString('the message', $body);
         self::assertStringContainsString('errno=2', $body);
-        // Under a CLI SAPI — which is how this suite runs — the uri field is 'cli'.
-        self::assertStringContainsString('uri=cli', $body);
+        // The uri sits on its own line rather than in the header, because a redirect chain
+        // is long enough to push uid off the screen. Under a CLI SAPI it reads 'cli'.
+        self::assertStringContainsString("\n  uri: cli", $body);
+    }
+
+    // -----------------------------------------------------------------
+    // Entries are separated and labelled
+    // -----------------------------------------------------------------
+
+    #[Test]
+    #[DataProvider('labelProvider')]
+    public function eachEntryIsIntroducedByALabelledDivider(string $level, array $context, string $expected): void
+    {
+        $logger = $this->makeLogger([
+            'channels'                 => ['messages', 'Queries', 'Deprecated'],
+            'queries_with_errors_only' => false,
+        ]);
+        $logger->log($level, 'the message', $context);
+
+        $body = $this->readLog();
+
+        self::assertStringContainsString('===== ' . $expected . ' =', $body);
+        // Fixed width, so a column of dividers lines up when scanning the file.
+        foreach (explode("\n", $body) as $line) {
+            if (str_starts_with($line, '=====')) {
+                self::assertSame(72, strlen($line), 'divider width');
+            }
+        }
+    }
+
+    public static function labelProvider(): array
+    {
+        return [
+            // A failed query is what you scan for, so it is labelled apart from a plain one.
+            'failed query'      => ['error', ['channel' => 'Queries', 'error' => 'boom'], 'QUERY ERROR'],
+            'plain query'       => ['debug', ['channel' => 'Queries'], 'QUERY'],
+            // An uncaught exception reaches the logger as E_USER_ERROR exactly like a
+            // triggered one, so handleException() marks it explicitly.
+            'uncaught exception' => ['error', ['channel' => 'messages', 'exception' => 'TypeError'], 'EXCEPTION'],
+            'plain error'       => ['error', ['channel' => 'messages'], 'ERROR'],
+            'warning'           => ['warning', ['channel' => 'messages'], 'WARNING'],
+            'notice'            => ['notice', ['channel' => 'messages'], 'NOTICE'],
+            'deprecation'       => ['warning', ['channel' => 'Deprecated'], 'DEPRECATED'],
+        ];
     }
 }

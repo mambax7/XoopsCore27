@@ -75,6 +75,9 @@ class XoopsFileLogger
     /** Hard cap for a single entry, so one enormous statement cannot defeat rotation. */
     private const MAX_ENTRY = 65536;
 
+    /** Width of the rule that separates entries. Fits an 80-column terminal. */
+    private const DIVIDER_WIDTH = 72;
+
     /** @var string absolute path of the current log file */
     protected $file;
 
@@ -282,6 +285,62 @@ class XoopsFileLogger
     }
 
     /**
+     * What kind of entry is this?
+     *
+     * Derived rather than passed in, so no producer has to be changed to get a useful
+     * label. Only 'exception' is explicit, because an uncaught exception and a triggered
+     * error both arrive as E_USER_ERROR and telling them apart from the message text
+     * would be guesswork.
+     *
+     * @param  string $level
+     * @param  string $channel
+     * @param  array  $context
+     * @return string
+     */
+    protected function entryLabel($level, $channel, array $context)
+    {
+        if (!empty($context['exception'])) {
+            return 'EXCEPTION';
+        }
+
+        switch (strtolower((string) $channel)) {
+            case 'queries':
+                // Worth its own label: a query that failed is a different kind of problem
+                // from one merely being recorded, and it is what you scan for.
+                return empty($context['error']) ? 'QUERY' : 'QUERY ERROR';
+            case 'deprecated':
+                return 'DEPRECATED';
+            case 'blocks':
+                return 'BLOCK';
+            case 'extra':
+                return 'EXTRA';
+        }
+
+        // messages: the PSR-3 level already says it -- ERROR, WARNING, NOTICE.
+        return strtoupper((string) $level);
+    }
+
+    /**
+     * A fixed-width rule carrying the entry label.
+     *
+     * The label sits near the left edge so a column of them can be scanned down without
+     * the eye having to track a moving position.
+     *
+     * @param  string $label
+     * @return string
+     */
+    protected function divider($label)
+    {
+        $label = trim((string) $label);
+        if ('' === $label) {
+            $label = 'LOG';
+        }
+        $tail = self::DIVIDER_WIDTH - 7 - strlen($label);
+
+        return '===== ' . $label . ' ' . str_repeat('=', max(3, $tail));
+    }
+
+    /**
      * Build one log entry.
      *
      * @param  string $level
@@ -292,15 +351,28 @@ class XoopsFileLogger
      */
     protected function format($level, $message, $channel, array $context)
     {
-        $head = sprintf(
-            '[%s] %s.%s req=%s uri=%s uid=%s',
+        // A labelled rule ahead of every entry. Without one the file reads as an unbroken
+        // wall of text -- entries run to several lines each, so where one ends and the
+        // next begins is genuinely hard to see -- and the label says what you are looking
+        // at before you have read a word of it.
+        $head = "\n" . $this->divider($this->entryLabel($level, $channel, $context)) . "\n";
+
+        $head .= sprintf(
+            '[%s] %s.%s req=%s uid=%s',
             date('Y-m-d H:i:s'),
             $channel,
             strtoupper($level),
             $this->requestId,
-            $this->sanitize($this->currentUri()),
             $this->currentUid()
         );
+
+        // The URI gets its own line instead of sitting in the header. A XOOPS redirect
+        // chain runs to several hundred characters, which pushed everything after it off
+        // the screen -- including uid, the field most often wanted beside the error.
+        $uri = $this->sanitize($this->currentUri());
+        if ('' !== $uri) {
+            $head .= "\n  uri: " . $uri;
+        }
 
         // Truncate BEFORE sanitising. MAX_ENTRY alone was not enough: a 16 MB SQL string
         // was regex-processed and concatenated first, and the peak allocation of that
