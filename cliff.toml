@@ -31,7 +31,7 @@ body = """
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group | striptags | trim | upper_first }}
 {% for commit in commits %}\
-- {{ commit.message | split(pat="\n") | first | trim | upper_first }}
+- {% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message | split(pat="\n") | first | trim | upper_first }}
 {% endfor %}\
 {% endfor %}
 
@@ -51,6 +51,20 @@ commit_preprocessors = [
   { pattern = '\s*\(#(\d+)\)', replace = " (#${1})" },
 ]
 commit_parsers = [
+  # Noise first, so no later rule can claim it.
+  # A merge commit only restates work the merged commits already describe; without
+  # this every "Merge pull request #N from ..." lands in Other.
+  { message = "^Merge ", skip = true },
+  # Dependabot raises both chore(deps) and chore(deps-dev). Matching only the former
+  # let every dev-dependency bump through into Miscellaneous. Its GitHub Actions
+  # updates carry no conventional prefix at all ("Bump x from 1 to 2"), so they need
+  # their own rule -- a human "ci: bump ..." starts with the type and is unaffected.
+  { message = "^chore\\(deps", skip = true },
+  # Matched against the raw subject, which Dependabot writes in either case; the
+  # capital in the rendered output comes from upper_first in the template.
+  { message = "^[Bb]ump ", skip = true },
+  # The commit that regenerates this file is not itself a change to the software.
+  { message = "^docs\\(changelog\\)", skip = true },
   { message = "^feat", group = "Features" },
   { message = "^fix", group = "Bug Fixes" },
   { message = "^security", group = "Security" },
@@ -60,7 +74,6 @@ commit_parsers = [
   { message = "^docs", group = "Documentation" },
   { message = "^test", group = "Testing" },
   { message = "^style", group = "Styling" },
-  { message = "^chore\\(deps\\)", skip = true },
   { message = "^chore\\(release\\)", skip = true },
   { message = "^(chore|ci|build)", group = "Miscellaneous" },
   { message = ".*", group = "Other" },
