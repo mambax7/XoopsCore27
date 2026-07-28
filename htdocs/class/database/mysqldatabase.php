@@ -98,6 +98,39 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
     }
 
     /**
+     * Report a call that handed us something other than a result set.
+     *
+     * The methods below receive whatever the caller got back from query(). On a failed
+     * query that is false, and a mis-wired caller can pass the SQL string itself. PHP 8
+     * turns both into an uncaught TypeError inside mysqli, so one bad call from one
+     * module takes the whole page down with a blank screen -- which is how this surfaced
+     * on xoops.org, from modules/core/brokenfile.php passing a string to getRowsNum().
+     *
+     * The '@' on the mysqli calls never covered that: it suppresses diagnostics, not
+     * thrown errors. Each caller now returns the failure value it already documents,
+     * which keeps the page alive and hands the caller the answer it is written to expect.
+     *
+     * Reported rather than swallowed, through the same channel this class already uses
+     * for caller misuse, so the module bug stays visible instead of quietly becoming an
+     * empty result.
+     *
+     * @param  string $method calling method
+     * @param  mixed  $result the value handed to us
+     *
+     * @return void
+     */
+    protected function reportInvalidResult($method, $result)
+    {
+        $given   = is_object($result) ? get_class($result) : gettype($result);
+        $message = $method . '() expects a mysqli_result, ' . $given . ' given';
+
+        if (is_object($this->logger)) {
+            $this->logger->addExtra('DB', $message);
+        }
+        trigger_error($message, E_USER_WARNING);
+    }
+
+    /**
      * Get a result row as an enumerated array
      *
      * @param \mysqli_result $result
@@ -106,6 +139,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function fetchRow($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return false;
+        }
         $row = @mysqli_fetch_row($result);
         return $row ?? false;
     }
@@ -119,6 +156,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function fetchArray($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return false;
+        }
         $row = @mysqli_fetch_assoc($result);
         return $row ?? false;
 
@@ -133,6 +174,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function fetchBoth($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return false;
+        }
         $row = @mysqli_fetch_array($result, MYSQLI_BOTH);
         return $row ?? false;
     }
@@ -145,6 +190,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function fetchObject($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return false;
+        }
         $row = @mysqli_fetch_object($result);
         return $row ?? false;
     }
@@ -168,6 +217,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function getRowsNum($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return 0;
+        }
         return (int)@mysqli_num_rows($result);
     }
 
@@ -200,6 +253,11 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function freeRecordSet($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+
+            return;
+        }
         mysqli_free_result($result);
     }
 
@@ -397,6 +455,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function getFieldName($result, $offset)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return '';
+        }
         return $result->fetch_field_direct($offset)->name;
     }
 
@@ -410,6 +472,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function getFieldType($result, $offset)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return '';
+        }
         $typecode = $result->fetch_field_direct($offset)->type;
         switch ($typecode) {
             case MYSQLI_TYPE_DECIMAL:
@@ -507,6 +573,10 @@ abstract class XoopsMySQLDatabase extends XoopsDatabase
      */
     public function getFieldsNum($result)
     {
+        if (!$this->isResultSet($result)) {
+            $this->reportInvalidResult(__FUNCTION__, $result);
+            return 0;
+        }
         return mysqli_num_fields($result);
     }
 
