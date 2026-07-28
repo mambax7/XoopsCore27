@@ -8,6 +8,8 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 ## [v2.7.3-Beta1] - 2026-07-28
 
 ### Bug Fixes
+- **profile**: Escape with ENT_SUBSTITUTE and correct the comment tense
+- **profile**: Assign redirect_page so the default theme's login form is clean
 - **core**: Stop the login redirect accumulating escaped ampersands (#145)
 - **database**: Return the documented failure value for a non-result argument (#143)
 
