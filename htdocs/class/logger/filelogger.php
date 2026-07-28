@@ -205,9 +205,14 @@ class XoopsFileLogger
         $keep    = intdiv($limit, 2);
         $omitted = strlen($value) - ($keep * 2);
 
-        return substr($value, 0, $keep)
+        $shortened = substr($value, 0, $keep)
             . ' ...[' . $omitted . ' chars omitted]... '
             . substr($value, -$keep);
+
+        // Just over the limit the marker costs more than the middle it replaces: at the
+        // default of 512 a 513-character value came back as 537. Keeping the original is
+        // both shorter and complete, so there is nothing to trade off.
+        return strlen($shortened) < strlen($value) ? $shortened : $value;
     }
 
     /**

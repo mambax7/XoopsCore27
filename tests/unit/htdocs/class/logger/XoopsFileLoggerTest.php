@@ -601,6 +601,31 @@ class XoopsFileLoggerTest extends TestCase
     }
 
     #[Test]
+    public function shorteningNeverMakesAValueLonger(): void
+    {
+        // Just over the limit, the "...[N chars omitted]..." marker costs more than the
+        // middle it replaces: at the default of 512 a 513-character value came back as
+        // 537 -- longer than the input, which is the opposite of the point. The other
+        // tests here all use pathological 1000+ character values, so the window from
+        // limit+1 to roughly limit+48 went unexercised.
+        $logger  = $this->makeLogger();
+        $shorten = new ReflectionMethod(XoopsFileLogger::class, 'shorten');
+        $shorten->setAccessible(true);
+
+        // Walked across the boundary rather than sampled either side of it.
+        foreach (range(500, 620, 4) as $length) {
+            $value = str_repeat('x', $length);
+            $out   = (string) $shorten->invoke($logger, $value);
+
+            self::assertLessThanOrEqual(
+                $length,
+                strlen($out),
+                sprintf('a %d-character value grew to %d', $length, strlen($out))
+            );
+        }
+    }
+
+    #[Test]
     public function theCutCanBeTurnedOffEntirely(): void
     {
         $runaway = str_repeat('/modules/profile/user.php?xoops_redirect=', 40) . '/END';
