@@ -32,9 +32,21 @@ if ($op === 'main') {
         include $GLOBALS['xoops']->path('header.php');
         $GLOBALS['xoopsTpl']->assign('lang_login', _LOGIN);
         $GLOBALS['xoopsTpl']->assign('lang_username', _USERNAME);
-        if (Request::hasVar('xoops_redirect', 'GET')) {
-            $GLOBALS['xoopsTpl']->assign('redirect_page', htmlspecialchars(Request::getUrl('xoops_redirect', 'GET'), ENT_QUOTES | ENT_HTML5));
-        }
+        // Assigned unconditionally. The template reads $redirect_page whether or not the
+        // form was reached through a redirect, and a theme is free to render it without a
+        // |default: guard -- the shipped xbootstrap5 profile form did so before this fix,
+        // so a guest opening the login form raised "Undefined array key redirect_page"
+        // plus "Attempt to read property value on null" on every render. That template is
+        // guarded now too, but assigning here is what holds for every theme, including
+        // ones outside this repository.
+        //
+        // ENT_SUBSTITUTE matters here, not just the explicit charset: without it
+        // htmlspecialchars() returns an EMPTY STRING for a target containing an invalid
+        // UTF-8 sequence, so a malformed redirect silently discarded where the visitor was
+        // going rather than losing the one bad byte. Verified on PHP 8.2.
+        $GLOBALS['xoopsTpl']->assign('redirect_page', Request::hasVar('xoops_redirect', 'GET')
+            ? htmlspecialchars(Request::getUrl('xoops_redirect', 'GET'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            : '');
         if ($GLOBALS['xoopsConfig']['usercookie']) {
             $GLOBALS['xoopsTpl']->assign('lang_rememberme', _US_REMEMBERME);
         }
