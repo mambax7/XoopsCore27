@@ -27,6 +27,9 @@ Search:
 - assign "showing" and "module_name" even when a module returns nothing, so an empty showall page stops emitting Undefined array key warnings (mamba) in #130
 - require both isactive and hassearch on the showall route, and normalise the rows a module returns before they reach the template (mamba) in #130
 
+Login form:
+- assign redirect_page whether or not the login form was reached through a redirect. The shipped xbootstrap5 profile form renders it without a |default: guard, so a guest opening that form raised "Undefined array key redirect_page" and "Attempt to read property value on null" on every render — the same shape as anon_canpost, on the default theme. Assigned in PHP so it holds for every theme, and the theme template gained the guard its siblings already had (mamba)
+
 Comments:
 - assign anon_canpost even when anonymous posting is disabled; a guest on such a module produced two warnings per comment row, 253 pairs in nine minutes of xoops.org traffic and the single largest source of log noise (mamba) in #130
 

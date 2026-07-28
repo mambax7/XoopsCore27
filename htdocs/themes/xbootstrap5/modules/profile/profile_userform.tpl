@@ -23,7 +23,7 @@
             </div>
 
             <input type="hidden" name="op" value="login" class="form-control">
-            <input type="hidden" name="xoops_redirect" value="<{$redirect_page}>" class="form-control">
+            <input type="hidden" name="xoops_redirect" value="<{$redirect_page|default:''}>" class="form-control">
             <button type="submit" class="btn btn-secondary"><{$lang_login}></button>
         </form>
         <br>

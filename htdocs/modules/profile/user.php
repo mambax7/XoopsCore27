@@ -32,9 +32,15 @@ if ($op === 'main') {
         include $GLOBALS['xoops']->path('header.php');
         $GLOBALS['xoopsTpl']->assign('lang_login', _LOGIN);
         $GLOBALS['xoopsTpl']->assign('lang_username', _USERNAME);
-        if (Request::hasVar('xoops_redirect', 'GET')) {
-            $GLOBALS['xoopsTpl']->assign('redirect_page', htmlspecialchars(Request::getUrl('xoops_redirect', 'GET'), ENT_QUOTES | ENT_HTML5));
-        }
+        // Assigned unconditionally. The template reads $redirect_page whether or not the
+        // form was reached through a redirect, and a theme is free to render it without a
+        // |default: guard -- the shipped xbootstrap5 profile form does exactly that, so a
+        // guest opening the login form raised "Undefined array key redirect_page" plus
+        // "Attempt to read property value on null" on every render. Assigning here fixes
+        // it for every theme, including ones outside this repository.
+        $GLOBALS['xoopsTpl']->assign('redirect_page', Request::hasVar('xoops_redirect', 'GET')
+            ? htmlspecialchars(Request::getUrl('xoops_redirect', 'GET'), ENT_QUOTES | ENT_HTML5)
+            : '');
         if ($GLOBALS['xoopsConfig']['usercookie']) {
             $GLOBALS['xoopsTpl']->assign('lang_rememberme', _US_REMEMBERME);
         }
