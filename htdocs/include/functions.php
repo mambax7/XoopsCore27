@@ -860,10 +860,24 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
         $xoopsTpl->assign('time', (int) $time);
     }
     if (!empty($_SERVER['REQUEST_URI']) && $addredirect && false !== strpos($url, 'user.php')) {
+        // Heal any escaped-ampersand layers the incoming URI already carries, rather than
+        // folding them into the next hop's redirect and passing the damage along. See
+        // xoops_normalizeUrlSeparators() for how the layers accumulate.
+        //
+        // Required here rather than relied upon: the include above runs only when
+        // $allowExternalLink is false, so on the other path the helper would be missing
+        // and the normalisation would silently not happen.
+        require_once __DIR__ . '/file_safety.php';
+        $requestUri = xoops_normalizeUrlSeparators($_SERVER['REQUEST_URI']);
+
         if (false === strpos($url, '?')) {
-            $url .= '?xoops_redirect=' . urlencode($_SERVER['REQUEST_URI']);
+            $url .= '?xoops_redirect=' . urlencode($requestUri);
         } else {
-            $url .= '&amp;xoops_redirect=' . urlencode($_SERVER['REQUEST_URI']);
+            // A plain "&" separator. This wrote the HTML entity "&amp;" straight into the
+            // query string, which names the parameter "amp;xoops_redirect" as far as any
+            // parser is concerned, and seeded the layering described above. Escaping for
+            // HTML belongs at output, not in the value.
+            $url .= '&xoops_redirect=' . urlencode($requestUri);
         }
     }
 //    if (defined('SID') && SID && (!isset($_COOKIE[session_name()]) || ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '' && !isset($_COOKIE[$xoopsConfig['session_name']])))) {
