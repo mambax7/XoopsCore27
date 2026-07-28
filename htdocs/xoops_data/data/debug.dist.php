@@ -114,6 +114,14 @@ return [
         'max_size'  => 8388608, // 8 MB
         'max_files' => 5,
 
+        // Drop the middle of any single value longer than this, keeping the head, the
+        // tail and a count of what was removed. Aimed at the pathological rather than
+        // the merely long: a runaway redirect chain reaches a thousand characters of
+        // the same fragment repeated and buries the entry around it, while ordinary
+        // SQL, error text and file paths sit well under the limit and pass through
+        // untouched. Set to 0 to keep every value whole.
+        'max_value' => 512,
+
         // Which channels to record. 'messages' carries PHP notices, warnings and
         // errors; 'Queries' carries SQL including failures. Blocks and Extra are
         // verbose and off by default.

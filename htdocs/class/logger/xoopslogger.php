@@ -343,7 +343,7 @@ class XoopsLogger
      * @param string  $errline
      * @param array|null $trace
      */
-    public function handleError($errno, $errstr, $errfile, $errline, $trace = null)
+    public function handleError($errno, $errstr, $errfile, $errline, $trace = null, $exceptionClass = null)
     {
         if ($errno & error_reporting()) {
             // Sanitize to relative pathnames before storing or dispatching
@@ -374,6 +374,9 @@ class XoopsLogger
                 // every notice would cost more than the logging is worth, so a logger that
                 // wants one and did not get one captures its own.
                 'trace'   => $trace,
+                // Set only by handleException(); lets a logger label the entry as an
+                // uncaught exception rather than an ordinary error.
+                'exception' => $exceptionClass,
             ]);
         }
 
@@ -424,7 +427,10 @@ class XoopsLogger
     {
         if ($this->isThrowable($e)) {
             $msg = get_class($e) . ': ' . $this->sanitizePath($this->sanitizeDbMessage($e->getMessage()));
-            $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine(), $e->getTrace());
+            // The class is forwarded so a logger can tell an uncaught exception from a
+            // triggered error. Both arrive as E_USER_ERROR, and matching on the message
+            // text would be guesswork.
+            $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine(), $e->getTrace(), get_class($e));
         }
     }
 

@@ -221,9 +221,15 @@ class XoopsFileLoggerTest extends TestCase
         // so the forged header stays inside the line it was injected into.
         self::assertStringContainsString('/index.php?x=1 [2026-01-01', $clean);
 
-        // The entry itself is still a header plus one body line and nothing more.
+        // And the entry itself gains no extra line. Counted as the lines the entry adds
+        // beyond its own fixed furniture -- the leading blank, the divider, the header and
+        // the uri line -- so this still fails if a forged newline ever opens one.
         $logger->log('warning', 'a message', ['channel' => 'messages']);
-        self::assertSame(2, substr_count($this->readLog(), "\n"));
+        $lines = array_values(array_filter(explode("\n", trim($this->readLog())), 'strlen'));
+
+        self::assertCount(5, $lines, 'divider, errstr, rule, uri and the header line');
+        self::assertStringStartsWith('=====', $lines[0]);
+        self::assertStringNotContainsString('FORGED', implode("\n", array_slice($lines, 1)));
     }
 
     // -----------------------------------------------------------------
@@ -493,7 +499,159 @@ class XoopsFileLoggerTest extends TestCase
         self::assertStringContainsString('messages.WARNING', $body);
         self::assertStringContainsString('the message', $body);
         self::assertStringContainsString('errno=2', $body);
-        // Under a CLI SAPI — which is how this suite runs — the uri field is 'cli'.
-        self::assertStringContainsString('uri=cli', $body);
+        // The uri sits on its own line rather than in the header, because a redirect chain
+        // is long enough to push uid off the screen. Under a CLI SAPI it reads 'cli'.
+        self::assertStringContainsString("\n  uri: cli", $body);
+    }
+
+    // -----------------------------------------------------------------
+    // Entries are separated and labelled
+    // -----------------------------------------------------------------
+
+    #[Test]
+    #[DataProvider('labelProvider')]
+    public function eachEntryIsIntroducedByALabelledDivider(string $level, array $context, string $expected): void
+    {
+        $logger = $this->makeLogger([
+            'channels'                 => ['messages', 'Queries', 'Deprecated'],
+            'queries_with_errors_only' => false,
+        ]);
+        $logger->log($level, 'the message', $context);
+
+        $body = $this->readLog();
+
+        self::assertStringContainsString('===== ' . $expected . ' =', $body);
+        // Fixed width, so a column of dividers lines up when scanning the file.
+        foreach (explode("\n", $body) as $line) {
+            if (str_starts_with($line, '=====')) {
+                self::assertSame(75, strlen($line), 'divider width');
+            }
+        }
+    }
+
+    #[Test]
+    public function aFieldStatedInTheSummaryIsNotRepeatedBelow(): void
+    {
+        // A compiled Smarty template path runs past a hundred characters. Printing it in
+        // the summary and again in the detail line doubled the bulk of the entry for no
+        // added information, which is much of what made the file hard to read.
+        $path   = '/caches/smarty_compile/12f84838_themes_xoops2020_default^c604781_0.db.themes_item.tpl.php';
+        $logger = $this->makeLogger();
+        $logger->log('warning', 'Attempt to read property "value" on null', [
+            'channel' => 'messages',
+            'errno'   => 2,
+            'errfile' => $path,
+            'errline' => 110,
+        ]);
+
+        $body = $this->readLog();
+
+        self::assertSame(1, substr_count($body, $path), 'errfile belongs in the summary only');
+        self::assertStringContainsString('  errfile= ' . $path, $body);
+        self::assertStringContainsString('  errline= 110', $body);
+        // errno is not in the summary, so it still belongs in the detail line below.
+        self::assertStringContainsString("\n  errno=2\n", $body);
+        self::assertSame(1, substr_count($body, 'Attempt to read property'));
+    }
+
+    #[Test]
+    public function aRunawayValueLosesItsMiddleButKeepsBothEnds(): void
+    {
+        // A XOOPS redirect loop reaches a thousand characters of the same fragment
+        // repeated, and printed whole it buries the entry it belongs to. Both ends carry
+        // meaning: the tail of a redirect chain is where the visitor was actually going.
+        $runaway = str_repeat('/modules/profile/user.php?xoops_redirect=', 40) . '/viewtopic.php?post_id=205596';
+        $logger  = $this->makeLogger(['channels' => ['Queries'], 'queries_with_errors_only' => false]);
+        $logger->log('error', $runaway, [
+            'channel' => 'Queries',
+            'sql'     => $runaway,
+            'error'   => 'Data too long',
+            'errno'   => 1406,
+        ]);
+
+        $body = $this->readLog();
+
+        self::assertLessThan(strlen($runaway), strlen($body));
+        self::assertStringContainsString('/modules/profile/user.php?xoops_redirect=', $body, 'head');
+        self::assertStringContainsString('/viewtopic.php?post_id=205596', $body, 'tail');
+        // The count is not decoration: in a "Data too long" error the length is the
+        // diagnosis, so the entry has to say how much it dropped.
+        self::assertMatchesRegularExpression('/\.\.\.\[\d+ chars omitted\]\.\.\./', $body);
+    }
+
+    #[Test]
+    public function anOrdinaryValueIsNotTouched(): void
+    {
+        // The cut is aimed at the pathological, not the merely long. If a normal
+        // statement or a compiled-template path were being trimmed, the limit is wrong.
+        $sql  = 'SELECT uname, email FROM users WHERE uid = 19563 AND level > 0 ORDER BY uname';
+        $path = '/caches/smarty_compile/12f84838_themes_xoops2020_default^c60478122971809d7bc704cb6346cff53cfce2da_0.db.themes_item.tpl.php';
+
+        $logger = $this->makeLogger(['channels' => ['messages', 'Queries'], 'queries_with_errors_only' => false]);
+        $logger->log('error', $sql, ['channel' => 'Queries', 'sql' => $sql, 'error' => 'boom', 'errno' => 1]);
+        $logger->log('warning', 'Attempt to read property "value" on null', [
+            'channel' => 'messages', 'errno' => 2, 'errfile' => $path, 'errline' => 110,
+        ]);
+
+        $body = $this->readLog();
+
+        self::assertStringContainsString($sql, $body);
+        self::assertStringContainsString($path, $body);
+        self::assertStringNotContainsString('chars omitted', $body);
+    }
+
+    #[Test]
+    public function shorteningNeverMakesAValueLonger(): void
+    {
+        // Just over the limit, the "...[N chars omitted]..." marker costs more than the
+        // middle it replaces: at the default of 512 a 513-character value came back as
+        // 537 -- longer than the input, which is the opposite of the point. The other
+        // tests here all use pathological 1000+ character values, so the window from
+        // limit+1 to roughly limit+48 went unexercised.
+        $logger  = $this->makeLogger();
+        $shorten = new ReflectionMethod(XoopsFileLogger::class, 'shorten');
+        $shorten->setAccessible(true);
+
+        // Walked across the boundary rather than sampled either side of it.
+        foreach (range(500, 620, 4) as $length) {
+            $value = str_repeat('x', $length);
+            $out   = (string) $shorten->invoke($logger, $value);
+
+            self::assertLessThanOrEqual(
+                $length,
+                strlen($out),
+                sprintf('a %d-character value grew to %d', $length, strlen($out))
+            );
+        }
+    }
+
+    #[Test]
+    public function theCutCanBeTurnedOffEntirely(): void
+    {
+        $runaway = str_repeat('/modules/profile/user.php?xoops_redirect=', 40) . '/END';
+        $logger  = $this->makeLogger([
+            'channels'                 => ['Queries'],
+            'queries_with_errors_only' => false,
+            'max_value'                => 0,
+        ]);
+        $logger->log('error', $runaway, ['channel' => 'Queries', 'sql' => $runaway, 'error' => 'x', 'errno' => 1]);
+
+        self::assertStringContainsString($runaway, $this->readLog());
+    }
+
+    public static function labelProvider(): array
+    {
+        return [
+            // A failed query is what you scan for, so it is labelled apart from a plain one.
+            'failed query'      => ['error', ['channel' => 'Queries', 'error' => 'boom'], 'QUERY ERROR'],
+            'plain query'       => ['debug', ['channel' => 'Queries'], 'QUERY'],
+            // An uncaught exception reaches the logger as E_USER_ERROR exactly like a
+            // triggered one, so handleException() marks it explicitly.
+            'uncaught exception' => ['error', ['channel' => 'messages', 'exception' => 'TypeError'], 'EXCEPTION'],
+            'plain error'       => ['error', ['channel' => 'messages'], 'ERROR'],
+            'warning'           => ['warning', ['channel' => 'messages'], 'WARNING'],
+            'notice'            => ['notice', ['channel' => 'messages'], 'NOTICE'],
+            'deprecation'       => ['warning', ['channel' => 'Deprecated'], 'DEPRECATED'],
+        ];
     }
 }
