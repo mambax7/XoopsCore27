@@ -554,6 +554,66 @@ class XoopsFileLoggerTest extends TestCase
         self::assertSame(1, substr_count($body, 'Attempt to read property'));
     }
 
+    #[Test]
+    public function aRunawayValueLosesItsMiddleButKeepsBothEnds(): void
+    {
+        // A XOOPS redirect loop reaches a thousand characters of the same fragment
+        // repeated, and printed whole it buries the entry it belongs to. Both ends carry
+        // meaning: the tail of a redirect chain is where the visitor was actually going.
+        $runaway = str_repeat('/modules/profile/user.php?xoops_redirect=', 40) . '/viewtopic.php?post_id=205596';
+        $logger  = $this->makeLogger(['channels' => ['Queries'], 'queries_with_errors_only' => false]);
+        $logger->log('error', $runaway, [
+            'channel' => 'Queries',
+            'sql'     => $runaway,
+            'error'   => 'Data too long',
+            'errno'   => 1406,
+        ]);
+
+        $body = $this->readLog();
+
+        self::assertLessThan(strlen($runaway), strlen($body));
+        self::assertStringContainsString('/modules/profile/user.php?xoops_redirect=', $body, 'head');
+        self::assertStringContainsString('/viewtopic.php?post_id=205596', $body, 'tail');
+        // The count is not decoration: in a "Data too long" error the length is the
+        // diagnosis, so the entry has to say how much it dropped.
+        self::assertMatchesRegularExpression('/\.\.\.\[\d+ chars omitted\]\.\.\./', $body);
+    }
+
+    #[Test]
+    public function anOrdinaryValueIsNotTouched(): void
+    {
+        // The cut is aimed at the pathological, not the merely long. If a normal
+        // statement or a compiled-template path were being trimmed, the limit is wrong.
+        $sql  = 'SELECT uname, email FROM users WHERE uid = 19563 AND level > 0 ORDER BY uname';
+        $path = '/caches/smarty_compile/12f84838_themes_xoops2020_default^c60478122971809d7bc704cb6346cff53cfce2da_0.db.themes_item.tpl.php';
+
+        $logger = $this->makeLogger(['channels' => ['messages', 'Queries'], 'queries_with_errors_only' => false]);
+        $logger->log('error', $sql, ['channel' => 'Queries', 'sql' => $sql, 'error' => 'boom', 'errno' => 1]);
+        $logger->log('warning', 'Attempt to read property "value" on null', [
+            'channel' => 'messages', 'errno' => 2, 'errfile' => $path, 'errline' => 110,
+        ]);
+
+        $body = $this->readLog();
+
+        self::assertStringContainsString($sql, $body);
+        self::assertStringContainsString($path, $body);
+        self::assertStringNotContainsString('chars omitted', $body);
+    }
+
+    #[Test]
+    public function theCutCanBeTurnedOffEntirely(): void
+    {
+        $runaway = str_repeat('/modules/profile/user.php?xoops_redirect=', 40) . '/END';
+        $logger  = $this->makeLogger([
+            'channels'                 => ['Queries'],
+            'queries_with_errors_only' => false,
+            'max_value'                => 0,
+        ]);
+        $logger->log('error', $runaway, ['channel' => 'Queries', 'sql' => $runaway, 'error' => 'x', 'errno' => 1]);
+
+        self::assertStringContainsString($runaway, $this->readLog());
+    }
+
     public static function labelProvider(): array
     {
         return [

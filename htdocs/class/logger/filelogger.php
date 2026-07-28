@@ -99,6 +99,9 @@ class XoopsFileLogger
     /** @var int frames to keep in the backtrace */
     protected $backtraceLimit;
 
+    /** @var int drop the middle of any value longer than this; 0 keeps everything */
+    protected $maxValue;
+
     /** @var bool set by quiet(); suppresses all further writes */
     protected $quiet = false;
 
@@ -154,6 +157,9 @@ class XoopsFileLogger
         $this->queriesWithErrorsOnly = (bool) ($config['queries_with_errors_only'] ?? true);
         $this->backtrace             = (bool) ($config['backtrace'] ?? true);
         $this->backtraceLimit        = $this->clamp($config['backtrace_limit'] ?? 12, 1, 50);
+        // 0 keeps values whole, for anyone who would rather have the noise than the cut.
+        $maxValue                    = $config['max_value'] ?? 512;
+        $this->maxValue              = 0 === (int) $maxValue ? 0 : $this->clamp($maxValue, 80, self::MAX_FIELD);
         $this->requestId             = substr(md5(uniqid('', true)), 0, 8);
     }
 
@@ -168,6 +174,40 @@ class XoopsFileLogger
         return strlen($value) > self::MAX_FIELD
             ? substr($value, 0, self::MAX_FIELD) . '...[' . strlen($value) . ' bytes]'
             : $value;
+    }
+
+    /**
+     * Drop the middle of a value that is too long to read.
+     *
+     * Distinct from trim(), which is a memory guard at 8 KB. This one is about the eye:
+     * a runaway XOOPS redirect chain reaches a thousand characters of the same fragment
+     * repeated, and printed whole it buries the entry it belongs to.
+     *
+     * Head and tail are kept because both carry meaning -- the tail of a redirect chain
+     * is where the visitor was actually going -- and the count of what was dropped is
+     * stated, because in a "Data too long" error the length IS the diagnosis.
+     *
+     * Collapsing the repetition instead was tried and rejected: the shortest repeating
+     * unit a regex finds rarely lines up with the one a reader would recognise, so the
+     * output implies a repetition that was never there. A log that misleads is worse
+     * than a log that is long.
+     *
+     * @param  string $value already sanitised
+     * @return string
+     */
+    protected function shorten($value)
+    {
+        $limit = $this->maxValue;
+        if ($limit <= 0 || strlen($value) <= $limit) {
+            return $value;
+        }
+
+        $keep    = intdiv($limit, 2);
+        $omitted = strlen($value) - ($keep * 2);
+
+        return substr($value, 0, $keep)
+            . ' ...[' . $omitted . ' chars omitted]... '
+            . substr($value, -$keep);
     }
 
     /**
@@ -340,14 +380,14 @@ class XoopsFileLogger
             $pairs['errstr'] = $message;
             foreach (['errfile', 'errline'] as $key) {
                 if (isset($context[$key]) && '' !== $context[$key] && is_scalar($context[$key])) {
-                    $pairs[$key] = $this->sanitize($this->trim((string) $context[$key]));
+                    $pairs[$key] = $this->shorten($this->sanitize($this->trim((string) $context[$key])));
                 }
             }
 
             return $pairs;
         }
 
-        $pairs['error'] = $this->sanitize($this->trim((string) $context['error']));
+        $pairs['error'] = $this->shorten($this->sanitize($this->trim((string) $context['error'])));
         if (isset($context['errno']) && is_scalar($context['errno'])) {
             $pairs['errno'] = (string) $context['errno'];
         }
@@ -413,7 +453,7 @@ class XoopsFileLogger
         // Truncate BEFORE sanitising. MAX_ENTRY alone was not enough: a 16 MB SQL string
         // was regex-processed and concatenated first, and the peak allocation of that
         // exhausted the memory limit long before the finished entry could be trimmed.
-        $message = $this->sanitize($this->trim($message));
+        $message = $this->shorten($this->sanitize($this->trim($message)));
 
         // A labelled rule carrying the timestamp opens every entry. Without a separator
         // the file reads as an unbroken wall of text -- entries run to several lines each
@@ -432,7 +472,7 @@ class XoopsFileLogger
         // The URI on its own line, not in the header: a XOOPS redirect chain runs to
         // several hundred characters and pushed uid -- the field most often wanted beside
         // the error -- off the right of the screen.
-        $uri = $this->sanitize($this->currentUri());
+        $uri = $this->shorten($this->sanitize($this->currentUri()));
         if ('' !== $uri) {
             $entry .= '  uri: ' . $uri . "\n";
         }
@@ -462,7 +502,7 @@ class XoopsFileLogger
             if (isset($summary[$key])) {
                 continue;
             }
-            $value = $this->sanitize($this->trim((string) $context[$key]));
+            $value = $this->shorten($this->sanitize($this->trim((string) $context[$key])));
             // addQuery() passes the SQL as BOTH the message and context['sql']; writing it
             // twice doubles the file size and the time spent holding the lock.
             if ('sql' === $key && $value === $message) {
