@@ -9,7 +9,11 @@ Debugging and logging:
 - keep the log out of reach: the filename is restricted to a plain .log name, a log resolving below the document root is refused, the file is created 0640, and directory guards ship alongside it (mamba) in #139
 - redact what reaches the file: server paths, session ids, and the session table's own rows, so a debug log cannot become a source of live CSRF token seeds or a hijacking primitive (mamba) in #139
 - strip control characters from every untrusted value written, so a crafted URI or SQL fragment cannot forge additional log lines (mamba) in #139
-- note for upgrades: mainfile.php is not replaced by an upgrade, so an existing site picks this up only once its mainfile.php is updated from the new dist; fresh installs get it automatically (mamba) in #139
+- note for upgrades: file logging needs no change to mainfile.php, because include/common.php reads debug.php itself. Updating mainfile.php from the new dist adds two further things: the XOOPS_DEBUG and XOOPS_DB_LEGACY_LOG constants, and error reporting raised earlier than common.php runs, which matters only for failures during bootstrap (mamba) in #139
+- note on visibility: display_errors from debug.php is applied at include/common.php, while the debugLevel setting in xoops_data/configs/xoopsconfig.php clamps error_reporting to 0 for non-admins later in the same file, after authentication. Errors raised before that point — the database connection, config loading, preloads — are therefore still displayed to any visitor. Set display_errors to false on a public site and read the log instead; it records the same bootstrap window (mamba) in #139
+
+Database:
+- return the documented failure value instead of fataling when a result-set method is handed something that is not one. A failed query returns false and a mis-wired caller can pass the SQL string itself; PHP 8 turns both into an uncaught TypeError inside mysqli, so one bad call from one module blanked the whole page. Observed on xoops.org from modules/core/brokenfile.php. The misuse is still reported, so the caller's bug stays visible (mamba)
 
 Security:
 - escape the untrusted values rendered in the logger's debug panel; a PHP warning quotes the offending request value and a database error quotes the offending column, so crafted input reached the administrator's browser as live markup through the error, query, block and deprecation channels (mamba) in #140
