@@ -76,7 +76,7 @@ class XoopsFileLogger
     private const MAX_ENTRY = 65536;
 
     /** Width of the rule that separates entries. Fits an 80-column terminal. */
-    private const DIVIDER_WIDTH = 72;
+    private const DIVIDER_WIDTH = 75;
 
     /** @var string absolute path of the current log file */
     protected $file;
@@ -321,10 +321,62 @@ class XoopsFileLogger
     }
 
     /**
-     * A fixed-width rule carrying the entry label.
+     * The headline pairs: what went wrong, and where.
      *
-     * The label sits near the left edge so a column of them can be scanned down without
-     * the eye having to track a moving position.
+     * Keyed so the caller can render them aligned. A failed query leads with the database
+     * error rather than the statement -- the statement can be hundreds of characters and
+     * is not the thing you are looking for first.
+     *
+     * @param  string $message already sanitised
+     * @param  string $channel
+     * @param  array  $context
+     * @return array<string, string>
+     */
+    protected function summary($message, $channel, array $context)
+    {
+        $pairs = [];
+
+        if ($this->summaryCarriesMessage($channel, $context)) {
+            $pairs['errstr'] = $message;
+            foreach (['errfile', 'errline'] as $key) {
+                if (isset($context[$key]) && '' !== $context[$key] && is_scalar($context[$key])) {
+                    $pairs[$key] = $this->sanitize($this->trim((string) $context[$key]));
+                }
+            }
+
+            return $pairs;
+        }
+
+        $pairs['error'] = $this->sanitize($this->trim((string) $context['error']));
+        if (isset($context['errno']) && is_scalar($context['errno'])) {
+            $pairs['errno'] = (string) $context['errno'];
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * Does the headline block already say what the message says?
+     *
+     * True for everything except a failed query, where the headline carries the database
+     * error and the statement itself belongs in the detail below.
+     *
+     * @param  string $channel
+     * @param  array  $context
+     * @return bool
+     */
+    protected function summaryCarriesMessage($channel, array $context)
+    {
+        return 'queries' !== strtolower((string) $channel)
+            || empty($context['error'])
+            || !is_scalar($context['error']);
+    }
+
+    /**
+     * A fixed-width rule carrying the timestamp and the entry label.
+     *
+     * The timestamp is part of the rule rather than a line of its own, so the two things
+     * you scan for -- when, and what kind -- are on the line that catches the eye.
      *
      * @param  string $label
      * @return string
@@ -335,9 +387,16 @@ class XoopsFileLogger
         if ('' === $label) {
             $label = 'LOG';
         }
-        $tail = self::DIVIDER_WIDTH - 7 - strlen($label);
 
-        return '===== ' . $label . ' ' . str_repeat('=', max(3, $tail));
+        $stamp = str_repeat('=', 11) . '[' . date('Y-m-d H:i:s') . ']  ';
+
+        // Label centred in what remains, so the rule keeps one width whatever it says.
+        $room = max(9, self::DIVIDER_WIDTH - strlen($stamp));
+        $left = intdiv($room - strlen($label) - 2, 2);
+        $left = max(3, $left);
+        $right = max(3, $room - strlen($label) - 2 - $left);
+
+        return $stamp . str_repeat('=', $left) . ' ' . $label . ' ' . str_repeat('=', $right);
     }
 
     /**
@@ -351,34 +410,45 @@ class XoopsFileLogger
      */
     protected function format($level, $message, $channel, array $context)
     {
-        // A labelled rule ahead of every entry. Without one the file reads as an unbroken
-        // wall of text -- entries run to several lines each, so where one ends and the
-        // next begins is genuinely hard to see -- and the label says what you are looking
-        // at before you have read a word of it.
-        $head = "\n" . $this->divider($this->entryLabel($level, $channel, $context)) . "\n";
+        // Truncate BEFORE sanitising. MAX_ENTRY alone was not enough: a 16 MB SQL string
+        // was regex-processed and concatenated first, and the peak allocation of that
+        // exhausted the memory limit long before the finished entry could be trimmed.
+        $message = $this->sanitize($this->trim($message));
 
-        $head .= sprintf(
-            '[%s] %s.%s req=%s uid=%s',
-            date('Y-m-d H:i:s'),
+        // A labelled rule carrying the timestamp opens every entry. Without a separator
+        // the file reads as an unbroken wall of text -- entries run to several lines each
+        // -- and the label says what you are looking at before you have read a word.
+        $entry = "\n" . $this->divider($this->entryLabel($level, $channel, $context)) . "\n";
+
+        // What went wrong and where, directly under the timestamp. This is the reason you
+        // opened the file; everything below it is supporting detail, and on a warning
+        // raised inside a compiled Smarty template the location is most of the answer.
+        foreach ($this->summary($message, $channel, $context) as $key => $value) {
+            $entry .= '  ' . str_pad($key, 7) . '= ' . $value . "\n";
+        }
+        $entry .= "-------\n";
+
+        // The URI on its own line, not in the header: a XOOPS redirect chain runs to
+        // several hundred characters and pushed uid -- the field most often wanted beside
+        // the error -- off the right of the screen.
+        $uri = $this->sanitize($this->currentUri());
+        if ('' !== $uri) {
+            $entry .= '  uri: ' . $uri . "\n";
+        }
+
+        $entry .= sprintf(
+            "  %s.%s req=%s uid=%s\n",
             $channel,
             strtoupper($level),
             $this->requestId,
             $this->currentUid()
         );
 
-        // The URI gets its own line instead of sitting in the header. A XOOPS redirect
-        // chain runs to several hundred characters, which pushed everything after it off
-        // the screen -- including uid, the field most often wanted beside the error.
-        $uri = $this->sanitize($this->currentUri());
-        if ('' !== $uri) {
-            $head .= "\n  uri: " . $uri;
+        // Repeated below only when the summary did not already carry it -- a query's
+        // statement belongs here, but a warning's text would just be printed twice.
+        if (!$this->summaryCarriesMessage($channel, $context)) {
+            $entry .= '  ' . $message . "\n";
         }
-
-        // Truncate BEFORE sanitising. MAX_ENTRY alone was not enough: a 16 MB SQL string
-        // was regex-processed and concatenated first, and the peak allocation of that
-        // exhausted the memory limit long before the finished entry could be trimmed.
-        $message = $this->sanitize($this->trim($message));
-        $body    = '  ' . $message;
 
         $detail = [];
         foreach (['errno', 'errfile', 'errline', 'sql', 'error', 'query_time'] as $key) {
@@ -394,17 +464,15 @@ class XoopsFileLogger
             $detail[] = $key . '=' . $value;
         }
         if ([] !== $detail) {
-            $body .= "\n  " . implode(' ', $detail);
+            $entry .= '  ' . implode(' ', $detail) . "\n";
         }
 
         if ($this->backtrace) {
             $trace = $this->renderTrace($context['trace'] ?? null);
             if ('' !== $trace) {
-                $body .= "\n" . $trace;
+                $entry .= $trace . "\n";
             }
         }
-
-        $entry = $head . "\n" . $body . "\n";
 
         // One entry must never be able to defeat rotation on its own.
         if (strlen($entry) > self::MAX_ENTRY) {

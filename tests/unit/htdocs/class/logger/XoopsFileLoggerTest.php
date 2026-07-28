@@ -227,7 +227,7 @@ class XoopsFileLoggerTest extends TestCase
         $logger->log('warning', 'a message', ['channel' => 'messages']);
         $lines = array_values(array_filter(explode("\n", trim($this->readLog())), 'strlen'));
 
-        self::assertCount(4, $lines, 'divider, header, uri and one body line');
+        self::assertCount(5, $lines, 'divider, errstr, rule, uri and the header line');
         self::assertStringStartsWith('=====', $lines[0]);
         self::assertStringNotContainsString('FORGED', implode("\n", array_slice($lines, 1)));
     }
@@ -524,7 +524,7 @@ class XoopsFileLoggerTest extends TestCase
         // Fixed width, so a column of dividers lines up when scanning the file.
         foreach (explode("\n", $body) as $line) {
             if (str_starts_with($line, '=====')) {
-                self::assertSame(72, strlen($line), 'divider width');
+                self::assertSame(75, strlen($line), 'divider width');
             }
         }
     }
