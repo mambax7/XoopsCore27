@@ -60,12 +60,26 @@ class XoopsTpl extends Smarty
         // Assuming $smarty is your Smarty instance
         $this->registerPlugin('modifier', 'file_exists', 'file_exists');
 
-        if ($xoopsConfig['debug_mode']) {
-            $this->debugging_ctrl = 'URL';
-            // $this->debug_tpl = XOOPS_ROOT_PATH . '/class/smarty/xoops_tpl/debug.tpl';
-            if ($xoopsConfig['debug_mode'] == 3) {
-                $this->debugging = true;
-            }
+        // Smarty's URL debug control is deliberately NOT enabled here.
+        //
+        // debugging_ctrl = 'URL' makes Smarty look for SMARTY_DEBUG in the query
+        // string and, on finding it, render its debug console -- every assigned
+        // template variable with its value -- to whoever asked. Smarty applies no
+        // authentication to that, and SMARTY_DEBUG=on additionally sets a bare
+        // SMARTY_DEBUG cookie that keeps the console on for later requests that
+        // no longer carry the parameter.
+        //
+        // It used to be set for every non-zero debug mode. Modes 1 and 2 select
+        // XOOPS's own logger output, not Smarty's, so an administrator enabling
+        // those handed any anonymous visitor a disclosure they never asked for.
+        //
+        // Removing it costs nothing in mode 3, the mode that does want the
+        // console: debugging is already true there, and Smarty only consults the
+        // URL when debugging is false (Smarty.class.php, createTemplate()). So
+        // the setting could never do anything except in the two modes where it
+        // should not have been active at all.
+        if (3 == $xoopsConfig['debug_mode']) {
+            $this->debugging = true;
         }
         $this->setCompileId();
         $this->assign(
