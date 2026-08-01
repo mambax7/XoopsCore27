@@ -724,17 +724,38 @@ class MyTextSanitizer
      * line to terminate, so the break renders as a whole empty line on top of the div's own
      * spacing. An author who deliberately left a blank line after the block still keeps one.
      *
-     * The pattern anchors on the inner closing tag rather than on a bare `</div>`: quotes nest,
-     * and user content may contain its own divs that must not be touched. `pre` is listed
-     * alongside `code` because {@see MytsSyntaxhighlight::load()} falls back to a plain
-     * `<pre>…</pre>` when its `highlight` option is off, so the box closes `</pre></div>`.
+     * The pattern is anchored at BOTH ends of the generated box. It has to open on the
+     * `xoopsCode` / `xoopsQuote` wrapper, because those classes are the only thing that marks
+     * the div as ours: matching the closing side alone would also strike a break the author
+     * deliberately wrote after their own `<div><code>…</code></div>`, which is reachable
+     * whenever HTML is permitted. It closes on the inner tag rather than a bare `</div>` for
+     * the same reason from the other side. `pre` is listed alongside `code` because
+     * {@see MytsSyntaxhighlight::load()} falls back to a plain `<pre>…</pre>` when its
+     * `highlight` option is off, so the box then closes `</pre></div>`.
      *
-     * @param  string $text rendered text
-     * @return string
+     * The span between the two anchors stays lazy so that nested quotes still work: the inner
+     * `</blockquote></div>` is not followed by a break, so the match keeps growing out to the
+     * outer one that is.
+     *
+     * Anything that is not a string is handed back untouched. `codeConv()` above is documented
+     * `@return mixed` and the whole display chain is untyped, so a non-string can reach here;
+     * coercing it would turn an array into the literal "Array" rather than leave the value for
+     * the next filter to deal with as it always has.
+     *
+     * @param  mixed $text rendered text
+     * @return mixed the text with the break removed, or $text unchanged if it is not a string
      */
     protected function trimBlockBreaks($text)
     {
-        return preg_replace('#(</(?:code|pre|blockquote)>\s*</div>)\s*<br\s*/?>#i', '$1', (string) $text);
+        if (!is_string($text)) {
+            return $text;
+        }
+
+        return preg_replace(
+            '#(<div class="xoops(?:Code|Quote)">.*?</(?:code|pre|blockquote)>\s*</div>)\s*<br\s*/?>#is',
+            '$1',
+            $text
+        );
     }
 
     /**

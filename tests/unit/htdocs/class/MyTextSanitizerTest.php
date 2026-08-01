@@ -290,8 +290,9 @@ class MyTextSanitizerTest extends TestCase
 
     private function trimBlockBreaks(string $text): string
     {
+        // No setAccessible(): it has had no effect since PHP 8.1 and is deprecated in 8.5.
         $m = new ReflectionMethod(MyTextSanitizer::class, 'trimBlockBreaks');
-        $m->setAccessible(true);
+
         return $m->invoke($this->sanitizer, $text);
     }
 
@@ -347,6 +348,30 @@ class MyTextSanitizerTest extends TestCase
         $input    = '<div class="xoopsCode"><code>x</code></div><br />mid<div class="xoopsQuote"><blockquote>q</blockquote></div><br />end';
         $expected = '<div class="xoopsCode"><code>x</code></div>mid<div class="xoopsQuote"><blockquote>q</blockquote></div>end';
         $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksLeavesAuthoredCodeDivUntouched()
+    {
+        // Reachable whenever HTML is permitted: the author's own div closes </code></div>
+        // exactly like a generated block, but carries no xoopsCode class, so their break stays.
+        $input = '<div class="example"><code>x</code></div><br />after';
+        $this->assertEquals($input, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksStillTrimsNestedQuote()
+    {
+        $input    = '<div class="xoopsQuote"><blockquote>o <div class="xoopsQuote"><blockquote>i</blockquote></div> t</blockquote></div><br />after';
+        $expected = '<div class="xoopsQuote"><blockquote>o <div class="xoopsQuote"><blockquote>i</blockquote></div> t</blockquote></div>after';
+        $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksReturnsNonStringUntouched()
+    {
+        $method = new ReflectionMethod(MyTextSanitizer::class, 'trimBlockBreaks');
+
+        $array = ['<div class="xoopsCode"><code>x</code></div><br />after'];
+        $this->assertSame($array, $method->invoke($this->sanitizer, $array));
+        $this->assertNull($method->invoke($this->sanitizer, null));
     }
 
 }

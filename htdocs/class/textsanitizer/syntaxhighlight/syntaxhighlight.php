@@ -89,18 +89,30 @@ class MytsSyntaxhighlight extends MyTextSanitizerExtension
             $buffer = preg_replace('#</pre>\s*$#', '', $buffer);
             $buffer = str_replace(["\r\n", "\n"], '<br />', $buffer);
 
-            // Indentation too: 8.2 encoded leading whitespace as &nbsp; (it had no <pre> to
-            // rely on), 8.3+ emits real spaces. Having just removed the <pre>, those spaces
-            // would collapse and every line would start at column 0.
-            $buffer = preg_replace_callback(
-                '/(<br \/>)([ \t]+)/',
-                static fn (array $m): string => $m[1] . str_replace(
-                    [' ', "\t"],
-                    ['&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'],
-                    $m[2]
-                ),
-                $buffer
-            );
+            // Whitespace too. Having no <pre> to rely on, 8.2 encoded EVERY space in the
+            // source as &nbsp; and every tab as four of them; 8.3+ emits real whitespace and
+            // lets the <pre> hold it. With that <pre> now removed, each run would collapse to
+            // a single rendered space — losing not just indentation but any alignment within
+            // a line, so `$a   = 1;` over `$bb  = 2;` would come out ragged.
+            //
+            // Only the text between tags is rewritten. The spaces inside an attribute such as
+            // `<span style="color: #007700">` have to survive untouched: rewriting those is
+            // what corrupts the markup itself. preg_split with DELIM_CAPTURE puts the tags at
+            // the odd offsets and the text at the even ones, which keeps the two apart without
+            // a pattern that has to reason about quoting.
+            $parts = preg_split('/(<[^>]*>)/', $buffer, -1, PREG_SPLIT_DELIM_CAPTURE);
+            if (is_array($parts)) {
+                foreach ($parts as $i => $part) {
+                    if (0 === $i % 2) {
+                        $parts[$i] = str_replace(
+                            [' ', "\t"],
+                            ['&nbsp;', '&nbsp;&nbsp;&nbsp;&nbsp;'],
+                            $part
+                        );
+                    }
+                }
+                $buffer = implode('', $parts);
+            }
         }
         $pos_open = $pos_close = 0;
         // Length of the opening marker actually found, so no magic number is assumed.
