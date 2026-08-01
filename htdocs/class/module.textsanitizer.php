@@ -627,6 +627,7 @@ class MyTextSanitizer
             $text = $this->nl2Br($text);
         }
         $text = $this->codeConv($text, $xcode);
+        $text = $this->trimBlockBreaks($text);
         $text = $this->makeClickable($text);
         if (!empty($this->config['filterxss_on_display'])) {
             $text = $this->filterXss($text);
@@ -710,6 +711,33 @@ class MyTextSanitizer
      * @param  mixed $xcode
      * @return mixed
      */
+    /**
+     * Drop the stray <br /> that sits immediately against a block-level [code] / [quote] box.
+     *
+     * `nl2Br()` runs BEFORE `codeConv()`/`quoteConv()` in {@see self::displayTarea()}, so by the
+     * time those wrap their content in `<div class="xoopsCode">` / `<div class="xoopsQuote">`
+     * the newline the author typed after `[/code]` or `[/quote]` has already become a `<br />`.
+     * The div is block-level and supplies its own vertical separation, so that `<br />` renders
+     * as an extra empty line — one after a code block, and after a quote as well.
+     *
+     * Only the TRAILING break is removed, and only one of them. The two sides are not
+     * symmetrical: a `<br />` that PRECEDES a block element merely terminates the previous
+     * line and shows no gap of its own, so an author's blank line before `[code]` is carried
+     * by two breaks and removing one visibly closes the gap. After the block there is no such
+     * line to terminate, so the break renders as a whole empty line on top of the div's own
+     * spacing. An author who deliberately left a blank line after the block still keeps one.
+     *
+     * The pattern anchors on `</code></div>` / `</blockquote></div>` rather than on a bare
+     * `</div>`: quotes nest, and user content may contain its own divs that must not be touched.
+     *
+     * @param  string $text rendered text
+     * @return string
+     */
+    protected function trimBlockBreaks($text)
+    {
+        return preg_replace('#(</(?:code|blockquote)>\s*</div>)\s*<br\s*/?>#i', '$1', (string) $text);
+    }
+
     public function codeConv($text, $xcode = 1)
     {
         if (empty($xcode)) {
