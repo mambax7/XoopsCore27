@@ -374,6 +374,12 @@ if (!defined('_CAL_DISPS1ST')) {
 if (!defined('_XOOPS_FORM_ENTERYOUTUBEURL')) {
     define('_XOOPS_FORM_ENTERYOUTUBEURL', 'Enter YouTube URL');
 }
+if (!defined('_XOOPS_FORM_ALT_ENTERHEIGHT')) {
+    define('_XOOPS_FORM_ALT_ENTERHEIGHT', 'Height:');
+}
+if (!defined('_XOOPS_FORM_ALTYOUTUBE')) {
+    define('_XOOPS_FORM_ALTYOUTUBE', 'Youtube');
+}
 
 // Multibyte constants
 if (!defined('XOOPS_USE_MULTIBYTES')) {
@@ -970,4 +976,14 @@ function xoops_getModuleHandler($name, $module_dir = '', $optional = false)
 function xoops_load($name, $type = 'core')
 {
     return XoopsLoad::load($name, $type);
+}
+
+// Xmf\I18n\Xoops\Registry\LocaleRegistry caches a snapshot under XOOPS_VAR_PATH, which in this
+// suite resolves to the repo's own xoops_data/. A developer who also runs a live site from this
+// tree leaves a populated snapshot there, and tests would then negotiate locales and build language
+// selectors from THAT site's installed packs — passing or failing differently per machine. Purge it
+// once per test process so every run starts from an unreadable (empty) registry. Nothing here has a
+// database, so no test rewrites the file.
+if (class_exists(\Xmf\I18n\Xoops\Registry\LocaleRegistry::class)) {
+    (new \Xmf\I18n\Xoops\Registry\LocaleRegistry(null))->purgeCache();
 }
