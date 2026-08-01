@@ -288,4 +288,65 @@ class MyTextSanitizerTest extends TestCase
 //        }
 //    }
 
+    private function trimBlockBreaks(string $text): string
+    {
+        $m = new ReflectionMethod(MyTextSanitizer::class, 'trimBlockBreaks');
+        $m->setAccessible(true);
+        return $m->invoke($this->sanitizer, $text);
+    }
+
+    public function testTrimBlockBreaksRemovesTrailingBreakAfterCodeBlock()
+    {
+        $input    = '<div class="xoopsCode"><code>x</code></div><br />after';
+        $expected = '<div class="xoopsCode"><code>x</code></div>after';
+        $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksRemovesTrailingBreakAfterQuoteBlock()
+    {
+        $input    = '<div class="xoopsQuote"><blockquote>q</blockquote></div><br />after';
+        $expected = '<div class="xoopsQuote"><blockquote>q</blockquote></div>after';
+        $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksRemovesTrailingBreakAfterPreBlock()
+    {
+        $input    = '<div class="xoopsCode"><pre>x</pre></div><br />after';
+        $expected = '<div class="xoopsCode"><pre>x</pre></div>after';
+        $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksRemovesOnlyOneOfSeveralBreaks()
+    {
+        $input    = '<div class="xoopsCode"><code>x</code></div><br /><br /><br />after';
+        $expected = '<div class="xoopsCode"><code>x</code></div><br /><br />after';
+        $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksLeavesLeadingBreakUntouched()
+    {
+        $input = 'before<br /><div class="xoopsCode"><code>x</code></div>';
+        $this->assertEquals($input, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksLeavesUnrelatedDivUntouched()
+    {
+        $input = '<div class="user"><span>x</span></div><br />after';
+        $this->assertEquals($input, $this->trimBlockBreaks($input));
+    }
+
+    public function testTrimBlockBreaksAcceptsBrVariantAndWhitespace()
+    {
+        $input  = '<div class="xoopsCode"><code>x</code></div>' . "\n" . '<br>after';
+        $result = $this->trimBlockBreaks($input);
+        $this->assertStringNotContainsString('<br', $result);
+    }
+
+    public function testTrimBlockBreaksHandlesMultipleIndependentBlocks()
+    {
+        $input    = '<div class="xoopsCode"><code>x</code></div><br />mid<div class="xoopsQuote"><blockquote>q</blockquote></div><br />end';
+        $expected = '<div class="xoopsCode"><code>x</code></div>mid<div class="xoopsQuote"><blockquote>q</blockquote></div>end';
+        $this->assertEquals($expected, $this->trimBlockBreaks($input));
+    }
+
 }

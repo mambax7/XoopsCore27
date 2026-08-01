@@ -705,18 +705,15 @@ class MyTextSanitizer
     }
 
     /**
-     * MyTextSanitizer::codeConv()
-     *
-     * @param  mixed $text
-     * @param  mixed $xcode
-     * @return mixed
-     */
-    /**
      * Drop the stray <br /> that sits immediately against a block-level [code] / [quote] box.
      *
-     * `nl2Br()` runs BEFORE `codeConv()`/`quoteConv()` in {@see self::displayTarea()}, so by the
-     * time those wrap their content in `<div class="xoopsCode">` / `<div class="xoopsQuote">`
-     * the newline the author typed after `[/code]` or `[/quote]` has already become a `<br />`.
+     * Both boxes end up carrying a trailing `<br />`, by two different routes. `quoteConv()`
+     * runs inside {@see self::xoopsCodeDecode()}, BEFORE `nl2Br()`, so the newline the author
+     * typed after `[/quote]` is still a newline when the quote is wrapped and only becomes a
+     * `<br />` afterwards. `codeConv()` runs AFTER `nl2Br()`, so for a code block that newline
+     * is already a `<br />` by the time the wrapping happens. Either way the rendered result
+     * is a `<br />` sitting immediately after the closing `</div>`.
+     *
      * The div is block-level and supplies its own vertical separation, so that `<br />` renders
      * as an extra empty line — one after a code block, and after a quote as well.
      *
@@ -727,17 +724,26 @@ class MyTextSanitizer
      * line to terminate, so the break renders as a whole empty line on top of the div's own
      * spacing. An author who deliberately left a blank line after the block still keeps one.
      *
-     * The pattern anchors on `</code></div>` / `</blockquote></div>` rather than on a bare
-     * `</div>`: quotes nest, and user content may contain its own divs that must not be touched.
+     * The pattern anchors on the inner closing tag rather than on a bare `</div>`: quotes nest,
+     * and user content may contain its own divs that must not be touched. `pre` is listed
+     * alongside `code` because {@see MytsSyntaxhighlight::load()} falls back to a plain
+     * `<pre>…</pre>` when its `highlight` option is off, so the box closes `</pre></div>`.
      *
      * @param  string $text rendered text
      * @return string
      */
     protected function trimBlockBreaks($text)
     {
-        return preg_replace('#(</(?:code|blockquote)>\s*</div>)\s*<br\s*/?>#i', '$1', (string) $text);
+        return preg_replace('#(</(?:code|pre|blockquote)>\s*</div>)\s*<br\s*/?>#i', '$1', (string) $text);
     }
 
+    /**
+     * MyTextSanitizer::codeConv()
+     *
+     * @param  mixed $text
+     * @param  mixed $xcode
+     * @return mixed
+     */
     public function codeConv($text, $xcode = 1)
     {
         if (empty($xcode)) {
