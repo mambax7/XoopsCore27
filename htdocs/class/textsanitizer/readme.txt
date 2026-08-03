@@ -16,7 +16,20 @@ class MytsMycode extends MyTextSanitizerExtension
         // If the extension has config data, load it
         $config = parent::loadConfig(__DIR__);
         // Make sure that the icon is available /images/form/mycode.gif
-        $code = "<img src='{$this->image_path}/mycode.gif' alt='" . _XOOPS_FORM_ALTMYCODE . "' onclick='xoopsCodeMycode(\"{$textarea_id}\",\"" . htmlspecialchars(_XOOPS_FORM_ENTERMYCODETERM, ENT_QUOTES | ENT_HTML5) . "\");'  onmouseover='style.cursor=\"hand\"'/>&nbsp;";
+        // Arguments crossing from PHP into a JavaScript string literal MUST be json_encode()d
+        // with these four flags, NOT htmlspecialchars()d. The browser decodes HTML entities
+        // BEFORE the JS parser runs, so an entity-escaped quote becomes a real quote and can
+        // close the literal. json_encode emits \uXXXX escapes, which survive that decode.
+        //
+        // The surrounding onclick attribute MUST be single-quoted: json_encode wraps its own
+        // output in double quotes, so onclick="..." would be closed by the first argument and
+        // JSON_HEX_QUOT would not help -- it escapes quotes in the VALUE, not the wrapping pair.
+        $jsFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
+        $args = json_encode((string) $textarea_id, $jsFlags)
+              . ', ' . json_encode(_XOOPS_FORM_ENTERMYCODETERM, $jsFlags);
+        $code = "<img src='{$this->image_path}/mycode.gif' alt='"
+              . htmlspecialchars(_XOOPS_FORM_ALTMYCODE, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+              . "' onclick='xoopsCodeMycode({$args});'/>&nbsp;";
         $javascript = <<<EOH
             function xoopsCodeMycode(id, enterMycodePhrase){
                 if (enterMycodePhrase == null) {

@@ -16,6 +16,41 @@
  * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
  */
 
+/*
+ * The custom properties below are declared twice on purpose: once here on :root, and again
+ * (identically) on .xo-edtb-toolbar. Do NOT "de-duplicate" this by deleting one of the two.
+ *
+ * XoopsDhtmlToolbar::render() wraps everything in a .xo-edtb-toolbar container, so the block
+ * below is enough for that path. But this PR deliberately keeps a compatibility path for
+ * third-party subclasses: renderFormDhtmlTAXoopsCode() and renderFormDhtmlTATypography() call
+ * XoopsDhtmlToolbar::renderCodeButtons()/renderTypography() directly and return bare
+ * .xo-edtb-group rows with NO .xo-edtb-toolbar ancestor. Without a :root fallback, every
+ * variable those rows reference (min-width, height, background, border, ...) resolves against
+ * an undefined custom property, and the buttons render unstyled. The :root copy is the fallback
+ * for that path; the .xo-edtb-toolbar copy is kept so a theme can still override the variables
+ * per-toolbar (its higher specificity wins whenever a .xo-edtb-toolbar ancestor is present).
+ */
+:root {
+    --xo-edtb-bg: #f8f9fa;
+    --xo-edtb-border: #ced4da;
+    --xo-edtb-radius: 4px;
+    --xo-edtb-gap: 4px;
+    --xo-edtb-padding: 4px;
+    --xo-edtb-font-size: 0.8125rem;
+
+    --xo-edtb-btn-size: 1.75rem;
+    --xo-edtb-btn-bg: #ffffff;
+    --xo-edtb-btn-fg: #212529;
+    --xo-edtb-btn-border: #ced4da;
+    --xo-edtb-btn-hover-bg: #e9ecef;
+    --xo-edtb-btn-active-bg: #dee2e6;
+
+    --xo-edtb-menu-bg: #ffffff;
+    --xo-edtb-menu-fg: #212529;
+    --xo-edtb-menu-border: #ced4da;
+    --xo-edtb-menu-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .xo-edtb-toolbar {
     --xo-edtb-bg: #f8f9fa;
     --xo-edtb-border: #ced4da;
@@ -164,6 +199,21 @@
 
 .xo-edtb-menu-item:hover {
     background: var(--xo-edtb-btn-hover-bg);
+}
+
+/*
+ * Explicit keyboard-focus indicator. The admin themes ship a universal reset that commonly
+ * drops the default `outline` (see the resize-grip comment above for the same class of
+ * problem), leaving keyboard users with no visible indication of which control has focus.
+ * --xo-edtb-btn-fg is reused (rather than a hardcoded colour) because it already flips from a
+ * dark foreground in the light scheme to a light foreground in the dark scheme
+ * (@media (prefers-color-scheme: dark) below), which keeps the ring visible — and themeable —
+ * against both of this file's button/background colour pairs.
+ */
+.xo-edtb-btn:focus-visible,
+.xo-edtb-menu-item:focus-visible {
+    outline: 2px solid var(--xo-edtb-btn-fg);
+    outline-offset: 2px;
 }
 
 .xo-edtb-swatch {

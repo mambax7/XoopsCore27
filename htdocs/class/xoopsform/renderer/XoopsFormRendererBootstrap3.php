@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/XoopsFormTabRendererInterface.php';
 require_once __DIR__ . '/../../xoopseditor/dhtmltextarea/XoopsDhtmlToolbar.php';
+require_once __DIR__ . '/XoopsFormRendererValueEscapeTrait.php';
 
 /**
  * Bootstrap3 style form renderer
@@ -22,6 +23,8 @@ require_once __DIR__ . '/../../xoopseditor/dhtmltextarea/XoopsDhtmlToolbar.php';
  */
 class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFormTabRendererInterface
 {
+    use XoopsFormRendererValueEscapeTrait;
+
     /**
      * Counter giving each rendered tab tray a unique DOM id.
      *
@@ -38,8 +41,8 @@ class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFo
     public function renderFormButton(XoopsFormButton $element)
     {
         return "<input type='" . $element->getType() . "' class='btn btn-default' name='"
-            . $element->getName() . "'  id='" . $element->getName() . "' value='" . $element->getValue()
-            . "' title='" . $element->getValue() . "'" . $element->getExtra() . ' />';
+            . $element->getName() . "'  id='" . $element->getName() . "' value='" . $this->escapeElementValue($element->getValue())
+            . "' title='" . $this->escapeElementValue($element->getValue()) . "'" . $element->getExtra() . ' />';
     }
 
     /**
@@ -60,7 +63,7 @@ class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFo
              . '" onClick="history.go(-1);return true;" />&nbsp;'
              . '<input type="reset" class="btn btn-warning"  name="reset"  id="reset" value="' . _RESET . '" />&nbsp;'
              . '<input type="' . $element->getType() . '" class="btn btn-success"  name="' . $element->getName()
-             . '"  id="' . $element->getName() . '" value="' . $element->getValue() . '"' . $element->getExtra()
+             . '"  id="' . $element->getName() . '" value="' . $this->escapeElementValue($element->getValue()) . '"' . $element->getExtra()
              . '  />';
 
         return $ret;
@@ -216,7 +219,7 @@ class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFo
         }
         return '<input class="form-control" style="width: 25%;" type="color" name="' . $element->getName()
             . "' title='" . $element->getTitle() . "' id='" . $element->getName()
-            . '" size="7" maxlength="7" value="' . $element->getValue() . '"' . $element->getExtra() . ' />';
+            . '" size="7" maxlength="7" value="' . $this->escapeElementValue($element->getValue()) . '"' . $element->getExtra() . ' />';
     }
 
     /**
@@ -239,7 +242,7 @@ class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFo
             . "');\" onclick=\"xoopsSavePosition('" . $element->getName()
             . "');\" onkeyup=\"xoopsSavePosition('" . $element->getName() . "');\" cols='"
             . $element->getCols() . "' rows='" . $element->getRows() . "'" . $element->getExtra()
-            . '>' . $element->getValue() . "</textarea>\n";
+            . '>' . $this->escapeElementValue($element->getValue()) . "</textarea>\n";
 
         if (empty($element->skipPreview)) {
             if (empty($GLOBALS['xoTheme'])) {
@@ -393,7 +396,7 @@ EOJS;
     {
         return '<input class="form-control" type="password" name="'
             . $element->getName() . '" id="' . $element->getName() . '" size="' . $element->getSize()
-            . '" maxlength="' . $element->getMaxlength() . '" value="' . $element->getValue() . '"'
+            . '" maxlength="' . $element->getMaxlength() . '" value="' . $this->escapeElementValue($element->getValue()) . '"'
             . $element->getExtra() . ' ' . ($element->autoComplete ? '' : 'autocomplete="off" ') . '/>';
     }
 
@@ -464,7 +467,7 @@ EOJS;
         return "<input class='form-control' type='text' name='"
             . $element->getName() . "' title='" . $element->getTitle() . "' id='" . $element->getName()
             . "' size='" . $element->getSize() . "' maxlength='" . $element->getMaxlength()
-            . "' value='" . $element->getValue() . "'" . $element->getExtra() . ' />';
+            . "' value='" . $this->escapeElementValue($element->getValue()) . "'" . $element->getExtra() . ' />';
     }
 
     /**
@@ -479,7 +482,7 @@ EOJS;
         return "<textarea class='form-control' name='"
             . $element->getName() . "' id='" . $element->getName() . "'  title='" . $element->getTitle()
             . "' rows='" . $element->getRows() . "' cols='" . $element->getCols() . "'"
-            . $element->getExtra() . '>' . $element->getValue() . '</textarea>';
+            . $element->getExtra() . '>' . $this->escapeElementValue($element->getValue()) . '</textarea>';
     }
 
     /**

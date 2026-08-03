@@ -147,16 +147,26 @@ class XoopsDhtmlToolbar
      */
     public function renderCodeButtons(XoopsFormDhtmlTextArea $element): string
     {
-        $textareaId = $element->getName();
+        // Raw name deliberately (getName(false)): the value is escaped per-context downstream —
+        // json_encode() inside jsCall() for JS arguments, rawurlencode() for the URL query params
+        // below — so do NOT "helpfully" restore the default HTML-encoded getName() here.
+        $textareaId = $element->getName(false);
         $btn        = self::BTN_SM;
 
         $code  = '<a name="moresmiley"></a>';
-        $code .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_IMG . '">';
+        // No aria-label/role="group" here (unlike the other groups in this class): the group
+        // holds URL, email, image, image-manager, smilies, an open-ended list of TextSanitizer
+        // extension buttons, code and quote -- there is no single existing language constant
+        // that describes it, and concatenating one from the individual button labels (as the
+        // typography groups below do) isn't possible because the extension buttons are appended
+        // dynamically. Adding a new constant would require a docs/lang_diff.txt entry for a
+        // one-off label, so each button's own aria-label carries the meaning instead.
+        $code .= '<div class="' . self::GROUP_CLASS . '">';
         $code .= $this->button($btn, $this->jsCall('xoopsCodeUrl', [$textareaId, _ENTERURL, _ENTERWEBTITLE]), _XOOPS_FORM_ALT_URL, 'fa-solid fa-link');
         $code .= $this->button($btn, $this->jsCall('xoopsCodeEmail', [$textareaId, _ENTEREMAIL, _ENTERWEBTITLE]), _XOOPS_FORM_ALT_EMAIL, 'fa-solid fa-envelope');
         $code .= $this->button($btn, $this->jsCall('xoopsCodeImg', [$textareaId, _ENTERIMGURL, _ENTERIMGPOS, _IMGPOSRORL, _ERRORIMGPOS, _XOOPS_FORM_ALT_ENTERWIDTH]), _XOOPS_FORM_ALT_IMG, 'fa-solid fa-file-image');
-        $code .= $this->button($btn, $this->jsCall('openWithSelfMain', [XOOPS_URL . '/imagemanager.php?target=' . $textareaId, 'imgmanager', 400, 430]), _XOOPS_FORM_ALT_IMAGE, 'fa-solid fa-file-image', '<span style="font-size:75%;"> Manager</span>');
-        $code .= $this->button($btn, $this->jsCall('openWithSelfMain', [XOOPS_URL . '/misc.php?action=showpopups&type=smilies&target=' . $textareaId, 'smilies', 300, 475]), _XOOPS_FORM_ALT_SMILEY, 'fa-solid fa-face-smile');
+        $code .= $this->button($btn, $this->jsCall('openWithSelfMain', [XOOPS_URL . '/imagemanager.php?target=' . rawurlencode($textareaId), 'imgmanager', 400, 430]), _XOOPS_FORM_ALT_IMAGE, 'fa-solid fa-file-image', '<span style="font-size:75%;"> Manager</span>');
+        $code .= $this->button($btn, $this->jsCall('openWithSelfMain', [XOOPS_URL . '/misc.php?action=showpopups&type=smilies&target=' . rawurlencode($textareaId), 'smilies', 300, 475]), _XOOPS_FORM_ALT_SMILEY, 'fa-solid fa-face-smile');
 
         $myts       = \MyTextSanitizer::getInstance();
         $extensions = array_filter($myts->config['extensions']);
@@ -203,7 +213,10 @@ class XoopsDhtmlToolbar
      */
     public function renderTypography(XoopsFormDhtmlTextArea $element): string
     {
-        $textareaId = $element->getName();
+        // Raw name deliberately (getName(false)): the value is escaped per-context downstream —
+        // json_encode() inside jsCall() for every JS argument below — so do NOT "helpfully"
+        // restore the default HTML-encoded getName() here.
+        $textareaId = $element->getName(false);
         $hiddenText = (string) $element->_hiddenText;
 
         $sizes = $GLOBALS['formtextdhtml_sizes'] ?? [];
@@ -216,7 +229,10 @@ class XoopsDhtmlToolbar
         $ret .= '</div>';
 
         $btn = self::BTN_SM;
-        $ret .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_BOLD . '">';
+        // Unlike the code-buttons group above, this group's contents are a fixed, known set, so
+        // (as with the size/font/colour and alignment groups) the aria-label is built from the
+        // concatenation of the individual button labels rather than dropped.
+        $ret .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_BOLD . '/' . _XOOPS_FORM_ALT_ITALIC . '/' . _XOOPS_FORM_ALT_UNDERLINE . '/' . _XOOPS_FORM_ALT_LINETHROUGH . '">';
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeBold', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_BOLD, 'fa-solid fa-bold');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeItalic', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_ITALIC, 'fa-solid fa-italic');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeUnderline', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_UNDERLINE, 'fa-solid fa-underline');
@@ -249,7 +265,10 @@ class XoopsDhtmlToolbar
             $maxlength = (int) $element->configs['maxlength'];
         }
 
-        $onclick = $this->jsCall('XoopsCheckLength', [$element->getName(), (string) $maxlength, _XOOPS_FORM_ALT_LENGTH, _XOOPS_FORM_ALT_LENGTH_MAX]);
+        // Raw name deliberately (getName(false)): the value is escaped per-context downstream —
+        // json_encode() inside jsCall() for JS arguments — so do NOT "helpfully" restore the
+        // default HTML-encoded getName() here.
+        $onclick = $this->jsCall('XoopsCheckLength', [$element->getName(false), (string) $maxlength, _XOOPS_FORM_ALT_LENGTH, _XOOPS_FORM_ALT_LENGTH_MAX]);
 
         return '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_CHECKLENGTH . '">'
             . $this->button(self::BTN_SM, $onclick, _XOOPS_FORM_ALT_CHECKLENGTH, 'fa-solid fa-square-check')
@@ -345,14 +364,22 @@ class XoopsDhtmlToolbar
 
     /**
      * Build a JavaScript function-call expression as a complete statement (trailing `;`), string
-     * arguments HTML-attribute-escaped so the result is safe inside a single-quoted `onclick='...'`
-     * attribute. Integer/float arguments are emitted unquoted.
+     * arguments JSON-encoded so the result is safe inside a single-quoted `onclick='...'` attribute.
+     * Integer/float arguments are emitted unquoted.
+     *
+     * The value crosses two decoders before it runs: the browser's HTML-attribute decoder, then the
+     * JS parser. `htmlspecialchars()` only escapes for the first — the browser decodes `&quot;` back
+     * to `"` before the JS parser ever sees it, so a string argument containing `"` can close the JS
+     * string literal early (e.g. `x");alert(1);//`) and inject arbitrary script. `json_encode()`
+     * with the `JSON_HEX_*` flags instead emits `"`, `<`, `&`, `'` — sequences
+     * that survive HTML-attribute decoding unchanged, so the value stays a single JS string literal
+     * no matter which decoder runs first. json_encode() also supplies its own surrounding quotes.
      *
      * @param string                    $fn   JavaScript function name (hard-coded literal — never
      *                                        build this from user input)
      * @param array<int, int|float|string> $args arguments, in order
      *
-     * @return string JavaScript statement, e.g. `xoopsCodeUrl(&quot;id&quot;, &quot;Enter URL&quot;);`
+     * @return string JavaScript statement, e.g. `xoopsCodeUrl("id", "Enter URL");`
      */
     protected function jsCall(string $fn, array $args): string
     {
@@ -361,7 +388,7 @@ class XoopsDhtmlToolbar
             if (is_int($arg) || is_float($arg)) {
                 $parts[] = (string) $arg;
             } else {
-                $parts[] = '"' . htmlspecialchars((string) $arg, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '"';
+                $parts[] = json_encode((string) $arg, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
             }
         }
 

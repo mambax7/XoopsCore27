@@ -21,6 +21,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 require_once __DIR__ . '/XoopsFormTabRendererInterface.php';
 require_once __DIR__ . '/../../xoopseditor/dhtmltextarea/XoopsDhtmlToolbar.php';
+require_once __DIR__ . '/XoopsFormRendererValueEscapeTrait.php';
 
 /**
  * Tailwind CSS + DaisyUI form renderer
@@ -44,6 +45,8 @@ require_once __DIR__ . '/../../xoopseditor/dhtmltextarea/XoopsDhtmlToolbar.php';
  */
 class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsFormTabRendererInterface
 {
+    use XoopsFormRendererValueEscapeTrait;
+
     /**
      * Counter giving each rendered tab tray a unique DOM id / radio group.
      *
@@ -419,7 +422,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             . " onclick='" . $savePositionJs . "'"
             . " onkeyup='" . $savePositionJs . "'"
             . ' cols="' . (int) $element->getCols() . '" rows="' . (int) $element->getRows() . '"'
-            . $this->renderExtra($element) . '>' . $this->esc($element->getValue()) . "</textarea>\n";
+            . $this->renderExtra($element) . '>' . $this->escapeElementValue($element->getValue()) . "</textarea>\n";
 
         if (empty($element->skipPreview)) {
             if (empty($GLOBALS['xoTheme'])) {
@@ -718,7 +721,7 @@ EOJS;
             . ' rows="' . (int) $element->getRows() . '"'
             . ' cols="' . (int) $element->getCols() . '"'
             . $this->renderExtra($element) . '>'
-            . $this->esc($element->getValue()) . '</textarea>';
+            . $this->escapeElementValue($element->getValue()) . '</textarea>';
     }
 
     /**

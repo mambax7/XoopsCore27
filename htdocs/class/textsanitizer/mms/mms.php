@@ -35,14 +35,15 @@ class MytsMms extends MyTextSanitizerExtension
         if ($config['enable_mms_entry'] === false) {
             return [];
         }
-        $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeMms(\"{$textarea_id}\",\""
-            . htmlspecialchars(_XOOPS_FORM_ENTERMMSURL, ENT_QUOTES | ENT_HTML5) . "\",\""
-            . htmlspecialchars(_XOOPS_FORM_ALT_ENTERHEIGHT, ENT_QUOTES | ENT_HTML5) . "\",\""
-            . htmlspecialchars(_XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5)
-            . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALTMMS
+        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
+        $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeMms("
+            . json_encode((string) $textarea_id, $jsonFlags) . ","
+            . json_encode(_XOOPS_FORM_ENTERMMSURL, $jsonFlags) . ","
+            . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ","
+            . json_encode(_XOOPS_FORM_ALT_ENTERWIDTH, $jsonFlags)
+            . ");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALTMMS
             . "'><span class='fa-solid fa-server' aria-hidden='true'></span></button>";
 
-        //$code       = "<img src='{$this->image_path}/mmssrc.gif' alt='" . _XOOPS_FORM_ALTMMS . "' title='" . _XOOPS_FORM_ALTMMS . "' '". "' onclick='xoopsCodeMms(\"{$textarea_id}\",\"" . htmlspecialchars(_XOOPS_FORM_ENTERMMSURL, ENT_QUOTES | ENT_HTML5) . "\",\"" . htmlspecialchars(_XOOPS_FORM_ALT_ENTERHEIGHT, ENT_QUOTES | ENT_HTML5) . "\",\"" . htmlspecialchars(_XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5) . "\");'  onmouseover='style.cursor=\"hand\"'/>&nbsp;";
         $javascript = <<<EOH
             function xoopsCodeMms(id,enterMmsPhrase, enterMmsHeightPhrase, enterMmsWidthPhrase)
             {
