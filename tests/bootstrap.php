@@ -62,9 +62,30 @@ if (!defined('_NONE')) {
 if (!defined('_DB_QUERY_ERROR')) {
     define('_DB_QUERY_ERROR', 'DB Query Error: %s');
 }
-if (!defined('_MSC_ORIGINAL_IMAGE')) {
-    define('_MSC_ORIGINAL_IMAGE', 'Original Image');
+// `class/textsanitizer/image/image.php` includes its language file at FILE scope, keyed on
+// $xoopsConfig['language'], and then uses _MSC_ORIGINAL_IMAGE inside load() -- a fatal in PHP 8 if
+// the include failed. Two separate problems follow from that, and both are fixed here:
+//
+//  1. Nothing set $xoopsConfig, so the path resolved to `language//misc.php` and the include
+//     always failed. The previous bootstrap papered over it by stubbing _MSC_ORIGINAL_IMAGE --
+//     the one constant the reachable branch happens to use. The other _MSC_* constants in that
+//     file were still undefined, so a config change (allowimage + a theme) turns a passing test
+//     into a fatal.
+//
+//  2. Setting $xoopsConfig['language'] alone does NOT fix it. Roughly thirty tests under
+//     class/auth/ assign `$GLOBALS['xoopsConfig'] = ['debug_mode' => n]` -- replacing the whole
+//     array -- and unset() it in tearDown. Whether the include succeeds then depends on which
+//     test happens to load image.php first, which is not a property a bootstrap may have.
+//
+// So load the real language file HERE, unconditionally. The require_once is the load-bearing
+// part: the constants exist before any test can touch $xoopsConfig. The assignment below is only
+// so image.php's own include_once resolves to the same realpath and is a no-op rather than a
+// warning. misc.php defines its 21 constants unguarded, which is also why stubbing any of them
+// here would collide.
+if (!isset($GLOBALS['xoopsConfig']['language'])) {
+    $GLOBALS['xoopsConfig']['language'] = 'english';
 }
+require_once XOOPS_ROOT_PATH . '/language/english/misc.php';
 if (!defined('_QUOTEC')) {
     define('_QUOTEC', '"');
 }
@@ -376,6 +397,47 @@ if (!defined('_XOOPS_FORM_ENTERYOUTUBEURL')) {
 }
 if (!defined('_XOOPS_FORM_ALT_ENTERHEIGHT')) {
     define('_XOOPS_FORM_ALT_ENTERHEIGHT', 'Height:');
+}
+
+// TextSanitizer extension button constants.
+//
+// Only the youtube ones were defined before, because config.dist.php enables youtube and
+// disables mp3/wmp/mms/rtsp/soundcloud (wiki is conditional on the mediawiki module) -- so a
+// test that rendered the whole toolbar only ever reached youtube. XoopsDhtmlToolbarExtensionEscapingTest
+// calls each extension's encode() directly to cover all seven regardless of configuration,
+// which needs every extension's constants defined here.
+if (!defined('_XOOPS_FORM_ALTMP3')) {
+    define('_XOOPS_FORM_ALTMP3', 'MP3');
+}
+if (!defined('_XOOPS_FORM_ALTWMP')) {
+    define('_XOOPS_FORM_ALTWMP', 'Windows Media');
+}
+if (!defined('_XOOPS_FORM_ENTERWMPURL')) {
+    define('_XOOPS_FORM_ENTERWMPURL', 'Enter Windows Media URL');
+}
+if (!defined('_XOOPS_FORM_ALTMMS')) {
+    define('_XOOPS_FORM_ALTMMS', 'MMS');
+}
+if (!defined('_XOOPS_FORM_ENTERMMSURL')) {
+    define('_XOOPS_FORM_ENTERMMSURL', 'Enter MMS URL');
+}
+if (!defined('_XOOPS_FORM_ALTRTSP')) {
+    define('_XOOPS_FORM_ALTRTSP', 'RTSP');
+}
+if (!defined('_XOOPS_FORM_ENTERRTSPURL')) {
+    define('_XOOPS_FORM_ENTERRTSPURL', 'Enter RTSP URL');
+}
+if (!defined('_XOOPS_FORM_ALT_SOUNDCLOUD')) {
+    define('_XOOPS_FORM_ALT_SOUNDCLOUD', 'SoundCloud');
+}
+if (!defined('_XOOPS_FORM_ENTER_SOUNDCLOUD_URL')) {
+    define('_XOOPS_FORM_ENTER_SOUNDCLOUD_URL', 'Enter SoundCloud URL');
+}
+if (!defined('_XOOPS_FORM_ALTWIKI')) {
+    define('_XOOPS_FORM_ALTWIKI', 'Wiki');
+}
+if (!defined('_XOOPS_FORM_ENTERWIKITERM')) {
+    define('_XOOPS_FORM_ENTERWIKITERM', 'Enter Wiki term');
 }
 if (!defined('_XOOPS_FORM_ALTYOUTUBE')) {
     define('_XOOPS_FORM_ALTYOUTUBE', 'Youtube');
