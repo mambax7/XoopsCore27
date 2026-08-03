@@ -1213,9 +1213,12 @@ class Protector
         if (false === $result) {
             $result = curl_getinfo($ch);
         } else {
-            $result = json_decode(curl_exec($ch), true);
+            // Decode the response already in hand. This line previously called
+            // curl_exec($ch) a second time, issuing another request to
+            // stopforumspam.com on every successful lookup and decoding that
+            // second response instead of the one just tested for failure.
+            $result = json_decode($result, true);
         }
-        curl_close($ch);
 
         return $result;
     }

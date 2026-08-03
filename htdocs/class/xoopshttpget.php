@@ -167,7 +167,6 @@ class XoopsHttpGet
             $httpcode    = (int) curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
             $redirectUrl = (string) curl_getinfo($curlHandle, CURLINFO_REDIRECT_URL);
             $curlError   = curl_error($curlHandle);
-            curl_close($curlHandle);
 
             if (false === $response) {
                 $this->error = $curlError;
