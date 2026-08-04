@@ -590,9 +590,9 @@ if (!Request::hasVar('user_submit', 'POST')) {
     }
     if (Request::hasVar('user_avatar', 'POST')) {
         if (Request::getString('user_avatar', '', 'POST') === 'y') {
-            $criteria->add(new Criteria('user_avatar', "('', 'blank.gif')", 'NOT IN'));
+            $criteria->add(new Criteria('user_avatar', ['', 'blank.gif'], 'NOT IN'));
         } elseif (Request::getString('user_avatar', '', 'POST') === 'n') {
-            $criteria->add(new Criteria('user_avatar', "('', 'blank.gif')", 'IN'));
+            $criteria->add(new Criteria('user_avatar', ['', 'blank.gif'], 'IN'));
         }
     }
     if (Request::hasVar('level', 'POST')) {

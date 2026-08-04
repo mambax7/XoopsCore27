@@ -180,7 +180,7 @@ switch ($action) {
         $module_handler = xoops_getHandler('module');
         $criteria       = new CriteriaCompo(new Criteria('hassearch', 1));
         $criteria->add(new Criteria('isactive', 1));
-        $criteria->add(new Criteria('mid', '(' . implode(',', $available_modules) . ')', 'IN'));
+        $criteria->add(new Criteria('mid', array_map('intval', $available_modules), 'IN'));
         $modules = $module_handler->getObjects($criteria, true);
         $mids    = Request::hasVar('mids', 'POST') ? Request::getArray('mids', [], 'POST') : Request::getArray('mids', [], 'GET');
         if (empty($mids) || !is_array($mids)) {

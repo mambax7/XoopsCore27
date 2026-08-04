@@ -143,7 +143,7 @@ class SystemGroup extends XoopsGroup
         $module_list[0] = _AM_SYSTEM_GROUPS_CUSTOMBLOCK;
         /** @var XoopsBlockHandler $block_handler */
         $block_handler = xoops_getHandler('block');
-        $blocks_obj    = $block_handler->getObjects(new Criteria('mid', "('" . implode("', '", array_keys($module_list)) . "')", 'IN'), true);
+        $blocks_obj    = $block_handler->getObjects(new Criteria('mid', array_map('intval', array_keys($module_list)), 'IN'), true);
 
         $blocks_module = [];
         foreach (array_keys($blocks_obj) as $bid) {

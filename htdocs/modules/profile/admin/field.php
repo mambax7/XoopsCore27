@@ -161,7 +161,7 @@ switch ($op) {
                 //if there are changed fields, fetch the fieldcategory objects
                 /** @var XoopsModuleHandler $field_handler */
                 $field_handler = xoops_getModuleHandler('field');
-                $fields        = $field_handler->getObjects(new Criteria('field_id', '(' . implode(',', $ids) . ')', 'IN'), true);
+                $fields        = $field_handler->getObjects(new Criteria('field_id', $ids, 'IN'), true);
                 foreach ($ids as $i) {
                     $fields[$i]->setVar('field_weight', (int) $weight[$i]);
                     $fields[$i]->setVar('cat_id', (int) $category[$i]);
@@ -299,7 +299,7 @@ switch ($op) {
                         }
                         $removed_groups = array_diff(array_keys($groups), $permGroups);
                         if (count($removed_groups) > 0) {
-                            $criteria->add(new Criteria('gperm_groupid', '(' . implode(',', $removed_groups) . ')', 'IN'));
+                            $criteria->add(new Criteria('gperm_groupid', array_map('intval', $removed_groups), 'IN'));
                             $groupperm_handler->deleteAll($criteria);
                         }
                         unset($groups);

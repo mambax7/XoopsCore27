@@ -448,7 +448,7 @@ function b_system_comments_show($options)
     $moduleperm_handler = xoops_getHandler('groupperm');
     $gperm_groupid      = is_object($xoopsUser) ? $xoopsUser->getGroups() : [XOOPS_GROUP_ANONYMOUS];
     $criteria1          = new CriteriaCompo(new Criteria('gperm_name', 'module_read', '='));
-    $criteria1->add(new Criteria('gperm_groupid', '(' . implode(',', $gperm_groupid) . ')', 'IN'));
+    $criteria1->add(new Criteria('gperm_groupid', array_map('intval', $gperm_groupid), 'IN'));
     $perms  = $moduleperm_handler->getObjects($criteria1, true);
     $modIds = [];
     foreach ($perms as $item) {
@@ -456,7 +456,7 @@ function b_system_comments_show($options)
     }
     if (count($modIds) > 0) {
         $modIds = array_unique($modIds);
-        $criteria->add(new Criteria('com_modid', '(' . implode(',', $modIds) . ')', 'IN'));
+        $criteria->add(new Criteria('com_modid', array_map('intval', $modIds), 'IN'));
     }
     // Check modules permissions
 

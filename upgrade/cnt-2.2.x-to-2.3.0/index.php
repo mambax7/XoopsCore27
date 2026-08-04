@@ -188,7 +188,7 @@ class Upgrade_220 extends XoopsUpgrade
         }
 
         //Rebuild user configuration options
-        $criteria = new CriteriaCompo(new Criteria('conf_name', "('activation_type', 'uname_test_level')", 'IN'));
+        $criteria = new CriteriaCompo(new Criteria('conf_name', ['activation_type', 'uname_test_level'], 'IN'));
         $criteria->add(new Criteria('conf_modid', 0));
         $criteria->setSort('conf_name');
         $criteria->setOrder('ASC');

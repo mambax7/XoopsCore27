@@ -123,7 +123,7 @@ class XoopsFormSelectUser extends XoopsFormElementTray
         }
         $allowedUids = $memberHandler->getUsersByGroupLink(
             $allowedGroups,
-            new Criteria('uid', '(' . implode(',', array_keys($selectedUsers)) . ')', 'IN'),
+            new Criteria('uid', array_map('intval', array_keys($selectedUsers)), 'IN'),
             false
         );
 
@@ -171,7 +171,7 @@ class XoopsFormSelectUser extends XoopsFormElementTray
         $value          = is_array($value) ? $value : (empty($value) ? [] : [$value]);
         $selectedUsers = [];
         if (count($value) > 0) {
-            $criteria = new Criteria('uid', '(' . implode(',', $value) . ')', 'IN');
+            $criteria = new Criteria('uid', array_map('intval', $value), 'IN');
             $criteria->setSort('uname');
             $criteria->setOrder('ASC');
             $selectedUsers = $member_handler->getUserList($criteria);

@@ -165,7 +165,7 @@ function update_system_v211($module)
     }
     if (count($tplids) > 0) {
         $tplfile_handler = xoops_getHandler('tplfile');
-        $duplicate_files = $tplfile_handler->getObjects(new Criteria('tpl_id', '(' . implode(',', $tplids) . ')', 'IN'));
+        $duplicate_files = $tplfile_handler->getObjects(new Criteria('tpl_id', array_map('intval', $tplids), 'IN'));
 
         if (count($duplicate_files) > 0) {
             foreach (array_keys($duplicate_files) as $i) {

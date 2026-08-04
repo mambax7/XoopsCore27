@@ -262,15 +262,15 @@ switch ($op) {
                     case XOBJ_DTYPE_INT:
                         $value        = array_map('intval', $fieldValues);
                         $searchvars[] = $fieldname;
-                        $criteria->add(new Criteria($fieldname, '(' . implode(',', $value) . ')', 'IN'));
+                        $criteria->add(new Criteria($fieldname, $value, 'IN'));
                         break;
 
                     case XOBJ_DTYPE_URL:
                     case XOBJ_DTYPE_TXTBOX:
                     case XOBJ_DTYPE_TXTAREA:
-                        $value        = array_map([$GLOBALS['xoopsDB'], 'quoteString'], $fieldValues);
                         $searchvars[] = $fieldname;
-                        $criteria->add(new Criteria($fieldname, '(' . implode(',', $value) . ')', 'IN'));
+                        // Pass raw values — Criteria quotes each element; pre-quoting would double-escape.
+                        $criteria->add(new Criteria($fieldname, array_values($fieldValues), 'IN'));
                         break;
                 }
                 foreach ($fieldValues as $value) {
@@ -334,7 +334,7 @@ switch ($op) {
                                 foreach ($value as $thisvalue) {
                                     $search_url[] = $fieldname . '[]=' . $thisvalue;
                                 }
-                                $criteria->add(new Criteria($fieldname, '(' . implode(',', $value) . ')', 'IN'));
+                                $criteria->add(new Criteria($fieldname, $value, 'IN'));
                             }
 
                             $searchvars[] = $fieldname;

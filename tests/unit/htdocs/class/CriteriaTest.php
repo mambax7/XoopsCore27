@@ -642,7 +642,26 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('uid', [], 'IN');
 
-        $this->assertSame('`uid` IN ()', $c->render($this->db));
+        // MySQL rejects the literal `IN ()`; nothing is a member of the empty set
+        $this->assertSame('1=0', $c->render($this->db));
+    }
+
+    public function testRenderNotInWithEmptyArray(): void
+    {
+        $c = new Criteria('uid', [], 'NOT IN');
+
+        // Everything is outside the empty set
+        $this->assertSame('1=1', $c->render($this->db));
+    }
+
+    public function testRenderInWithEmptyArrayIsNotDroppedByCriteriaCompo(): void
+    {
+        // Regression: an empty IN must narrow to no rows, never vanish from the
+        // WHERE clause — CriteriaCompo silently drops fragments that render ''.
+        $compo = new CriteriaCompo(new Criteria('isactive', 1));
+        $compo->add(new Criteria('uid', [], 'IN'));
+
+        $this->assertSame('(`isactive` = 1 AND 1=0)', $compo->render($this->db));
     }
 
     public function testRenderInWithSingleElementArray(): void
@@ -656,8 +675,27 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('uid', ['1', '2', '3'], 'IN');
 
-        // Numeric strings are cast to int
+        // Numeric STRINGS stay strings — the caller's PHP type is the intent.
+        // MySQL folds these constants for an integer column and still uses the
+        // index; casting them would break text columns, where a search for
+        // '001' must not become IN (1) and start matching '1' and ' 1'.
+        $this->assertSame("`uid` IN ('1','2','3')", $c->render($this->db));
+    }
+
+    public function testRenderInWithIntsInArrayStaysUnquoted(): void
+    {
+        $c = new Criteria('uid', [1, 2, 3], 'IN');
+
         $this->assertSame('`uid` IN (1,2,3)', $c->render($this->db));
+    }
+
+    public function testRenderInPreservesLeadingZeroStrings(): void
+    {
+        // Regression: '001' and '1' are distinct text values and must not both
+        // collapse to the integer 1.
+        $c = new Criteria('field_value', ['001', '1'], 'IN');
+
+        $this->assertSame("`field_value` IN ('001','1')", $c->render($this->db));
     }
 
     // =========================================================================
@@ -682,7 +720,26 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('uid', '()', 'IN');
 
-        $this->assertSame('`uid` IN ()', $c->render($this->db));
+        // Same contract as the modern empty array
+        $this->assertSame('1=0', $c->render($this->db));
+    }
+
+    public function testRenderNotInWithSafeLegacyEmptyParens(): void
+    {
+        $c = new Criteria('uid', '()', 'NOT IN');
+
+        $this->assertSame('1=1', $c->render($this->db));
+    }
+
+    public function testRenderInWithWhitespaceOnlyParensIsTreatedAsMalformed(): void
+    {
+        $c = new Criteria('uid', '( )', 'IN');
+
+        // '( )' is not a recognised legacy list — only the exact '()' is. It takes
+        // the malformed path and is quoted as a single literal rather than being
+        // trusted as an empty set. Hand-built lists always produce '()' because
+        // implode() of an empty array is '', so this shape cannot arise in practice.
+        $this->assertSame("`uid` IN ('( )')", $c->render($this->db));
     }
 
     public function testRenderInWithUnsafeLegacyStringQuotesSafely(): void
@@ -1486,10 +1543,11 @@ class CriteriaTest extends TestCase
             'string list'    => ['name', ['a', 'b'], 'IN', "`name` IN ('a','b')"],
             'mixed list'     => ['val', [1, 'x', 3], 'IN', "`val` IN (1,'x',3)"],
             'single int'     => ['uid', [42], 'IN', '`uid` IN (42)'],
-            'empty list'     => ['uid', [], 'IN', '`uid` IN ()'],
+            'empty list'     => ['uid', [], 'IN', '1=0'],
+            'empty not in'   => ['uid', [], 'NOT IN', '1=1'],
             'not in ints'    => ['uid', [4, 5], 'NOT IN', '`uid` NOT IN (4,5)'],
             'not in strings' => ['s', ['a', 'b'], 'NOT IN', "`s` NOT IN ('a','b')"],
-            'numeric strings'=> ['uid', ['1', '2'], 'IN', '`uid` IN (1,2)'],
+            'numeric strings'=> ['uid', ['1', '2'], 'IN', "`uid` IN ('1','2')"],
             'negative ints'  => ['uid', [-1, -2], 'IN', '`uid` IN (-1,-2)'],
         ];
     }
@@ -1817,7 +1875,9 @@ class CriteriaTest extends TestCase
     {
         $c = new Criteria('offset', ['-10', '-20'], 'IN');
 
-        $this->assertSame('`offset` IN (-10,-20)', $c->render($this->db));
+        // Strings stay quoted; only real ints render bare (see the -10/-20/5
+        // int case above, which is unchanged).
+        $this->assertSame("`offset` IN ('-10','-20')", $c->render($this->db));
     }
 
     // =========================================================================

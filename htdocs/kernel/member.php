@@ -276,7 +276,7 @@ class XoopsMemberHandler
             foreach ($batches as $batch) {
                 $criteria = new CriteriaCompo();
                 $criteria->add(new Criteria('groupid', (int)$group_id));
-                $criteria->add(new Criteria('uid', '(' . implode(',', $batch) . ')', 'IN'));
+                $criteria->add(new Criteria('uid', $batch, 'IN'));
                 if (!$this->membershipHandler->deleteAll($criteria)) {
                     return false;
                 }
@@ -286,7 +286,7 @@ class XoopsMemberHandler
 
         $criteria = new CriteriaCompo();
         $criteria->add(new Criteria('groupid', (int)$group_id));
-        $criteria->add(new Criteria('uid', '(' . implode(',', $ids) . ')', 'IN'));
+        $criteria->add(new Criteria('uid', $ids, 'IN'));
         return $this->membershipHandler->deleteAll($criteria);
     }
 
@@ -306,7 +306,7 @@ class XoopsMemberHandler
         }
 
         // Batch fetch users for better performance
-        $criteria = new Criteria('uid', '(' . implode(',', array_map('intval', $user_ids)) . ')', 'IN');
+        $criteria = new Criteria('uid', array_map('intval', $user_ids), 'IN');
         $users = $this->userHandler->getObjects($criteria, true);
 
         $ret = [];
@@ -332,7 +332,7 @@ class XoopsMemberHandler
         }
 
         // Batch fetch groups for better performance
-        $criteria = new Criteria('groupid', '(' . implode(',', array_map('intval', $group_ids)) . ')', 'IN');
+        $criteria = new Criteria('groupid', array_map('intval', $group_ids), 'IN');
         $groups = $this->groupHandler->getObjects($criteria, true);
 
         $ret = [];
@@ -659,8 +659,8 @@ class XoopsMemberHandler
     private function createSafeInCriteria($field, $value)
     {
         $ids = $this->sanitizeIds((array)$value);
-        $inClause = !empty($ids) ? '(' . implode(',', $ids) . ')' : '(0)';
-        return new Criteria($field, $inClause, 'IN');
+        // An empty list renders as a constant false predicate, so no '(0)' sentinel is needed.
+        return new Criteria($field, $ids, 'IN');
     }
 
     /**

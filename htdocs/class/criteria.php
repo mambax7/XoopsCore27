@@ -370,6 +370,38 @@ class Criteria extends CriteriaElement
     }
 
     /**
+     * Predicate for an empty IN / NOT IN list.
+     *
+     * MySQL rejects the literal `IN ()` with a syntax error, so an empty set
+     * renders as a constant instead: nothing is a member of the empty set, and
+     * everything is outside it.
+     *
+     * @param string $op uppercased operator, 'IN' or 'NOT IN'
+     * @return string constant predicate
+     */
+    private static function emptyInPredicate(string $op): string
+    {
+        return $op === 'IN' ? '1=0' : '1=1';
+    }
+
+    /**
+     * Render a validated legacy (preformatted string) IN list.
+     *
+     * @param string $clause rendered column reference
+     * @param string $op     uppercased operator, 'IN' or 'NOT IN'
+     * @param string $legacy validated legacy list, e.g. "(1,2,3)"
+     * @return string SQL fragment
+     */
+    private static function renderLegacyInList(string $clause, string $op, string $legacy): string
+    {
+        if (preg_match('/^\(\s*\)$/', trim($legacy))) {
+            return self::emptyInPredicate($op);
+        }
+
+        return $clause . ' ' . $op . ' ' . $legacy;
+    }
+
+    /**
      * Set the global default for allowing inner wildcards in LIKE patterns.
      * Useful during migrations of legacy modules that intentionally use inner wildcards.
      *
@@ -505,14 +537,25 @@ class Criteria extends CriteriaElement
             if (is_array($this->value)) {
                 $parts = [];
                 foreach ($this->value as $v) {
-                    if (is_int($v) || (is_string($v) && preg_match('/^-?\d+$/', $v))) {
-                        $parts[] = (string)(int)$v;
+                    // Preserve the caller's PHP type: an int becomes an SQL
+                    // integer, anything else an SQL string literal. Casting
+                    // numeric-looking strings would turn a text-column search
+                    // for '001' into `IN (1)`, which MySQL then evaluates
+                    // numerically and matches against '1', '01' and ' 1' too.
+                    // Callers holding IDs cast with (int)/array_map('intval').
+                    if (is_int($v)) {
+                        $parts[] = (string)$v;
                     } else {
                         $parts[] = $db->quote((string)$v);
                     }
                 }
-            return $clause . ' ' . $op . ' (' . implode(',', $parts) . ')';
-        }
+
+                if ($parts === []) {
+                    return self::emptyInPredicate($op);
+                }
+
+                return $clause . ' ' . $op . ' (' . implode(',', $parts) . ')';
+            }
 
             // Legacy format: preformatted string in parentheses
             $legacy = (string)$this->value;
@@ -525,8 +568,8 @@ class Criteria extends CriteriaElement
 
             // If legacy logging is not enabled, just pass through
             if (!self::isLegacyLogEnabled()) {
-                return $clause . ' ' . $op . ' ' . $legacy;
-        }
+                return self::renderLegacyInList($clause, $op, $legacy);
+            }
 
             // Build log message
             $message = sprintf(
@@ -547,15 +590,15 @@ class Criteria extends CriteriaElement
             if (class_exists('XoopsLogger')) {
                 \XoopsLogger::getInstance()
                             ->addExtra('CriteriaLegacyIN', $message);
-        } else {
+            } else {
                 error_log($message);
-        }
+            }
 
             if (defined('XOOPS_DEBUG') && XOOPS_DEBUG) {
                 trigger_error($message, E_USER_DEPRECATED);
             }
 
-            return $clause . ' ' . $op . ' ' . $legacy;
+            return self::renderLegacyInList($clause, $op, $legacy);
         }
 
         // NOW it's safe to cast to string for other operators

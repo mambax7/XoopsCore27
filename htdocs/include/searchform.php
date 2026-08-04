@@ -43,7 +43,7 @@ if (empty($modules)) {
     $criteria->add(new Criteria('isactive', 1));
     $criteria->add(new Criteria('dirname', 'system', '<>'));
     if (!empty($available_modules)) {
-        $criteria->add(new Criteria('mid', '(' . implode(',', $available_modules) . ')', 'IN'));
+        $criteria->add(new Criteria('mid', array_map('intval', $available_modules), 'IN'));
     }
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');

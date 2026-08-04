@@ -51,7 +51,7 @@ if (Request::hasVar('delete_messages', 'POST') && (Request::hasVar('msg_id', 'PO
         $confirmMsg = _MD_PM_SURE_TO_DELETE;
         $allowedIds = [];
         if (!empty($postedIds)) {
-            $criteria = new Criteria('msg_id', '(' . implode(',', $postedIds) . ')', 'IN');
+            $criteria = new Criteria('msg_id', $postedIds, 'IN');
             $pmObjects = $pm_handler->getObjects($criteria, true);
             $confirmMsg .= '<ul>';
             foreach ($postedIds as $delId) {
@@ -260,7 +260,9 @@ if (count($pm_arr) > 0) {
     }
     /** @var XoopsMemberHandler $member_handler */
     $member_handler = xoops_getHandler('member');
-    $senders        = $member_handler->getUserList(new Criteria('uid', '(' . implode(', ', array_unique($uids)) . ')', 'IN'));
+    $senders        = $member_handler->getUserList(
+        new Criteria('uid', array_values(array_unique(array_map('intval', $uids))), 'IN')
+    );
     foreach (array_keys($pm_arr) as $i) {
         $message              = $pm_arr[$i];
         // Pass the raw filename — the template applies `|escape:'url'` since

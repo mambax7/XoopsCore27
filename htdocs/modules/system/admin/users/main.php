@@ -346,7 +346,7 @@ case 'users_save':
         }
 
         if (!empty($groups_failed)) {
-            $group_names = $member_handler->getGroupList(new Criteria('groupid', '(' . implode(', ', $groups_failed) . ')', 'IN'));
+            $group_names = $member_handler->getGroupList(new Criteria('groupid', array_map('intval', $groups_failed), 'IN'));
             xoops_error(sprintf(_AM_SYSTEM_USERS_CNRNU2, implode(', ', $group_names)));
             break;
         }
@@ -931,7 +931,7 @@ case 'users_save':
                 $groups_map = [];
                 if (!empty($all_group_ids_on_page)) {
                     $groupHandler   = xoops_getHandler('group');
-                    $group_criteria = new \Criteria('groupid', '(' . implode(',', array_keys($all_group_ids_on_page)) . ')', 'IN');
+                    $group_criteria = new \Criteria('groupid', array_map('intval', array_keys($all_group_ids_on_page)), 'IN');
                     $groups_map     = $groupHandler->getObjects($group_criteria, true);
                 }
 

@@ -155,6 +155,33 @@ if [ -n "$added" ]; then
         | grep -vE 'unset[[:space:]]*\(' || true)
     [ -n "$hits" ] && report "direct \$_GET/\$_POST/\$_REQUEST/\$_COOKIE — use Xmf\\Request::getX('k', def, 'GET'|'POST')" "$hits"
 
+    # 14. Legacy Criteria IN format — a preformatted "(1,2,3)" string as the
+    #     value argument. Criteria still accepts it for third-party modules
+    #     (emitting E_USER_DEPRECATED under XOOPS_DEBUG), but core must pass an
+    #     array so the class casts/quotes each element. A hand-built list that
+    #     fails Criteria's validation silently collapses to one quoted literal
+    #     and matches nothing. Matches the value argument opening with a quote
+    #     immediately followed by `(`, on a line that also names the operator.
+    #     The rarer indirect shape ($in = '(' . implode(...); then passed to a
+    #     Criteria) needs whole-file context, so it is covered by
+    #     tests/unit/htdocs/class/CriteriaLegacyInUsageTest.php instead.
+    hits=$(printf '%s\n' "$added" | grep -E "Criteria[[:space:]]*\(.*,[[:space:]]*[\"']\(.*[\"'](NOT )?IN[\"']" || true)
+    [ -n "$hits" ] && report "legacy Criteria IN format — pass an array: new Criteria('uid', \$ids, 'IN')" "$hits"
+
+    # 15. Error-suppressed call — @foo(...). Suppression hides the failure
+    #     instead of handling it; use an explicit guard or try/catch(\Throwable).
+    #     The `(` must follow the identifier directly, with no whitespace, so
+    #     docblock tags never match: `@param string $x`, `@see self::foo()`,
+    #     `@return array<int,string>`, and the parenthesised-union form
+    #     `@param (int|string) $x` all put a non-`(` character (or a space)
+    #     after the tag name. That last one is why the space is not tolerated
+    #     here — allowing it would flag valid PHPStan syntax. The cost is that
+    #     the `@ foo()` spelling slips through, which no formatter emits.
+    #     Caught post-hoc by review on this very commit (an `@exec()` in a new
+    #     test), which is why it is mechanized here.
+    hits=$(printf '%s\n' "$added" | grep -E '@[a-zA-Z_][a-zA-Z0-9_]*\(' || true)
+    [ -n "$hits" ] && report "error-suppressed call @foo() — handle the failure explicitly instead" "$hits"
+
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
     # the </script> breakout concern only applies inside HTML <script>
     # contexts, and the repo legitimately uses the flag elsewhere
