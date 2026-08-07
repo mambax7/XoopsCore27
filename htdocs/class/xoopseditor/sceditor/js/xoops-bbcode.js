@@ -58,7 +58,17 @@
         });
     };
     var escapeUriScheme = sceditor.escapeUriScheme || function (str) {
-        return str;
+        var value = String(str || '');
+        var colon = value.indexOf(':');
+        // Relative reference (no scheme at all, or the first colon appears after a
+        // path/query/fragment delimiter, e.g. "/page?a=b:c") — safe as-is.
+        var delimiter = value.search(/[\/?#]/);
+        if (-1 === colon || (-1 !== delimiter && delimiter < colon)) {
+            return value;
+        }
+        // Absolute URI: allow only approved schemes; anything else (javascript:,
+        // data:, vbscript:, ...) is replaced by a dead fragment reference.
+        return /^(?:https?|ftp|mailto):/i.test(value) ? value : '#';
     };
 
     /**
@@ -71,13 +81,22 @@
     var XOOPS_SIZES = ['xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large'];
 
     /**
-     * Map a WYSIWYG CSS font-size keyword/length back to the nearest named XOOPS
-     * size. Best-effort only — see file header, this path is not exercised while
-     * the editor stays in source mode.
+     * Convert a WYSIWYG CSS font-size value to a named XOOPS size: an exact keyword
+     * match passes through, anything else falls back to 'medium'. Best-effort only —
+     * see file header, this path is not exercised while the editor stays in source mode.
      */
-    function nearestXoopsSize(cssSize) {
+    function toXoopsSize(cssSize) {
         var i = XOOPS_SIZES.indexOf(String(cssSize).toLowerCase());
         return i !== -1 ? XOOPS_SIZES[i] : 'medium';
+    }
+
+    /**
+     * Localized label lookup: sceditor.php publishes window.xoopsSCEditorLang from the
+     * editor language file before this script loads; missing keys fall back to English.
+     */
+    function L(key, fallback) {
+        var lang = window.xoopsSCEditorLang;
+        return (lang && typeof lang[key] === 'string' && lang[key]) ? lang[key] : fallback;
     }
 
     // ------------------------------------------------------------------
@@ -204,7 +223,10 @@
             return '[code' + (lang ? '=' + lang : '') + ']' + content + '[/code]';
         },
         html: function (token, attrs, content) {
-            return '<code>' + content + '</code>';
+            // Store the parsed language on the attribute format() reads back (same
+            // pattern as siteurl/data-siteurl) so [code=lang] round-trips.
+            var lang = (attrs && attrs.defaultattr) || '';
+            return '<code' + (lang ? ' data-lang="' + escapeEntities(lang) + '"' : '') + '>' + content + '</code>';
         }
     });
 
@@ -260,7 +282,7 @@
         quoteType: QuoteType.always,
         format: function (element, content) {
             var size = element.style ? element.style.fontSize : '';
-            return '[size=' + nearestXoopsSize(size) + ']' + content + '[/size]';
+            return '[size=' + toXoopsSize(size) + ']' + content + '[/size]';
         },
         html: function (token, attrs, content) {
             var size = (attrs && attrs.defaultattr) || 'medium';
@@ -419,7 +441,7 @@
     // ------------------------------------------------------------------
     sceditor.command.set('strike', {
         txtExec: ['[d]', '[/d]'],
-        tooltip: 'Strikethrough'
+        tooltip: L('strike', 'Strikethrough')
     });
 
     // The stock email command inserts [email=address]label[/email]; XOOPS only
@@ -427,84 +449,84 @@
     // 416-417), so the attribute form would publish as literal BBCode.
     sceditor.command.set('email', {
         txtExec: function (caller) {
-            var addr = window.prompt('Email address:', '');
+            var addr = window.prompt(L('emailPrompt', 'Email address:'), '');
             if (addr) {
                 this.insertText('[email]' + addr + '[/email]');
             }
         },
-        tooltip: 'Email'
+        tooltip: L('email', 'Email')
     });
 
-    sceditor.command.set('left', { txtExec: ['[left]', '[/left]'], tooltip: 'Align left' });
-    sceditor.command.set('center', { txtExec: ['[center]', '[/center]'], tooltip: 'Align center' });
-    sceditor.command.set('right', { txtExec: ['[right]', '[/right]'], tooltip: 'Align right' });
+    sceditor.command.set('left', { txtExec: ['[left]', '[/left]'], tooltip: L('left', 'Align left') });
+    sceditor.command.set('center', { txtExec: ['[center]', '[/center]'], tooltip: L('center', 'Align center') });
+    sceditor.command.set('right', { txtExec: ['[right]', '[/right]'], tooltip: L('right', 'Align right') });
 
     sceditor.command.set('size', {
         txtExec: function (caller) {
-            var choice = window.prompt('Size (' + XOOPS_SIZES.join(', ') + '):', 'medium');
+            var choice = window.prompt(L('sizePrompt', 'Size (%s):').replace('%s', XOOPS_SIZES.join(', ')), 'medium');
             if (choice && XOOPS_SIZES.indexOf(choice) !== -1) {
                 this.insertText('[size=' + choice + ']', '[/size]');
             }
         },
-        tooltip: 'Font Size'
+        tooltip: L('size', 'Font Size')
     });
 
     sceditor.command.set('siteurl', {
         txtExec: function (caller) {
-            var path = window.prompt('Site-relative path:', '');
+            var path = window.prompt(L('siteurlPrompt', 'Site-relative path:'), '');
             if (path) {
                 this.insertText('[siteurl=' + path + ']', '[/siteurl]');
             }
         },
-        tooltip: 'Site URL'
+        tooltip: L('siteurl', 'Site URL')
     });
 
     sceditor.command.set('quote', {
         txtExec: ['[quote]', '[/quote]'],
-        tooltip: 'Quote'
+        tooltip: L('quote', 'Quote')
     });
 
     sceditor.command.set('code', {
         txtExec: ['[code]', '[/code]'],
-        tooltip: 'Code'
+        tooltip: L('code', 'Code')
     });
 
     sceditor.command.set('bulletlist', {
         txtExec: ['[ul]\n[li]', '[/li]\n[/ul]'],
-        tooltip: 'Bulleted list'
+        tooltip: L('list', 'Bulleted list')
     });
 
     sceditor.command.set('image', {
         txtExec: function (caller) {
-            var url = window.prompt('Image URL:', 'https://');
+            var url = window.prompt(L('imagePrompt', 'Image URL:'), 'https://');
             if (url) {
                 this.insertText('[img]' + url + '[/img]');
             }
         },
-        tooltip: 'Image'
+        tooltip: L('image', 'Image')
     });
 
     sceditor.command.set('youtube', {
         txtExec: function (caller) {
-            var url = window.prompt('YouTube URL or video ID:', '');
+            var url = window.prompt(L('youtubePrompt', 'YouTube URL or video ID:'), '');
             if (!url) {
                 return;
             }
-            var width = window.prompt('Width:', '16') || '16';
-            var height = window.prompt('Height:', '9') || '9';
+            var width = window.prompt(L('widthPrompt', 'Width:'), '16') || '16';
+            var height = window.prompt(L('heightPrompt', 'Height:'), '9') || '9';
             this.insertText('[youtube=' + width + ',' + height + ']' + url + '[/youtube]');
         },
-        tooltip: 'YouTube'
+        tooltip: L('youtube', 'YouTube')
     });
 
     sceditor.command.set('wikipage', {
         txtExec: function (caller) {
-            var term = window.prompt('Wiki page:', '');
+            var term = window.prompt(L('wikiPrompt', 'Wiki page:'), '');
             if (term) {
                 this.insertText('[[' + term + ']]');
             }
         },
-        tooltip: 'Wiki link'
+        tooltip: L('wiki', 'Wiki link')
     });
 
     /**

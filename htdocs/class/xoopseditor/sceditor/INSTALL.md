@@ -9,7 +9,7 @@ editors.
 
 ## Directory layout
 
-```
+```text
 class/xoopseditor/sceditor/
 ├── minified/                     <- SCEditor distribution (MIT licensed, upstream
 │   ├── sceditor.min.js              release layout — do not edit these files)
@@ -49,6 +49,14 @@ The editor always starts and stays in BBCode source mode
 mode, which is what keeps XOOPS-specific and unrecognised BBCode (including
 arbitrary smilie text codes) from being rewritten or dropped.
 
+The rest of `minified/` (`plugins/`, `icons/`, the xhtml format, the jQuery
+builds, the extra themes) is not loaded by the integration. It ships anyway,
+deliberately: keeping the upstream release layout intact means an upgrade is
+a wholesale replacement of `minified/` with no per-file curation, and the
+unused files give site integrators the standard upstream options (an
+alternative theme or icon set, the autosave plugin) without a separate
+download.
+
 ## Upgrading the bundled library
 
 To move to a newer SCEditor release, replace the contents of `minified/`
@@ -60,8 +68,9 @@ customisations placed inside `minified/` would be lost on the next upgrade.
 
 ## License note
 
-SCEditor is © Sam Clarke and contributors, MIT licensed; the bundled files
-under `minified/` retain their upstream license headers — do not remove or
-alter them. The XOOPS integration files in this directory (`sceditor.php`,
+SCEditor is © Sam Clarke and contributors, MIT licensed; the full license
+text ships verbatim as `minified/LICENSE.md` (copied from the upstream
+repository), and the bundled files under `minified/` retain their upstream
+license headers — do not remove or alter either. The XOOPS integration files in this directory (`sceditor.php`,
 `editor_registry.php`, `language/english.php`, `js/xoops-bbcode.js`) are
 XOOPS project code under the GNU GPL 2, same as the rest of this repository.
