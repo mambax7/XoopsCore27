@@ -67,7 +67,7 @@ xoops_load('xoopsformloader');
 //xoops_load("xoopsmodule");
 include_once XOOPS_ROOT_PATH . '/include/cp_functions.php';
 include_once XOOPS_ROOT_PATH . '/modules/system/constants.php';
-include_once __DIR__ . '/XoopsFormRendererBootstrap4.php';
+xoops_load('xoopsformrendererbootstrap4');
 XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap4());
 
 
@@ -165,6 +165,10 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
 
     // Add new category - start
     if ($op === 'addcat' && \Xmf\Request::hasVar('op', 'POST')) {
+        if (!$isadmin) {
+            redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+        }
+
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header($current_file . '?target=' . $target, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
@@ -220,6 +224,10 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
 
     // Update category - start
     if ($op === 'updatecat' && \Xmf\Request::hasVar('op', 'POST')) {
+        if (!$isadmin) {
+            redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+        }
+
         if (!$GLOBALS['xoopsSecurity']->check() || $imgcat_id <= 0) {
             redirect_header($current_file . '?target=' . $target, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
@@ -281,6 +289,10 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
 
     // Confirm delete category - start
     if ($op === 'delcat' && \Xmf\Request::hasVar('op', 'GET')) {
+        if (!$isadmin) {
+            redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+        }
+
         xoops_header();
         echo "<link href='css/xoopsimagebrowser.css' rel='stylesheet' type='text/css' />";
         xoops_confirm(['op' => 'delcatok', 'imgcat_id' => $imgcat_id, 'target' => $target], $current_file, _MD_RUDELIMGCAT);
@@ -291,6 +303,10 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
 
     // Delete category - start
     if ($op === 'delcatok' && \Xmf\Request::hasVar('op', 'POST')) {
+        if (!$isadmin) {
+            redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+        }
+
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header($current_file . '?target=' . $target, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
@@ -500,6 +516,10 @@ if ($op === 'listimg') {
 }
 
 if ($op === 'editcat') {
+    if (!$isadmin) {
+        redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+    }
+
     if ($imgcat_id <= 0) {
         redirect_header($current_file . '?target=' . $target, 1);
     }

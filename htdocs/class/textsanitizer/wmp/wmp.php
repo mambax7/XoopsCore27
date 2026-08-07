@@ -35,14 +35,15 @@ class MytsWmp extends MyTextSanitizerExtension
             return [];
         }
 
-        $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeWmp(\"{$textarea_id}\",\""
-            . htmlspecialchars(_XOOPS_FORM_ENTERWMPURL, ENT_QUOTES | ENT_HTML5) . "\",\""
-            . htmlspecialchars(_XOOPS_FORM_ALT_ENTERHEIGHT, ENT_QUOTES | ENT_HTML5) . "\",\""
-            . htmlspecialchars(_XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5)
-            . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALTWMP
+        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
+        $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeWmp("
+            . json_encode((string) $textarea_id, $jsonFlags) . ","
+            . json_encode(_XOOPS_FORM_ENTERWMPURL, $jsonFlags) . ","
+            . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ","
+            . json_encode(_XOOPS_FORM_ALT_ENTERWIDTH, $jsonFlags)
+            . ");' onmouseover='style.cursor=\"hand\"' title='" . htmlspecialchars(_XOOPS_FORM_ALTWMP, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . "'><span class='fa-brands fa-windows' aria-hidden='true'></span></button>";
 
-        //$code = "<img src='{$this->image_path}/wmp.gif' alt='" . _XOOPS_FORM_ALTWMP . "' title='" . _XOOPS_FORM_ALTWMP . "' '" . "' onclick='xoopsCodeWmp(\"{$textarea_id}\",\"" . htmlspecialchars(_XOOPS_FORM_ENTERWMPURL, ENT_QUOTES | ENT_HTML5) . "\",\"" . htmlspecialchars(_XOOPS_FORM_ALT_ENTERHEIGHT, ENT_QUOTES | ENT_HTML5) . "\",\"" . htmlspecialchars(_XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5) . "\");'  onmouseover='style.cursor=\"hand\"'/>&nbsp;";
         $javascript = <<<EOH
             function xoopsCodeWmp(id, enterWmpPhrase, enterWmpHeightPhrase, enterWmpWidthPhrase)
             {

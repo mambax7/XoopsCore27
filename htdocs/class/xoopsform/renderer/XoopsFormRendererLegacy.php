@@ -17,8 +17,13 @@
  * @copyright 2000-2026 XOOPS Project (https://xoops.org)
  * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
  */
+require_once __DIR__ . '/../../xoopseditor/dhtmltextarea/XoopsDhtmlToolbar.php';
+require_once __DIR__ . '/XoopsFormRendererValueEscapeTrait.php';
+
 class XoopsFormRendererLegacy implements XoopsFormRendererInterface
 {
+    use XoopsFormRendererValueEscapeTrait;
+
     /**
      * Render support for XoopsFormButton
      *
@@ -29,8 +34,8 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
     public function renderFormButton(XoopsFormButton $element)
     {
         return "<input type='" . $element->getType() . "' class='formButton' name='" . $element->getName()
-            . "'  id='" . $element->getName() . "' value='" . $element->getValue() . "' title='"
-            . $element->getValue() . "'" . $element->getExtra() . ' />';
+            . "'  id='" . $element->getName() . "' value='" . $this->escapeElementValue($element->getValue()) . "' title='"
+            . $this->escapeElementValue($element->getValue()) . "'" . $element->getExtra() . ' />';
     }
 
     /**
@@ -50,7 +55,7 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
         $ret .= '<input type="button" value="' . _CANCEL . '" onClick="history.go(-1);return true;" />&nbsp;'
             . '<input type="reset" class="formbutton"  name="reset"  id="reset" value="' . _RESET . '" />&nbsp;'
             . '<input type="' . $element->getType() . '" class="formbutton"  name="' . $element->getName()
-            . '" id="' . $element->getName() . '" value="' . $element->getValue() . '"' . $element->getExtra()
+            . '" id="' . $element->getName() . '" value="' . $this->escapeElementValue($element->getValue()) . '"' . $element->getExtra()
             . ' />';
 
         return $ret;
@@ -141,7 +146,7 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
         }
         return "<input type='color' name='" . $element->getName() . "' title='" . $element->getTitle()
             . "' id='" . $element->getName() . "' size='" . $element->getSize() . "' maxlength='"
-            . $element->getMaxlength() . "' value='" . $element->getValue() . "'" . $element->getExtra()
+            . $element->getMaxlength() . "' value='" . $this->escapeElementValue($element->getValue()) . "'" . $element->getExtra()
             . ' />';
     }
 
@@ -156,16 +161,11 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
     {
         xoops_loadLanguage('formdhtmltextarea');
         $ret = '';
-        // actions
-        $ret .= $this->renderFormDhtmlTAXoopsCode($element) . "<br>\n";
-        // fonts
-        $ret .= $this->renderFormDhtmlTATypography($element);
-        // length checker
-        $maxlength = $element->configs['maxlength'] ?? 0;
-        $ret .= "<button type='button' class='btn btn-default' onclick=\"XoopsCheckLength('" . $element->getName() . "', '" . $maxlength . "', '" . _XOOPS_FORM_ALT_LENGTH . "', '" . _XOOPS_FORM_ALT_LENGTH_MAX . "');\" title='" . _XOOPS_FORM_ALT_CHECKLENGTH . "'><span class='fa-solid fa-square-check' aria-hidden='true'></span></button>&nbsp;";
-        $ret .= "<br>\n";
+        // toolbar: xoopscode buttons, typography, check-length — shared across all renderers
+        $toolbar = new \XoopsDhtmlToolbar();
+        $ret .= $toolbar->render($element) . "<br>\n";
         // the textarea box
-        $ret .= "<textarea id='" . $element->getName() . "' name='" . $element->getName() . "' title='" . $element->getTitle() . "' onselect=\"xoopsSavePosition('" . $element->getName() . "');\" onclick=\"xoopsSavePosition('" . $element->getName() . "');\" onkeyup=\"xoopsSavePosition('" . $element->getName() . "');\" cols='" . $element->getCols() . "' rows='" . $element->getRows() . "'" . $element->getExtra() . '>' . $element->getValue() . "</textarea><br>\n";
+        $ret .= "<textarea id='" . $element->getName() . "' name='" . $element->getName() . "' title='" . $element->getTitle() . "' onselect=\"xoopsSavePosition('" . $element->getName() . "');\" onclick=\"xoopsSavePosition('" . $element->getName() . "');\" onkeyup=\"xoopsSavePosition('" . $element->getName() . "');\" cols='" . $element->getCols() . "' rows='" . $element->getRows() . "'" . $element->getExtra() . '>' . $this->escapeElementValue($element->getValue()) . "</textarea><br>\n";
 
         if (empty($element->skipPreview)) {
             if (empty($GLOBALS['xoTheme'])) {
@@ -200,101 +200,38 @@ EOJS;
     /**
      * Render xoopscode buttons for editor, include calling text sanitizer extensions
      *
+     * Thin delegate to the shared {@see XoopsDhtmlToolbar}. Kept (rather than removed) because
+     * this method is `protected`, not part of {@see XoopsFormRendererInterface}, and a third-party
+     * subclass of this renderer may still call or override it.
+     *
      * @param XoopsFormDhtmlTextArea $element form element
      *
      * @return string rendered buttons for xoopscode assistance
      */
     protected function renderFormDhtmlTAXoopsCode(XoopsFormDhtmlTextArea $element)
     {
-        $textarea_id = $element->getName();
-        $code = '';
-        $code .= '<a name="moresmiley"></a>';
-        $code .= "<button type='button' class='btn btn-default' onclick='xoopsCodeUrl(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERURL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ENTERWEBTITLE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_URL . "'><span class='fa-solid fa-link' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-default' onclick='xoopsCodeEmail(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTEREMAIL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ENTERWEBTITLE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_EMAIL . "'><span class='fa-solid fa-envelope' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-default' onclick='xoopsCodeImg(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERIMGURL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ENTERIMGPOS, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_IMGPOSRORL, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_ERRORIMGPOS, ENT_QUOTES | ENT_HTML5) . "\", \"" . htmlspecialchars(_XOOPS_FORM_ALT_ENTERWIDTH, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_IMG . "'><span class='fa-solid fa-file-image' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-default' onclick='openWithSelfMain(\"" . XOOPS_URL . "/imagemanager.php?target={$textarea_id}\",\"imgmanager\",400,430);' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_IMAGE . "'><span class='fa-solid fa-file-image' aria-hidden='true'></span><span style='font-size:75%;'> Manager</span></button>";
-        $code .= "<button type='button' class='btn btn-default' onclick='openWithSelfMain(\"" . XOOPS_URL . "/misc.php?action=showpopups&amp;type=smilies&amp;target={$textarea_id}\",\"smilies\",300,475);' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_SMILEY . "'><span class='fa-solid fa-face-smile' aria-hidden='true'></span></button>";
-
-        $myts        = \MyTextSanitizer::getInstance();
-
-        $extensions = array_filter($myts->config['extensions']);
-        foreach (array_keys($extensions) as $key) {
-            $extension = $myts->loadExtension($key);
-            $result = $extension->encode($textarea_id);
-            $encode = $result[0] ?? '';
-            $js     = $result[1] ?? '';
-            if (empty($encode)) {
-                continue;
-            }
-            $code .= $encode;
-            if (!empty($js)) {
-                $element->js .= $js;
-            }
-        }
-        $code .= "<button type='button' class='btn btn-default' onclick='xoopsCodeCode(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERCODE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_CODE . "'><span class='fa-solid fa-code' aria-hidden='true'></span></button>";
-        $code .= "<button type='button' class='btn btn-default' onclick='xoopsCodeQuote(\"{$textarea_id}\", \"" . htmlspecialchars(_ENTERQUOTE, ENT_QUOTES | ENT_HTML5) . "\");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALT_QUOTE . "'><span class='fa-solid fa-quote-right' aria-hidden='true'></span></button>";
-
-        $xoopsPreload = XoopsPreload::getInstance();
-        $xoopsPreload->triggerEvent('core.class.xoopsform.formdhtmltextarea.codeicon', [&$code]);
-
-        return $code;
+        return (new \XoopsDhtmlToolbar())->renderCodeButtons($element);
     }
 
     /**
-     * Render typography controls for editor (font, size, color)
+     * Render typography controls for editor (font, size, color) plus the check-length button
+     *
+     * Thin delegate to the shared {@see XoopsDhtmlToolbar}. Returns the typography groups AND the
+     * check-length button — the same combined output this method produced before the toolbar was
+     * extracted, when the check-length button was the tail of its markup. Kept (rather than
+     * removed) because this method is `protected`, not part of
+     * {@see XoopsFormRendererInterface}, and a third-party subclass of this renderer may still
+     * call or override it.
      *
      * @param XoopsFormDhtmlTextArea $element form element
      *
-     * @return string rendered typography controls
+     * @return string rendered typography controls and check-length button
      */
     protected function renderFormDhtmlTATypography(XoopsFormDhtmlTextArea $element)
     {
-        $textarea_id = $element->getName();
-        $hiddentext  = $element->_hiddenText;
-        $fontStr = "<script type=\"text/javascript\">" . "var _editor_dialog = ''" . "+ '<select class=\"input-sm form-control\" id=\'{$textarea_id}Size\' onchange=\'xoopsSetElementAttribute(\"size\", this.options[this.selectedIndex].value, \"{$textarea_id}\", \"{$hiddentext}\");\' onfocusout=\'this.selectedIndex=0;\'>'" . "+ '<option value=\'SIZE\'>" . _SIZE . "</option>'";
+        $toolbar = new \XoopsDhtmlToolbar();
 
-        foreach ($GLOBALS['formtextdhtml_sizes'] as $_val => $_name) {
-            $fontStr .= " + '<option value=\'{$_val}\'>{$_name}</option>'";
-        }
-        $fontStr .= " + '</select> '";
-        $fontStr .= "+ '<select class=\"input-sm form-control\" id=\'{$textarea_id}Font\' onchange=\'xoopsSetElementAttribute(\"font\", this.options[this.selectedIndex].value, \"{$textarea_id}\", \"{$hiddentext}\");\' onfocusout=\'this.selectedIndex=0;\'>'" . "+ '<option value=\'FONT\'>" . _FONT . "</option>'";
-        $fontarray = !empty($GLOBALS['formtextdhtml_fonts']) ? $GLOBALS['formtextdhtml_fonts'] : [
-            'Arial',
-            'Courier',
-            'Georgia',
-            'Helvetica',
-            'Impact',
-            'Verdana',
-            'Haettenschweiler',
-        ];
-        foreach ($fontarray as $font) {
-            $fontStr .= " + '<option value=\'{$font}\'>{$font}</option>'";
-        }
-        $fontStr .= " + '</select> '";
-        $fontStr .= "+ '<select class=\"input-sm form-control\" id=\'{$textarea_id}Color\' onchange=\'xoopsSetElementAttribute(\"color\", this.options[this.selectedIndex].value, \"{$textarea_id}\", \"{$hiddentext}\");\' onfocusout=\'this.selectedIndex=0;\'>'" . "+ '<option value=\'COLOR\'>" . _COLOR . "</option>';" . "var _color_array = new Array('00', '33', '66', '99', 'CC', 'FF');
-                for (var i = 0; i < _color_array.length; i ++) {
-                    for (var j = 0; j < _color_array.length; j ++) {
-                        for (var k = 0; k < _color_array.length; k ++) {
-                            var _color_ele = _color_array[i] + _color_array[j] + _color_array[k];
-                            _editor_dialog += '<option value=\''+_color_ele+'\' style=\'background-color:#'+_color_ele+';color:#'+_color_ele+';\'>#'+_color_ele+'</option>';
-                        }
-                    }
-                }
-                _editor_dialog += '</select>'";
-        $fontStr .= ";";
-        $fontStr .= 'document.write(_editor_dialog); </script>';
-
-        $styleStr  = "<button type='button' class='btn btn-default' onclick='xoopsMakeBold(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_BOLD . "' aria-label='Left Align'><span class='fa-solid fa-bold' aria-hidden='true'></span></button>";
-        $styleStr .= "<button type='button' class='btn btn-default' onclick='xoopsMakeItalic(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_ITALIC . "' aria-label='Left Align'><span class='fa-solid fa-italic' aria-hidden='true'></span></button>";
-        $styleStr .= "<button type='button' class='btn btn-default' onclick='xoopsMakeUnderline(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_UNDERLINE . "' aria-label='Left Align'><span class='fa-solid fa-underline'></span></button>";
-        $styleStr .= "<button type='button' class='btn btn-default' onclick='xoopsMakeLineThrough(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_LINETHROUGH . "' aria-label='Left Align'><span class='fa-solid fa-strikethrough'></span></button>";
-
-        $alignStr  = "<button type='button' class='btn btn-default' onclick='xoopsMakeLeft(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_LEFT . "' aria-label='Left Align'><span class='fa-solid fa-align-left' aria-hidden='true'></span></button>";
-        $alignStr .= "<button type='button' class='btn btn-default' onclick='xoopsMakeCenter(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_CENTER . "' aria-label='Left Align'><span class='fa-solid fa-align-center' aria-hidden='true'></span></button>";
-        $alignStr .= "<button type='button' class='btn btn-default' onclick='xoopsMakeRight(\"{$hiddentext}\", \"{$textarea_id}\");' title='" . _XOOPS_FORM_ALT_RIGHT . "' aria-label='Left Align'><span class='fa-solid fa-align-right' aria-hidden='true'></span></button>";
-
-        $fontStr .= "<br>\n{$styleStr}&nbsp;{$alignStr}&nbsp;\n";
-        return $fontStr;
+        return $toolbar->renderTypography($element) . $toolbar->renderCheckLength($element);
     }
 
     /**
@@ -366,7 +303,7 @@ EOJS;
     public function renderFormPassword(XoopsFormPassword $element)
     {
         return '<input type="password" name="' . $element->getName() . '" id="' . $element->getName() . '" size="'
-            . $element->getSize() . '" maxlength="' . $element->getMaxlength() . '" value="' . $element->getValue()
+            . $element->getSize() . '" maxlength="' . $element->getMaxlength() . '" value="' . $this->escapeElementValue($element->getValue())
             . '"' . $element->getExtra() . ' ' . ($element->autoComplete ? '' : 'autocomplete="off" ') . '/>';
     }
 
@@ -468,7 +405,7 @@ EOJS;
     {
         return "<input type='text' name='" . $element->getName() . "' title='" . $element->getTitle()
             . "' id='" . $element->getName() . "' size='" . $element->getSize() . "' maxlength='"
-            . $element->getMaxlength() . "' value='" . $element->getValue() . "'" . $element->getExtra()
+            . $element->getMaxlength() . "' value='" . $this->escapeElementValue($element->getValue()) . "'" . $element->getExtra()
             . ' />';
     }
 
@@ -483,7 +420,7 @@ EOJS;
     {
         return "<textarea name='" . $element->getName() . "' id='" . $element->getName() . "'  title='"
             . $element->getTitle() . "' rows='" . $element->getRows() . "' cols='" . $element->getCols()
-            . "'" . $element->getExtra() . '>' . $element->getValue() . '</textarea>';
+            . "'" . $element->getExtra() . '>' . $this->escapeElementValue($element->getValue()) . '</textarea>';
     }
 
     /**

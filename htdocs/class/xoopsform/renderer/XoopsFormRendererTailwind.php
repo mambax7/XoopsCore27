@@ -20,6 +20,8 @@
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 require_once __DIR__ . '/XoopsFormTabRendererInterface.php';
+require_once __DIR__ . '/../../xoopseditor/dhtmltextarea/XoopsDhtmlToolbar.php';
+require_once __DIR__ . '/XoopsFormRendererValueEscapeTrait.php';
 
 /**
  * Tailwind CSS + DaisyUI form renderer
@@ -43,6 +45,8 @@ require_once __DIR__ . '/XoopsFormTabRendererInterface.php';
  */
 class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsFormTabRendererInterface
 {
+    use XoopsFormRendererValueEscapeTrait;
+
     /**
      * Counter giving each rendered tab tray a unique DOM id / radio group.
      *
@@ -409,16 +413,16 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
 
         $savePositionJs = $this->buildJsCall('xoopsSavePosition', [$nameRaw]);
 
-        $ret  = $this->renderFormDhtmlTAXoopsCode($element) . "<br>\n";
-        $ret .= $this->renderFormDhtmlTATypography($element);
-        $ret .= "<br>\n";
+        // toolbar: xoopscode buttons, typography, check-length — shared across all renderers
+        $toolbar = new \XoopsDhtmlToolbar();
+        $ret     = $toolbar->render($element) . "<br>\n";
         $ret .= '<textarea class="textarea textarea-bordered w-full font-mono"'
             . ' id="' . $name . '" name="' . $name . self::ATTR_TITLE . $title . '"'
             . " onselect='" . $savePositionJs . "'"
             . " onclick='" . $savePositionJs . "'"
             . " onkeyup='" . $savePositionJs . "'"
             . ' cols="' . (int) $element->getCols() . '" rows="' . (int) $element->getRows() . '"'
-            . $this->renderExtra($element) . '>' . $this->esc($element->getValue()) . "</textarea>\n";
+            . $this->renderExtra($element) . '>' . $this->escapeElementValue($element->getValue()) . "</textarea>\n";
 
         if (empty($element->skipPreview)) {
             if (empty($GLOBALS['xoTheme'])) {
@@ -496,142 +500,38 @@ EOJS;
     /**
      * Render xoopscode buttons for editor, include calling text sanitizer extensions
      *
+     * Thin delegate to the shared {@see XoopsDhtmlToolbar}. Kept (rather than removed) because
+     * this method is `protected`, not part of {@see XoopsFormRendererInterface}, and a third-party
+     * subclass of this renderer may still call or override it.
+     *
      * @param XoopsFormDhtmlTextArea $element form element
      *
      * @return string rendered buttons for xoopscode assistance
      */
     protected function renderFormDhtmlTAXoopsCode(XoopsFormDhtmlTextArea $element)
     {
-        $textareaIdRaw   = (string) $element->getName(false);
-        $textareaIdParam = rawurlencode($textareaIdRaw);
-        $urlImageMgr     = XOOPS_URL . '/imagemanager.php?target=' . $textareaIdParam;
-        $urlSmilies      = XOOPS_URL . '/misc.php?action=showpopups&type=smilies&target=' . $textareaIdParam;
-        $btn           = self::BTN_NEUTRAL_SM;
-
-        $code = "<div class='flex flex-wrap gap-1'>";
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('xoopsCodeUrl', [$textareaIdRaw, _ENTERURL, _ENTERWEBTITLE]), _XOOPS_FORM_ALT_URL, 'fa-solid fa-link');
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('xoopsCodeEmail', [$textareaIdRaw, _ENTEREMAIL, _ENTERWEBTITLE]), _XOOPS_FORM_ALT_EMAIL, 'fa-solid fa-envelope');
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('xoopsCodeImg', [$textareaIdRaw, _ENTERIMGURL, _ENTERIMGPOS, _IMGPOSRORL, _ERRORIMGPOS, _XOOPS_FORM_ALT_ENTERWIDTH]), _XOOPS_FORM_ALT_IMG, 'fa-solid fa-file-image');
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('openWithSelfMain', [$urlImageMgr, 'imgmanager', 400, 430]), _XOOPS_FORM_ALT_IMAGE, 'fa-solid fa-file-image', '<small> Manager</small>');
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('openWithSelfMain', [$urlSmilies, 'smilies', 300, 475]), _XOOPS_FORM_ALT_SMILEY, 'fa-solid fa-face-smile');
-
-        $myts       = \MyTextSanitizer::getInstance();
-        $extensions = array_filter($myts->config['extensions']);
-        foreach (array_keys($extensions) as $key) {
-            $extension = $myts->loadExtension($key);
-            $result    = $extension->encode($textareaIdRaw);
-            $encode    = $result[0] ?? '';
-            $js        = $result[1] ?? '';
-            if (empty($encode)) {
-                continue;
-            }
-            // Extensions output Bootstrap classes — remap the common ones to DaisyUI.
-            $encode = str_replace(['btn-default', 'btn-secondary'], self::BTN_NEUTRAL_SM, $encode);
-            $code .= $encode;
-            if (!empty($js)) {
-                $element->js .= $js;
-            }
-        }
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('xoopsCodeCode', [$textareaIdRaw, _ENTERCODE]), _XOOPS_FORM_ALT_CODE, 'fa-solid fa-code');
-        $code .= $this->renderEditorButton($btn, $this->buildJsCall('xoopsCodeQuote', [$textareaIdRaw, _ENTERQUOTE]), _XOOPS_FORM_ALT_QUOTE, 'fa-solid fa-quote-right');
-        $code .= '</div>';
-
-        $xoopsPreload = XoopsPreload::getInstance();
-        $xoopsPreload->triggerEvent('core.class.xoopsform.formdhtmltextarea.codeicon', [&$code]);
-
-        return $code;
+        return (new \XoopsDhtmlToolbar())->renderCodeButtons($element);
     }
 
     /**
-     * Render typography controls for editor (font, size, color)
+     * Render typography controls for editor (font, size, color) plus the check-length button
+     *
+     * Thin delegate to the shared {@see XoopsDhtmlToolbar}. Returns the typography groups AND the
+     * check-length button — the same combined output this method produced before the toolbar was
+     * extracted, when the check-length button was the tail of its markup. Kept (rather than
+     * removed) because this method is `protected`, not part of
+     * {@see XoopsFormRendererInterface}, and a third-party subclass of this renderer may still
+     * call or override it.
      *
      * @param XoopsFormDhtmlTextArea $element form element
      *
-     * @return string rendered typography controls
+     * @return string rendered typography controls and check-length button
      */
     protected function renderFormDhtmlTATypography(XoopsFormDhtmlTextArea $element)
     {
-        $textareaIdRaw = (string) $element->getName(false);
-        $hiddentextRaw = (string) $element->_hiddenText;
-        $btn           = self::BTN_NEUTRAL_SM;
-        $menuCls       = self::DROPDOWN_MENU_CLS;
+        $toolbar = new \XoopsDhtmlToolbar();
 
-        $fontarray = !empty($GLOBALS['formtextdhtml_fonts']) ? $GLOBALS['formtextdhtml_fonts'] : [
-            'Arial', 'Courier', 'Georgia', 'Helvetica', 'Impact', 'Verdana', 'Haettenschweiler',
-        ];
-
-        $colorArray = [
-            'Black'  => '000000', 'Blue'   => '38AAFF', 'Brown'  => '987857',
-            'Green'  => '79D271', 'Grey'   => '888888', 'Orange' => 'FFA700',
-            'Paper'  => 'E0E0E0', 'Purple' => '363E98', 'Red'    => 'FF211E',
-            'White'  => 'FEFEFE', 'Yellow' => 'FFD628',
-        ];
-
-        $fontStr = "<div class='flex flex-wrap gap-1 mt-2'>";
-
-        // Size dropdown — each link uses href='#' onclick='...; return false;'
-        // so the JavaScript runs through a real handler context instead of a
-        // `javascript:` URL (which adds URL decoding on top of HTML entity
-        // decoding before the JS engine sees it).
-        $sizes = $GLOBALS['formtextdhtml_sizes'] ?? [];
-        $fontStr .= "<div class='dropdown'>"
-            . "<div tabindex='0' role='button' class='{$btn}' title='" . $this->esc(_SIZE) . self::ATTR_ARIA_LABEL . $this->esc(_SIZE) . "'><span class='fa-solid fa-text-height'></span></div>"
-            . "<ul tabindex='0' class='{$menuCls}'>";
-        foreach ($sizes as $value => $label) {
-            $onclick = $this->buildJsCall('xoopsSetElementAttribute', ['size', (string) $value, $textareaIdRaw, $hiddentextRaw]);
-            $fontStr .= "<li><a href='#' onclick='" . $onclick . "; return false;'>" . $this->esc((string) $label) . '</a></li>';
-        }
-        $fontStr .= '</ul></div>';
-
-        // Font dropdown
-        $fontStr .= "<div class='dropdown'>"
-            . "<div tabindex='0' role='button' class='{$btn}' title='" . $this->esc(_FONT) . self::ATTR_ARIA_LABEL . $this->esc(_FONT) . "'><span class='fa-solid fa-font'></span></div>"
-            . "<ul tabindex='0' class='{$menuCls}'>";
-        foreach ($fontarray as $font) {
-            $onclick = $this->buildJsCall('xoopsSetElementAttribute', ['font', (string) $font, $textareaIdRaw, $hiddentextRaw]);
-            $fontStr .= "<li><a href='#' onclick='" . $onclick . "; return false;'>" . $this->esc((string) $font) . '</a></li>';
-        }
-        $fontStr .= '</ul></div>';
-
-        // Color dropdown
-        $fontStr .= "<div class='dropdown'>"
-            . "<div tabindex='0' role='button' class='{$btn}' title='" . $this->esc(_COLOR) . self::ATTR_ARIA_LABEL . $this->esc(_COLOR) . "'><span class='fa-solid fa-palette'></span></div>"
-            . "<ul tabindex='0' class='{$menuCls}'>";
-        foreach ($colorArray as $color => $hex) {
-            $onclick = $this->buildJsCall('xoopsSetElementAttribute', ['color', $hex, $textareaIdRaw, $hiddentextRaw]);
-            $fontStr .= "<li><a href='#' onclick='" . $onclick . "; return false;'><span style=\"color:#" . $this->esc($hex) . ";\">" . $this->esc($color) . '</span></a></li>';
-        }
-        $fontStr .= '</ul></div>';
-
-        // Style buttons
-        $styleBtn = self::BTN_NEUTRAL_SM . ' join-item';
-        $fontStr .= "<div class='join'>";
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeBold', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_BOLD, 'fa-solid fa-bold');
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeItalic', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_ITALIC, 'fa-solid fa-italic');
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeUnderline', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_UNDERLINE, 'fa-solid fa-underline');
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeLineThrough', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_LINETHROUGH, 'fa-solid fa-strikethrough');
-        $fontStr .= '</div>';
-
-        // Align buttons
-        $fontStr .= "<div class='join'>";
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeLeft', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_LEFT, 'fa-solid fa-align-left');
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeCenter', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_CENTER, 'fa-solid fa-align-center');
-        $fontStr .= $this->renderEditorButton($styleBtn, $this->buildJsCall('xoopsMakeRight', [$hiddentextRaw, $textareaIdRaw]), _XOOPS_FORM_ALT_RIGHT, 'fa-solid fa-align-right');
-        $fontStr .= '</div>';
-
-        // Length check button — configs is a legacy dynamic property on some
-        // editor instances; guard the access to avoid PHP 8.2 dynamic property warnings
-        $maxlength = 0;
-        if (property_exists($element, 'configs') && is_array($element->configs) && isset($element->configs['maxlength'])) {
-            $maxlength = (int) $element->configs['maxlength'];
-        }
-        $lengthOnclick = $this->buildJsCall('XoopsCheckLength', [$textareaIdRaw, (string) $maxlength, _XOOPS_FORM_ALT_LENGTH, _XOOPS_FORM_ALT_LENGTH_MAX]);
-        $checkLengthLabel = $this->esc(_XOOPS_FORM_ALT_CHECKLENGTH);
-        $fontStr .= "<button type='button' class='{$btn}' onclick='" . $lengthOnclick . self::ATTR_TITLE_SQ
-            . $checkLengthLabel . self::ATTR_ARIA_LABEL . $checkLengthLabel . "'><span class='fa-solid fa-square-check'></span></button>";
-        $fontStr .= '</div>';
-
-        return $fontStr;
+        return $toolbar->renderTypography($element) . $toolbar->renderCheckLength($element);
     }
 
     /**
@@ -824,7 +724,7 @@ EOJS;
             . ' rows="' . (int) $element->getRows() . '"'
             . ' cols="' . (int) $element->getCols() . '"'
             . $this->renderExtra($element) . '>'
-            . $this->esc($element->getValue()) . '</textarea>';
+            . $this->escapeElementValue($element->getValue()) . '</textarea>';
     }
 
     /**

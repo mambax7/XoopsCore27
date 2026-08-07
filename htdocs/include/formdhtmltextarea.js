@@ -131,13 +131,23 @@ function xoopsCodeCode(id, enterCodePhrase) {
     domobj.focus();
 }
 
+// Legacy helper from an older toolbar layout that had a separate "add text" box alongside
+// the Font/Colour/Size selects. No renderer has emitted an "<id>Addtext" element or an
+// element with the hiddentext id for a long time, and nothing in core or any bundled
+// extension calls this function, so every path through it dereferenced null. It is kept
+// only because it is a global that a third-party module could still call; it now returns
+// harmlessly instead of throwing a TypeError.
 function xoopsCodeText(id, hiddentext, enterTextboxPhrase) {
     var textareaDom = xoopsGetElementById(id);
     var textDom = xoopsGetElementById(id + "Addtext");
     var fontDom = xoopsGetElementById(id + "Font");
     var colorDom = xoopsGetElementById(id + "Color");
     var sizeDom = xoopsGetElementById(id + "Size");
-    var xoopsHiddenTextDomStyle = xoopsGetElementById(hiddentext).style;
+    var hiddenDom = xoopsGetElementById(hiddentext);
+    if (!textareaDom || !textDom || !fontDom || !colorDom || !sizeDom || !hiddenDom) {
+        return;
+    }
+    var xoopsHiddenTextDomStyle = hiddenDom.style;
     var selection = xoopsGetSelect(id);
     if (selection.length > 0) {
         var textDomValue = selection;
@@ -223,12 +233,19 @@ function xoopsGetSelect(id) {
 
 
 function xoopsSetElementAttribute(key, val, id, eid) {
+    // xoopsGetSelect() returns null on browsers with no selection API (its final else
+    // branch), so normalise before use: otherwise text.length throws and the tag pair
+    // below would contain the literal string "null".
     var text = xoopsGetSelect(id);
-    if (text.length <= 0) {
-        setVisible("xoopsHiddenText");
-        eval("setElement" + key.substr(0, 1).toUpperCase() + key.substr(1, key.length) + "(eid, val)");
-        return;
+    if (text === null || text === undefined) {
+        text = "";
     }
+    // With no selection this used to call setVisible("xoopsHiddenText") and then eval a
+    // setElementSize/Font/Color() helper. That path was dead twice over: no renderer emits
+    // an element with that id (so setVisible() threw a TypeError on null), and no
+    // setElement* function has ever existed in this file. Size/Font/Colour therefore did
+    // nothing at all unless text was selected. Insert an empty tag pair instead, which is
+    // the behaviour every other editor has and what the user is asking for by clicking.
     var domobj = xoopsGetElementById(id);
     xoopsInsertText(domobj, "[" + key + "=" + val + "]" + text + "[/" + key + "]");
     domobj.focus();
@@ -270,11 +287,31 @@ function makeLineThrough(id) {
     }
 }
 
+// Explicit dispatch for the legacy live-preview helpers. Replaces an eval() of a
+// caller-supplied function name: only these four are ever valid targets, so a lookup is
+// both safer and clearer than evaluating a string.
+var xoopsStylePreviewFuncs = {
+    makeBold: makeBold,
+    makeItalic: makeItalic,
+    makeUnderline: makeUnderline,
+    makeLineThrough: makeLineThrough
+};
+
 function xoopsMakeStyle(id, eid, val, func) {
+    // See xoopsSetElementAttribute(): xoopsGetSelect() can return null.
     var text = xoopsGetSelect(id);
-    if (text.length <= 0 && func.length > 0 && eid.length > 0) {
+    if (text === null || text === undefined) {
+        text = "";
+    }
+    // The no-selection branch toggles a hidden live-preview element. No current renderer
+    // emits one, so setVisible() dereferenced null and threw — B/I/U/S did nothing unless
+    // text was selected. Take it only when the element genuinely exists (kept for any
+    // custom renderer that still emits it); otherwise fall through and insert an empty
+    // tag pair so the click does something useful.
+    if (text.length <= 0 && func.length > 0 && eid.length > 0
+        && xoopsGetElementById(eid) && xoopsStylePreviewFuncs[func]) {
         setVisible(eid);
-        eval(func + "(eid)");
+        xoopsStylePreviewFuncs[func](eid);
         return;
     }
     var domobj = xoopsGetElementById(id);

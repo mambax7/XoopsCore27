@@ -30,8 +30,10 @@ class MytsMp3 extends MyTextSanitizerExtension
      */
     public function encode($textarea_id)
     {
-        $buttonHtml = "<button type='button' class='btn btn-default' onclick='xoopsCodeMp3(\"{$textarea_id}\");' title='"
-                      . _XOOPS_FORM_ALTMP3 . "'>"
+        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
+        $buttonHtml = "<button type='button' class='btn btn-default' onclick='xoopsCodeMp3("
+                      . json_encode((string) $textarea_id, $jsonFlags) . ");' title='"
+                      . htmlspecialchars(_XOOPS_FORM_ALTMP3, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "'>"
                       . "<span class='fa-solid fa-music' aria-hidden='true'></span></button>";
 
         $javascript = <<<EOF
