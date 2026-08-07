@@ -97,10 +97,13 @@ if ([] !== $xoopsDebugConfig) {
     // The call is idempotent and the config is cached, so repeating it costs nothing.
     xoops_applyDebugConfig();
 
-    if (!empty($xoopsDebugConfig['log']['enabled'])) {
+    // 'core_log' since 2.7.3; xoops_getDebugConfig() still publishes the older
+    // 'log' spelling as an alias pointing at the same array, so a debug.php
+    // written before the rename needs no edit.
+    if (!empty($xoopsDebugConfig['core_log']['enabled'])) {
         XoopsLoad::load('filelogger');
         if (class_exists('XoopsFileLogger', false)) {
-            $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+            $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['core_log']));
         }
     }
 }
@@ -456,3 +459,22 @@ $xoopsLogger->stopTime('XOOPS Boot');
 $xoopsLogger->startTime('Module init');
 
 $xoopsPreload->triggerEvent('core.include.common.end');
+
+/**
+ * The error screen, last of all.
+ *
+ * Deliberately the final statement in this file. An error screen installs its own error
+ * and exception handlers, and so did XoopsLogger further up; whichever runs last owns
+ * them. Activating any earlier produces a screen that is quietly displaced before the
+ * first error ever happens -- which presents as the screen being broken rather than as
+ * the screen being overwritten, and is a genuinely unpleasant afternoon.
+ *
+ * Core registers nothing itself and knows no provider by name: it reads the owner
+ * declared in xoops_data/data/debug.php, or recorded by the provider module that claimed
+ * it at install, and triggers core.debug.errorscreen for whichever module that is.
+ * Always defines XOOPS_ERROR_SCREEN_STATUS and XOOPS_ERROR_SCREEN_MESSAGE, whatever the
+ * outcome, so a module can tell "no provider is installed" apart from "a provider is
+ * installed and currently off". Costs one function call and a cached array read when no
+ * debug.php exists.
+ */
+xoops_activateErrorScreen();

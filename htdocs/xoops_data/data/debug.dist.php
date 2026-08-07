@@ -71,11 +71,42 @@ return [
     // if the rest of this file says otherwise.
     'enabled' => true,
 
+    // 'development' | 'production'. Read by xoops_getDebugEnvironment() and published as
+    // XOOPS_ENVIRONMENT / XOOPS_ENV, for any component that behaves differently on a
+    // developer's machine than on a live site.
+    'environment' => 'development',
+
     // Sets XOOPS_DEBUG, and PHP's display_errors / error_reporting, as early as
     // the bootstrap allows. E_ALL includes the E_USER_DEPRECATED notices XOOPS
     // raises for legacy module APIs.
     'display_errors'  => true,
     'error_reporting' => E_ALL,
+
+    // Who owns PHP's error and exception handlers.
+    //
+    // 'auto' -- the default -- means the first error-screen module you installed, which
+    // recorded itself in debug-runtime.json at install time. Install one module and it
+    // works; install a second and it tells you the seat is taken and leaves it alone.
+    // With none installed this is 'core': XoopsLogger keeps both handlers and DebugBar
+    // receives everything.
+    //
+    // Naming a module here instead pins it, and beats whatever was recorded. The token is
+    // the provider MODULE'S DIRNAME -- 'xwhoops', and so on -- so this line names the
+    // directory to go and look in. Core ships no provider, keeps no list of them, and
+    // does not know what any token means; a module may also answer to older spellings of
+    // its own choosing.
+    //
+    //     'error_screen' => 'auto',      first installed provider (default)
+    //     'error_screen' => 'core',      never hand the handlers to anything
+    //     'error_screen' => 'xwhoops',   pin this one, whatever else is installed
+    //
+    // A pinned or recorded module that is deactivated does NOT pass the screen to
+    // another installed provider: it falls back to core behaviour and reports
+    // 'unclaimed'. Ownership only ever changes when somebody asks for it.
+    //
+    // A provider may read its own settings from this file under its own key -- core
+    // passes unknown keys through untouched and never interprets them.
+    'error_screen' => 'auto',
 
     'database' => [
         // Sets XOOPS_DB_LEGACY_LOG, which makes the database layer report legacy call
@@ -85,6 +116,22 @@ return [
         'legacy_log' => false,
     ],
 
+    'ray' => [
+        'enabled' => false,
+    ],
+
+    // The DebugBar module, as a SECOND activation source alongside the database-backed
+    // Admin -> Preferences -> Debug Mode. Either switches the toolbar on; the module's own
+    // 'debugbar_enable' preference and the authenticated-administrator requirement still
+    // apply, and neither is configurable from here. Useful on a local checkout where you
+    // would rather not carry a debug flag in the database.
+    //
+    // Must be a real boolean: the core coerces anything else to false, so 'true' as a
+    // string will NOT switch this on.
+    'debugbar' => [
+        'enabled' => false,
+    ],
+
     /*
      * Persistent log file.
      *
@@ -92,7 +139,7 @@ return [
      * still have it when a page dies before rendering — which is exactly when
      * you need it most. Notices and warnings are included, not only errors.
      */
-    'log' => [
+    'core_log' => [
         'enabled' => true,
 
         // Logging REFUSES to run while xoops_data sits inside the document root, because
