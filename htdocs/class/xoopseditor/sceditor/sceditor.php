@@ -91,7 +91,6 @@ class FormSCEditor extends XoopsEditor
         $rows    = (int) $this->getRows();
         $configs = (array) $this->configs;
         $width   = htmlspecialchars($configs['width'] ?? $this->width, ENT_QUOTES, 'UTF-8');
-        $height  = htmlspecialchars($configs['height'] ?? $this->height, ENT_QUOTES, 'UTF-8');
 
         $htmlName     = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
         $escapedValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');

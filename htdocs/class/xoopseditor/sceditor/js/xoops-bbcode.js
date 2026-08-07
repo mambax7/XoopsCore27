@@ -47,6 +47,21 @@
     var QuoteType = (sceditor.BBCodeParser && sceditor.BBCodeParser.QuoteType) || {};
 
     /**
+     * Escape helpers exposed by the SCEditor core (lib/escape.js), used so the
+     * html() definitions below behave like the stock format's: attribute values
+     * are entity-escaped and URI values are scheme-checked. Fallbacks keep this
+     * file loadable against a stripped build that omits the exports.
+     */
+    var escapeEntities = sceditor.escapeEntities || function (str) {
+        return String(str).replace(/[&<>"'`]/g, function (ch) {
+            return '&#' + ch.charCodeAt(0) + ';';
+        });
+    };
+    var escapeUriScheme = sceditor.escapeUriScheme || function (str) {
+        return str;
+    };
+
+    /**
      * Named XOOPS [size=] values, in smallest-to-largest order.
      * Source: htdocs/language/english/formdhtmltextarea.php:39-47 ($GLOBALS['formtextdhtml_sizes']).
      * XOOPS does NOT use SCEditor's default numeric 1-7 scale for [size=]; using
@@ -137,20 +152,25 @@
         },
         html: function (token, attrs, content) {
             var href = (attrs && attrs.defaultattr) || '';
-            return '<a href="' + href + '">' + content + '</a>';
+            // Match the stock format's handling: scheme-check then entity-escape,
+            // so a [url=javascript:...] can never become a live link if the
+            // conversion path ever runs.
+            return '<a href="' + escapeEntities(escapeUriScheme(href)) + '">' + content + '</a>';
         }
     });
 
     // --- [siteurl=...]...[/siteurl] — XOOPS-specific, no SCEditor default ---
-    // module.textsanitizer.php:402-403.
+    // module.textsanitizer.php:402-403. html() stores the path on data-siteurl
+    // (the attribute format() reads back) so the tag round-trips without losing
+    // its target.
     bbcode.set('siteurl', {
         quoteType: QuoteType.always,
         format: function (element, content) {
             return '[siteurl=' + (element.getAttribute('data-siteurl') || '') + ']' + content + '[/siteurl]';
         },
         html: function (token, attrs, content) {
-            var path = (attrs && attrs.defaultattr) || '';
-            return '<a href="' + path + '">' + content + '</a>';
+            var path = escapeEntities((attrs && attrs.defaultattr) || '');
+            return '<a data-siteurl="' + path + '" href="' + path + '">' + content + '</a>';
         }
     });
 
@@ -191,30 +211,40 @@
     // --- [font=Name]...[/font] ------------------------------------------
     // module.textsanitizer.php:414-415. Matches SCEditor's own default dialect.
     bbcode.set('font', {
+        // Both shapes are claimed so format() sees the <span> its own html()
+        // emits (styles:) as well as legacy <font face=> markup (tags:) —
+        // without the styles claim the tag would not round-trip.
         tags: { font: { face: null } },
+        styles: { 'font-family': null },
         quoteType: QuoteType.always,
         format: function (element, content) {
-            var face = element.getAttribute ? element.getAttribute('face') : '';
+            var face = (element.getAttribute && element.getAttribute('face'))
+                || (element.style && element.style.fontFamily)
+                || '';
             return '[font=' + face + ']' + content + '[/font]';
         },
         html: function (token, attrs, content) {
             var face = (attrs && attrs.defaultattr) || '';
-            return '<span style="font-family: ' + face + ';">' + content + '</span>';
+            return '<span style="font-family: ' + escapeEntities(face) + ';">' + content + '</span>';
         }
     });
 
     // --- [color=hex|name]...[/color] -------------------------------------
     // module.textsanitizer.php:410-411. Matches SCEditor's own default dialect.
     bbcode.set('color', {
+        // Both shapes claimed for the same round-trip reason as 'font' above.
         tags: { font: { color: null } },
+        styles: { color: null },
         quoteType: QuoteType.always,
         format: function (element, content) {
-            var color = element.getAttribute ? element.getAttribute('color') : '';
+            var color = (element.getAttribute && element.getAttribute('color'))
+                || (element.style && element.style.color)
+                || '';
             return '[color=' + color + ']' + content + '[/color]';
         },
         html: function (token, attrs, content) {
             var color = (attrs && attrs.defaultattr) || '';
-            return '<span style="color: ' + color + ';">' + content + '</span>';
+            return '<span style="color: ' + escapeEntities(color) + ';">' + content + '</span>';
         }
     });
 
@@ -224,6 +254,9 @@
     // tag that silently corrupts existing posts if the numeric SCEditor
     // default is used instead.
     bbcode.set('size', {
+        // The styles claim is what lets format() ever run: without it no HTML
+        // element maps back to [size=] and the tag would not round-trip.
+        styles: { 'font-size': null },
         quoteType: QuoteType.always,
         format: function (element, content) {
             var size = element.style ? element.style.fontSize : '';
@@ -231,7 +264,7 @@
         },
         html: function (token, attrs, content) {
             var size = (attrs && attrs.defaultattr) || 'medium';
-            return '<span style="font-size: ' + size + ';">' + content + '</span>';
+            return '<span style="font-size: ' + escapeEntities(size) + ';">' + content + '</span>';
         }
     });
 
@@ -262,7 +295,7 @@
             return '[img' + attrs + ']' + src + '[/img]';
         },
         html: function (token, attrs, content) {
-            return '<img src="' + content + '" alt="" />';
+            return '<img src="' + escapeEntities(escapeUriScheme(content)) + '" alt="" />';
         }
     });
 
@@ -275,7 +308,7 @@
             return '[youtube=' + (width || '') + ',' + (height || '') + ']' + content + '[/youtube]';
         },
         html: function (token, attrs, content) {
-            return '<a href="https://www.youtube.com/watch?v=' + content + '">' + content + '</a>';
+            return '<a href="https://www.youtube.com/watch?v=' + escapeEntities(content) + '">' + content + '</a>';
         }
     });
 
@@ -318,7 +351,7 @@
             return '[iframe=' + (height || '') + ']' + content + '[/iframe]';
         },
         html: function (token, attrs, content) {
-            return '<iframe src="' + content + '"></iframe>';
+            return '<iframe src="' + escapeEntities(escapeUriScheme(content)) + '"></iframe>';
         }
     });
 
@@ -326,7 +359,7 @@
     bbcode.set('mp3', {
         format: '[mp3]{0}[/mp3]',
         html: function (token, attrs, content) {
-            return '<audio controls><source src="' + content + '"></audio>';
+            return '<audio controls><source src="' + escapeEntities(escapeUriScheme(content)) + '"></audio>';
         }
     });
 
@@ -334,7 +367,7 @@
     bbcode.set('soundcloud', {
         format: '[soundcloud]{0}[/soundcloud]',
         html: function (token, attrs, content) {
-            return '<a href="' + content + '">' + content + '</a>';
+            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
         }
     });
 
@@ -347,7 +380,7 @@
             return '[mms=' + (width || '') + ',' + (height || '') + ']' + content + '[/mms]';
         },
         html: function (token, attrs, content) {
-            return '<a href="' + content + '">' + content + '</a>';
+            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
         }
     });
 
@@ -360,7 +393,7 @@
             return '[rtsp=' + (width || '') + ',' + (height || '') + ']' + content + '[/rtsp]';
         },
         html: function (token, attrs, content) {
-            return '<a href="' + content + '">' + content + '</a>';
+            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
         }
     });
 
@@ -373,7 +406,7 @@
             return '[wmp=' + (width || '') + ',' + (height || '') + ']' + content + '[/wmp]';
         },
         html: function (token, attrs, content) {
-            return '<a href="' + content + '">' + content + '</a>';
+            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
         }
     });
 
