@@ -24,7 +24,7 @@ class MytsMycode extends MyTextSanitizerExtension
         // The surrounding onclick attribute MUST be single-quoted: json_encode wraps its own
         // output in double quotes, so onclick="..." would be closed by the first argument and
         // JSON_HEX_QUOT would not help -- it escapes quotes in the VALUE, not the wrapping pair.
-        $jsFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
+        $jsFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
         $args = json_encode((string) $textarea_id, $jsFlags)
               . ', ' . json_encode(_XOOPS_FORM_ENTERMYCODETERM, $jsFlags);
         $code = "<img src='{$this->image_path}/mycode.gif' alt='"

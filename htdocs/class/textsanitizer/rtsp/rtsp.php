@@ -35,7 +35,7 @@ class MytsRtsp extends MyTextSanitizerExtension
         if ($config['enable_rtsp_entry'] === false) {
             return [];
         }
-        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR;
+        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
         $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeRtsp("
             . json_encode((string) $textarea_id, $jsonFlags) . ","
             . json_encode(_XOOPS_FORM_ENTERRTSPURL, $jsonFlags) . ","
