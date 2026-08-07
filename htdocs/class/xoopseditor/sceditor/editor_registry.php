@@ -26,7 +26,9 @@
 $sceditorRoot      = XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor';
 $sceditorInstalled = is_readable($sceditorRoot . '/minified/sceditor.min.js')
     && is_readable($sceditorRoot . '/minified/formats/bbcode.js')
-    && is_readable($sceditorRoot . '/js/xoops-bbcode.js');
+    && is_readable($sceditorRoot . '/js/xoops-bbcode.js')
+    && is_readable($sceditorRoot . '/minified/themes/default.min.css')
+    && is_readable($sceditorRoot . '/minified/themes/content/default.min.css');
 
 return $config = [
     'name'   => 'sceditor',

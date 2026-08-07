@@ -33,16 +33,16 @@ class/xoopseditor/sceditor/
 
 ## What the plugin actually loads
 
-`FormSCEditor::isActive()` requires all three of these to be readable, so a
-half-removed library never renders a broken editor — the editor is simply
-absent from the selection list:
+`FormSCEditor::isActive()` (and the same gate in `editor_registry.php`)
+requires all five of these to be readable, so a half-removed library never
+renders a broken or unstyled editor — the editor is simply absent from the
+selection list:
 
 - `minified/sceditor.min.js` — SCEditor core
 - `minified/formats/bbcode.js` — SCEditor's stock BBCode format
 - `js/xoops-bbcode.js` — the XOOPS dialect layered on top
-
-`render()` additionally links `minified/themes/default.min.css` for the
-toolbar and `minified/themes/content/default.min.css` for the editing area.
+- `minified/themes/default.min.css` — toolbar/chrome stylesheet
+- `minified/themes/content/default.min.css` — editing-area stylesheet
 
 The editor always starts and stays in BBCode source mode
 (`startInSourceMode`) — this plugin never switches SCEditor into its WYSIWYG

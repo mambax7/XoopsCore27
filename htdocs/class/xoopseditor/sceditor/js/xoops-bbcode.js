@@ -183,6 +183,9 @@
     // (the attribute format() reads back) so the tag round-trips without losing
     // its target.
     bbcode.set('siteurl', {
+        // The data-siteurl attribute claim makes the converter route these
+        // anchors here instead of to the generic 'url' handler.
+        tags: { a: { 'data-siteurl': null } },
         quoteType: QuoteType.always,
         format: function (element, content) {
             return '[siteurl=' + (element.getAttribute('data-siteurl') || '') + ']' + content + '[/siteurl]';
@@ -197,8 +200,12 @@
     // module.textsanitizer.php:416-417 — no `=address` attribute form exists
     // server-side, so the default SCEditor `[email=addr]label[/email]` shape
     // (if that is what upstream ships) must not be used here.
+    // Deliberately NO tags: claim — SCEditor's attribute constraints accept
+    // only null or an array of values, and a RegExp here makes the converter
+    // call .includes() on it and throw for EVERY anchor. A mailto anchor is
+    // instead claimed by 'url' and serialises as [url=mailto:...], which
+    // MyTextSanitizer decodes fine.
     bbcode.set('email', {
-        tags: { a: { href: /^mailto:/ } },
         format: '[email]{0}[/email]',
         html: '<a href="mailto:{0}">{0}</a>'
     });
@@ -317,12 +324,25 @@
             return '[img' + attrs + ']' + src + '[/img]';
         },
         html: function (token, attrs, content) {
-            return '<img src="' + escapeEntities(escapeUriScheme(content)) + '" alt="" />';
+            // Re-emit width/align so format() (which reads the width attribute and
+            // the float style) can rebuild the original tag instead of a bare [img].
+            var extra = '';
+            if (attrs && attrs.width) {
+                extra += ' width="' + escapeEntities(attrs.width) + '"';
+            }
+            if (attrs && attrs.align && /^(left|right)$/i.test(attrs.align)) {
+                extra += ' style="float: ' + attrs.align.toLowerCase() + ';"';
+            }
+            return '<img src="' + escapeEntities(escapeUriScheme(content)) + '"' + extra + ' alt="" />';
         }
     });
 
     // [youtube=WIDTHxHEIGHT_OR_W,H]videoIdOrUrl[/youtube] — class/textsanitizer/youtube/youtube.php:77.
     bbcode.set('youtube', {
+        // data-youtube claim + data-width/data-height carry the tag identity and
+        // dimensions through a conversion, so format() rebuilds the original tag
+        // instead of the anchor being claimed by 'url'.
+        tags: { a: { 'data-youtube': null } },
         quoteType: QuoteType.always,
         format: function (element, content) {
             var width = element.getAttribute ? element.getAttribute('data-width') : '';
@@ -330,7 +350,11 @@
             return '[youtube=' + (width || '') + ',' + (height || '') + ']' + content + '[/youtube]';
         },
         html: function (token, attrs, content) {
-            return '<a href="https://www.youtube.com/watch?v=' + escapeEntities(content) + '">' + content + '</a>';
+            var dims = String((attrs && attrs.defaultattr) || '').split(',');
+            return '<a data-youtube="1"'
+                + ' data-width="' + escapeEntities(dims[0] || '') + '"'
+                + ' data-height="' + escapeEntities(dims[1] || '') + '"'
+                + ' href="https://www.youtube.com/watch?v=' + escapeEntities(content) + '">' + content + '</a>';
         }
     });
 

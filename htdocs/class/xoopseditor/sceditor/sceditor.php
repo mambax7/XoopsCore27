@@ -77,8 +77,10 @@ class FormSCEditor extends XoopsEditor
     }
 
     /**
-     * Accept a CSS length as string or number; bare numbers become pixels, anything
-     * non-scalar keeps the current value.
+     * Accept a CSS length as string or number; bare numbers become pixels. Anything that is
+     * not a single plain length keeps the current value — the result lands inside a style
+     * attribute, and HTML escaping alone would not stop a value like
+     * '100%;display:none;background-image:url(...)' from injecting extra declarations.
      *
      * @param mixed  $value   incoming configuration value
      * @param string $current value to keep when the input is unusable
@@ -90,7 +92,7 @@ class FormSCEditor extends XoopsEditor
         if (is_int($value) || is_float($value) || (is_string($value) && is_numeric(trim($value)))) {
             return trim((string) $value) . 'px';
         }
-        if (is_string($value) && '' !== trim($value)) {
+        if (is_string($value) && preg_match('/^\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|pt|ch|ex)$/i', trim($value))) {
             return trim($value);
         }
 
@@ -125,7 +127,9 @@ class FormSCEditor extends XoopsEditor
 
         $this->isEnabled = is_readable($root . '/minified/sceditor.min.js')
             && is_readable($root . '/minified/formats/bbcode.js')
-            && is_readable($root . '/js/xoops-bbcode.js');
+            && is_readable($root . '/js/xoops-bbcode.js')
+            && is_readable($root . '/minified/themes/default.min.css')
+            && is_readable($root . '/minified/themes/content/default.min.css');
 
         return $this->isEnabled;
     }
@@ -146,11 +150,14 @@ class FormSCEditor extends XoopsEditor
         // width/height configuration never lands in $this->configs: XoopsEditor::__construct()
         // routes those keys to setWidth()/setHeight() above, so the properties are already
         // normalized here.
-        $width   = htmlspecialchars($this->width, ENT_QUOTES, 'UTF-8');
+        // ENT_SUBSTITUTE throughout: without it one invalid UTF-8 byte makes htmlspecialchars()
+        // return '' and the textarea renders EMPTY — saving would then erase the original
+        // content. Substituted characters degrade one value, not the whole field.
+        $width   = htmlspecialchars($this->width, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-        $htmlName     = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
-        $escapedValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-        $jsId         = json_encode($name, JSON_THROW_ON_ERROR);
+        $htmlName     = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escapedValue = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $jsId         = json_encode($name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
 
         $editorPath = XOOPS_URL . $this->rootPath;
 
@@ -195,17 +202,18 @@ class FormSCEditor extends XoopsEditor
         $html .= '    format: "bbcode",' . "\n";
         $html .= '    startInSourceMode: true,' . "\n";
         // Content stylesheet for the editing area, per the upstream usage docs.
-        $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_THROW_ON_ERROR) . ',' . "\n";
+        $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    toolbar: (typeof xoopsBBCodeToolbar !== "undefined") ? xoopsBBCodeToolbar : "bold,italic,underline,strike",' . "\n";
         $html .= '    emoticonsEnabled: false,' . "\n";
         $html .= '    resizeEnabled: true,' . "\n";
-        $html .= '    width: ' . json_encode($this->width, JSON_THROW_ON_ERROR) . ',' . "\n";
-        $html .= '    height: ' . json_encode($this->height, JSON_THROW_ON_ERROR) . "\n";
+        $html .= '    width: ' . json_encode($this->width, JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
+        $html .= '    height: ' . json_encode($this->height, JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
         $html .= '  });' . "\n";
         // Belt and braces for the source-mode-only promise: the toolbar exposes no source
-        // toggle, but any stray script calling sourceMode(false) would trigger the exact
-        // BBCode->HTML conversion this integration exists to prevent. Keep the getter and
-        // sourceMode(true) working; swallow only the switch to WYSIWYG.
+        // toggle, but any stray script calling sourceMode(false) OR toggleSourceMode() (the
+        // method SCEditor's own source command uses) would trigger the exact BBCode->HTML
+        // conversion this integration exists to prevent. Keep the getter and sourceMode(true)
+        // working; swallow only the switch to WYSIWYG.
         $html .= '  var instance = sceditor.instance(el);' . "\n";
         $html .= '  if (instance && typeof instance.sourceMode === "function") {' . "\n";
         $html .= '    var xoopsOrigSourceMode = instance.sourceMode.bind(instance);' . "\n";
@@ -213,6 +221,11 @@ class FormSCEditor extends XoopsEditor
         $html .= '      if (false === enable) { return; }' . "\n";
         $html .= '      return xoopsOrigSourceMode.apply(null, arguments);' . "\n";
         $html .= '    };' . "\n";
+        $html .= '    if (typeof instance.toggleSourceMode === "function") {' . "\n";
+        $html .= '      instance.toggleSourceMode = function () {' . "\n";
+        $html .= '        if (!xoopsOrigSourceMode()) { xoopsOrigSourceMode(true); }' . "\n";
+        $html .= '      };' . "\n";
+        $html .= '    }' . "\n";
         $html .= '  }' . "\n";
         $html .= '});' . "\n";
         $html .= '</script>' . "\n";
