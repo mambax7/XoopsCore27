@@ -70,8 +70,8 @@ new state immediately.
 
 To move to a newer SCEditor release, replace the contents of `minified/`
 with the `minified/` directory from the upstream release archive
-(https://github.com/samclarke/SCEditor releases, or the npm package
-`sceditor`). Do not modify the files in `minified/`; XOOPS-specific
+(the [SCEditor releases page](https://github.com/samclarke/SCEditor/releases),
+or the npm package `sceditor`). Do not modify the files in `minified/`; XOOPS-specific
 behaviour lives entirely in `js/xoops-bbcode.js` and `sceditor.php`, and
 customisations placed inside `minified/` would be lost on the next upgrade.
 

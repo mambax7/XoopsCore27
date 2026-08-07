@@ -92,7 +92,17 @@ class FormSCEditor extends XoopsEditor
         if (is_int($value) || is_float($value) || (is_string($value) && is_numeric(trim($value)))) {
             // Numeric coercion, not string concatenation: is_numeric() also accepts
             // forms like '100.' and '1e3', which would concatenate into invalid CSS
-            // ('100.px', '1e3px'); 0 + normalizes them to '100' / '1000' first.
+            // ('100.px', '1e3px'). Guard the coerced number too — '1e400' overflows
+            // to INF ('INFpx'), an INF/NAN float can arrive directly, and a negative
+            // length is not a usable dimension; all of those keep the fallback.
+            // The guard must read the ORIGINAL value: (string) INF is 'INF', which
+            // (float)-casts back to 0.0 and would slip through a string-based check
+            // only to fatal on the 0 + 'INF' coercion below.
+            $number = is_string($value) ? (float) trim($value) : (float) $value;
+            if (!is_finite($number) || $number < 0) {
+                return $current;
+            }
+
             return (string) (0 + trim((string) $value)) . 'px';
         }
         if (is_string($value) && preg_match('/^\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|pt|ch|ex)$/i', trim($value))) {
