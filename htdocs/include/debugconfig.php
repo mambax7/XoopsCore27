@@ -342,12 +342,16 @@ if (!function_exists('xoops_recordErrorScreenOwner')) {
      * to prevent, so the site falls back to 'core'.
      *
      * Handing the seat to a provider that is ALREADY installed therefore takes a
-     * deliberate act. Reinstalling it works, and so does pinning 'error_screen' in
-     * debug.php. An ordinary module update does NOT -- this function refuses while another
-     * token is recorded, so an update hook calling it without $force is declined, and
-     * saying otherwise would describe a handover that cannot happen. A first-class
-     * transfer operation is still to be designed; until it exists, $force is the hook it
-     * will use.
+     * deliberate act, and there are three: pin 'error_screen' in debug.php; uninstall the
+     * holder and reinstall the one you want; or deactivate the holder and update the one
+     * you want. The third works through $force -- an update hook establishes that the
+     * holder is gone or inactive, which is a question about the module table and so cannot
+     * be answered from this file, and then claims with $force = true. See xtracy's
+     * xoops_module_update_*() for the reference implementation.
+     *
+     * An update hook that calls this WITHOUT $force is declined while another token is
+     * recorded, which is correct: an ordinary update must not quietly take a seat from a
+     * provider that is still running.
      *
      * @param string $token the claiming module's dirname; '' is refused
      * @param bool   $force take ownership even when another provider holds it. The hook a
@@ -410,7 +414,11 @@ if (!function_exists('xoops_isDeveloperRequest')) {
      * Two conditions, both required:
      *  1. debugging is switched on by EITHER mechanism -- the XOOPS_DEBUG constant from
      *     xoops_data/data/debug.php, or Admin -> Preferences -> Debug Mode. They are
-     *     documented as independent and either alone is a legitimate way to work;
+     *     documented as independent and either alone is a legitimate way to work. That
+     *     equality is about EXPOSURE, which is what this function gates. It does not
+     *     extend to ACTIVATION of the error screen: xoops_activateErrorScreen() honours
+     *     the file configuration only, deliberately, and reports 'dormant' on a site
+     *     running Debug Mode alone;
      *  2. the request belongs to an authenticated member of the webmaster group.
      *
      * Group membership is the test rather than XoopsUser::isAdmin(), which resolves
@@ -775,8 +783,8 @@ if (!function_exists('xoops_activateErrorScreen')) {
      *
      *   XOOPS_ERROR_SCREEN_OWNER    the owner token, 'core' when none applies
      *   XOOPS_ERROR_SCREEN_SOURCE   config | recorded | default -- where that came from
-     *   XOOPS_ERROR_SCREEN_STATUS   core | active | disabled | unclaimed | error, or
-     *                               whatever else the provider reported
+     *   XOOPS_ERROR_SCREEN_STATUS   core | dormant | active | disabled | unclaimed |
+     *                               error, or whatever else the provider reported
      *   XOOPS_ERROR_SCREEN_MESSAGE  a short human explanation of that status
      *
      * Defining them unconditionally is what lets an admin screen tell "no provider is
@@ -797,6 +805,31 @@ if (!function_exists('xoops_activateErrorScreen')) {
         if ('core' === $owner) {
             $status  = 'core';
             $message = 'XoopsLogger keeps the error and exception handlers.';
+
+            // Recorded, but the file config that would activate it is not there.
+            //
+            // The error screen is a debug.php feature, deliberately and not merely as a
+            // side effect of this early return. Writing xoops_data/data/debug.php takes
+            // filesystem access -- the same privilege as the exposure an error screen
+            // risks -- while Admin -> Preferences -> Debug Mode is reachable from a web
+            // form by anyone holding an admin session. Handing PHP's handlers to
+            // third-party code asks for the stronger credential. Debug Mode has meant
+            // "XoopsLogger renders its log into the page" for twenty years, and quietly
+            // widening it to "a module takes over set_error_handler()" would change the
+            // meaning of an existing control on every site with a provider installed.
+            // The pin and the opt-out live in debug.php too, so a Debug Mode site would
+            // have no vocabulary to say "stop" without creating the file anyway.
+            //
+            // Said out loud, because a provider that is installed, recorded, and silently
+            // never running is exactly the invisible state this seam exists to end.
+            $recorded = xoops_getRecordedErrorScreenOwner();
+            if ('' !== $recorded && [] === xoops_getDebugConfig()) {
+                $status  = 'dormant';
+                $message = 'Provider "' . $recorded . '" is recorded as the error-screen owner, but'
+                    . ' xoops_data/data/debug.php is absent or disabled. The error screen activates'
+                    . ' only under the file-based debug configuration -- Admin -> Preferences ->'
+                    . ' Debug Mode does not activate it.';
+            }
         } else {
             $outcome = ['status' => '', 'message' => ''];
 

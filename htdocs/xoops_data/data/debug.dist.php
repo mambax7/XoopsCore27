@@ -104,6 +104,13 @@ return [
     // another installed provider: it falls back to core behaviour and reports
     // 'unclaimed'. Ownership only ever changes when somebody asks for it.
     //
+    // The error screen is activated by THIS FILE only. Admin -> Preferences -> Debug Mode
+    // remains what it has always been -- XoopsLogger rendering its log into the page --
+    // and does not hand PHP's handlers to a module: writing this file takes filesystem
+    // access, which is the privilege that matches the exposure an error screen risks, and
+    // an admin session is not. A provider installed on a site with no debug.php reports
+    // 'dormant' rather than failing silently.
+    //
     // A provider may read its own settings from this file under its own key -- core
     // passes unknown keys through untouched and never interprets them.
     'error_screen' => 'auto',
