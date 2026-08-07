@@ -1064,12 +1064,10 @@ class Snoopy
 
         if ($response === false || !is_string($response)) {
             $this->error = 'cURL error: ' . curl_error($ch);
-            curl_close($ch);
             return false;
         }
 
         $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
 
         $header_text = substr($response, 0, $header_size);
         $results     = substr($response, $header_size);

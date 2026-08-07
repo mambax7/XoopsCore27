@@ -79,7 +79,6 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
                 $usedCurl = true;
                 $recaptchaCheck = json_decode($curlReturn, true);
             }
-            curl_close($curlHandle);
         }
         if (false === $usedCurl) {
             $recaptchaCheck = file_get_contents($recaptchaVerifyURL);
