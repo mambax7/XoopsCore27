@@ -57,6 +57,15 @@ unused files give site integrators the standard upstream options (an
 alternative theme or icon set, the autosave plugin) without a separate
 download.
 
+## After adding or removing files
+
+The editor selection list is cached (`XoopsCache` key `editorlist`), so the
+activation gate above is only re-evaluated after the cache is cleared. After
+installing, removing, or upgrading any of the required assets, clear the
+cache from the admin side (System → Preferences/Maintenance → clear cache,
+which empties `xoops_data/caches/xoops_cache/`) so the dropdown reflects the
+new state immediately.
+
 ## Upgrading the bundled library
 
 To move to a newer SCEditor release, replace the contents of `minified/`

@@ -488,6 +488,7 @@
     sceditor.command.set('size', {
         txtExec: function (caller) {
             var choice = window.prompt(L('sizePrompt', 'Size (%s):').replace('%s', XOOPS_SIZES.join(', ')), 'medium');
+            choice = choice ? choice.trim().toLowerCase() : choice;
             if (choice && XOOPS_SIZES.indexOf(choice) !== -1) {
                 this.insertText('[size=' + choice + ']', '[/size]');
             }

@@ -27,7 +27,7 @@
  * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @package             class
  * @subpackage          editor
- * @since               2.8.0
+ * @since               2.7.3
  * @author              XOOPS Development Team
  * @see                 https://github.com/samclarke/SCEditor
  */
@@ -90,7 +90,10 @@ class FormSCEditor extends XoopsEditor
     private function normalizeCssLength($value, string $current): string
     {
         if (is_int($value) || is_float($value) || (is_string($value) && is_numeric(trim($value)))) {
-            return trim((string) $value) . 'px';
+            // Numeric coercion, not string concatenation: is_numeric() also accepts
+            // forms like '100.' and '1e3', which would concatenate into invalid CSS
+            // ('100.px', '1e3px'); 0 + normalizes them to '100' / '1000' first.
+            return (string) (0 + trim((string) $value)) . 'px';
         }
         if (is_string($value) && preg_match('/^\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|pt|ch|ex)$/i', trim($value))) {
             return trim($value);
@@ -125,11 +128,23 @@ class FormSCEditor extends XoopsEditor
         // js/xoops-bbcode.js is ours and layers the XOOPS dialect on top of that format.
         $root = XOOPS_ROOT_PATH . $this->rootPath;
 
-        $this->isEnabled = is_readable($root . '/minified/sceditor.min.js')
-            && is_readable($root . '/minified/formats/bbcode.js')
-            && is_readable($root . '/js/xoops-bbcode.js')
-            && is_readable($root . '/minified/themes/default.min.css')
-            && is_readable($root . '/minified/themes/content/default.min.css');
+        // is_file() as well as is_readable(): is_readable() alone returns true for a
+        // DIRECTORY of the same name, which would activate an editor that cannot load.
+        $assets = [
+            $root . '/minified/sceditor.min.js',
+            $root . '/minified/formats/bbcode.js',
+            $root . '/js/xoops-bbcode.js',
+            $root . '/minified/themes/default.min.css',
+            $root . '/minified/themes/content/default.min.css',
+        ];
+
+        $this->isEnabled = true;
+        foreach ($assets as $asset) {
+            if (!is_file($asset) || !is_readable($asset)) {
+                $this->isEnabled = false;
+                break;
+            }
+        }
 
         return $this->isEnabled;
     }
@@ -201,6 +216,11 @@ class FormSCEditor extends XoopsEditor
         $html .= '  sceditor.create(el, {' . "\n";
         $html .= '    format: "bbcode",' . "\n";
         $html .= '    startInSourceMode: true,' . "\n";
+        // autoUpdate keeps the original textarea's value continuously in sync. SCEditor
+        // does sync on form submit by itself, but XOOPS validation runs from the form's
+        // inline onsubmit attribute, which can fire before SCEditor's own submit listener
+        // - without this, required-field validation could read a stale (empty) value.
+        $html .= '    autoUpdate: true,' . "\n";
         // Content stylesheet for the editing area, per the upstream usage docs.
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    toolbar: (typeof xoopsBBCodeToolbar !== "undefined") ? xoopsBBCodeToolbar : "bold,italic,underline,strike",' . "\n";

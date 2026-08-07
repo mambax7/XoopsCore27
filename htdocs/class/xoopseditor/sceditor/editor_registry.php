@@ -13,7 +13,7 @@
  * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @package             class
  * @subpackage          editor
- * @since               2.8.0
+ * @since               2.7.3
  * @author              XOOPS Development Team
  * @see                 https://github.com/samclarke/SCEditor
  */
@@ -23,12 +23,24 @@
 // admin could select SCEditor, get a plain textarea, and have no idea why.
 // NOTE: getList() caches its result (XoopsCache), so purge the cache after installing the
 // library — see INSTALL.md.
-$sceditorRoot      = XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor';
-$sceditorInstalled = is_readable($sceditorRoot . '/minified/sceditor.min.js')
-    && is_readable($sceditorRoot . '/minified/formats/bbcode.js')
-    && is_readable($sceditorRoot . '/js/xoops-bbcode.js')
-    && is_readable($sceditorRoot . '/minified/themes/default.min.css')
-    && is_readable($sceditorRoot . '/minified/themes/content/default.min.css');
+$sceditorRoot   = XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor';
+// is_file() as well as is_readable(): is_readable() alone returns true for a directory
+// of the same name. Keep this asset list in sync with FormSCEditor::isActive().
+$sceditorAssets = [
+    $sceditorRoot . '/minified/sceditor.min.js',
+    $sceditorRoot . '/minified/formats/bbcode.js',
+    $sceditorRoot . '/js/xoops-bbcode.js',
+    $sceditorRoot . '/minified/themes/default.min.css',
+    $sceditorRoot . '/minified/themes/content/default.min.css',
+];
+
+$sceditorInstalled = true;
+foreach ($sceditorAssets as $sceditorAsset) {
+    if (!is_file($sceditorAsset) || !is_readable($sceditorAsset)) {
+        $sceditorInstalled = false;
+        break;
+    }
+}
 
 return $config = [
     'name'   => 'sceditor',
