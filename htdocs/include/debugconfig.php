@@ -716,7 +716,11 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
             $current[$key] = $value;
         }
 
-        $json      = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        // JSON_FORCE_OBJECT so a file emptied of every key stays {} rather than turning
+        // into [], which is what an empty PHP array encodes to. Both decode to an empty
+        // array here, but a consumer in another language reading [] where it expected an
+        // object has been handed a different type by an implementation detail.
+        $json      = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_FORCE_OBJECT);
         $file      = $directory . '/debug-runtime.json';
         $temporary = $file . '.' . getmypid() . '.tmp';
         $written   = false;
