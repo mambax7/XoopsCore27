@@ -627,6 +627,7 @@ class MyTextSanitizer
             $text = $this->nl2Br($text);
         }
         $text = $this->codeConv($text, $xcode);
+        $text = $this->trimBlockBreaks($text);
         $text = $this->makeClickable($text);
         if (!empty($this->config['filterxss_on_display'])) {
             $text = $this->filterXss($text);
@@ -701,6 +702,60 @@ class MyTextSanitizer
     public function codeConvCallback($match)
     {
         return '<div class="xoopsCode">' . $this->executeExtension('syntaxhighlight', str_replace('\\\"', '\"', base64_decode($match[2])), $match[1]) . '</div>';
+    }
+
+    /**
+     * Drop the stray <br /> that sits immediately against a block-level [code] / [quote] box.
+     *
+     * Both boxes end up carrying a trailing `<br />`, by two different routes. `quoteConv()`
+     * runs inside {@see self::xoopsCodeDecode()}, BEFORE `nl2Br()`, so the newline the author
+     * typed after `[/quote]` is still a newline when the quote is wrapped and only becomes a
+     * `<br />` afterwards. `codeConv()` runs AFTER `nl2Br()`, so for a code block that newline
+     * is already a `<br />` by the time the wrapping happens. Either way the rendered result
+     * is a `<br />` sitting immediately after the closing `</div>`.
+     *
+     * The div is block-level and supplies its own vertical separation, so that `<br />` renders
+     * as an extra empty line — one after a code block, and after a quote as well.
+     *
+     * Only the TRAILING break is removed, and only one of them. The two sides are not
+     * symmetrical: a `<br />` that PRECEDES a block element merely terminates the previous
+     * line and shows no gap of its own, so an author's blank line before `[code]` is carried
+     * by two breaks and removing one visibly closes the gap. After the block there is no such
+     * line to terminate, so the break renders as a whole empty line on top of the div's own
+     * spacing. An author who deliberately left a blank line after the block still keeps one.
+     *
+     * The pattern is anchored at BOTH ends of the generated box. It has to open on the
+     * `xoopsCode` / `xoopsQuote` wrapper, because those classes are the only thing that marks
+     * the div as ours: matching the closing side alone would also strike a break the author
+     * deliberately wrote after their own `<div><code>…</code></div>`, which is reachable
+     * whenever HTML is permitted. It closes on the inner tag rather than a bare `</div>` for
+     * the same reason from the other side. `pre` is listed alongside `code` because
+     * {@see MytsSyntaxhighlight::load()} falls back to a plain `<pre>…</pre>` when its
+     * `highlight` option is off, so the box then closes `</pre></div>`.
+     *
+     * The span between the two anchors stays lazy so that nested quotes still work: the inner
+     * `</blockquote></div>` is not followed by a break, so the match keeps growing out to the
+     * outer one that is.
+     *
+     * Anything that is not a string is handed back untouched. `codeConv()` above is documented
+     * `@return mixed` and the whole display chain is untyped, so a non-string can reach here;
+     * coercing it would turn an array into the literal "Array" rather than leave the value for
+     * the next filter to deal with as it always has.
+     *
+     * @param  mixed $text rendered text
+     * @return mixed the text with the break removed, or $text unchanged if it is not a string
+     */
+    protected function trimBlockBreaks($text)
+    {
+        if (!is_string($text)) {
+            return $text;
+        }
+
+        return preg_replace(
+            '#(<div class="xoops(?:Code|Quote)">.*?</(?:code|pre|blockquote)>\s*</div>)\s*<br\s*/?>#is',
+            '$1',
+            $text
+        );
     }
 
     /**
