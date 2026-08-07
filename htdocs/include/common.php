@@ -96,19 +96,32 @@ if (is_readable($xoopsDebugLoader)) {
     try {
         require_once $xoopsDebugLoader;
     } catch (\Throwable $e) {
-        // Fail closed; see xoops_getDebugConfigError().
+        // Fail closed, and deliberately silent: nothing has configured error display yet.
+        //
+        // Nothing is recorded here either. xoops_setDebugConfigError() lives in the file
+        // that just failed to parse, so in this exact case it does not exist to be called
+        // -- the recorder covers a broken debug.php, not a broken debugconfig.php. An
+        // earlier comment here pointed at it as though it applied.
     }
 }
 unset($xoopsDebugLoader);
 
 $xoopsDebugConfig = function_exists('xoops_getDebugConfig') ? xoops_getDebugConfig() : [];
-if ([] !== $xoopsDebugConfig && function_exists('xoops_applyDebugConfig')) {
+
+// Called unconditionally, not only when a debug.php exists. XOOPS_ENVIRONMENT, XOOPS_ENV
+// and RAY_ENABLED are defined at the top of this function precisely so they exist on every
+// request -- and guarding the call meant they were absent on exactly the sites that have no
+// debug.php, which is every production site. A consumer reading them bare then fatals in
+// production and nowhere else. With no config the call sets three constants and returns.
+if (function_exists('xoops_applyDebugConfig')) {
+    xoops_applyDebugConfig();
+}
+
+if ([] !== $xoopsDebugConfig) {
     // Applied HERE as well as further down. On an install whose mainfile.php predates
     // 2.7.3 nothing has raised error_reporting yet, so php.ini still governs -- and if
     // that is restrictive, handleError() discards the early errors before any logger sees
     // them. Attaching the logger early is pointless unless reporting is raised with it.
-    // The call is idempotent and the config is cached, so repeating it costs nothing.
-    xoops_applyDebugConfig();
 
     // 'core_log' since 2.7.3; xoops_getDebugConfig() still publishes the older
     // 'log' spelling as an alias pointing at the same array, so a debug.php
@@ -220,7 +233,11 @@ $xoops->gzipCompression();
  * install whose mainfile.php predates
  * 2.7.3 still get file logging, even though its XOOPS_DEBUG constant was fixed earlier.
  */
-$xoopsDebugConfig = xoops_getDebugConfig();
+// Guarded like the first read above, and for the identical reason. Guarding only the
+// earlier call site left this one to fatal on a truncated debugconfig.php a hundred lines
+// later -- the boot cleared every guard and then died anyway, which made the whole
+// fail-closed exercise decorative.
+$xoopsDebugConfig = function_exists('xoops_getDebugConfig') ? xoops_getDebugConfig() : [];
 
 if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     xoops_loadLanguage('logger');
@@ -241,7 +258,9 @@ if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     // addQuery/addBlock/addExtra/handleError, so the file logger still receives
     // everything.
     xoops_loadLanguage('logger');
-    xoops_applyDebugConfig();
+    if (function_exists('xoops_applyDebugConfig')) {
+        xoops_applyDebugConfig();
+    }
     $xoopsLogger->activated = false;
 } else {
     error_reporting(0);

@@ -134,7 +134,7 @@ if (!function_exists('xoops_getDebugConfig')) {
 
         // 'enabled' must be a real boolean. A string from an environment-backed config is
         // truthy whatever it happens to say, so 'false' would switch debugging ON.
-        if (!is_array($loaded) || true !== ($loaded['enabled'] ?? false)) {
+        if (true !== ($loaded['enabled'] ?? false)) {
             return $config;
         }
 
@@ -318,7 +318,7 @@ if (!function_exists('xoops_getRecordedErrorScreenOwner')) {
         $override = xoops_readDebugRuntimeOverride();
         $recorded = $override['error_screen_owner'] ?? '';
 
-        return is_string($recorded) ? trim($recorded) : '';
+        return is_string($recorded) ? strtolower(trim($recorded)) : '';
     }
 }
 
@@ -330,28 +330,43 @@ if (!function_exists('xoops_recordErrorScreenOwner')) {
      *
      * The rule is first-installed-wins, and it is enforced HERE rather than trusted to
      * each provider: a second provider installing must not be able to take a screen the
-     * first one is already showing, however it was written. Pass '' to release, which
-     * uninstalling should do -- and which deactivating deliberately should NOT, so that
-     * re-activating a module restores the setup the site already had.
+     * first one is already showing, however it was written.
+     *
+     * This function only CLAIMS. Release through xoops_releaseErrorScreenOwner($dirname),
+     * which checks that you are the holder first -- there is no caller identity here, so
+     * an anonymous "release" could only ever mean "clear whatever anybody else holds",
+     * and uninstalling one module must not free another module's seat.
      *
      * A released screen does not promote whatever else happens to be installed. Ownership
      * changing without anybody asking for it is the surprise this whole mechanism exists
-     * to prevent, so the site falls back to 'core' and the other provider takes over only
-     * when it is next installed or updated -- a deliberate act, with a visible result.
+     * to prevent, so the site falls back to 'core'.
      *
-     * @param string $token the claiming module's dirname, or '' to release
-     * @param bool   $force take ownership even when another provider holds it
+     * Handing the seat to a provider that is ALREADY installed therefore takes a
+     * deliberate act. Reinstalling it works, and so does pinning 'error_screen' in
+     * debug.php. An ordinary module update does NOT -- this function refuses while another
+     * token is recorded, so an update hook calling it without $force is declined, and
+     * saying otherwise would describe a handover that cannot happen. A first-class
+     * transfer operation is still to be designed; until it exists, $force is the hook it
+     * will use.
+     *
+     * @param string $token the claiming module's dirname; '' is refused
+     * @param bool   $force take ownership even when another provider holds it. The hook a
+     *                      deliberate handover uses, after verifying the holder is gone or
+     *                      inactive -- never on an ordinary install.
      * @return bool true when the record now names $token
      */
     function xoops_recordErrorScreenOwner($token, $force = false)
     {
-        $token = is_string($token) ? trim($token) : '';
+        // Lower-cased to match how a token written in debug.php is normalised. Without
+        // this a mixed-case dirname works when recorded and goes permanently 'unclaimed'
+        // when pinned, since every comparison is strict.
+        $token = is_string($token) ? strtolower(trim($token)) : '';
         $held  = xoops_getRecordedErrorScreenOwner();
 
         if ('' === $token) {
-            // Release only what you hold. An uninstall must not clear somebody else's
-            // claim just because it ran later.
-            return true;
+            // Refused, and reported as refused. Returning true here would let a caller
+            // that meant to release believe it had.
+            return false;
         }
 
         if ('' !== $held && $held !== $token && !$force) {
@@ -371,7 +386,7 @@ if (!function_exists('xoops_releaseErrorScreenOwner')) {
      */
     function xoops_releaseErrorScreenOwner($token)
     {
-        $token = is_string($token) ? trim($token) : '';
+        $token = is_string($token) ? strtolower(trim($token)) : '';
         if ('' === $token || xoops_getRecordedErrorScreenOwner() !== $token) {
             return true;
         }
@@ -541,7 +556,10 @@ if (!function_exists('xoops_findVendorDirectory')) {
         $found = '';
 
         $candidates = [];
-        foreach (['XOOPS_LIB_PATH', 'XOOPS_PATH', 'XOOPS_TRUST_PATH'] as $constantName) {
+        // XOOPS_PATH and XOOPS_TRUST_PATH only: both are defined by mainfile.php. An
+        // earlier revision also probed XOOPS_LIB_PATH, which no core release defines --
+        // harmless behind defined(), but it advertised an API that does not exist.
+        foreach (['XOOPS_PATH', 'XOOPS_TRUST_PATH'] as $constantName) {
             if (defined($constantName)) {
                 $candidates[] = rtrim((string) constant($constantName), '/\\') . '/vendor';
             }
@@ -561,163 +579,32 @@ if (!function_exists('xoops_findVendorDirectory')) {
     }
 }
 
-if (!function_exists('xoops_errorScreenState')) {
-    /**
-     * Backing store for the error-screen outcome. Internal to this file.
-     *
-     * A provider runs inside an event, so it cannot return a value to the code that
-     * triggered it. This is the channel it reports through instead.
-     *
-     * @param array|null $set the outcome to record, or null to read the current one
-     * @return array ['status' => string, 'message' => string]
-     */
-    function xoops_errorScreenState($set = null)
-    {
-        static $state = ['status' => '', 'message' => ''];
-
-        // First writer wins. Two providers claiming the same owner token is a
-        // misconfiguration, and the second one silently overwriting the first is exactly
-        // the load-order roulette the owner token exists to end.
-        if (is_array($set) && '' === $state['status']) {
-            $state = [
-                'status'  => (string) ($set['status'] ?? ''),
-                'message' => (string) ($set['message'] ?? ''),
-            ];
-        }
-
-        return $state;
-    }
-}
-
-if (!function_exists('xoops_setErrorScreenStatus')) {
-    /**
-     * Report the outcome of an error-screen registration. Called BY a provider.
-     *
-     * A provider handling core.debug.errorscreen must call this exactly once, whatever
-     * happened -- including when it decided NOT to register. Reporting "I am installed and
-     * I chose to stay dormant, because X" is the entire difference between a diagnosable
-     * setup and a silent one, and silence is what this seam replaces.
-     *
-     * Any short lower-case string is a valid status; core does not interpret it. The
-     * vocabulary the shipped providers use is active | disabled | missing | incompatible
-     * | error, and a consumer that does not recognise a status should show it verbatim
-     * rather than treat it as a failure.
-     *
-     * @param string $status  short machine-readable outcome
-     * @param string $message short human explanation of that outcome
-     * @return void
-     */
-    function xoops_setErrorScreenStatus($status, $message = '')
-    {
-        xoops_errorScreenState(['status' => $status, 'message' => $message]);
-    }
-}
-
 if (!function_exists('xoops_getErrorScreenStatus')) {
     /**
      * What became of the error screen this request.
      *
-     * Meaningful only after xoops_activateErrorScreen() has run; before that the status
-     * is an empty string. The same values are published as XOOPS_ERROR_SCREEN_STATUS and
-     * XOOPS_ERROR_SCREEN_MESSAGE for consumers that would rather read a constant.
+     * Reads the published constants rather than keeping a second copy of the answer.
+     * There is deliberately no store behind this: a function and a constant that both
+     * describe the same event are two things that can disagree, and they did -- a
+     * provider that reported success and then threw left the constant saying 'error'
+     * while the function still said 'active'. One source, no drift.
      *
-     * @return array ['status' => string, 'message' => string]
+     * Meaningful only after xoops_activateErrorScreen() has run; before that, and on a
+     * core too old to have the seam, every value is an empty string.
+     *
+     * @return array ['owner' => string, 'source' => string, 'status' => string, 'message' => string]
      */
     function xoops_getErrorScreenStatus()
     {
-        return xoops_errorScreenState();
+        return [
+            'owner'   => defined('XOOPS_ERROR_SCREEN_OWNER') ? (string) constant('XOOPS_ERROR_SCREEN_OWNER') : '',
+            'source'  => defined('XOOPS_ERROR_SCREEN_SOURCE') ? (string) constant('XOOPS_ERROR_SCREEN_SOURCE') : '',
+            'status'  => defined('XOOPS_ERROR_SCREEN_STATUS') ? (string) constant('XOOPS_ERROR_SCREEN_STATUS') : '',
+            'message' => defined('XOOPS_ERROR_SCREEN_MESSAGE') ? (string) constant('XOOPS_ERROR_SCREEN_MESSAGE') : '',
+        ];
     }
 }
 
-if (!function_exists('xoops_activateErrorScreen')) {
-    /**
-     * Hand PHP's error and exception handlers to whichever component the site declared.
-     *
-     * CALL THIS LAST, at the very end of include/common.php. An error screen takes over
-     * set_error_handler() and set_exception_handler(), and so did XoopsLogger earlier in
-     * the boot; whichever runs last owns them. Firing this any earlier produces a screen
-     * that is quietly displaced before the first error ever occurs -- which looks like the
-     * screen being broken rather than being overwritten.
-     *
-     * Core itself registers nothing here and knows no provider by name. It reads the
-     * declared owner from xoops_data/data/debug.php, triggers core.debug.errorscreen, and
-     * records whatever the provider reports back through xoops_setErrorScreenStatus().
-     * A provider is an ordinary module preload -- the same mechanism the xwhoops module
-     * has always used -- so a library falling out of use, or a new one arriving, is a
-     * module being uninstalled or installed and never a change to core.
-     *
-     * Always defines, whatever the outcome:
-     *
-     *   XOOPS_ERROR_SCREEN_OWNER    the owner token, 'core' when none applies
-     *   XOOPS_ERROR_SCREEN_SOURCE   config | recorded | default -- where that came from
-     *   XOOPS_ERROR_SCREEN_STATUS   core | active | disabled | unclaimed | error, or
-     *                               whatever else the provider reported
-     *   XOOPS_ERROR_SCREEN_MESSAGE  a short human explanation of that status
-     *
-     * Defining them unconditionally is what lets an admin screen tell "no provider is
-     * installed" apart from "a provider is installed and currently off" -- an absent
-     * constant means the core is older than this seam, which is a third, different
-     * statement.
-     *
-     * @return string the resulting status
-     */
-    function xoops_activateErrorScreen()
-    {
-        if (defined('XOOPS_ERROR_SCREEN_STATUS')) {
-            return (string) constant('XOOPS_ERROR_SCREEN_STATUS');
-        }
-
-        $owner = xoops_getErrorScreenOwner();
-
-        if ('core' === $owner) {
-            $status  = 'core';
-            $message = 'XoopsLogger keeps the error and exception handlers.';
-        } else {
-            // One boundary around the whole dispatch. An error screen is a debugging
-            // convenience; a broken or half-installed provider must not be able to take
-            // the site down on the last line of the bootstrap.
-            try {
-                $preload = $GLOBALS['xoopsPreload'] ?? null;
-                if (is_object($preload) && method_exists($preload, 'triggerEvent')) {
-                    $preload->triggerEvent('core.debug.errorscreen', ['owner' => $owner]);
-                }
-                $state   = xoops_errorScreenState();
-                $status  = $state['status'];
-                $message = $state['message'];
-            } catch (\Throwable $e) {
-                $status  = 'error';
-                $message = 'Error screen "' . $owner . '" failed to start (' . get_class($e) . ').';
-            }
-
-            if ('' === $status) {
-                // The owner names a provider that no installed module answers for --
-                // deactivated, uninstalled, or a token nobody was ever going to answer.
-                // Behaviour falls back to 'core': XoopsLogger keeps the handlers, which is
-                // exactly what happens when nothing registers. Reported under its own
-                // status rather than as 'core', because "the screen you configured is not
-                // running" and "you configured no screen" are different situations and
-                // only one of them wants looking at.
-                //
-                // Deliberately does NOT promote some other installed provider. Ownership
-                // changing without anybody asking is the surprise this mechanism exists to
-                // prevent; the other module takes over when it is next installed or
-                // updated, which is a deliberate act with a visible result.
-                $status  = 'unclaimed';
-                $message = 'No active module claims the error screen "' . $owner
-                    . '"; the handlers stay with XoopsLogger.';
-            }
-        }
-
-        xoops_errorScreenState(['status' => $status, 'message' => $message]);
-
-        define('XOOPS_ERROR_SCREEN_OWNER', $owner);
-        define('XOOPS_ERROR_SCREEN_SOURCE', xoops_getErrorScreenOwnerSource());
-        define('XOOPS_ERROR_SCREEN_STATUS', $status);
-        define('XOOPS_ERROR_SCREEN_MESSAGE', $message);
-
-        return $status;
-    }
-}
 
 if (!function_exists('xoops_readDebugRuntimeOverride')) {
     /**
@@ -773,7 +660,16 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
      *
      * Merges rather than replaces, and a null value removes its key, so two independent
      * writers -- a module install recording ownership, an admin toggle switching a bar
-     * off -- cannot erase each other's settings.
+     * off -- do not erase each other's settings.
+     *
+     * The whole read-modify-write runs under an exclusive lock on a sidecar file. The
+     * merge alone is not enough: two writers can both read the same JSON and then write
+     * back, and the second silently drops the first one's key. Atomic rename prevents a
+     * reader seeing a torn file; it does nothing about a lost update, and an earlier
+     * revision of this docblock claimed otherwise.
+     *
+     * The sidecar rather than the file itself, because the write is a rename: locking a
+     * path that is about to be replaced protects nothing.
      *
      * Written to a temporary file and renamed, so a reader never sees a half-written
      * file: on every platform this matters on, rename over an existing path is atomic.
@@ -792,6 +688,17 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
             return false;
         }
 
+        $lockFile   = $directory . '/debug-runtime.lock';
+        $lockHandle = @fopen($lockFile, 'c');
+        if (false === $lockHandle) {
+            return false;
+        }
+        if (!flock($lockHandle, LOCK_EX)) {
+            fclose($lockHandle);
+
+            return false;
+        }
+
         $current = xoops_readDebugRuntimeOverride(true);
         foreach ($changes as $key => $value) {
             if (null === $value) {
@@ -801,27 +708,168 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
             $current[$key] = $value;
         }
 
-        $json = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if (!is_string($json)) {
-            return false;
-        }
-
+        $json      = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $file      = $directory . '/debug-runtime.json';
         $temporary = $file . '.' . getmypid() . '.tmp';
-        if (false === file_put_contents($temporary, $json . "\n")) {
-            return false;
-        }
-        if (!rename($temporary, $file)) {
-            @unlink($temporary);
+        $written   = false;
 
-            return false;
+        if (is_string($json) && false !== file_put_contents($temporary, $json . "\n")) {
+            $written = rename($temporary, $file);
+            if (!$written) {
+                @unlink($temporary);
+            }
         }
 
         // The static cache in the reader is now stale, and callers in this same request
         // -- an install routine reading back what it just claimed -- would otherwise see
-        // the previous contents.
+        // the previous contents. Refreshed inside the lock so the next reader in this
+        // process cannot observe the pre-write state.
         xoops_readDebugRuntimeOverride(true);
 
-        return true;
+        flock($lockHandle, LOCK_UN);
+        fclose($lockHandle);
+
+        return $written;
+    }
+}
+
+if (!function_exists('xoops_activateErrorScreen')) {
+    /**
+     * Hand PHP's error and exception handlers to whichever component the site declared.
+     *
+     * CALL THIS LAST, at the very end of include/common.php. An error screen takes over
+     * set_error_handler() and set_exception_handler(), and so did XoopsLogger earlier in
+     * the boot; whichever runs last owns them. Firing this any earlier produces a screen
+     * that is quietly displaced before the first error ever occurs -- which looks like the
+     * screen being broken rather than being overwritten.
+     *
+     * Core itself registers nothing here and knows no provider by name. It reads the
+     * declared owner, triggers core.debug.errorscreen, and records whatever the provider
+     * reports back. A provider is an ordinary module preload -- the same mechanism the
+     * xwhoops module has always used -- so a library falling out of use, or a new one
+     * arriving, is a module being uninstalled or installed and never a change to core.
+     *
+     * The event receives three arguments:
+     *
+     *   'owner'              the token being offered. Answer only to your own.
+     *   'developer_request'  whether xoops_isDeveloperRequest() is true for this request.
+     *                        ADVISORY, and passed rather than enforced because a provider
+     *                        may legitimately register a production-safe error page for
+     *                        anonymous visitors. A provider that exposes source, file
+     *                        paths, request data or superglobals MUST refuse when this is
+     *                        false -- the one obligation core cannot check for you.
+     *   'report'             callable(string $status, string $message = ''): bool
+     *                        Call it exactly once, whatever happened -- INCLUDING when you
+     *                        decide not to register. "I am installed and chose to stay
+     *                        dormant, because X" is the whole difference between a
+     *                        diagnosable setup and a silent one. First caller wins; later
+     *                        calls return false. Any short lower-case status is valid and
+     *                        core does not interpret it; the shipped vocabulary is
+     *                        active | disabled | missing | incompatible | error.
+     *
+     * Passing the reporter in the event rather than exposing a global setter keeps the
+     * outcome in this function's own scope: the catch below can finalise a status without
+     * competing with a store a half-failed provider already wrote to.
+     *
+     * Always defines, whatever the outcome:
+     *
+     *   XOOPS_ERROR_SCREEN_OWNER    the owner token, 'core' when none applies
+     *   XOOPS_ERROR_SCREEN_SOURCE   config | recorded | default -- where that came from
+     *   XOOPS_ERROR_SCREEN_STATUS   core | active | disabled | unclaimed | error, or
+     *                               whatever else the provider reported
+     *   XOOPS_ERROR_SCREEN_MESSAGE  a short human explanation of that status
+     *
+     * Defining them unconditionally is what lets an admin screen tell "no provider is
+     * installed" apart from "a provider is installed and currently off" -- an absent
+     * constant means the core is older than this seam, which is a third, different
+     * statement.
+     *
+     * @return string the resulting status
+     */
+    function xoops_activateErrorScreen()
+    {
+        if (defined('XOOPS_ERROR_SCREEN_STATUS')) {
+            return (string) constant('XOOPS_ERROR_SCREEN_STATUS');
+        }
+
+        $owner = xoops_getErrorScreenOwner();
+
+        if ('core' === $owner) {
+            $status  = 'core';
+            $message = 'XoopsLogger keeps the error and exception handlers.';
+        } else {
+            $outcome = ['status' => '', 'message' => ''];
+
+            // First caller wins. Two providers answering one token is a misconfiguration,
+            // and the second silently overwriting the first is the load-order roulette the
+            // owner token exists to end. Note this governs the REPORT only: the preload
+            // dispatcher runs every listener, so two providers would both still register
+            // and the later one would own the handlers while the status describes the
+            // earlier. Core cannot prevent that; it can refuse to lie about which one it
+            // heard from first.
+            $report = static function ($status, $message = '') use (&$outcome) {
+                if ('' !== $outcome['status']) {
+                    return false;
+                }
+                $status = is_string($status) ? trim($status) : '';
+                if ('' === $status) {
+                    return false;
+                }
+                $outcome = [
+                    'status'  => $status,
+                    'message' => is_string($message) ? $message : '',
+                ];
+
+                return true;
+            };
+
+            // One boundary around the whole dispatch. An error screen is a debugging
+            // convenience; a broken or half-installed provider must not be able to take
+            // the site down on the last line of the bootstrap.
+            try {
+                $preload = $GLOBALS['xoopsPreload'] ?? null;
+                if (is_object($preload) && method_exists($preload, 'triggerEvent')) {
+                    $preload->triggerEvent('core.debug.errorscreen', [
+                        'owner'             => $owner,
+                        'developer_request' => function_exists('xoops_isDeveloperRequest')
+                            && xoops_isDeveloperRequest(),
+                        'report'            => $report,
+                    ]);
+                }
+                $status  = $outcome['status'];
+                $message = $outcome['message'];
+            } catch (\Throwable $e) {
+                // Authoritative. A provider that reported success and then threw is a
+                // provider that failed, and the outcome it wrote is stale by the time we
+                // are here -- which is exactly why the outcome lives in this scope and not
+                // in a store that would have refused this correction.
+                $status  = 'error';
+                $message = 'Error screen "' . $owner . '" failed to start (' . get_class($e) . ').';
+            }
+
+            if ('' === $status) {
+                // The owner names a provider that no installed module answers for --
+                // deactivated, uninstalled, or a token nobody was ever going to answer.
+                // Behaviour falls back to 'core': XoopsLogger keeps the handlers, which is
+                // exactly what happens when nothing registers. Reported under its own
+                // status rather than as 'core', because "the screen you configured is not
+                // running" and "you configured no screen" are different situations and
+                // only one of them wants looking at.
+                //
+                // Deliberately does NOT promote some other installed provider. Ownership
+                // changing without anybody asking is the surprise this mechanism exists to
+                // prevent.
+                $status  = 'unclaimed';
+                $message = 'No active module claims the error screen "' . $owner
+                    . '"; the handlers stay with XoopsLogger.';
+            }
+        }
+
+        define('XOOPS_ERROR_SCREEN_OWNER', $owner);
+        define('XOOPS_ERROR_SCREEN_SOURCE', xoops_getErrorScreenOwnerSource());
+        define('XOOPS_ERROR_SCREEN_STATUS', $status);
+        define('XOOPS_ERROR_SCREEN_MESSAGE', $message);
+
+        return $status;
     }
 }

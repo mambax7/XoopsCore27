@@ -96,8 +96,11 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
         } catch (\Throwable $e) {
             // Deliberately silent. Nothing has configured error display yet, so anything
             // said here is said under php.ini's rules -- which on a misconfigured host
-            // means a path printed to whoever loaded the page. The reason is recorded by
-            // xoops_getDebugConfigError() and surfaced by DebugBar's Diagnostics instead.
+            // means a path printed to whoever loaded the page.
+            //
+            // Nothing is recorded either: xoops_setDebugConfigError() lives in the file
+            // that just failed to parse. It records a broken debug.php, not a broken
+            // debugconfig.php, and an earlier comment here claimed otherwise.
         }
     }
     unset($xoopsDebugLoader);
@@ -107,9 +110,11 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
     // missing one is a fatal before secure.php is even read.
     if (function_exists('xoops_getDebugConfig') && function_exists('xoops_applyDebugConfig')) {
         $xoopsDebugConfig = xoops_getDebugConfig();
-        if ([] !== $xoopsDebugConfig) {
-            xoops_applyDebugConfig();
-        }
+
+        // Unconditionally: it publishes XOOPS_ENVIRONMENT, XOOPS_ENV and RAY_ENABLED
+        // before it looks at the config at all, and those are documented as existing on
+        // every request. With no debug.php it defines them and returns.
+        xoops_applyDebugConfig();
     }
 
     define('XOOPS_DB_LEGACY_LOG', !empty($xoopsDebugConfig['database']['legacy_log']));
