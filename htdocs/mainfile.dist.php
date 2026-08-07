@@ -83,11 +83,31 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
     // then be a fatal "Call to undefined function" -- taking the whole site down before
     // secure.php is even read. mainfile.php survives upgrades while include/ is replaced,
     // so a partial or interrupted upgrade can genuinely produce this pairing.
-    $xoopsDebugConfig = [];
-    if (is_readable(XOOPS_ROOT_PATH . '/include/debugconfig.php')) {
-        include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
-        if (function_exists('xoops_getDebugConfig')) {
-            $xoopsDebugConfig = xoops_getDebugConfig();
+    $xoopsDebugConfig  = [];
+    $xoopsDebugLoader  = XOOPS_ROOT_PATH . '/include/debugconfig.php';
+
+    if (is_readable($xoopsDebugLoader)) {
+        // try/catch, not just is_readable(). The realistic failure here is not a MISSING
+        // file -- is_readable() covers that -- but a TRUNCATED one, left by an upload or
+        // a write that died halfway. That is a ParseError, and a ParseError raised by an
+        // include IS catchable, unlike one in this file. Fail closed to production.
+        try {
+            require_once $xoopsDebugLoader;
+        } catch (\Throwable $e) {
+            // Deliberately silent. Nothing has configured error display yet, so anything
+            // said here is said under php.ini's rules -- which on a misconfigured host
+            // means a path printed to whoever loaded the page. The reason is recorded by
+            // xoops_getDebugConfigError() and surfaced by DebugBar's Diagnostics instead.
+        }
+    }
+    unset($xoopsDebugLoader);
+
+    // BOTH functions, not just the first. They live in one file, so a half-written copy
+    // of it is exactly the state that defines one and not the other -- and calling the
+    // missing one is a fatal before secure.php is even read.
+    if (function_exists('xoops_getDebugConfig') && function_exists('xoops_applyDebugConfig')) {
+        $xoopsDebugConfig = xoops_getDebugConfig();
+        if ([] !== $xoopsDebugConfig) {
             xoops_applyDebugConfig();
         }
     }

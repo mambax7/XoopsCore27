@@ -87,9 +87,22 @@ $xoopsLogger->startTime('XOOPS Boot');
  * deprecations and SQL with no change to any producer. With no debug.php this is one
  * file_exists() and nothing more.
  */
-include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
-$xoopsDebugConfig = xoops_getDebugConfig();
-if ([] !== $xoopsDebugConfig) {
+// Guarded exactly as mainfile.php guards it, and for the same reason. Leaving this
+// unguarded made mainfile.php's care pointless: it survives the partial upgrade, then
+// common.php fatals fifteen lines later. include_once is a no-op when mainfile.php
+// already loaded the file, so on a healthy install this costs nothing.
+$xoopsDebugLoader = XOOPS_ROOT_PATH . '/include/debugconfig.php';
+if (is_readable($xoopsDebugLoader)) {
+    try {
+        require_once $xoopsDebugLoader;
+    } catch (\Throwable $e) {
+        // Fail closed; see xoops_getDebugConfigError().
+    }
+}
+unset($xoopsDebugLoader);
+
+$xoopsDebugConfig = function_exists('xoops_getDebugConfig') ? xoops_getDebugConfig() : [];
+if ([] !== $xoopsDebugConfig && function_exists('xoops_applyDebugConfig')) {
     // Applied HERE as well as further down. On an install whose mainfile.php predates
     // 2.7.3 nothing has raised error_reporting yet, so php.ini still governs -- and if
     // that is restrictive, handleError() discards the early errors before any logger sees
@@ -470,11 +483,12 @@ $xoopsPreload->triggerEvent('core.include.common.end');
  * the screen being overwritten, and is a genuinely unpleasant afternoon.
  *
  * Core registers nothing itself and knows no provider by name: it reads the owner
- * declared in xoops_data/data/debug.php, or recorded by the provider module that claimed
- * it at install, and triggers core.debug.errorscreen for whichever module that is.
- * Always defines XOOPS_ERROR_SCREEN_STATUS and XOOPS_ERROR_SCREEN_MESSAGE, whatever the
- * outcome, so a module can tell "no provider is installed" apart from "a provider is
- * installed and currently off". Costs one function call and a cached array read when no
- * debug.php exists.
+ * declared in xoops_data/data/debug.php and triggers core.debug.errorscreen, which the
+ * module owning that token answers. Always defines XOOPS_ERROR_SCREEN_STATUS and
+ * XOOPS_ERROR_SCREEN_MESSAGE, whatever the outcome, so a module can tell "no provider is
+ * installed" apart from "a provider is installed and currently off". Costs one function
+ * call and a cached array read when no debug.php exists.
  */
-xoops_activateErrorScreen();
+if (function_exists('xoops_activateErrorScreen')) {
+    xoops_activateErrorScreen();
+}
