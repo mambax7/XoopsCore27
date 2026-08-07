@@ -4,6 +4,33 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
+2026/08: Version 2.7.3
+================================
+/htdocs/class/xoopseditor/sceditor/language/english.php (new file — SCEditor editor)
+- added define('_XOOPS_EDITOR_SCEDITOR', 'SCEditor (BBCode)');
+- added define('_XOOPS_EDITOR_SCEDITOR_STRIKE', 'Strikethrough');
+- added define('_XOOPS_EDITOR_SCEDITOR_LEFT', 'Align left');
+- added define('_XOOPS_EDITOR_SCEDITOR_CENTER', 'Align center');
+- added define('_XOOPS_EDITOR_SCEDITOR_RIGHT', 'Align right');
+- added define('_XOOPS_EDITOR_SCEDITOR_SIZE', 'Font Size');
+- added define('_XOOPS_EDITOR_SCEDITOR_SIZE_PROMPT', 'Size (%s):');
+- added define('_XOOPS_EDITOR_SCEDITOR_EMAIL', 'Email');
+- added define('_XOOPS_EDITOR_SCEDITOR_EMAIL_PROMPT', 'Email address:');
+- added define('_XOOPS_EDITOR_SCEDITOR_SITEURL', 'Site URL');
+- added define('_XOOPS_EDITOR_SCEDITOR_SITEURL_PROMPT', 'Site-relative path:');
+- added define('_XOOPS_EDITOR_SCEDITOR_QUOTE', 'Quote');
+- added define('_XOOPS_EDITOR_SCEDITOR_CODE', 'Code');
+- added define('_XOOPS_EDITOR_SCEDITOR_LIST', 'Bulleted list');
+- added define('_XOOPS_EDITOR_SCEDITOR_IMAGE', 'Image');
+- added define('_XOOPS_EDITOR_SCEDITOR_IMAGE_PROMPT', 'Image URL:');
+- added define('_XOOPS_EDITOR_SCEDITOR_YOUTUBE', 'YouTube');
+- added define('_XOOPS_EDITOR_SCEDITOR_YOUTUBE_PROMPT', 'YouTube URL or video ID:');
+- added define('_XOOPS_EDITOR_SCEDITOR_WIDTH_PROMPT', 'Width:');
+- added define('_XOOPS_EDITOR_SCEDITOR_HEIGHT_PROMPT', 'Height:');
+- added define('_XOOPS_EDITOR_SCEDITOR_WIKI', 'Wiki link');
+- added define('_XOOPS_EDITOR_SCEDITOR_WIKI_PROMPT', 'Wiki page:');
+
+================================
 2026/07: Version 2.7.1-Final
 ================================
 /htdocs/themes/xbootstrap5/language/english/main.php
