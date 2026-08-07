@@ -54,16 +54,20 @@
         closeOthers(inside, null);
     });
 
-    // 3: Escape closes the open dropdown and puts focus back on its toggle.
+    // 3: Escape closes every open dropdown, but only the dropdown that currently contains focus
+    // gets it back on its toggle — otherwise Escape would yank focus away from wherever the user
+    // is typing (e.g. the textarea itself).
     document.addEventListener('keydown', function (event) {
         if (event.key !== 'Escape' && event.keyCode !== 27) {
             return;
         }
         var open = document.querySelectorAll(DROPDOWN + '[open]');
+        var active = document.activeElement;
         for (var i = 0; i < open.length; i++) {
             var summary = open[i].querySelector('summary');
+            var hadFocus = !!(active && open[i].contains(active));
             open[i].removeAttribute('open');
-            if (summary && typeof summary.focus === 'function') {
+            if (hadFocus && summary && typeof summary.focus === 'function') {
                 summary.focus();
             }
         }

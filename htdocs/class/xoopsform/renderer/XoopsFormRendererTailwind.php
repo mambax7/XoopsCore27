@@ -514,15 +514,18 @@ EOJS;
     }
 
     /**
-     * Render typography controls for editor (font, size, color)
+     * Render typography controls for editor (font, size, color) plus the check-length button
      *
-     * Thin delegate to the shared {@see XoopsDhtmlToolbar}. Kept (rather than removed) because
-     * this method is `protected`, not part of {@see XoopsFormRendererInterface}, and a third-party
-     * subclass of this renderer may still call or override it.
+     * Thin delegate to the shared {@see XoopsDhtmlToolbar}. Returns the typography groups AND the
+     * check-length button — the same combined output this method produced before the toolbar was
+     * extracted, when the check-length button was the tail of its markup. Kept (rather than
+     * removed) because this method is `protected`, not part of
+     * {@see XoopsFormRendererInterface}, and a third-party subclass of this renderer may still
+     * call or override it.
      *
      * @param XoopsFormDhtmlTextArea $element form element
      *
-     * @return string rendered typography controls
+     * @return string rendered typography controls and check-length button
      */
     protected function renderFormDhtmlTATypography(XoopsFormDhtmlTextArea $element)
     {

@@ -219,10 +219,21 @@ class XoopsDhtmlToolbar
         $textareaId = $element->getName(false);
         $hiddenText = (string) $element->_hiddenText;
 
-        $sizes = $GLOBALS['formtextdhtml_sizes'] ?? [];
-        $fonts = !empty($GLOBALS['formtextdhtml_fonts']) ? $GLOBALS['formtextdhtml_fonts'] : self::DEFAULT_FONTS;
+        // Both globals are documented override points set by arbitrary module code, so their
+        // shape cannot be trusted: a non-array would reach array_combine() (TypeError) or
+        // dropdown()'s foreach (warning), and a font entry that is not a scalar string would
+        // make array_combine() throw on an illegal key type.
+        $sizes = isset($GLOBALS['formtextdhtml_sizes']) && is_array($GLOBALS['formtextdhtml_sizes'])
+            ? $GLOBALS['formtextdhtml_sizes']
+            : [];
+        $fonts = !empty($GLOBALS['formtextdhtml_fonts']) && is_array($GLOBALS['formtextdhtml_fonts'])
+            ? array_values(array_filter(array_map('strval', array_filter($GLOBALS['formtextdhtml_fonts'], 'is_scalar')), 'strlen'))
+            : self::DEFAULT_FONTS;
+        if ([] === $fonts) {
+            $fonts = self::DEFAULT_FONTS;
+        }
 
-        $ret  = '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _SIZE . '/' . _FONT . '/' . _COLOR . '">';
+        $ret  = '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . $this->esc(_SIZE . '/' . _FONT . '/' . _COLOR) . '">';
         $ret .= $this->dropdown($textareaId, $hiddenText, 'size', _SIZE, 'fa-solid fa-text-height', $sizes);
         $ret .= $this->dropdown($textareaId, $hiddenText, 'font', _FONT, 'fa-solid fa-font', array_combine($fonts, $fonts));
         $ret .= $this->dropdown($textareaId, $hiddenText, 'color', _COLOR, 'fa-solid fa-palette', array_flip(self::COLOR_PALETTE), true);
@@ -232,14 +243,14 @@ class XoopsDhtmlToolbar
         // Unlike the code-buttons group above, this group's contents are a fixed, known set, so
         // (as with the size/font/colour and alignment groups) the aria-label is built from the
         // concatenation of the individual button labels rather than dropped.
-        $ret .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_BOLD . '/' . _XOOPS_FORM_ALT_ITALIC . '/' . _XOOPS_FORM_ALT_UNDERLINE . '/' . _XOOPS_FORM_ALT_LINETHROUGH . '">';
+        $ret .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . $this->esc(_XOOPS_FORM_ALT_BOLD . '/' . _XOOPS_FORM_ALT_ITALIC . '/' . _XOOPS_FORM_ALT_UNDERLINE . '/' . _XOOPS_FORM_ALT_LINETHROUGH) . '">';
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeBold', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_BOLD, 'fa-solid fa-bold');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeItalic', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_ITALIC, 'fa-solid fa-italic');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeUnderline', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_UNDERLINE, 'fa-solid fa-underline');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeLineThrough', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_LINETHROUGH, 'fa-solid fa-strikethrough');
         $ret .= '</div>';
 
-        $ret .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_LEFT . '/' . _XOOPS_FORM_ALT_CENTER . '/' . _XOOPS_FORM_ALT_RIGHT . '">';
+        $ret .= '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . $this->esc(_XOOPS_FORM_ALT_LEFT . '/' . _XOOPS_FORM_ALT_CENTER . '/' . _XOOPS_FORM_ALT_RIGHT) . '">';
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeLeft', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_LEFT, 'fa-solid fa-align-left');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeCenter', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_CENTER, 'fa-solid fa-align-center');
         $ret .= $this->button($btn, $this->jsCall('xoopsMakeRight', [$hiddenText, $textareaId]), _XOOPS_FORM_ALT_RIGHT, 'fa-solid fa-align-right');
@@ -259,8 +270,8 @@ class XoopsDhtmlToolbar
     public function renderCheckLength(XoopsFormDhtmlTextArea $element): string
     {
         $maxlength = 0;
-        // 'configs' is a legacy dynamic property some callers set on the element; guard the
-        // access so PHP 8.2+ does not warn when it was never set.
+        // 'configs' is declared on XoopsFormDhtmlTextArea, but legacy callers overwrite it with
+        // arbitrary values — validate the shape before reading maxlength.
         if (property_exists($element, 'configs') && is_array($element->configs) && isset($element->configs['maxlength'])) {
             $maxlength = (int) $element->configs['maxlength'];
         }
@@ -270,7 +281,7 @@ class XoopsDhtmlToolbar
         // default HTML-encoded getName() here.
         $onclick = $this->jsCall('XoopsCheckLength', [$element->getName(false), (string) $maxlength, _XOOPS_FORM_ALT_LENGTH, _XOOPS_FORM_ALT_LENGTH_MAX]);
 
-        return '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . _XOOPS_FORM_ALT_CHECKLENGTH . '">'
+        return '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . $this->esc(_XOOPS_FORM_ALT_CHECKLENGTH) . '">'
             . $this->button(self::BTN_SM, $onclick, _XOOPS_FORM_ALT_CHECKLENGTH, 'fa-solid fa-square-check')
             . '</div>';
     }
@@ -292,6 +303,18 @@ class XoopsDhtmlToolbar
             [self::BTN_SM, self::BTN, self::BTN, self::BTN],
             $html
         );
+    }
+
+    /**
+     * Escape a value for an HTML attribute context.
+     *
+     * @param string $value raw value
+     *
+     * @return string escaped value
+     */
+    protected function esc(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**

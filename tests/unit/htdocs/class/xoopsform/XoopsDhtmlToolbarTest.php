@@ -80,8 +80,16 @@ class XoopsDhtmlToolbarTest extends TestCase
     /** @var array */
     private $originalPreloadEvents;
 
+    /** @var object|null */
+    private $originalXoTheme;
+
     protected function setUp(): void
     {
+        // injectStylesheet() branches on $GLOBALS['xoTheme']; pin it absent so the inline
+        // <link> path is exercised regardless of what earlier tests left behind.
+        $this->originalXoTheme = $GLOBALS['xoTheme'] ?? null;
+        unset($GLOBALS['xoTheme']);
+
         $GLOBALS['formtextdhtml_sizes'] = [
             'xx-small' => 'xx-Small',
             'small'    => 'Small',
@@ -109,6 +117,10 @@ class XoopsDhtmlToolbarTest extends TestCase
         $prop->setValue($instance, $this->originalPreloadEvents);
 
         unset($GLOBALS['formtextdhtml_sizes'], $GLOBALS['formtextdhtml_fonts']);
+
+        if (null !== $this->originalXoTheme) {
+            $GLOBALS['xoTheme'] = $this->originalXoTheme;
+        }
     }
 
     // =========================================================================

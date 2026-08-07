@@ -66,6 +66,14 @@ class XoopsFormDhtmlTextArea extends XoopsFormTextArea
     public $js          = '';
 
     /**
+     * Editor configuration ('maxlength' drives the check-length toolbar button). Callers set this
+     * directly; declared so those writes are not deprecated dynamic-property creation on PHP 8.2+.
+     *
+     * @var array
+     */
+    public $configs = [];
+
+    /**
      * Constructor
      *
      * @param string $caption    Caption
