@@ -41,7 +41,7 @@ class MytsRtsp extends MyTextSanitizerExtension
             . json_encode(_XOOPS_FORM_ENTERRTSPURL, $jsonFlags) . ","
             . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ","
             . json_encode(_XOOPS_FORM_ALT_ENTERWIDTH, $jsonFlags)
-            . ");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALTRTSP
+            . ");' onmouseover='style.cursor=\"hand\"' title='" . htmlspecialchars(_XOOPS_FORM_ALTRTSP, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . "'><span class='fa-solid fa-comment' aria-hidden='true'></span></button>";
         $javascript = <<<EOH
             function xoopsCodeRtsp(id,enterRtspPhrase, enterRtspHeightPhrase, enterRtspWidthPhrase)

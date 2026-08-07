@@ -95,13 +95,13 @@ final class XoopsFormRendererUniquenessTest extends TestCase
         $found = [];
 
         foreach ($this->phpFiles() as $file) {
-            // Prefilter on filename: a renderer class always lives in a same-named file, and
-            // this keeps the scan from reading every PHP file in core twice.
-            if (!str_starts_with($file->getFilename(), 'XoopsFormRenderer')) {
+            $source = (string) file_get_contents($file->getPathname());
+            // Content prefilter (cheap stripos ahead of the anchored regex): unlike the previous
+            // filename check, this still catches a declaration living in a differently-named or
+            // differently-cased file such as xoopsformrenderer.php.
+            if (false === stripos($source, 'class XoopsFormRenderer')) {
                 continue;
             }
-
-            $source = (string) file_get_contents($file->getPathname());
             if (preg_match('/^\s*(?:final\s+|abstract\s+)?class\s+(XoopsFormRenderer\w*)/m', $source, $m)) {
                 $found[$m[1]][] = $this->relativePath($file);
             }

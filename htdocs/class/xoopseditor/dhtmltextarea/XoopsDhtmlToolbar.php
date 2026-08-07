@@ -153,7 +153,11 @@ class XoopsDhtmlToolbar
         $textareaId = $element->getName(false);
         $btn        = self::BTN_SM;
 
-        $code  = '<a name="moresmiley"></a>';
+        // Ensure toolbar.css/toolbar.js load even when a renderer subclass calls this helper
+        // directly instead of going through render(). The static guard in injectStylesheet()
+        // makes this a no-op (empty string) when render() already injected on this request.
+        $code  = $this->injectStylesheet();
+        $code .= '<a name="moresmiley"></a>';
         // No aria-label/role="group" here (unlike the other groups in this class): the group
         // holds URL, email, image, image-manager, smilies, an open-ended list of TextSanitizer
         // extension buttons, code and quote -- there is no single existing language constant
@@ -219,6 +223,9 @@ class XoopsDhtmlToolbar
         $textareaId = $element->getName(false);
         $hiddenText = (string) $element->_hiddenText;
 
+        // Same direct-call asset guarantee as renderCodeButtons() — no-op after first injection.
+        $assets = $this->injectStylesheet();
+
         // Both globals are documented override points set by arbitrary module code, so their
         // shape cannot be trusted: a non-array would reach array_combine() (TypeError) or
         // dropdown()'s foreach (warning), and a font entry that is not a scalar string would
@@ -233,8 +240,16 @@ class XoopsDhtmlToolbar
             $fonts = self::DEFAULT_FONTS;
         }
 
-        $ret  = '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="' . $this->esc(_SIZE . '/' . _FONT . '/' . _COLOR) . '">';
-        $ret .= $this->dropdown($textareaId, $hiddenText, 'size', _SIZE, 'fa-solid fa-text-height', $sizes);
+        // No size options (the global is normally populated by the formdhtmltextarea language
+        // file) means no Size dropdown at all — an empty <details> toggle would render a
+        // control that opens an empty menu and does nothing.
+        $hasSizes = [] !== $sizes;
+
+        $ret  = $assets . '<div class="' . self::GROUP_CLASS . '" role="group" aria-label="'
+            . $this->esc(($hasSizes ? _SIZE . '/' : '') . _FONT . '/' . _COLOR) . '">';
+        if ($hasSizes) {
+            $ret .= $this->dropdown($textareaId, $hiddenText, 'size', _SIZE, 'fa-solid fa-text-height', $sizes);
+        }
         $ret .= $this->dropdown($textareaId, $hiddenText, 'font', _FONT, 'fa-solid fa-font', array_combine($fonts, $fonts));
         $ret .= $this->dropdown($textareaId, $hiddenText, 'color', _COLOR, 'fa-solid fa-palette', array_flip(self::COLOR_PALETTE), true);
         $ret .= '</div>';
@@ -411,7 +426,14 @@ class XoopsDhtmlToolbar
             if (is_int($arg) || is_float($arg)) {
                 $parts[] = (string) $arg;
             } else {
-                $parts[] = json_encode((string) $arg, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+                try {
+                    $parts[] = json_encode((string) $arg, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
+                } catch (\Throwable $e) {
+                    // A malformed argument (typically invalid UTF-8 in a translated label) must
+                    // degrade to one broken button argument, not abort the whole form render.
+                    trigger_error('XoopsDhtmlToolbar: could not encode a toolbar argument for ' . $fn . '(): ' . $e->getMessage(), E_USER_WARNING);
+                    $parts[] = '""';
+                }
             }
         }
 

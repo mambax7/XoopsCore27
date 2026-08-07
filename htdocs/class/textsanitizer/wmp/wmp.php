@@ -41,7 +41,7 @@ class MytsWmp extends MyTextSanitizerExtension
             . json_encode(_XOOPS_FORM_ENTERWMPURL, $jsonFlags) . ","
             . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ","
             . json_encode(_XOOPS_FORM_ALT_ENTERWIDTH, $jsonFlags)
-            . ");' onmouseover='style.cursor=\"hand\"' title='" . _XOOPS_FORM_ALTWMP
+            . ");' onmouseover='style.cursor=\"hand\"' title='" . htmlspecialchars(_XOOPS_FORM_ALTWMP, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . "'><span class='fa-brands fa-windows' aria-hidden='true'></span></button>";
 
         $javascript = <<<EOH

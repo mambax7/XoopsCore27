@@ -133,6 +133,10 @@ class XoopsDhtmlToolbarTest extends TestCase
      */
     public function testAllFiveRenderersProduceIdenticalToolbarOutput(): void
     {
+        // Byte-identity comparison: pre-mark assets injected so the first helper call does not
+        // carry the one-time <link>/<script> tags the later calls will not have.
+        $this->suppressAssets();
+
         $results = [];
         foreach (self::RENDERER_CLASSES as $class) {
             $element  = $this->makeElement();
@@ -158,6 +162,8 @@ class XoopsDhtmlToolbarTest extends TestCase
      */
     public function testEveryRendererDelegatesToTheSameSharedToolbarInstanceShape(): void
     {
+        $this->suppressAssets();
+
         $toolbarElement = $this->makeElement();
         $toolbar        = new XoopsDhtmlToolbar();
         $direct = $toolbar->renderCodeButtons($toolbarElement)
@@ -310,6 +316,38 @@ class XoopsDhtmlToolbarTest extends TestCase
         $this->assertStringNotContainsString('toolbar.css', $second);
     }
 
+    /**
+     * A renderer subclass that calls the row helpers directly (bypassing render()) must still
+     * get toolbar.css/toolbar.js onto the page — once, no matter which helper runs first.
+     */
+    public function testHelpersInjectAssetsWhenRenderIsBypassed(): void
+    {
+        $toolbar = new XoopsDhtmlToolbar();
+
+        $typography = $toolbar->renderTypography($this->makeElement());
+        $code       = $toolbar->renderCodeButtons($this->makeElement());
+
+        $this->assertStringContainsString('toolbar.css', $typography);
+        $this->assertStringNotContainsString('toolbar.css', $code, 'assets must not be injected twice');
+    }
+
+    /**
+     * With no size options configured, the Size dropdown (a toggle opening an empty menu) must
+     * be omitted entirely while Font and Color still render.
+     */
+    public function testSizeDropdownIsOmittedWhenNoSizesConfigured(): void
+    {
+        unset($GLOBALS['formtextdhtml_sizes']);
+
+        $toolbar    = new XoopsDhtmlToolbar();
+        $typography = $toolbar->renderTypography($this->makeElement());
+
+        $this->assertStringNotContainsString("'size'", $typography);
+        $this->assertStringNotContainsString('"size"', $typography);
+        $this->assertStringContainsString('fa-font', $typography);
+        $this->assertStringContainsString('fa-palette', $typography);
+    }
+
     // =========================================================================
     // Helpers
     // =========================================================================
@@ -340,6 +378,19 @@ class XoopsDhtmlToolbarTest extends TestCase
         $prop = $ref->getProperty('styleInjected');
         $prop->setAccessible(true);
         $prop->setValue(null, false);
+    }
+
+    /**
+     * Mark assets as already injected so helper output carries no one-time <link>/<script>
+     * tags — used by the byte-identity tests, where only the first of several calls would
+     * otherwise include them.
+     */
+    private function suppressAssets(): void
+    {
+        $ref  = new ReflectionClass(XoopsDhtmlToolbar::class);
+        $prop = $ref->getProperty('styleInjected');
+        $prop->setAccessible(true);
+        $prop->setValue(null, true);
     }
 
     private function injectCodeiconHandler(): void

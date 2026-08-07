@@ -392,9 +392,10 @@ final class XoopsFormRendererEscapingTest extends TestCase
     private function parse(string $html): DOMDocument
     {
         $doc = new DOMDocument();
-        libxml_use_internal_errors(true);
+        $previousErrorSetting = libxml_use_internal_errors(true);
         $doc->loadHTML('<!doctype html><meta charset="utf-8"><body>' . $html . '</body>', LIBXML_NOERROR);
         libxml_clear_errors();
+        libxml_use_internal_errors($previousErrorSetting);
 
         return $doc;
     }
