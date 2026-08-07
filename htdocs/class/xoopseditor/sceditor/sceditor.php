@@ -4,10 +4,10 @@
  *
  * A lightweight BBCode SOURCE-mode editor based on SCEditor
  * (https://github.com/samclarke/SCEditor, MIT licensed — see INSTALL.md).
- * The SCEditor library itself is NOT bundled with XOOPS; an administrator
- * must download and install it (see INSTALL.md in this directory) before
- * this editor becomes available. Until then isActive() returns false and
- * this editor is not usable.
+ * The SCEditor distribution ships with XOOPS under minified/ in its upstream
+ * release layout; isActive() still verifies the required files are readable,
+ * so a deployment that strips the library out leaves this editor inert (it
+ * simply does not appear in the editor list) rather than broken.
  *
  * This plugin only ever runs SCEditor in BBCode source mode, never WYSIWYG:
  * in WYSIWYG mode any tag SCEditor's format table does not recognise is
@@ -121,6 +121,11 @@ class FormSCEditor extends XoopsEditor
                . '</textarea>' . "\n";
 
         // Initialize SCEditor: BBCode format, permanently in source mode.
+        // startInSourceMode matters for correctness, not just preference: creating the
+        // instance in the default WYSIWYG mode would parse the existing BBCode into HTML
+        // and re-serialise it on the way back to source — exactly the round-trip that can
+        // rewrite or drop XOOPS-specific tags. Starting in source mode means the content
+        // never enters that conversion path.
         // Defensive: a missing or failed library must leave a plain, fully
         // usable textarea rather than a dead control.
         $html .= '<script>' . "\n";
@@ -130,6 +135,7 @@ class FormSCEditor extends XoopsEditor
         $html .= '  if (!el) { return; }' . "\n";
         $html .= '  sceditor.create(el, {' . "\n";
         $html .= '    format: "bbcode",' . "\n";
+        $html .= '    startInSourceMode: true,' . "\n";
         // Content stylesheet for the editing area, per the upstream usage docs.
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_THROW_ON_ERROR) . ',' . "\n";
         $html .= '    toolbar: (typeof xoopsBBCodeToolbar !== "undefined") ? xoopsBBCodeToolbar : "bold,italic,underline,strike",' . "\n";
@@ -138,10 +144,6 @@ class FormSCEditor extends XoopsEditor
         $html .= '    width: ' . json_encode($configs['width'] ?? $this->width, JSON_THROW_ON_ERROR) . ',' . "\n";
         $html .= '    height: ' . json_encode($configs['height'] ?? $this->height, JSON_THROW_ON_ERROR) . "\n";
         $html .= '  });' . "\n";
-        $html .= '  var instance = sceditor.instance(el);' . "\n";
-        $html .= '  if (instance && typeof instance.sourceMode === "function") {' . "\n";
-        $html .= '    instance.sourceMode(true);' . "\n";
-        $html .= '  }' . "\n";
         $html .= '});' . "\n";
         $html .= '</script>' . "\n";
 

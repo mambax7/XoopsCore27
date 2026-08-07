@@ -3,7 +3,7 @@
  *
  * This file is XOOPS-authored integration glue (GNU GPL 2, matching the rest of
  * this repository) — it is NOT part of the SCEditor library itself (MIT licensed,
- * see INSTALL.md in this directory). It teaches a *separately installed* copy of
+ * bundled under ../minified/, see INSTALL.md in this directory). It teaches
  * SCEditor (https://github.com/samclarke/SCEditor) the exact BBCode dialect that
  * MyTextSanitizer::xoopsCodeDecode() and the class/textsanitizer/* extensions
  * decode on the server (htdocs/class/module.textsanitizer.php:398-474 and
@@ -67,21 +67,26 @@
 
     // ------------------------------------------------------------------
     // Core tags — module.textsanitizer.php:419-424 (xoopsCodeDecode()).
+    // NOTE on registry keys: bbcode.set()'s first argument is the literal
+    // BBCode tag name as it appears between the brackets ([b], [url], ...),
+    // matching the keys the stock formats/bbcode.js registers — NOT the
+    // toolbar command name ('bold', 'link', ...). A wrong key would register
+    // a new bogus tag instead of overriding the real one.
     // [b] [i] [u] already match SCEditor's own defaults; declared explicitly
     // anyway so this file is the single source of truth for the XOOPS dialect
     // rather than relying on upstream defaults not changing.
     // ------------------------------------------------------------------
-    bbcode.set('bold', {
+    bbcode.set('b', {
         tags: { b: null, strong: null },
         format: '[b]{0}[/b]',
         html: '<strong>{0}</strong>'
     });
-    bbcode.set('italic', {
+    bbcode.set('i', {
         tags: { i: null, em: null },
         format: '[i]{0}[/i]',
         html: '<em>{0}</em>'
     });
-    bbcode.set('underline', {
+    bbcode.set('u', {
         tags: { u: null },
         format: '[u]{0}[/u]',
         html: '<span style="text-decoration: underline;">{0}</span>'
@@ -89,9 +94,11 @@
 
     // --- Explicit override #1: strikethrough --------------------------
     // module.textsanitizer.php:425-426 — XOOPS uses [d]...[/d], NOT SCEditor's
-    // default [s]...[/s]. Getting this wrong would silently rewrite every post
-    // that used strikethrough into a tag MyTextSanitizer never decodes.
-    bbcode.set('strike', {
+    // default [s]...[/s]. Registered under the 'd' tag name so any conversion
+    // path recognises existing [d] content; the HTML elements (del/s/strike)
+    // are claimed here after the stock file loads, so they serialise to [d],
+    // not to the [s] tag MyTextSanitizer never decodes.
+    bbcode.set('d', {
         tags: { del: null, s: null, strike: null },
         format: '[d]{0}[/d]',
         html: '<del>{0}</del>'
@@ -118,9 +125,10 @@
     });
 
     // --- [url=...]...[/url] --------------------------------------------
-    // module.textsanitizer.php:404-409. Matches SCEditor's own default 'link'
-    // dialect; declared explicitly for completeness.
-    bbcode.set('link', {
+    // module.textsanitizer.php:404-409. Matches SCEditor's own default dialect
+    // (registered upstream under the 'url' tag name); declared explicitly for
+    // completeness.
+    bbcode.set('url', {
         tags: { a: { href: null } },
         quoteType: QuoteType.always,
         format: function (element, content) {
@@ -286,14 +294,13 @@
         html: '<li>{0}</li>'
     });
 
-    // [[WikiPage]] — class/textsanitizer/wiki/wiki.php:84 (no closing tag pair,
-    // brackets are both the open and close delimiter).
-    bbcode.set('wikipage', {
-        format: '[[{0}]]',
-        html: function (token, attrs, content) {
-            return '<a href="#">' + content + '</a>';
-        }
-    });
+    // [[WikiPage]] — class/textsanitizer/wiki/wiki.php:84. NOT registered with
+    // bbcode.set(): the registry keys are literal tag names, and the wiki
+    // syntax has no tag name — [[...]] uses doubled brackets as both open and
+    // close delimiter, which SCEditor's BBCode grammar cannot express. A
+    // registration would only have invented a bogus [wikipage] tag. The
+    // 'wikipage' toolbar command below inserts the [[...]] form directly,
+    // which is all source mode needs.
 
     // ------------------------------------------------------------------
     // Default-off extension tags — registered so the BBCode is understood if
@@ -380,6 +387,19 @@
     sceditor.command.set('strike', {
         txtExec: ['[d]', '[/d]'],
         tooltip: 'Strikethrough'
+    });
+
+    // The stock email command inserts [email=address]label[/email]; XOOPS only
+    // decodes the bare [email]address[/email] form (module.textsanitizer.php:
+    // 416-417), so the attribute form would publish as literal BBCode.
+    sceditor.command.set('email', {
+        txtExec: function (caller) {
+            var addr = window.prompt('Email address:', '');
+            if (addr) {
+                this.insertText('[email]' + addr + '[/email]');
+            }
+        },
+        tooltip: 'Email'
     });
 
     sceditor.command.set('left', { txtExec: ['[left]', '[/left]'], tooltip: 'Align left' });
