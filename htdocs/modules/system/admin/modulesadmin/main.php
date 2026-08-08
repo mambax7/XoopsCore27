@@ -381,6 +381,9 @@ switch ($op) {
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->getByDirname($module);
+        if (!is_object($mod)) {
+            redirect_header('admin.php?fct=modulesadmin', 3, sprintf(_AM_SYSTEM_MODULES_DELETE_ERROR, $module));
+        }
         // Construct message
         if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
             $msgs = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $mod->getVar('dirname', 'n'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($mod->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
@@ -442,6 +445,9 @@ switch ($op) {
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->getByDirname($module);
+        if (!is_object($mod)) {
+            redirect_header('admin.php?fct=modulesadmin', 3, sprintf(_AM_SYSTEM_MODULES_UPDATE_ERROR, $module));
+        }
         $msgs = '';
         // Construct message
         if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
