@@ -137,7 +137,8 @@ switch ($op) {
             $listed_mods[$i]                  = $module->toArray();
             $listed_mods[$i]['name']          = htmlspecialchars((string) $module->getVar('name'), ENT_QUOTES | ENT_HTML5);
             $listed_mods[$i]['image']         = htmlspecialchars((string) $module->getInfo('image'), ENT_QUOTES | ENT_HTML5);
-            $listed_mods[$i]['adminindex']    = $module->getInfo('adminindex');
+            $listed_mods[$i]['dirname']       = htmlspecialchars((string) $module->getVar('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $listed_mods[$i]['adminindex']    = htmlspecialchars((string) $module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $listed_mods[$i]['version']       = $module->getVar('version');
             $listed_mods[$i]['last_update']   = formatTimestamp($module->getVar('last_update'), 'm');
             $listed_mods[$i]['author']        = htmlspecialchars((string) $module->getInfo('author'), ENT_QUOTES | ENT_HTML5);
@@ -215,9 +216,9 @@ switch ($op) {
                     $module = $module_handler->create();
                     $module->loadInfo($file);
                     $toinstall_mods[$i]['name']          = htmlspecialchars($module->getInfo('name'), ENT_QUOTES | ENT_HTML5);
-                    $toinstall_mods[$i]['dirname']       = $module->getInfo('dirname');
+                    $toinstall_mods[$i]['dirname']       = htmlspecialchars((string) $module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     $toinstall_mods[$i]['image']         = htmlspecialchars((string) $module->getInfo('image'), ENT_QUOTES | ENT_HTML5);
-                    $toinstall_mods[$i]['version']       = $module->getInfo('version');
+                    $toinstall_mods[$i]['version']       = htmlspecialchars((string) $module->getInfo('version'), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     $toinstall_mods[$i]['author']        = htmlspecialchars((string) $module->getInfo('author'), ENT_QUOTES | ENT_HTML5);
                     $toinstall_mods[$i]['credits']       = htmlspecialchars((string) $module->getInfo('credits'), ENT_QUOTES | ENT_HTML5);
                     $toinstall_mods[$i]['license']       = htmlspecialchars((string) $module->getInfo('license'), ENT_QUOTES | ENT_HTML5);
@@ -318,9 +319,10 @@ switch ($op) {
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->create();
         $mod->loadInfoAsVar($module);
+        $msgs = '';
         // Construct message
-        if ($mod->getInfo('image') !== false && trim($mod->getInfo('image')) != '') {
-            $msgs = '<img src="' . XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . trim($mod->getInfo('image')) . '" alt="" />';
+        if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
+            $msgs = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $mod->getVar('dirname', 'n'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($mod->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
         }
         $msgs .= '<br><span style="font-size:smaller;">' . $mod->getVar('name', 's') . '</span><br><br>' . _AM_SYSTEM_MODULES_RUSUREINS;
         // Call Header
@@ -380,8 +382,8 @@ switch ($op) {
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->getByDirname($module);
         // Construct message
-        if ($mod->getInfo('image') !== false && trim($mod->getInfo('image')) != '') {
-            $msgs = '<img src="' . XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . trim($mod->getInfo('image')) . '" alt="" />';
+        if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
+            $msgs = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $mod->getVar('dirname', 'n'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($mod->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
         }
         $msgs .= '<br><span style="font-size:smaller;">' . $mod->getVar('name') . '</span><br><br>' . _AM_SYSTEM_MODULES_RUSUREUNINS;
         // Call Header
@@ -440,9 +442,10 @@ switch ($op) {
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->getByDirname($module);
+        $msgs = '';
         // Construct message
-        if ($mod->getInfo('image') !== false && trim($mod->getInfo('image')) != '') {
-            $msgs = '<img src="' . XOOPS_URL . '/modules/' . $mod->getVar('dirname', 'n') . '/' . trim($mod->getInfo('image')) . '" alt="" />';
+        if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
+            $msgs = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $mod->getVar('dirname', 'n'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($mod->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
         }
         $msgs .= '<br><span style="font-size:smaller;">' . $mod->getVar('name', 's') . '</span><br><br>' . _AM_SYSTEM_MODULES_RUSUREUPD;
         // Call Header

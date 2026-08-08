@@ -325,7 +325,25 @@ class XoopsModule extends XoopsObject
 
             return false;
         }
+        // Initialised before the include so it is defined on every path even if a
+        // malformed xoops_version.php never assigns it; the include below overwrites it
+        // for a well-formed manifest.
+        $modversion = [];
         include $file;
+        // Keep the manifest's own spelling of its dirname only when it names THE SAME
+        // FOLDER this was loaded from, compared case-insensitively -- that is what a
+        // case-insensitive filesystem treats as one directory, and a module's own casing
+        // is worth preserving. A manifest that declares a different, traversal, or empty
+        // dirname is not trusted to redirect anything: fall back to the real folder
+        // ($dirname, already basename()'d above). This blocks a hostile package from
+        // poisoning every getInfo('dirname') consumer and, via loadInfoAsVar(), the
+        // persisted xoops_modules.dirname column, or from pointing metadata loads at
+        // another module's directory. $modversion was initialised to an array above and a
+        // well-formed manifest keeps it one, so no further type guard is needed here.
+        $declared = isset($modversion['dirname']) ? (string) $modversion['dirname'] : '';
+        if (0 !== strcasecmp($declared, $dirname)) {
+            $modversion['dirname'] = $dirname;
+        }
         $modVersions[$dirname] = $modversion;
         $this->modinfo         = $modVersions[$dirname];
 

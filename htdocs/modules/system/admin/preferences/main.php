@@ -407,7 +407,7 @@ switch ($op) {
             $xoopsTpl->assign('breadcrumb', 1);
         } else {
             if ($module->getInfo('adminindex')) {
-                echo '<a href="' . XOOPS_URL . '/modules/' . $module->getVar('dirname') . '/' . $module->getInfo('adminindex') . '">' . $module->getVar('name') . '</a>&nbsp;<span style="font-weight:bold;">&raquo;</span>&nbsp;' . _PREFERENCES . '<br><br>';
+                echo '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $module->getVar('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string) $module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">' . $module->getVar('name') . '</a>&nbsp;<span style="font-weight:bold;">&raquo;</span>&nbsp;' . _PREFERENCES . '<br><br>';
             } else {
                 echo $module->getVar('name') . '&nbsp;<span style="font-weight:bold;">&raquo;</span>&nbsp;' . _PREFERENCES . '<br><br>';
             }
