@@ -604,8 +604,14 @@ if (!function_exists('xoops_findVendorDirectory')) {
                 $candidates[] = rtrim((string) constant($constantName), '/\\') . '/vendor';
             }
         }
-        $candidates[] = XOOPS_ROOT_PATH . '/xoops_lib/vendor';
-        $candidates[] = XOOPS_ROOT_PATH . '/class/libraries/vendor';
+        // Guarded like the two above: XOOPS_ROOT_PATH is defined by mainfile.php on any
+        // booted request, but this helper is also reachable from a provider module's preload
+        // and from tests, where a bare reference to an undefined constant is a fatal in
+        // PHP 8 -- not the empty-string "none found" this function promises.
+        if (defined('XOOPS_ROOT_PATH')) {
+            $candidates[] = XOOPS_ROOT_PATH . '/xoops_lib/vendor';
+            $candidates[] = XOOPS_ROOT_PATH . '/class/libraries/vendor';
+        }
 
         foreach ($candidates as $candidate) {
             if (is_dir($candidate)) {
