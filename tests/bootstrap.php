@@ -941,7 +941,11 @@ class XoopsTestDatabasePreload extends XoopsPreloadItem
 $preloadInstance = XoopsPreload::getInstance();
 $ref = new ReflectionClass($preloadInstance);
 $prop = $ref->getProperty('_events');
-$prop->setAccessible(true);
+// The setAccessible() call that used to be here is gone: it has done nothing since PHP 8.1,
+// reflection reaches private members regardless, and PHP 8.5 deprecates it. Not cosmetic --
+// the deprecation is emitted during bootstrap, so it lands in the output of every test that
+// asserts on a clean stream, and it took out two XoopsFormTinymce7Test cases on 8.5 as
+// "PHPUnit\Framework\Exception".
 $events = $prop->getValue($preloadInstance);
 $events['coreclassdatabasedatabasefactoryconnection'][] = [
     'class_name' => 'XoopsTestDatabasePreload',
@@ -1004,7 +1008,7 @@ function xoops_getHandler($name, $optional = false)
                 while ($current) {
                     if ($current->hasProperty('db')) {
                         $prop = $current->getProperty('db');
-                        $prop->setAccessible(true);
+                        // See the note above: no-op since 8.1, deprecated in 8.5.
                         $prop->setValue($handler, $GLOBALS['xoopsDB']);
                         break;
                     }

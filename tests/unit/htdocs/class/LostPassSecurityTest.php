@@ -42,6 +42,75 @@ class LostPassSecurityTest extends KernelTestCase
 {
     private LostPassSecurity $security;
 
+    /**
+     * The IP / identifier pairs these tests feed to isRateLimited().
+     *
+     * Kept in one place because the cache purge below has to know them. Add a case that
+     * uses a new IP or identifier and it belongs here too, or the purge stops covering it.
+     *
+     * @var list<array{0: string, 1: string}>
+     */
+    private const RATE_LIMIT_INPUTS = [
+        ['127.0.0.1', 'test@example.com'],
+        ['127.0.0.1', ''],
+        ['192.168.1.1', 'uid:42'],
+    ];
+
+    /**
+     * Rate-limit state is on DISK, and it outlives the process.
+     *
+     * isRateLimited() counts attempts in XoopsCache, which the file engine keeps under
+     * xoops_data/caches/xoops_cache/. Nothing here ever removed them, so a second run of
+     * the suite in the same working copy read the FIRST run's attempts, crossed the limit
+     * and returned true where these tests assert false.
+     *
+     * The failure looks like a bug in whatever you changed most recently, which is what
+     * makes it worth fixing rather than documenting: it is a test that accuses the
+     * innocent. Purging on the way in as well as on the way out matters -- on the way out
+     * alone still leaves a run that was interrupted, or predates this fix, to poison the
+     * next one.
+     */
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        self::purgeRateLimitCache();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::purgeRateLimitCache();
+        parent::tearDownAfterClass();
+    }
+
+    private static function purgeRateLimitCache(): void
+    {
+        if (! defined('XOOPS_ROOT_PATH')) {
+            return;
+        }
+        if (! class_exists('XoopsCache', false)) {
+            $file = XOOPS_ROOT_PATH . '/class/cache/xoopscache.php';
+            if (! is_file($file)) {
+                return;
+            }
+            require_once $file;
+        }
+        if (! class_exists('XoopsCache', false)) {
+            return;
+        }
+
+        // Mirrors LostPassSecurity::isRateLimited() -- same prefix, same hashing, same
+        // normalisation. Duplicated rather than exposed, because widening a private
+        // constant's visibility for a test is a worse trade than six lines that a comment
+        // ties to their original.
+        foreach (self::RATE_LIMIT_INPUTS as [$ip, $identifier]) {
+            \XoopsCache::delete('lostpass_rl_ip_' . hash('sha256', $ip));
+            $idNorm = strtolower(trim($identifier));
+            if ('' !== $idNorm) {
+                \XoopsCache::delete('lostpass_rl_id_' . hash('sha256', $idNorm));
+            }
+        }
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

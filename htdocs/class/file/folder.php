@@ -311,9 +311,25 @@ class XoopsFolderHandler
      */
     public function isAbsolute($path)
     {
-        $match = preg_match('/^\\//', $path) || preg_match('/^[A-Z]:\\//i', $path);
+        $path = (string) $path;
 
-        return $match;
+        // A drive letter is absolute with EITHER separator.
+        //
+        // This used to accept only 'C:/' and not 'C:\'. isWindowsPath() directly below
+        // recognises exactly the opposite spelling, so the two methods disagreed about the
+        // same path, and PHP hands out the backslash form freely: dirname() and realpath()
+        // both return it on Windows. A path like 'L:\xoops\htdocs\xoops_data' was
+        // therefore "not absolute", so cd() fell through to addPathElement() against an
+        // empty $this->path, built a path that does not exist, and left $path null --
+        // which is why the file cache engine failed to initialise on Windows with
+        // "Cache Engine file is not initialized", while working everywhere else.
+        //
+        // UNC paths (\\server\share) are absolute too, and were never matched at all.
+        $match = preg_match('#^/#', $path)
+            || preg_match('#^[A-Z]:[\\\\/]#i', $path)
+            || preg_match('#^\\\\\\\\#', $path);
+
+        return (bool) $match;
     }
 
     /**

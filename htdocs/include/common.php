@@ -87,20 +87,49 @@ $xoopsLogger->startTime('XOOPS Boot');
  * deprecations and SQL with no change to any producer. With no debug.php this is one
  * file_exists() and nothing more.
  */
-include_once XOOPS_ROOT_PATH . '/include/debugconfig.php';
-$xoopsDebugConfig = xoops_getDebugConfig();
+// Guarded exactly as mainfile.php guards it, and for the same reason. Leaving this
+// unguarded made mainfile.php's care pointless: it survives the partial upgrade, then
+// common.php fatals fifteen lines later. include_once is a no-op when mainfile.php
+// already loaded the file, so on a healthy install this costs nothing.
+$xoopsDebugLoader = XOOPS_ROOT_PATH . '/include/debugconfig.php';
+if (is_readable($xoopsDebugLoader)) {
+    try {
+        require_once $xoopsDebugLoader;
+    } catch (\Throwable $e) {
+        // Fail closed, and deliberately silent: nothing has configured error display yet.
+        //
+        // Nothing is recorded here either. xoops_setDebugConfigError() lives in the file
+        // that just failed to parse, so in this exact case it does not exist to be called
+        // -- the recorder covers a broken debug.php, not a broken debugconfig.php. An
+        // earlier comment here pointed at it as though it applied.
+    }
+}
+unset($xoopsDebugLoader);
+
+$xoopsDebugConfig = function_exists('xoops_getDebugConfig') ? xoops_getDebugConfig() : [];
+
+// Called unconditionally, not only when a debug.php exists. XOOPS_ENVIRONMENT and
+// XOOPS_ENV are defined at the top of this function precisely so they exist on every
+// request -- and guarding the call meant they were absent on exactly the sites that have no
+// debug.php, which is every production site. A consumer reading them bare then fatals in
+// production and nowhere else. With no config the call sets both constants and returns.
+if (function_exists('xoops_applyDebugConfig')) {
+    xoops_applyDebugConfig();
+}
+
 if ([] !== $xoopsDebugConfig) {
     // Applied HERE as well as further down. On an install whose mainfile.php predates
     // 2.7.3 nothing has raised error_reporting yet, so php.ini still governs -- and if
     // that is restrictive, handleError() discards the early errors before any logger sees
     // them. Attaching the logger early is pointless unless reporting is raised with it.
-    // The call is idempotent and the config is cached, so repeating it costs nothing.
-    xoops_applyDebugConfig();
 
-    if (!empty($xoopsDebugConfig['log']['enabled'])) {
+    // 'core_log' since 2.7.3; xoops_getDebugConfig() still publishes the older
+    // 'log' spelling as an alias pointing at the same array, so a debug.php
+    // written before the rename needs no edit.
+    if (!empty($xoopsDebugConfig['core_log']['enabled'])) {
         XoopsLoad::load('filelogger');
         if (class_exists('XoopsFileLogger', false)) {
-            $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['log']));
+            $xoopsLogger->addLogger(new XoopsFileLogger((array) $xoopsDebugConfig['core_log']));
         }
     }
 }
@@ -204,7 +233,11 @@ $xoops->gzipCompression();
  * install whose mainfile.php predates
  * 2.7.3 still get file logging, even though its XOOPS_DEBUG constant was fixed earlier.
  */
-$xoopsDebugConfig = xoops_getDebugConfig();
+// Guarded like the first read above, and for the identical reason. Guarding only the
+// earlier call site left this one to fatal on a truncated debugconfig.php a hundred lines
+// later -- the boot cleared every guard and then died anyway, which made the whole
+// fail-closed exercise decorative.
+$xoopsDebugConfig = function_exists('xoops_getDebugConfig') ? xoops_getDebugConfig() : [];
 
 if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     xoops_loadLanguage('logger');
@@ -225,7 +258,9 @@ if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
     // addQuery/addBlock/addExtra/handleError, so the file logger still receives
     // everything.
     xoops_loadLanguage('logger');
-    xoops_applyDebugConfig();
+    if (function_exists('xoops_applyDebugConfig')) {
+        xoops_applyDebugConfig();
+    }
     $xoopsLogger->activated = false;
 } else {
     error_reporting(0);
@@ -456,3 +491,23 @@ $xoopsLogger->stopTime('XOOPS Boot');
 $xoopsLogger->startTime('Module init');
 
 $xoopsPreload->triggerEvent('core.include.common.end');
+
+/**
+ * The error screen, last of all.
+ *
+ * Deliberately the final statement in this file. An error screen installs its own error
+ * and exception handlers, and so did XoopsLogger further up; whichever runs last owns
+ * them. Activating any earlier produces a screen that is quietly displaced before the
+ * first error ever happens -- which presents as the screen being broken rather than as
+ * the screen being overwritten, and is a genuinely unpleasant afternoon.
+ *
+ * Core registers nothing itself and knows no provider by name: it reads the owner
+ * declared in xoops_data/data/debug.php and triggers core.debug.errorscreen, which the
+ * module owning that token answers. Always defines XOOPS_ERROR_SCREEN_STATUS and
+ * XOOPS_ERROR_SCREEN_MESSAGE, whatever the outcome, so a module can tell "no provider is
+ * installed" apart from "a provider is installed and currently off". Costs one function
+ * call and a cached array read when no debug.php exists.
+ */
+if (function_exists('xoops_activateErrorScreen')) {
+    xoops_activateErrorScreen();
+}
