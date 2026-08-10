@@ -239,14 +239,46 @@ class MyTextSanitizerTest extends TestCase
 
     public function testDisplayTareaWithHtmlDisabledKeepsMarkupEncoded()
     {
+        // Snapshot first, and pop only what actually moved.
+        //
+        // displayTarea()'s legacy path reaches XoopsLogger::getInstance(), which installs
+        // an error and an exception handler and never restores them -- but only on its
+        // FIRST call in the process. `static $instance` means every later call returns the
+        // cached logger and installs nothing.
+        //
+        // So whether this test has anything to pop depends on what ran before it. Run this
+        // file alone and it does; run the full suite and something earlier has already
+        // built the logger, so an unconditional restore_*_handler() pair pops frames
+        // belonging to PHPUnit instead -- which PHPUnit reports as "removed error handlers
+        // other than its own", and failOnRisky would turn red. That is what the previous
+        // version of this teardown did, and it passed in isolation, which is why it stood.
+        //
+        // set_*_handler(null) followed by restore_*_handler() is the only way to read the
+        // current handler; the pair is net zero frames. Bounded, because a runaway loop in
+        // a test is a hung build rather than a failed one.
+        $errorBefore = set_error_handler(null);
+        restore_error_handler();
+        $exceptionBefore = set_exception_handler(null);
+        restore_exception_handler();
+
         $out = $this->sanitizer->displayTarea('<script>alert(1)</script> visit https://xoops.org', 0);
 
-        // displayTarea()'s legacy path installs an error and an exception handler
-        // and never restores them. Confirmed by PHPUnit: removing these two calls
-        // makes this test "risky — did not remove its own error/exception
-        // handlers". Pop them so handler state does not leak into later tests.
-        restore_error_handler();
-        restore_exception_handler();
+        for ($i = 0; $i < 16; ++$i) {
+            $current = set_error_handler(null);
+            restore_error_handler();
+            if ($current === $errorBefore) {
+                break;
+            }
+            restore_error_handler();
+        }
+        for ($i = 0; $i < 16; ++$i) {
+            $current = set_exception_handler(null);
+            restore_exception_handler();
+            if ($current === $exceptionBefore) {
+                break;
+            }
+            restore_exception_handler();
+        }
 
         $this->assertStringNotContainsString('<script>', $out);
         $this->assertStringContainsString('&lt;script&gt;', $out);
