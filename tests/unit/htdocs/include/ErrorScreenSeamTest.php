@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use PHPUnit\Framework\Attributes\CoversFunction;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -42,14 +42,15 @@ use PHPUnit\Framework\TestCase;
  * going vacuous again. ADR-0001 Appendix A is the long version.
  * ---------------------------------------------------------------------------------------
  */
-#[CoversFunction('xoops_activateErrorScreen')]
-#[CoversFunction('xoops_getErrorScreenOwner')]
-#[CoversFunction('xoops_getErrorScreenOwnerSource')]
-#[CoversFunction('xoops_getErrorScreenStatus')]
-#[CoversFunction('xoops_recordErrorScreenOwner')]
-#[CoversFunction('xoops_releaseErrorScreenOwner')]
-#[CoversFunction('xoops_writeDebugRuntimeOverride')]
-#[CoversFunction('xoops_applyDebugConfig')]
+// CoversNothing, deliberately. Every case executes the seam in a SUBPROCESS (see above),
+// so the parent PHPUnit process never runs -- and cannot collect coverage for -- the
+// functions under test: xoops_activateErrorScreen, xoops_getErrorScreenOwner,
+// xoops_getErrorScreenOwnerSource, xoops_getErrorScreenStatus, xoops_recordErrorScreenOwner,
+// xoops_releaseErrorScreenOwner, xoops_writeDebugRuntimeOverride, xoops_applyDebugConfig.
+// Declaring those as CoversFunction targets made the coverage job fail with "not a valid
+// target" (the functions are never defined in this process), and loading the file here just
+// to validate the metadata would record a misleading 0%.
+#[CoversNothing]
 class ErrorScreenSeamTest extends TestCase
 {
     private string $varPath = '';
@@ -682,5 +683,42 @@ class ErrorScreenSeamTest extends TestCase
         ]);
 
         $this->assertSame('xprovider', $result['recorded_owner']);
+    }
+
+    #[Test]
+    public function theHolderCanReleaseItsSeatAndTheFileStaysAnObject(): void
+    {
+        // The release half of the ownership lifecycle, exercised end to end: claim, then
+        // release the same token. The seat must be free afterwards, and the runtime file
+        // -- emptied of its last key -- must serialise as the JSON OBJECT {}, not the
+        // array [] an empty PHP array would encode to. A consumer in another language
+        // reading [] where it expected an object has been handed a different type.
+        $result = $this->runCase([
+            'debug'   => ['enabled' => true],
+            'record'  => 'xprovider',
+            'release' => 'xprovider',
+        ]);
+
+        $this->assertTrue($result['record_call']);
+        $this->assertTrue($result['release_call']);
+        $this->assertSame('', $result['recorded_owner'], 'the released seat must be free');
+        $this->assertSame('{}', $result['runtime_raw'], 'the emptied file must stay a JSON object');
+    }
+
+    #[Test]
+    public function aNonHolderCannotReleaseAnotherModulesSeat(): void
+    {
+        // Release checks identity: uninstalling one module must not free another module's
+        // seat just because it ran later. The call still returns true -- the caller asked
+        // for "the record no longer names me", and it does not -- but the holder's record
+        // survives untouched.
+        $result = $this->runCase([
+            'debug'   => ['enabled' => true],
+            'record'  => 'xfirst',
+            'release' => 'xother',
+        ]);
+
+        $this->assertTrue($result['release_call']);
+        $this->assertSame('xfirst', $result['recorded_owner'], "another module's seat must survive a foreign release");
     }
 }

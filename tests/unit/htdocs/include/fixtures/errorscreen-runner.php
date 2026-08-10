@@ -16,6 +16,7 @@
  *   root_path           directory to use as XOOPS_ROOT_PATH; defaults to the real core
  *   debug               array to write as debug.php, or false to leave it absent
  *   record              token to record as the error-screen owner before activating
+ *   release             token to release AFTER the record above, before activating
  *   provider            token a fake provider answers to
  *   provider_status     status that provider reports
  *   provider_throws     bool: throw after reporting
@@ -261,6 +262,13 @@ if (isset($spec['record'])) {
     $recorded = xoops_recordErrorScreenOwner((string) $spec['record']);
 }
 
+// Release AFTER the record above, so a case can exercise both halves of the ownership
+// lifecycle in one process: claim a seat, then release it (or fail to, when the token is
+// not the holder's).
+if (isset($spec['release'])) {
+    $released = xoops_releaseErrorScreenOwner((string) $spec['release']);
+}
+
 // As include/common.php calls it: unconditionally, behind function_exists() only. The
 // environment constants are published before the early return precisely so they exist on
 // a site with no debug.php, and a fixture that skipped this call could not observe that.
@@ -290,6 +298,12 @@ fwrite(STDOUT, json_encode([
     'recorded_owner'    => xoops_getRecordedErrorScreenOwner(),
     'environment'       => defined('XOOPS_ENVIRONMENT') ? XOOPS_ENVIRONMENT : null,
     'record_call'       => $recorded ?? null,
+    'release_call'      => $released ?? null,
+    // The runtime file VERBATIM, so a test can assert on the serialised shape itself --
+    // e.g. that a file emptied of its last key is the JSON object {} and not the array [].
+    'runtime_raw'       => is_file($varPath . '/data/debug-runtime.json')
+        ? trim((string) file_get_contents($varPath . '/data/debug-runtime.json'))
+        : null,
     'provider_registered'      => null !== $fixtureErrorHandler,
     'second_listener_ran'      => $secondListenerRan,
     'error_handler_is_core'    => null !== $coreErrorHandler && $liveErrorHandler === $coreErrorHandler,

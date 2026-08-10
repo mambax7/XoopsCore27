@@ -261,23 +261,27 @@ class MyTextSanitizerTest extends TestCase
         $exceptionBefore = set_exception_handler(null);
         restore_exception_handler();
 
-        $out = $this->sanitizer->displayTarea('<script>alert(1)</script> visit https://xoops.org', 0);
-
-        for ($i = 0; $i < 16; ++$i) {
-            $current = set_error_handler(null);
-            restore_error_handler();
-            if ($current === $errorBefore) {
-                break;
+        // finally, so a throw out of displayTarea() cannot skip the cleanup and leak the
+        // logger's handlers into every later test in the process.
+        try {
+            $out = $this->sanitizer->displayTarea('<script>alert(1)</script> visit https://xoops.org', 0);
+        } finally {
+            for ($i = 0; $i < 16; ++$i) {
+                $current = set_error_handler(null);
+                restore_error_handler();
+                if ($current === $errorBefore) {
+                    break;
+                }
+                restore_error_handler();
             }
-            restore_error_handler();
-        }
-        for ($i = 0; $i < 16; ++$i) {
-            $current = set_exception_handler(null);
-            restore_exception_handler();
-            if ($current === $exceptionBefore) {
-                break;
+            for ($i = 0; $i < 16; ++$i) {
+                $current = set_exception_handler(null);
+                restore_exception_handler();
+                if ($current === $exceptionBefore) {
+                    break;
+                }
+                restore_exception_handler();
             }
-            restore_exception_handler();
         }
 
         $this->assertStringNotContainsString('<script>', $out);
