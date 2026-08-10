@@ -111,9 +111,9 @@ if (!defined('XOOPS_MAINFILE_INCLUDED')) {
     if (function_exists('xoops_getDebugConfig') && function_exists('xoops_applyDebugConfig')) {
         $xoopsDebugConfig = xoops_getDebugConfig();
 
-        // Unconditionally: it publishes XOOPS_ENVIRONMENT, XOOPS_ENV and RAY_ENABLED
-        // before it looks at the config at all, and those are documented as existing on
-        // every request. With no debug.php it defines them and returns.
+        // Unconditionally: it publishes XOOPS_ENVIRONMENT and XOOPS_ENV before it looks
+        // at the config at all, and those are documented as existing on every request.
+        // With no debug.php it defines them and returns.
         xoops_applyDebugConfig();
     }
 

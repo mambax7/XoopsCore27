@@ -108,11 +108,11 @@ unset($xoopsDebugLoader);
 
 $xoopsDebugConfig = function_exists('xoops_getDebugConfig') ? xoops_getDebugConfig() : [];
 
-// Called unconditionally, not only when a debug.php exists. XOOPS_ENVIRONMENT, XOOPS_ENV
-// and RAY_ENABLED are defined at the top of this function precisely so they exist on every
+// Called unconditionally, not only when a debug.php exists. XOOPS_ENVIRONMENT and
+// XOOPS_ENV are defined at the top of this function precisely so they exist on every
 // request -- and guarding the call meant they were absent on exactly the sites that have no
 // debug.php, which is every production site. A consumer reading them bare then fatals in
-// production and nowhere else. With no config the call sets three constants and returns.
+// production and nowhere else. With no config the call sets both constants and returns.
 if (function_exists('xoops_applyDebugConfig')) {
     xoops_applyDebugConfig();
 }

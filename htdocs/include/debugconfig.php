@@ -141,13 +141,14 @@ if (!function_exists('xoops_getDebugConfig')) {
         // Normalise the nested shapes now, so nothing downstream has to defend itself
         // against an object or a string where an array belongs.
         $loaded['database'] = isset($loaded['database']) && is_array($loaded['database']) ? $loaded['database'] : [];
-        $loaded['ray']      = isset($loaded['ray']) && is_array($loaded['ray']) ? $loaded['ray'] : [];
-        $loaded['debugbar'] = isset($loaded['debugbar']) && is_array($loaded['debugbar']) ? $loaded['debugbar'] : [];
 
-        // Any OTHER key is passed through untouched. debug.php is a per-install file, so
-        // a site is free to keep a provider's settings in it -- but core does not know
-        // what those keys mean and must not pretend to. A provider normalises its own
-        // block, in its own repository, on the same terms as every other consumer.
+        // Any OTHER key is passed through untouched -- with no exceptions, which is a
+        // stronger statement than this file used to be able to make. debug.php is a
+        // per-install file, so a site is free to keep a module's settings in it, but core
+        // does not know what those keys mean and must not pretend to. Every module
+        // normalises its own block, in its own repository, on the same terms as every
+        // other consumer -- including the modules the XOOPS project ships itself, which
+        // get no shortcut here for being ours.
 
         // The core file log. Named 'core_log' from 2.7.3 on, matching the "core" source
         // the DebugBar module lists on its Logs page and keeping it clearly distinct from
@@ -169,14 +170,6 @@ if (!function_exists('xoops_getDebugConfig')) {
         // one level further down.
         $loaded['core_log']['enabled']    = true === ($loaded['core_log']['enabled'] ?? false);
         $loaded['database']['legacy_log'] = true === ($loaded['database']['legacy_log'] ?? false);
-        $loaded['ray']['enabled']         = true === ($loaded['ray']['enabled'] ?? false);
-
-        // The DebugBar module reads this as a SECOND activation source, alongside the
-        // database-backed Admin -> Preferences -> Debug Mode. Normalised here rather than
-        // in the module so it gets the same strict treatment as every other switch: the
-        // module reads it with a truthiness test somewhere, and 'false' as a string is
-        // truthy, which is the exact trap closed above for the other three.
-        $loaded['debugbar']['enabled']    = true === ($loaded['debugbar']['enabled'] ?? false);
 
         // Exactly one component may own PHP's error and exception handlers. The value is
         // a free-form token naming that component, resolved by xoops_getErrorScreenOwner()
@@ -194,7 +187,22 @@ if (!function_exists('xoops_getDebugConfig')) {
             ? strtolower(trim($screen))
             : 'auto';
 
+        // Opt-in hard gate. Off by default, and that default is the whole design: core
+        // passes 'developer_request' to the provider and lets it decide, because a
+        // provider may legitimately render a PRODUCTION-SAFE page for anonymous visitors
+        // and core cannot tell that apart from a stack trace full of superglobals.
+        //
+        // A site that does not want to extend that trust to every provider it might ever
+        // install can say so here, and then core does not dispatch at all for a
+        // non-developer request. Same strict-boolean treatment as every other switch.
+        $loaded['error_screen_strict'] = true === ($loaded['error_screen_strict'] ?? false);
+
         // Alias, kept in step with core_log so pre-2.7.3 consumers see the same array.
+        //
+        // @deprecated 2.7.3 Read 'core_log'. The 'log' spelling is accepted as INPUT and
+        // published as output through the 2.7.x line, and comes out in 2.8.0 -- named now,
+        // while it costs one line, because an alias with no expiry is a permanent second
+        // vocabulary that nobody ever feels entitled to remove.
         $loaded['log'] = $loaded['core_log'];
 
         $config = $loaded;
@@ -328,9 +336,16 @@ if (!function_exists('xoops_recordErrorScreenOwner')) {
      *
      * Called by a provider module's install and uninstall routines, not at request time.
      *
-     * The rule is first-installed-wins, and it is enforced HERE rather than trusted to
-     * each provider: a second provider installing must not be able to take a screen the
-     * first one is already showing, however it was written.
+     * The rule is first-installed-wins, enforced HERE against ordinary claims rather than
+     * trusted to each provider: a second provider installing must not take a screen the
+     * first one is already showing, however carelessly it was written.
+     *
+     * Enforced against ORDINARY claims -- the precise wording matters. $force skips the
+     * precondition, and is how a deliberate handover happens once the holder is gone or
+     * inactive. Module code is trusted code and could take the seat regardless, so this is
+     * a correctness boundary rather than a security one: it stops an accident, not an
+     * attacker. An earlier version of this docblock said "cannot take a seat another
+     * module is sitting in even if it asks", which promised more than the parameter list.
      *
      * This function only CLAIMS. Release through xoops_releaseErrorScreenOwner($dirname),
      * which checks that you are the holder first -- there is no caller identity here, so
@@ -373,11 +388,27 @@ if (!function_exists('xoops_recordErrorScreenOwner')) {
             return false;
         }
 
+        // Fail fast on the obvious refusal, so a caller that is plainly not entitled to
+        // the seat does not touch the file at all. This is a courtesy, NOT the guard --
+        // $held was read outside the lock and may already be stale by the time we act on
+        // it. The guard that counts is the $expect below, evaluated inside the lock.
         if ('' !== $held && $held !== $token && !$force) {
             return false;
         }
 
-        return xoops_writeDebugRuntimeOverride(['error_screen_owner' => $token]);
+        // Compare-and-set: write only if the seat is still free or already ours.
+        //
+        // Without this, two modules installing at the same moment can both read an empty
+        // owner, both pass the check above, and both write -- so "the first provider
+        // installed wins" quietly becomes "whichever finished last wins". A narrow race,
+        // but the rule it breaks is the one this whole mechanism exists to state.
+        //
+        // $force skips the precondition, which is what makes it a deliberate handover
+        // rather than a louder claim: a provider's update hook uses it after establishing
+        // that the holder is gone or inactive, a question core's bootstrap cannot answer.
+        $expect = $force ? null : ['error_screen_owner' => ['', $token]];
+
+        return xoops_writeDebugRuntimeOverride(['error_screen_owner' => $token], $expect);
     }
 }
 
@@ -391,11 +422,26 @@ if (!function_exists('xoops_releaseErrorScreenOwner')) {
     function xoops_releaseErrorScreenOwner($token)
     {
         $token = is_string($token) ? strtolower(trim($token)) : '';
-        if ('' === $token || xoops_getRecordedErrorScreenOwner() !== $token) {
+        if ('' === $token) {
+            return true;
+        }
+        if (xoops_getRecordedErrorScreenOwner() !== $token) {
+            // Not ours to release, and that is a success: the caller wanted the record to
+            // stop naming it, and it does not.
             return true;
         }
 
-        return xoops_writeDebugRuntimeOverride(['error_screen_owner' => null]);
+        // ...but re-checked inside the lock, because between the read above and the write
+        // below a forced transfer can have handed the seat to somebody else. An
+        // unconditional delete here would erase the new owner's record on the way out.
+        $done = xoops_writeDebugRuntimeOverride(
+            ['error_screen_owner' => null],
+            ['error_screen_owner' => [$token]]
+        );
+
+        // A refusal means the seat changed hands while we were uninstalling. The record no
+        // longer names us either way, which is what the caller asked for.
+        return $done || xoops_getRecordedErrorScreenOwner() !== $token;
     }
 }
 
@@ -474,23 +520,6 @@ if (!function_exists('xoops_isDeveloperRequest')) {
     }
 }
 
-if (!function_exists('xoops_mayRegisterErrorScreen')) {
-    /**
-     * May this component take over the error screen?
-     *
-     * The single question every contender asks before calling register()/enable().
-     * Callers should guard with function_exists() so they keep working on a core that
-     * predates this seam.
-     *
-     * @param string $component the caller's own owner token
-     * @return bool
-     */
-    function xoops_mayRegisterErrorScreen($component)
-    {
-        return is_string($component) && $component === xoops_getErrorScreenOwner();
-    }
-}
-
 if (!function_exists('xoops_applyDebugConfig')) {
     /**
      * Apply the PHP-level settings: display_errors and error_reporting.
@@ -518,8 +547,6 @@ if (!function_exists('xoops_applyDebugConfig')) {
         // defined() and pick a fallback, and the fallbacks drift apart.
         defined('XOOPS_ENVIRONMENT') || define('XOOPS_ENVIRONMENT', xoops_getDebugEnvironment());
         defined('XOOPS_ENV') || define('XOOPS_ENV', XOOPS_ENVIRONMENT);
-        defined('RAY_ENABLED')
-            || define('RAY_ENABLED', [] !== $config && true === ($config['ray']['enabled'] ?? false));
 
         if ([] === $config) {
             return false;
@@ -527,6 +554,11 @@ if (!function_exists('xoops_applyDebugConfig')) {
 
         // Strict booleans only: a string such as 'false' is truthy and would turn
         // display_errors ON against the stated intent.
+        // Only when the key is present, unlike error_reporting which has a documented
+        // default. Deliberate: the absence of a display_errors setting means "leave
+        // php.ini alone", and php.ini's answer on a server is more likely to be right for
+        // that server than a default invented here. The asymmetry is worth a line because
+        // it reads like an oversight.
         if (array_key_exists('display_errors', $config)) {
             ini_set('display_errors', true === $config['display_errors'] ? '1' : '0');
         }
@@ -599,6 +631,11 @@ if (!function_exists('xoops_getErrorScreenStatus')) {
      *
      * Meaningful only after xoops_activateErrorScreen() has run; before that, and on a
      * core too old to have the seam, every value is an empty string.
+     *
+     * The message is PLAIN TEXT and interpolates the owner token verbatim. Anything
+     * rendering it into HTML must escape it. The token is a lowercased dirname or a value
+     * an admin wrote into debug.php -- both privileged -- so this is a note for consumers
+     * rather than a hole, but it is not pre-sanitised and nobody should assume it is.
      *
      * @return array ['owner' => string, 'source' => string, 'status' => string, 'message' => string]
      */
@@ -682,10 +719,19 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
      * Written to a temporary file and renamed, so a reader never sees a half-written
      * file: on every platform this matters on, rename over an existing path is atomic.
      *
-     * @param array $changes keys to set, or set to null to remove
+     * $expect makes the whole thing a compare-and-set. Pass ['key' => [allowed, values]]
+     * and the write only happens if the file's current value for that key is one of them
+     * -- checked INSIDE the lock, which is the only place a check can mean anything. A
+     * caller that reads first and then writes has already lost: between its read and its
+     * write, another request can have changed the value it was relying on.
+     *
+     * @param array      $changes keys to set, or set to null to remove
+     * @param array|null $expect  key => list of acceptable current values, or null for
+     *                            an unconditional write. A key absent from the file
+     *                            reads as ''.
      * @return bool true when the file now reflects $changes
      */
-    function xoops_writeDebugRuntimeOverride($changes)
+    function xoops_writeDebugRuntimeOverride($changes, $expect = null)
     {
         if (!is_array($changes) || [] === $changes || !defined('XOOPS_VAR_PATH')) {
             return false;
@@ -708,6 +754,22 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
         }
 
         $current = xoops_readDebugRuntimeOverride(true);
+
+        // The precondition, re-read under the lock. Anything the caller checked before
+        // calling is stale by definition, however carefully it looked.
+        if (is_array($expect)) {
+            foreach ($expect as $key => $acceptable) {
+                $held = $current[$key] ?? '';
+                $held = is_string($held) ? $held : '';
+                if (!in_array($held, (array) $acceptable, true)) {
+                    flock($lockHandle, LOCK_UN);
+                    fclose($lockHandle);
+
+                    return false;
+                }
+            }
+        }
+
         foreach ($changes as $key => $value) {
             if (null === $value) {
                 unset($current[$key]);
@@ -716,11 +778,18 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
             $current[$key] = $value;
         }
 
-        // JSON_FORCE_OBJECT so a file emptied of every key stays {} rather than turning
-        // into [], which is what an empty PHP array encodes to. Both decode to an empty
-        // array here, but a consumer in another language reading [] where it expected an
-        // object has been handed a different type by an implementation detail.
-        $json      = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_FORCE_OBJECT);
+        // The empty document is the only one that needs forcing: a file emptied of every
+        // key would otherwise encode as [], because that is what an empty PHP array is.
+        // Both decode to an empty array here, but a consumer in another language reading
+        // [] where it expected an object has been handed a different type by an
+        // implementation detail.
+        //
+        // JSON_FORCE_OBJECT would do it -- and would also quietly turn any nested LIST a
+        // future writer stores into {"0":...}. Nothing stores one today, which is exactly
+        // why it would be found late and by somebody who did not put it there.
+        $json = [] === $current
+            ? '{}'
+            : json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         $file      = $directory . '/debug-runtime.json';
         $temporary = $file . '.' . getmypid() . '.tmp';
         $written   = false;
@@ -770,6 +839,11 @@ if (!function_exists('xoops_activateErrorScreen')) {
      *                        anonymous visitors. A provider that exposes source, file
      *                        paths, request data or superglobals MUST refuse when this is
      *                        false -- the one obligation core cannot check for you.
+     *                        A site that would rather not take that on trust can set
+     *                        'error_screen_strict' => true in debug.php, and then core
+     *                        does not dispatch at all when this would be false. Off by
+     *                        default, because enforcing it for everybody would forbid a
+     *                        provider from rendering a production-safe page.
      *   'report'             callable(string $status, string $message = ''): bool
      *                        Call it exactly once, whatever happened -- INCLUDING when you
      *                        decide not to register. "I am installed and chose to stay
@@ -778,6 +852,17 @@ if (!function_exists('xoops_activateErrorScreen')) {
      *                        calls return false. Any short lower-case status is valid and
      *                        core does not interpret it; the shipped vocabulary is
      *                        active | disabled | missing | incompatible | error.
+     *                        ONE exception: reporting 'error' tells core the activation
+     *                        failed, and core restores the error and exception handlers it
+     *                        held before the dispatch. Report 'error' only when you mean
+     *                        it, and register your handlers LAST -- after everything that
+     *                        can throw -- because a shutdown function you have already
+     *                        registered cannot be taken back by core or by anyone.
+     *                        Register BEFORE you report, never after: core compares who
+     *                        holds the handlers at your report against who holds them at
+     *                        the end of the dispatch, to detect a second module
+     *                        registering on top of you. Reporting first makes your own
+     *                        registration look like exactly that.
      *
      * Passing the reporter in the event rather than exposing a global setter keeps the
      * outcome in this function's own scope: the catch below can finalise a status without
@@ -788,7 +873,14 @@ if (!function_exists('xoops_activateErrorScreen')) {
      *   XOOPS_ERROR_SCREEN_OWNER    the owner token, 'core' when none applies
      *   XOOPS_ERROR_SCREEN_SOURCE   config | recorded | default -- where that came from
      *   XOOPS_ERROR_SCREEN_STATUS   core | dormant | active | disabled | unclaimed |
-     *                               error, or whatever else the provider reported
+     *                               error | contested | suppressed, or whatever else the
+     *                               provider reported. 'suppressed' means the site set
+     *                               error_screen_strict and this was not a developer
+     *                               request, so nothing was dispatched at all.
+     *                               'contested' is core's own: more than one
+     *                               listener registered for one token, so the handlers
+     *                               went back to XoopsLogger rather than staying with
+     *                               whichever module happened to run last
      *   XOOPS_ERROR_SCREEN_MESSAGE  a short human explanation of that status
      *
      * Defining them unconditionally is what lets an admin screen tell "no provider is
@@ -834,18 +926,65 @@ if (!function_exists('xoops_activateErrorScreen')) {
                     . ' only under the file-based debug configuration -- Admin -> Preferences ->'
                     . ' Debug Mode does not activate it.';
             }
+        } elseif (true === (xoops_getDebugConfig()['error_screen_strict'] ?? false)
+                  && !(function_exists('xoops_isDeveloperRequest') && xoops_isDeveloperRequest())) {
+            // The site asked core to enforce the gate rather than advise it, and this
+            // request is not a developer's. Nothing is dispatched, so no provider gets the
+            // chance to decide for itself.
+            //
+            // Reported under its own status rather than as 'core': "the screen you
+            // configured was suppressed for this request" and "you configured no screen"
+            // are different situations, and a provider author staring at a page with no
+            // BlueScreen needs to be able to tell which one they are looking at.
+            $status  = 'suppressed';
+            $message = 'The error screen "' . $owner . '" was not offered this request:'
+                . ' error_screen_strict is on and this is not a developer request.';
         } else {
             $outcome = ['status' => '', 'message' => ''];
 
+            // Read the handlers we are about to lend out, without disturbing them.
+            //
+            // set_*_handler() returns the previous handler and installs the new one, so
+            // the restore() immediately after puts the stack back exactly as it was. This
+            // is the only way to READ the current handler in PHP; there is no getter.
+            //
+            // Kept so that a provider which fails AFTER registering can be undone -- see
+            // the rollback below the dispatch. Snapshotted here rather than inside the
+            // try, because a failure is exactly the case where the try's scope is the
+            // wrong place to be keeping the thing that repairs it.
+            $priorErrorHandler     = set_error_handler(null);
+            restore_error_handler();
+            $priorExceptionHandler = set_exception_handler(null);
+            restore_exception_handler();
+
             // First caller wins. Two providers answering one token is a misconfiguration,
             // and the second silently overwriting the first is the load-order roulette the
-            // owner token exists to end. Note this governs the REPORT only: the preload
-            // dispatcher runs every listener, so two providers would both still register
-            // and the later one would own the handlers while the status describes the
-            // earlier. Core cannot prevent that; it can refuse to lie about which one it
-            // heard from first.
-            $report = static function ($status, $message = '') use (&$outcome) {
+            // owner token exists to end.
+            //
+            // Stated exactly, because the honest version is narrower than "exactly one
+            // module owns the error screen": the preload dispatcher runs every listener,
+            // so core cannot stop a second one registering. What core does is DETECT that
+            // it happened -- by the refusal count below, and by comparing who held the
+            // handlers when the winning report arrived against who holds them at the end
+            // -- publish it as 'contested', and put the handlers back where they were. A
+            // registry that invoked exactly one provider would PREVENT it instead; that is
+            // the 2.8 direction, not this one.
+            $refusedReports          = 0;
+            $handlerAtFirstReport    = null;
+            $exceptionAtFirstReport  = null;
+
+            $report = static function ($status, $message = '') use (
+                &$outcome,
+                &$refusedReports,
+                &$handlerAtFirstReport,
+                &$exceptionAtFirstReport
+            ) {
                 if ('' !== $outcome['status']) {
+                    // Refused -- but remembered. A second module answering one token is
+                    // the misconfiguration this whole mechanism exists to surface, and
+                    // core knew about it all along and threw the knowledge away.
+                    ++$refusedReports;
+
                     return false;
                 }
                 $status = is_string($status) ? trim($status) : '';
@@ -857,8 +996,20 @@ if (!function_exists('xoops_activateErrorScreen')) {
                     'message' => is_string($message) ? $message : '',
                 ];
 
+                // Whoever holds the handlers at the moment the winning report is accepted.
+                // If that is not who holds them when the dispatch ends, a later listener
+                // registered on top -- the case the published status would otherwise
+                // describe wrongly. Assumes a provider registers BEFORE it reports, which
+                // the contract above now requires.
+                $handlerAtFirstReport = set_error_handler(null);
+                restore_error_handler();
+                $exceptionAtFirstReport = set_exception_handler(null);
+                restore_exception_handler();
+
                 return true;
             };
+
+            $dispatchThrew = false;
 
             // One boundary around the whole dispatch. An error screen is a debugging
             // convenience; a broken or half-installed provider must not be able to take
@@ -880,6 +1031,7 @@ if (!function_exists('xoops_activateErrorScreen')) {
                 // provider that failed, and the outcome it wrote is stale by the time we
                 // are here -- which is exactly why the outcome lives in this scope and not
                 // in a store that would have refused this correction.
+                $dispatchThrew = true;
                 $status  = 'error';
                 $message = 'Error screen "' . $owner . '" failed to start (' . get_class($e) . ').';
             }
@@ -899,6 +1051,94 @@ if (!function_exists('xoops_activateErrorScreen')) {
                 $status  = 'unclaimed';
                 $message = 'No active module claims the error screen "' . $owner
                     . '"; the handlers stay with XoopsLogger.';
+            }
+
+            // A failed provider does not get to keep the handlers.
+            //
+            // Core promises above that a broken or half-installed provider cannot take the
+            // site down. Without this it can: a provider that calls set_error_handler()
+            // and only then fails still owns PHP's handlers for the rest of the request,
+            // while the constants below say the activation failed. The site's error path
+            // then belongs to something core has already declared broken.
+            //
+            // Keyed on the OUTCOME, not on the catch. Both reference providers wrap their
+            // own activation in a try/catch and report 'error' without ever throwing at
+            // core -- xtracy around Debugger::enable(), xwhoops around registerWhoops() --
+            // so a restore that lived in the catch above would miss the two implementations
+            // shipped as the worked examples.
+            //
+            // 'error' is therefore the one status core interprets. Every other status is
+            // still opaque to core and passed through untouched.
+            //
+            // Two honest limits. set_*_handler() pushes a frame rather than popping one,
+            // so this restores the EFFECTIVE handler at one extra stack level -- correct,
+            // and cheap on the last line of a bootstrap. And a shutdown function the
+            // provider registered CANNOT be removed by anybody; providers close that
+            // residue by doing everything that can throw before they register, not after.
+            // Who ended up with the handlers, whatever anybody said about it.
+            //
+            // BOTH of them. An earlier version of this compared only the error handler,
+            // which missed a listener that takes just the exception handler -- and PHP
+            // will hand you one without the other perfectly happily. The prose says
+            // "handlers", plural, so the check has to mean it.
+            $finalErrorHandler = set_error_handler(null);
+            restore_error_handler();
+            $finalExceptionHandler = set_exception_handler(null);
+            restore_exception_handler();
+
+            // Registration is not mediated; only reporting is.
+            //
+            // The preload dispatcher runs every listener. The reporter closure decides
+            // which OUTCOME is published, but nothing stops a second listener calling
+            // set_error_handler() after the first, and that loser owns the handlers while
+            // the constants describe the winner. Core cannot prevent this without
+            // replacing the broadcast with a registry -- but it can notice, say so, and
+            // refuse to leave a contested seat occupied.
+            //
+            // Three ways the published outcome can be a lie. Core has the evidence for all
+            // three and used to discard it.
+            $contested = '';
+            if ($refusedReports > 0) {
+                // Two modules answered one token and both reported. Unambiguous.
+                $contested = $refusedReports . ' further module(s) answered the error screen "'
+                    . $owner . '" after the first; core cannot tell which one holds the handlers.';
+            } elseif ('' !== $outcome['status']
+                      && ($handlerAtFirstReport !== $finalErrorHandler
+                          || $exceptionAtFirstReport !== $finalExceptionHandler)) {
+                // Somebody registered after the module whose report was accepted.
+                $contested = 'A second listener registered handlers after "' . $owner
+                    . '" reported, so the published status may not describe the module that holds them.';
+            } elseif (!$dispatchThrew && '' === $outcome['status']
+                      && ($priorErrorHandler !== $finalErrorHandler
+                          || $priorExceptionHandler !== $finalExceptionHandler)) {
+                // Nobody reported, yet the handlers moved. Without this the status below
+                // reads 'unclaimed' -- "the handlers stay with XoopsLogger" -- which in
+                // this case is flatly false.
+                //
+                // Not when the dispatch THREW, though. A provider that registers and then
+                // throws before it can report looks identical to a silent second listener
+                // from the handlers alone -- but it is not identical, and core knows the
+                // difference, because it caught the exception. 'error' is the more
+                // specific and more useful answer, so it wins; overwriting it with
+                // 'contested' would report a multi-listener problem that did not happen.
+                $contested = 'A module registered handlers for the error screen "' . $owner
+                    . '" without reporting an outcome.';
+            }
+
+            // Hand the handlers back on failure, and on a contested seat.
+            //
+            // Reporting the problem while leaving the last registrant installed would keep
+            // the guarantee false and merely annotate it. Falling back to XoopsLogger is
+            // the direction the rest of this design fails in: a surprise toward core is
+            // recoverable, a surprise toward a module is not.
+            if ('error' === $status || '' !== $contested) {
+                set_error_handler($priorErrorHandler);
+                set_exception_handler($priorExceptionHandler);
+            }
+
+            if ('' !== $contested) {
+                $status  = 'contested';
+                $message = $contested . ' The handlers were returned to XoopsLogger.';
             }
         }
 

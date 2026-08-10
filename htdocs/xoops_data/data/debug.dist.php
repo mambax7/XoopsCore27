@@ -69,11 +69,19 @@ if (!defined('XOOPS_ROOT_PATH')) {
 return [
     // Master switch. false leaves XOOPS in its normal production behaviour even
     // if the rest of this file says otherwise.
+    //
+    // MUST be a real boolean, and this applies to every 'enabled' in this file. Anything
+    // else -- 1, 'true', 'yes' -- is treated as false and debugging stays OFF, silently.
+    // That is deliberate rather than lax: a string is truthy whatever it says, so a
+    // lenient test would read 'false' as ON, which is the dangerous direction to be wrong
+    // in. It does mean 'enabled' => 1 leaves this file doing nothing at all, and this is
+    // the line where that is most likely to be typed.
     'enabled' => true,
 
-    // 'development' | 'production'. Read by xoops_getDebugEnvironment() and published as
-    // XOOPS_ENVIRONMENT / XOOPS_ENV, for any component that behaves differently on a
-    // developer's machine than on a live site.
+    // 'development' | 'staging' | 'production'. Read by xoops_getDebugEnvironment() and
+    // published as XOOPS_ENVIRONMENT / XOOPS_ENV, for any component that behaves
+    // differently on a developer's machine than on a live site. Anything else falls back
+    // to 'production' -- the safe end -- rather than being passed through.
     'environment' => 'development',
 
     // Sets XOOPS_DEBUG, and PHP's display_errors / error_reporting, as early as
@@ -113,7 +121,48 @@ return [
     //
     // A provider may read its own settings from this file under its own key -- core
     // passes unknown keys through untouched and never interprets them.
+    //
+    // Whatever happens, four constants are published on EVERY request, so a site can
+    // always find out what is going on without guessing:
+    //
+    //     XOOPS_ERROR_SCREEN_OWNER     the token that won, or 'core'
+    //     XOOPS_ERROR_SCREEN_SOURCE    config | recorded | default -- where it came from
+    //     XOOPS_ERROR_SCREEN_STATUS    see below
+    //     XOOPS_ERROR_SCREEN_MESSAGE   one sentence explaining that status
+    //
+    // The statuses core itself can publish:
+    //
+    //     core        nothing was asked for; XoopsLogger keeps the handlers
+    //     dormant     a provider is recorded, but this file is absent or disabled
+    //     unclaimed   the owner names a module that did not answer -- deactivated,
+    //                 uninstalled, or a token nothing was ever going to answer
+    //     error       the provider failed to start; core took the handlers back
+    //     suppressed  error_screen_strict is on and this was not a developer request,
+    //                 so no provider was offered the seat at all
+    //     contested   more than one module registered for the token, so core could not
+    //                 tell which one held the handlers and returned them to XoopsLogger
+    //
+    // A provider reports its own outcome too, and core publishes that verbatim without
+    // interpreting it. The shipped vocabulary is active | disabled | missing |
+    // incompatible | error.
     'error_screen' => 'auto',
+
+    // Enforce the developer gate instead of advising it. Off by default.
+    //
+    // Core works out whether diagnostics may be exposed to whoever is making the request
+    // -- debugging on, and an authenticated member of the webmaster group -- and passes
+    // the answer to the provider, which is expected to refuse when it is false. That is
+    // an obligation, not a lock: a provider MAY legitimately render a production-safe
+    // page for anonymous visitors, and core cannot tell that apart from a stack trace
+    // full of superglobals, so it does not try.
+    //
+    // Turn this on and core stops dispatching altogether for a non-developer request, so
+    // a provider that ignored the flag never gets the chance. The status reads
+    // 'suppressed' on those requests, which is deliberately not the same as 'core'.
+    //
+    // Worth it if you install providers you have not read. Leave it off if you rely on a
+    // provider's production-safe error page, because this switches that off too.
+    'error_screen_strict' => false,
 
     'database' => [
         // Sets XOOPS_DB_LEGACY_LOG, which makes the database layer report legacy call
@@ -123,18 +172,17 @@ return [
         'legacy_log' => false,
     ],
 
-    'ray' => [
-        'enabled' => false,
-    ],
-
     // The DebugBar module, as a SECOND activation source alongside the database-backed
     // Admin -> Preferences -> Debug Mode. Either switches the toolbar on; the module's own
     // 'debugbar_enable' preference and the authenticated-administrator requirement still
     // apply, and neither is configurable from here. Useful on a local checkout where you
     // would rather not carry a debug flag in the database.
     //
-    // Must be a real boolean: the core coerces anything else to false, so 'true' as a
-    // string will NOT switch this on.
+    // Must be a real boolean. The DebugBar module tests this with a strict comparison,
+    // so 'true' as a STRING will NOT switch it on -- and a string is what you get if you
+    // copy a value out of an .env file or a form. Core does not normalise this block: it
+    // passes the key through untouched, exactly as it does for a provider module's own
+    // settings, and the module that owns the setting is the one that validates it.
     'debugbar' => [
         'enabled' => false,
     ],
