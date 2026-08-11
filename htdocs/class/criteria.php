@@ -330,14 +330,52 @@ class Criteria extends CriteriaElement
     private static $legacyLogEnabled = null;
 
     /**
-     * Initialize logging flag once
+     * Initialize logging flag once.
+     *
+     * Reads the configuration as well as the constant, and the config term is not
+     * decoration. XOOPS_DB_LEGACY_LOG is defined in mainfile.php, and mainfile.php
+     * survives an upgrade untouched by design -- so a site upgraded from 2.7.1 has it
+     * frozen at false, defined before any 2.7.3 code runs, and nothing downstream can
+     * change it. Setting 'legacy_log' in xoops_data/data/debug.php had no effect there at
+     * all: the switch the documentation tells you to use was inert on exactly the
+     * installations most likely to still contain legacy IN lists.
+     *
+     * Added to the constant rather than substituted for it, so a hand-edited
+     * XOOPS_DB_LEGACY_LOG in mainfile.php keeps working. Same rule as
+     * xoops_isDeveloperRequest(): each term may widen, none may narrow.
+     *
+     * function_exists() because this class is reachable from the installer and from unit
+     * tests, where include/debugconfig.php has not been loaded.
      */
     private static function isLegacyLogEnabled(): bool
     {
         if (self::$legacyLogEnabled === null) {
-            self::$legacyLogEnabled = defined('XOOPS_DB_LEGACY_LOG') && XOOPS_DB_LEGACY_LOG;
+            self::$legacyLogEnabled = (defined('XOOPS_DB_LEGACY_LOG') && XOOPS_DB_LEGACY_LOG)
+                || (function_exists('xoops_getDebugConfig')
+                    && true === (xoops_getDebugConfig()['database']['legacy_log'] ?? false));
         }
         return self::$legacyLogEnabled;
+    }
+
+    /**
+     * Is debugging on for this site?
+     *
+     * Delegates to include/debugconfig.php so there is one predicate, not a copy that
+     * drifts. NOT xoops_isDeveloperRequest(): this decides whether to compute a backtrace
+     * and raise a deprecation notice, both of which end up in a log. A cron run or a CLI
+     * script has no logged-in user, and withholding a deprecation notice from it because
+     * nobody is watching would be the wrong question answered confidently.
+     *
+     * Falls back to the bare constant when debugconfig.php is absent -- the installer and
+     * the unit tests reach this class without it.
+     */
+    private static function isDebugEnabled(): bool
+    {
+        if (function_exists('xoops_isDebugEnabled')) {
+            return xoops_isDebugEnabled();
+        }
+
+        return defined('XOOPS_DEBUG') && XOOPS_DEBUG;
     }
 
     /**
@@ -579,7 +617,7 @@ class Criteria extends CriteriaElement
             );
 
             // Only pay backtrace cost in debug mode
-            if (defined('XOOPS_DEBUG') && XOOPS_DEBUG) {
+            if (self::isDebugEnabled()) {
                 $bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
                 $caller = $bt[1] ?? [];
                 $file = $caller['file'] ?? 'unknown';
@@ -594,7 +632,7 @@ class Criteria extends CriteriaElement
                 error_log($message);
             }
 
-            if (defined('XOOPS_DEBUG') && XOOPS_DEBUG) {
+            if (self::isDebugEnabled()) {
                 trigger_error($message, E_USER_DEPRECATED);
             }
 

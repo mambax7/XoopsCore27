@@ -446,6 +446,45 @@ if (!function_exists('xoops_releaseErrorScreenOwner')) {
 }
 
 
+if (!function_exists('xoops_isDebugEnabled')) {
+    /**
+     * Is debugging switched on for this site, by any mechanism?
+     *
+     * THIS IS NOT THE SAME QUESTION AS xoops_isDeveloperRequest(), and the difference is
+     * the whole reason both exist:
+     *
+     *  - this one asks about the SITE. It has no opinion about who is making the request,
+     *    and it is the right question for anything written to a log, emitted as a
+     *    deprecation notice, or computed for later reading. A cron run and a CLI script
+     *    have no user at all, and refusing them diagnostics because nobody is logged in
+     *    would be nonsense;
+     *  - xoops_isDeveloperRequest() asks about the REQUESTER, and gates what is shown on
+     *    screen to a person. It is this predicate AND webmaster-group membership.
+     *
+     * Conflating them is how this went wrong before: three components each answered "may I
+     * show diagnostics" differently, and the loosest one set the site's real exposure.
+     * Splitting the site question out means the strict answer is built from the loose one
+     * rather than beside it, so they cannot drift.
+     *
+     * Three terms, monotone. Each may widen, none may narrow -- see the note on
+     * xoops_isDeveloperRequest() for why the constant is read ALONGSIDE the config and not
+     * replaced by it, and why the Debug Mode term is any non-zero value.
+     *
+     * Safe at any point in the bootstrap, and side-effect free: xoops_getDebugConfig()
+     * caches statically and reads one file at most once per request.
+     *
+     * @return bool
+     */
+    function xoops_isDebugEnabled()
+    {
+        $debugMode = (int) ($GLOBALS['xoopsConfig']['debug_mode'] ?? 0);
+
+        return (defined('XOOPS_DEBUG') && XOOPS_DEBUG)
+            || [] !== xoops_getDebugConfig()
+            || 0 !== $debugMode;
+    }
+}
+
 if (!function_exists('xoops_isDeveloperRequest')) {
     /**
      * May diagnostics be exposed to whoever is making THIS request?
@@ -458,14 +497,29 @@ if (!function_exists('xoops_isDeveloperRequest')) {
      * and request data, and were rendering for anonymous visitors as a result.
      *
      * Two conditions, both required:
-     *  1. debugging is switched on by EITHER mechanism -- the XOOPS_DEBUG constant from
-     *     xoops_data/data/debug.php, or Admin -> Preferences -> Debug Mode. They are
-     *     documented as independent and either alone is a legitimate way to work. That
-     *     equality is about EXPOSURE, which is what this function gates. It does not
-     *     extend to ACTIVATION of the error screen: xoops_activateErrorScreen() honours
-     *     the file configuration only, deliberately, and reports 'dormant' on a site
-     *     running Debug Mode alone;
+     *  1. debugging is switched on by ANY of three mechanisms -- the XOOPS_DEBUG constant,
+     *     the presence of a usable xoops_data/data/debug.php, or Admin -> Preferences ->
+     *     Debug Mode set to anything but Off. They are documented as independent and any
+     *     one alone is a legitimate way to work. That equality is about EXPOSURE, which is
+     *     what this function gates.
+     *     It does not extend to ACTIVATION of the error screen: xoops_activateErrorScreen()
+     *     honours the file configuration only, deliberately, and reports 'dormant' on a
+     *     site running Debug Mode alone;
      *  2. the request belongs to an authenticated member of the webmaster group.
+     *
+     * The config is read DIRECTLY, in addition to the constant rather than instead of it,
+     * and that is the whole reason this is three terms and not two. On a current install
+     * XOOPS_DEBUG is defined as `[] !== $xoopsDebugConfig`, so terms one and two are the
+     * same predicate and the behaviour is unchanged. They come apart only on a site
+     * upgraded from 2.7.1, whose mainfile.php survives the upgrade untouched and has
+     * therefore already frozen XOOPS_DEBUG at its hard-coded false before any 2.7.3 code
+     * runs -- no code here can undo that, so the documented promise in condition 1 was
+     * simply false on every upgraded site until the config term was added.
+     *
+     * Reading the config INSTEAD of the constant would have been shorter and is wrong: it
+     * silently drops the developer who hand-edited XOOPS_DEBUG to true in mainfile.php,
+     * which is exactly what dev sites did before debug.php existed, and who has no
+     * debug.php at all. Each term may only ever widen; none may narrow.
      *
      * Group membership is the test rather than XoopsUser::isAdmin(), which resolves
      * against $GLOBALS['xoopsModule'] when called with no argument and therefore answers
@@ -480,10 +534,12 @@ if (!function_exists('xoops_isDeveloperRequest')) {
      */
     function xoops_isDeveloperRequest($dirname = null)
     {
-        $debugMode = (int) ($GLOBALS['xoopsConfig']['debug_mode'] ?? 0);
-        $debugOn   = (defined('XOOPS_DEBUG') && XOOPS_DEBUG)
-            || in_array($debugMode, [1, 2], true);
-        if (!$debugOn) {
+        // Condition 1, delegated. It is the SITE question and it has its own function --
+        // criteria.php and anything else writing to a log needs the same answer without
+        // the webmaster test, and a copy of the predicate there would be a copy that
+        // drifts. Building the strict answer out of the loose one is what keeps them
+        // in step.
+        if (!xoops_isDebugEnabled()) {
             return false;
         }
 
@@ -534,7 +590,15 @@ if (!function_exists('xoops_applyDebugConfig')) {
      * legitimately have set some of them already.
      *
      * XOOPS_DEBUG is NOT defined here. mainfile.php defines it unguarded straight after
-     * calling this function, and a second define() would be a fatal redeclaration.
+     * calling this function, so defining it here too would mean a second define() on an
+     * already-defined constant: PHP 8 emits `Warning: Constant XOOPS_DEBUG already
+     * defined`, keeps the FIRST value and carries on. Not fatal -- an earlier version of
+     * this comment said it was -- but a warning on every request is no more acceptable
+     * than a fatal, and the value that survives is the one from whichever file ran first,
+     * which is not a thing to leave to ordering. Hence: defined in exactly one place.
+     *
+     * The cost of that is paid in xoops_isDeveloperRequest(), which cannot trust the
+     * constant on an upgraded site and reads xoops_getDebugConfig() alongside it.
      *
      * @return bool true when debugging is enabled and was applied
      */
