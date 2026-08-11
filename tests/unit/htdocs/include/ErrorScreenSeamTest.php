@@ -40,6 +40,12 @@ use PHPUnit\Framework\TestCase;
  * The cases also carry self-guards (detector 3's asserts error_handler_is_provider is
  * false) so that a later well-meaning fixture change fails loudly instead of quietly
  * going vacuous again. ADR-0001 Appendix A is the long version.
+ *
+ * THE SAME RULE COVERS xoops_isDeveloperRequest()'s three OR terms, and it was earned the
+ * same way. The section "the gate's three terms, and each one's job" first had two cases,
+ * and they killed the mutant that DROPS the config term while letting through the one that
+ * SUBSTITUTES it for the constant -- which is the change a future reader is most likely to
+ * make, since it is shorter and reads better. Three cases, one per term: keep it that way.
  * ---------------------------------------------------------------------------------------
  */
 // CoversNothing, deliberately. Every case executes the seam in a SUBPROCESS (see above),
@@ -369,6 +375,158 @@ class ErrorScreenSeamTest extends TestCase
         ]);
 
         $this->assertSame('active', $result['status']);
+    }
+
+    // --------------------------------------- the gate's three terms, and each one's job
+
+    // The three cases below deliberately omit 'developer_request', so the REAL
+    // xoops_isDeveloperRequest() runs instead of the fixture's stub. They are the only
+    // cases in this file that do, and the assertion that carries each of them is
+    // $result['gate'] -- NOT $result['status'], which does not move with the gate outside
+    // strict mode and is asserted here only as a consistency check.
+    //
+    // One case per term, and each kills a different mutant:
+    //   config term dropped   -> theGateOpensFromDebugPhpAlone... goes red
+    //   constant term dropped -> theGateStillOpensForAHandEdited... goes red
+    //   both replaced by one  -> whichever of the two lost its term goes red
+    // The third case bounds all of it: with no term satisfied, the gate must stay shut.
+
+    #[Test]
+    public function theGateOpensFromDebugPhpAloneWhenTheDebugConstantIsStuckFalse(): void
+    {
+        // A site upgraded from 2.7.1 keeps its old mainfile.php, which hard-codes
+        // XOOPS_DEBUG to false before any 2.7.3 code runs. Nothing downstream can undo
+        // that. So a gate reading only the constant collapses to Debug Mode alone, and an
+        // admin who creates debug.php and leaves Admin -> Preferences at 0 -- the exact
+        // workflow the feature documents -- gets a provider that refuses and reports
+        // 'disabled', naming the wrong reason and sending them hunting in the wrong place.
+        $result = $this->runCase([
+            'mainfile_debug_constant' => false,
+            'debug_mode'              => 0,
+            'webmaster_user'          => true,
+            'debug'                   => ['enabled' => true, 'error_screen' => 'xprovider'],
+            'provider'                => 'xprovider',
+        ]);
+
+        $this->assertFalse($result['debug_constant'], 'the case is void unless the constant really is false');
+        $this->assertTrue($result['gate'], 'debug.php alone must open the gate on an upgraded site');
+        $this->assertTrue($result['provider_saw_gate'], 'and the provider must be told so');
+        $this->assertTrue($result['provider_ran']);
+    }
+
+    #[Test]
+    public function theGateStillOpensForAHandEditedDebugConstantWithNoDebugPhp(): void
+    {
+        // Why the config term was ADDED to the constant rather than substituted for it.
+        // Before debug.php existed, switching a dev site on meant editing XOOPS_DEBUG to
+        // true in mainfile.php by hand, and those sites have no debug.php at all. Reading
+        // the config INSTEAD of the constant is shorter, reads better, and silently shuts
+        // the gate on every one of them.
+        //
+        // Without this case that substitution passes the whole suite. Measured, not
+        // assumed: it did.
+        $result = $this->runCase([
+            'mainfile_debug_constant' => true,
+            'debug_mode'              => 0,
+            'webmaster_user'          => true,
+            'debug'                   => false,
+        ]);
+
+        $this->assertTrue($result['debug_constant']);
+        $this->assertTrue($result['gate'], 'a hand-edited XOOPS_DEBUG must still open the gate');
+    }
+
+    #[Test]
+    public function theGateStaysShutWhenNoTermIsSatisfied(): void
+    {
+        // The bound on the widening. The config term may only ever open the gate on a site
+        // that DELIBERATELY created debug.php -- stale constant, Debug Mode 0, webmaster
+        // present, no file, no gate. Without this, a term that always returned true would
+        // pass both cases above.
+        $result = $this->runCase([
+            'mainfile_debug_constant' => false,
+            'debug_mode'              => 0,
+            'webmaster_user'          => true,
+            'debug'                   => false,
+        ]);
+
+        $this->assertFalse($result['debug_constant']);
+        $this->assertFalse($result['gate'], 'no debug.php, no Debug Mode, no constant -- the gate must be shut');
+    }
+
+    #[Test]
+    public function theSiteQuestionAndTheRequesterQuestionAreDifferentAnswers(): void
+    {
+        // xoops_isDebugEnabled() asks about the SITE; xoops_isDeveloperRequest() asks
+        // about the REQUESTER and is the site answer AND webmaster-group membership. The
+        // second is built from the first, so this case is what proves they are two
+        // answers and not one: debugging is on, nobody is logged in.
+        //
+        // It matters because the site question is what class/criteria.php uses to decide
+        // whether to raise a deprecation notice, and a cron run or a CLI script has no
+        // user at all. Wire the strict answer in there and legacy-IN notices vanish from
+        // every unattended run -- which is most of them.
+        $result = $this->runCase([
+            'mainfile_debug_constant' => false,
+            'debug_mode'              => 0,
+            'debug'                   => ['enabled' => true],
+        ]);
+
+        $this->assertTrue($result['debug_enabled'], 'the site has debugging on');
+        $this->assertFalse($result['gate'], 'but no user is making this request');
+    }
+
+    #[Test]
+    public function anyNonZeroDebugModeCountsAsDebuggingOn(): void
+    {
+        // Mode 3 is Smarty Templates Debug. The preference is "which debug facility",
+        // not "how much debugging" -- there is no ordering in which 3 is less on than 1 --
+        // and reading it as [1, 2] made this gate answer "not debugging" on a site that
+        // had deliberately switched debugging on. DebugBar hit it first: its toolbar
+        // renders for any non-zero mode, so on mode 3 it drew buttons whose endpoints
+        // this gate refused, and it split its access policy in two to route around us.
+        //
+        // No debug.php and no constant, so debug_mode is the ONLY term that can open it.
+        $result = $this->runCase([
+            'mainfile_debug_constant' => false,
+            'debug_mode'              => 3,
+            'webmaster_user'          => true,
+            'debug'                   => false,
+        ]);
+
+        $this->assertFalse($result['debug_constant']);
+        $this->assertTrue($result['gate'], 'Smarty debug is still debugging');
+    }
+
+    #[Test]
+    public function strictModeOnAnUpgradedSiteFollowsTheGateRatherThanTheConstant(): void
+    {
+        // The one place where the gate's answer changes the SEAM's outcome and not just
+        // what the provider is told. Strict mode suppresses the dispatch for a
+        // non-developer request, so a gate stuck false on an upgraded site turned
+        // error_screen_strict into "suppress everything, always" -- a site that had opted
+        // into strictness got no error screen at all, and the message blamed the request.
+        //
+        // Nothing in the strict path reads XOOPS_DEBUG itself; it asks
+        // xoops_isDeveloperRequest(). This case exists so it stays that way: re-inline the
+        // constant check here as an optimisation and this goes red while the three cases
+        // above stay green.
+        $result = $this->runCase([
+            'mainfile_debug_constant' => false,
+            'debug_mode'              => 0,
+            'webmaster_user'          => true,
+            'debug'                   => [
+                'enabled'             => true,
+                'error_screen'        => 'xprovider',
+                'error_screen_strict' => true,
+            ],
+            'provider'                => 'xprovider',
+        ]);
+
+        $this->assertFalse($result['debug_constant']);
+        $this->assertTrue($result['gate']);
+        $this->assertSame('active', $result['status'], 'strict mode must not suppress a developer request');
+        $this->assertTrue($result['provider_ran']);
     }
 
     // ------------------------------------------------------------- failure modes

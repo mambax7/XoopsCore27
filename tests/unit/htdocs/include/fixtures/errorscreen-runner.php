@@ -37,6 +37,21 @@
  *   developer_request   bool: what xoops_isDeveloperRequest() should answer
  *                       (the strict switch lives in the 'debug' array as
  *                       'error_screen_strict')
+ *   mainfile_debug_constant bool: define XOOPS_DEBUG as this value BEFORE debugconfig.php
+ *                       loads, which is what mainfile.php does on a real site. false is
+ *                       every site upgraded from 2.7.1 -- its mainfile.php survives the
+ *                       upgrade with the constant hard-coded false, defined long before
+ *                       any 2.7.3 code can look at it. true is the developer who
+ *                       hand-edited it, which is what dev sites did before debug.php
+ *                       existed. Omit 'developer_request' alongside this, or the stub
+ *                       below replaces the very function under test and the case proves
+ *                       nothing.
+ *   debug_mode          int: $GLOBALS['xoopsConfig']['debug_mode'], the Admin ->
+ *                       Preferences setting. 0 is the value worth testing -- it is the
+ *                       term that must NOT be what saves the gate.
+ *   webmaster_user      bool: install a $GLOBALS['xoopsUser'] stand-in in the webmaster
+ *                       group, so condition 2 of the gate passes and condition 1 is the
+ *                       only thing the case is measuring.
  *   case                'truncated-loader' replays common.php's guard chain instead
  *
  * @copyright   (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -64,6 +79,17 @@ $rootPath = (string) ($spec['root_path'] ?? dirname(__DIR__, 5) . '/htdocs');
 define('XOOPS_ROOT_PATH', $rootPath);
 define('XOOPS_VAR_PATH', $varPath);
 
+// Simulates mainfile.php: the constant is already defined before include/debugconfig.php
+// has been read, and nothing downstream can change it. Defining it HERE rather than after
+// the require is the point -- a define() placed later would be the guarded 2.7.3 shape and
+// would not reproduce either site.
+//
+// array_key_exists, not isset or empty: false is a meaningful value here -- it is the
+// entire upgraded-site case -- and the two other forms would silently discard it.
+if (array_key_exists('mainfile_debug_constant', $spec)) {
+    define('XOOPS_DEBUG', (bool) $spec['mainfile_debug_constant']);
+}
+
 @mkdir($varPath . '/data', 0777, true);
 if (array_key_exists('debug', $spec) && false !== $spec['debug']) {
     file_put_contents($varPath . '/data/debug.php', '<?php return ' . var_export($spec['debug'], true) . ';');
@@ -84,6 +110,40 @@ if (array_key_exists('developer_request', $spec)) {
         return $GLOBALS['xoopsErrorScreenFixtureDeveloper'];
     }
     $GLOBALS['xoopsErrorScreenFixtureDeveloper'] = $xoopsErrorScreenFixtureDeveloper;
+}
+
+// The two inputs to the REAL gate, for cases that deliberately do not stub it out.
+if (array_key_exists('debug_mode', $spec)) {
+    $GLOBALS['xoopsConfig']['debug_mode'] = (int) $spec['debug_mode'];
+}
+
+/**
+ * Stand-in for XoopsUser. getGroups() is the entire surface xoops_isDeveloperRequest()
+ * touches when called without a $dirname, and the gate tests it by group membership
+ * rather than through isAdmin() -- so this is the whole of what a webmaster is, here.
+ */
+class XoopsErrorScreenFixtureUser
+{
+    /** @var int[] */
+    private $groups;
+
+    /** @param int[] $groups */
+    public function __construct(array $groups)
+    {
+        $this->groups = $groups;
+    }
+
+    /** @return int[] */
+    public function getGroups()
+    {
+        return $this->groups;
+    }
+}
+
+if (!empty($spec['webmaster_user'])) {
+    // 1 is the gate's own fallback for XOOPS_GROUP_ADMIN, and leaving that constant
+    // undefined exercises the fallback rather than papering over it.
+    $GLOBALS['xoopsUser'] = new XoopsErrorScreenFixtureUser([1]);
 }
 
 /**
@@ -279,6 +339,13 @@ if (function_exists('xoops_applyDebugConfig')) {
 $returned = xoops_activateErrorScreen();
 $read     = xoops_getErrorScreenStatus();
 
+// The gate's OWN answer, reported separately from the seam's outcome. Necessary because
+// the two do not always move together: on a site with no debug.php the token resolves to
+// 'core' whatever the gate says, so a case asking "is the gate still shut here?" has
+// nothing to observe in the status fields. For cases that stub the gate out this just
+// echoes the stub, and nothing asserts on it.
+$gate = function_exists('xoops_isDeveloperRequest') ? xoops_isDeveloperRequest() : null;
+
 // Read the effective handlers the same way the seam does: set-then-restore is the only
 // way PHP offers to look at the current one.
 $liveErrorHandler = set_error_handler(static function () { return false; });
@@ -293,6 +360,9 @@ fwrite(STDOUT, json_encode([
     'status'            => XOOPS_ERROR_SCREEN_STATUS,
     'message'           => XOOPS_ERROR_SCREEN_MESSAGE,
     'read_back'         => $read,
+    'gate'              => $gate,
+    'debug_enabled'     => function_exists('xoops_isDebugEnabled') ? xoops_isDebugEnabled() : null,
+    'debug_constant'    => defined('XOOPS_DEBUG') ? XOOPS_DEBUG : null,
     'provider_ran'      => $providerRan,
     'provider_saw_gate' => $providerSawDeveloperFlag,
     'recorded_owner'    => xoops_getRecordedErrorScreenOwner(),
