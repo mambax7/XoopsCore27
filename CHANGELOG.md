@@ -5,6 +5,54 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.3-RC1] - 2026-08-11
+
+### Bug Fixes
+- Fix/debug-gate-on-upgraded-sites
+- **db**: Let the legacy-IN diagnostic be switched on from debug.php
+- **debugconfig**: Guard XOOPS_ROOT_PATH in vendor discovery
+- **file**: Treat drive-letter and UNC paths as absolute
+- **debug**: Keep debug-runtime.json an object when its last key is removed
+- **debug**: Repair the guard chain, the constants and the reporting channel
+- **debug**: Survive a missing or truncated debugconfig.php through the boot
+- **system**: Guard getByDirname() on the uninstall and update confirm screens
+- **textsanitizer**: Degrade invalid UTF-8 in button JS instead of throwing
+- **editor**: Tighten toolbar rendering paths from second review pass
+- **editor**: Harden toolbar override handling and attribute output
+- **imagemanager**: Use the core form renderer and enforce authorization
+- **xoopsform**: Escape element values in all renderer output contexts
+- **editor**: Repair the dhtml toolbar's no-selection actions
+- **php85**: Drop deprecated curl_close() calls
+- **textsanitizer**: Keep code whitespace and scope the break trim to our own boxes
+- **textsanitizer**: Trim the break after an unhighlighted code block too
+- **textsanitizer**: Repair [code] and [quote] rendering on PHP 8.3+
+- **criteria**: Render empty IN lists as a constant and convert core callers (#154)
+
+### Features
+- **debug**: Add the error-screen provider seam
+- **debug**: The error screen is file-configured, and says so when it is not
+- **debug**: File-based debug configuration for 2.7.3
+- **editor**: Add SCEditor as an optional BBCode editor (#152)
+
+### Other
+- Updated changelog
+- 2.7.3 RC1
+
+### Refactor
+- **editor**: Render one shared dhtml toolbar for every renderer
+
+### Security
+- **system**: Harden module admin log output and testdata path (#155)
+
+### Testing
+- **debug**: One case per term of the developer gate
+- **errorscreen**: Answer the coverage job and close two review gaps
+- **bootstrap**: Drop ReflectionProperty::setAccessible(), a no-op since 8.1
+- **debug**: Cover the error-screen seam, contested detectors included
+- **lostpass**: Purge the rate-limit cache around the class, not never
+- **sanitizer**: Pop only the handler frames this test actually installed
+- **xoopsform**: Cover attribute contexts on pinned methods and renderer uniqueness
+
 ## [v2.7.3-Beta1] - 2026-07-28
 
 ### Bug Fixes
