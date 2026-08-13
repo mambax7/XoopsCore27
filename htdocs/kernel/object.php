@@ -40,7 +40,21 @@ define('XOBJ_DTYPE_LTIME', 11);
 define('XOBJ_DTYPE_FLOAT', 13);
 define('XOBJ_DTYPE_DECIMAL', 14);
 define('XOBJ_DTYPE_ENUM', 15);
-// YOU SHOULD NEVER USE THE FOLLOWING TYPES, THEY WILL BE REMOVED
+/**
+ * DEPRECATED since XOOPS 2.7.3 — scheduled for removal in XOOPS 4.0.
+ *
+ * The UNICODE_* datatypes url-encode on write and url-decode on read (via
+ * xoops_convert_encode()/decode()), a pre-UTF-8 workaround that is harmful on
+ * modern utf8mb4 installs: it bloats storage and breaks SQL LIKE/FULLTEXT.
+ * Use the non-unicode successor instead:
+ *   UNICODE_TXTBOX  -> TXTBOX    UNICODE_TXTAREA -> TXTAREA
+ *   UNICODE_URL     -> URL       UNICODE_EMAIL   -> EMAIL
+ *   UNICODE_ARRAY   -> ARRAY     UNICODE_OTHER   -> OTHER
+ * Existing Unicode-typed data (e.g. profile custom fields persisted in
+ * profile_field.field_valuetype) must be migrated in XOOPS 2.8 before removal.
+ *
+ * @deprecated 2.7.3
+ */
 define('XOBJ_DTYPE_UNICODE_TXTBOX', 16);
 define('XOBJ_DTYPE_UNICODE_TXTAREA', 17);
 define('XOBJ_DTYPE_UNICODE_URL', 18);
@@ -193,6 +207,23 @@ class XoopsObject
      */
     public function initVar($key, $data_type, $value = null, $required = false, $maxlength = null, $options = '', $enumerations = '')
     {
+        // Deprecation notice (2.7.3): the UNICODE_* datatypes are scheduled for
+        // removal in 4.0. Warning-only — behaviour is unchanged. Guarded so it is
+        // safe during early bootstrap, before the logger exists.
+        if (
+            in_array($data_type, [
+                XOBJ_DTYPE_UNICODE_TXTBOX, XOBJ_DTYPE_UNICODE_TXTAREA, XOBJ_DTYPE_UNICODE_URL,
+                XOBJ_DTYPE_UNICODE_EMAIL, XOBJ_DTYPE_UNICODE_ARRAY, XOBJ_DTYPE_UNICODE_OTHER,
+            ], true)
+            && isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])
+        ) {
+            $GLOBALS['xoopsLogger']->addDeprecated(sprintf(
+                "XOBJ_DTYPE_UNICODE_* datatype used for variable '%s' in %s is deprecated since XOOPS 2.7.3 and will be removed in 4.0; use the non-unicode datatype instead.",
+                (string) $key,
+                get_class($this)
+            ));
+        }
+
         $this->vars[$key] = [
             'value'       => $value,
             'required'    => $required,
