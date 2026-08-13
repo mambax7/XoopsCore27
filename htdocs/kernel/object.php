@@ -76,10 +76,10 @@ define('XOBJ_DTYPE_TIMESTAMP', 24);
 class XoopsObject
 {
     /**
-     * Object datatypes deprecated since XOOPS 2.7.3 (XOBJ_DTYPE_UNICODE_* = 16-21),
+     * Ids of the datatypes deprecated in XOOPS 2.7.3 (XOBJ_DTYPE_UNICODE_* = 16-21),
      * scheduled for removal in 4.0. Kept here as literal ids, in one place, so this
-     * reference site does not itself trip the deprecation check; see the @deprecated
-     * block near the XOBJ_DTYPE_UNICODE_* defines in this file.
+     * reference site does not itself trip the deprecation check; see the deprecation
+     * doc block near the XOBJ_DTYPE_UNICODE_* defines in this file.
      *
      * @var int[]
      */
