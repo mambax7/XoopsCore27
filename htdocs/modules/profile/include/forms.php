@@ -96,11 +96,11 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                     XOBJ_DTYPE_URL             => _PROFILE_AM_URL,
                     XOBJ_DTYPE_OTHER           => _PROFILE_AM_OTHER,
                     XOBJ_DTYPE_ARRAY           => _PROFILE_AM_ARRAY,
-                    XOBJ_DTYPE_UNICODE_ARRAY   => _PROFILE_AM_UNICODE_ARRAY,
-                    XOBJ_DTYPE_UNICODE_TXTBOX  => _PROFILE_AM_UNICODE_TXTBOX,
-                    XOBJ_DTYPE_UNICODE_TXTAREA => _PROFILE_AM_UNICODE_TXTAREA,
-                    XOBJ_DTYPE_UNICODE_EMAIL   => _PROFILE_AM_UNICODE_EMAIL,
-                    XOBJ_DTYPE_UNICODE_URL     => _PROFILE_AM_UNICODE_URL,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY   => _PROFILE_AM_UNICODE_ARRAY,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX  => _PROFILE_AM_UNICODE_TXTBOX,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA => _PROFILE_AM_UNICODE_TXTAREA,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_EMAIL   => _PROFILE_AM_UNICODE_EMAIL,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL     => _PROFILE_AM_UNICODE_URL,
                 ];
 
                 $type_select = new XoopsFormSelect(_PROFILE_AM_VALUETYPE, 'field_valuetype', $field->getVar('field_valuetype', 'e'));
@@ -120,11 +120,11 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                     XOBJ_DTYPE_URL             => _PROFILE_AM_URL,
                     XOBJ_DTYPE_OTHER           => _PROFILE_AM_OTHER,
                     XOBJ_DTYPE_ARRAY           => _PROFILE_AM_ARRAY,
-                    XOBJ_DTYPE_UNICODE_ARRAY   => _PROFILE_AM_UNICODE_ARRAY,
-                    XOBJ_DTYPE_UNICODE_TXTBOX  => _PROFILE_AM_UNICODE_TXTBOX,
-                    XOBJ_DTYPE_UNICODE_TXTAREA => _PROFILE_AM_UNICODE_TXTAREA,
-                    XOBJ_DTYPE_UNICODE_EMAIL   => _PROFILE_AM_UNICODE_EMAIL,
-                    XOBJ_DTYPE_UNICODE_URL     => _PROFILE_AM_UNICODE_URL,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY   => _PROFILE_AM_UNICODE_ARRAY,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX  => _PROFILE_AM_UNICODE_TXTBOX,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA => _PROFILE_AM_UNICODE_TXTAREA,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_EMAIL   => _PROFILE_AM_UNICODE_EMAIL,
+                    /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL     => _PROFILE_AM_UNICODE_URL,
                 ];
 
                 $type_select = new XoopsFormSelect(_PROFILE_AM_VALUETYPE, 'field_valuetype', $field->getVar('field_valuetype', 'e'));

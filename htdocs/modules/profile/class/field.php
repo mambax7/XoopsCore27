@@ -547,13 +547,13 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
             switch ($obj->getVar('field_valuetype')) {
                 default:
                 case XOBJ_DTYPE_ARRAY:
-                case XOBJ_DTYPE_UNICODE_ARRAY:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
                     $type = 'mediumtext';
                     $maxlengthstring = '';
                     break;
-                case XOBJ_DTYPE_UNICODE_EMAIL:
-                case XOBJ_DTYPE_UNICODE_TXTBOX:
-                case XOBJ_DTYPE_UNICODE_URL:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_EMAIL:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL:
                 case XOBJ_DTYPE_EMAIL:
                 case XOBJ_DTYPE_TXTBOX:
                 case XOBJ_DTYPE_URL:
@@ -579,7 +579,7 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
                     break;
 
                 case XOBJ_DTYPE_OTHER:
-                case XOBJ_DTYPE_UNICODE_TXTAREA:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA:
                 case XOBJ_DTYPE_TXTAREA:
                     $type            = 'text';
                     $maxlengthstring = '';
