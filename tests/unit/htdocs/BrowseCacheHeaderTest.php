@@ -11,6 +11,12 @@ use PHPUnit\Framework\TestCase;
  * 5.2.2.1), and an unrecognised directive is ignored, so the field carried no
  * lifetime for any cache reading it -- every asset served through browse.php,
  * including the bundled jQuery most themes load in <head>.
+ *
+ * These are source contracts rather than response assertions. browse.php is a
+ * front controller: it boots through mainfile.php, streams the file body, and
+ * ends in exit(), so including it would end the test run, and inspecting real
+ * response headers would need an installed site rather than a unit suite.
+ * BrowsePathContainmentTest guards its other contract the same way.
  */
 final class BrowseCacheHeaderTest extends TestCase
 {
@@ -69,14 +75,32 @@ final class BrowseCacheHeaderTest extends TestCase
     }
 
     #[Test]
-    public function theComposedHeaderIsTheIntendedFifteenDayPolicy(): void
+    public function bothFreshnessHeadersDeriveFromTheFifteenDayLifetime(): void
     {
-        // The exact field browse.php builds from its $expires expression.
-        $expires = 60 * 60 * 24 * 15;
-        self::assertSame(1296000, $expires);
+        $src = $this->browseSource();
+
+        // Read the lifetime out of browse.php rather than restating it here.
+        // The factors are multiplied as written, so refactoring the expression
+        // is free; changing the policy fails this test, which is the point.
         self::assertSame(
-            'Cache-Control: public, max-age=1296000',
-            'Cache-Control: public, max-age=' . $expires
+            1,
+            preg_match('/\$expires\s*=\s*([\d\s*]+?);/', $src, $m),
+            'browse.php should declare its cache lifetime as an $expires expression'
+        );
+        $lifetime = array_product(array_map('intval', preg_split('/\s*\*\s*/', trim($m[1]))));
+        self::assertSame(1296000, $lifetime, 'The cache lifetime should stay at 15 days');
+
+        // Both freshness headers have to be built from that one value, or they
+        // can drift apart and describe two different policies.
+        self::assertStringContainsString(
+            "header('Cache-Control: public, max-age=' . \$expires);",
+            $src,
+            'max-age should come from $expires, not a literal'
+        );
+        self::assertStringContainsString(
+            "time() + \$expires",
+            $src,
+            'Expires should be computed from the same $expires'
         );
     }
 }
