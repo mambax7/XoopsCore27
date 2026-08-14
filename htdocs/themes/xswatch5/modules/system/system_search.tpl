@@ -73,7 +73,7 @@
 					</div>
 					<{if !empty($previous) || !empty($next)}>
 						<div>
-						<{if isset($previous)}>
+						<{if !empty($previous)}>
 							<span class="d-none d-sm-inline"><a class="btn btn-secondary" href="<{$previous}>" role="button"><{$smarty.const._SR_PREVIOUS|replace:"<<":"<span class='fa-solid fa-circle-chevron-left fa-lg'></span>"}></a></span>
 							<span class="d-inline d-sm-none"><a class="btn btn-secondary" href="<{$previous}>" role="button"><span class="fa-solid fa-circle-chevron-left"></span></a></span>
 						<{else}>
@@ -81,7 +81,7 @@
 							<span class="d-inline d-sm-none"><a class="btn btn-secondary disabled" role="button" tabindex="-1" aria-disabled="true"><span class="text-muted"><span class="fa-solid fa-circle-chevron-left"></span></span></a></span>
 						<{/if}>
 						<span class="mx-1"></span>
-						<{if isset($next)}>
+						<{if !empty($next)}>
 							<span class="d-none d-sm-inline"><a class="btn btn-secondary" href="<{$next}>" role="button"><{$smarty.const._SR_NEXT|replace:">>":"<span class='fa-solid fa-circle-chevron-right fa-lg'></span>"}></a></span>
 							<span class="d-inline d-sm-none"><a class="btn btn-secondary" href="<{$next}>" role="button"><span class="fa-solid fa-circle-chevron-right"></span></a></span>
 						<{else}>
