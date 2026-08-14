@@ -145,8 +145,10 @@ if ($action !== 'showallbyuser') {
  * guard exists to prevent.
  *
  * 'link' and 'title' are required and must be scalar because they are concatenated and
- * pattern-matched. 'image', 'uid' and 'time' are optional, so a non-scalar value is dropped
- * rather than rejecting the whole row.
+ * pattern-matched; both are cast to string here so the rendering code does not depend on
+ * PHP coercing them at each use. 'image', 'uid' and 'time' are optional, so a non-scalar
+ * value is dropped rather than rejecting the whole row. 'uid' is additionally cast to an
+ * integer, defaulting to 0, because both branches test and render it as one.
  *
  * @param  mixed $rows raw return value from a module search callback
  * @return array<int, array> rows safe to render
@@ -163,11 +165,20 @@ $xoopsNormaliseSearchRows = static function ($rows) {
             || !is_scalar($row['title'])) {
             continue;
         }
+        // Required fields are pattern-matched, concatenated and escaped downstream.
+        // A module may hand back an int or a bool, which PHP would coerce silently
+        // at each of those points; fix the type once here instead.
+        $row['link']  = (string) $row['link'];
+        $row['title'] = (string) $row['title'];
         foreach (['image', 'uid', 'time'] as $optional) {
             if (isset($row[$optional]) && !is_scalar($row[$optional])) {
                 unset($row[$optional]);
             }
         }
+        // Both branches read uid as an integer -- for the empty() test that decides
+        // whether to render a byline, and for the userinfo link built from it -- so
+        // normalise it here rather than repeating the cast in each of them.
+        $row['uid'] = isset($row['uid']) ? (int) $row['uid'] : 0;
         $clean[] = $row;
     }
 
@@ -213,7 +224,7 @@ switch ($action) {
         $results_arr = [];
         foreach ($mids as $mid) {
             $mid = (int) $mid;
-            if (in_array($mid, $available_modules)) {
+            if (in_array($mid, $available_modules, true)) {
                 // $mids can come straight from the query string, and $modules only holds
                 // modules that are active AND searchable. A readable-but-not-searchable
                 // mid (e.g. mids[]=1) would otherwise index a missing key and yield null.
@@ -271,7 +282,6 @@ switch ($action) {
                         $results_arr[$i]['link'] = $results[$i]['link'];
                         $results_arr[$i]['link_title'] = $myts->htmlSpecialChars($results[$i]['title']);
 
-                        $results[$i]['uid'] = @(int) $results[$i]['uid'];
                         if (!empty($results[$i]['uid'])) {
                             $uname = XoopsUser::getUnameFromId($results[$i]['uid']);
                             $results_arr[$i]['uname'] = $uname;
@@ -304,8 +314,6 @@ switch ($action) {
 
     case 'showall':
     case 'showallbyuser':
-        include $GLOBALS['xoops']->path('header.php');
-        $xoopsTpl->assign('showallbyuser', true);
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
         /** @var XoopsModule $module */
@@ -323,6 +331,12 @@ switch ($action) {
             || 1 !== (int) $module->getVar('hassearch')) {
             redirect_header(XOOPS_URL . '/search.php', 2, _SR_NOMATCH);
         }
+        // Only now that the request is known to be servable: header.php builds the
+        // theme and fires the core.header.* events, all of which a rejected request
+        // would throw away, and redirect_header() then builds a second theme of its
+        // own to render the redirect.
+        include $GLOBALS['xoops']->path('header.php');
+        $xoopsTpl->assign('showallbyuser', true);
         // Resolve the label BEFORE the try: the catch must never dereference $module,
         // or a failure there throws a second, uncaught error.
         //
@@ -399,7 +413,6 @@ switch ($action) {
                 }
                 $results_arr['link'] = $results[$i]['link'];
                 $results_arr['link_title'] = $myts->htmlSpecialChars($results[$i]['title']);
-                $results['uid'] = @(int) $results[$i]['uid'];
                 if (!empty($results[$i]['uid'])) {
                     $uname = XoopsUser::getUnameFromId($results[$i]['uid']);
                     $results_arr['uname'] = $uname;
