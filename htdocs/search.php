@@ -213,7 +213,7 @@ switch ($action) {
         $results_arr = [];
         foreach ($mids as $mid) {
             $mid = (int) $mid;
-            if (in_array($mid, $available_modules)) {
+            if (in_array($mid, $available_modules, true)) {
                 // $mids can come straight from the query string, and $modules only holds
                 // modules that are active AND searchable. A readable-but-not-searchable
                 // mid (e.g. mids[]=1) would otherwise index a missing key and yield null.
@@ -306,8 +306,6 @@ switch ($action) {
 
     case 'showall':
     case 'showallbyuser':
-        include $GLOBALS['xoops']->path('header.php');
-        $xoopsTpl->assign('showallbyuser', true);
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
         /** @var XoopsModule $module */
@@ -325,6 +323,12 @@ switch ($action) {
             || 1 !== (int) $module->getVar('hassearch')) {
             redirect_header(XOOPS_URL . '/search.php', 2, _SR_NOMATCH);
         }
+        // Only now that the request is known to be servable: header.php builds the
+        // theme and fires the core.header.* events, all of which a rejected request
+        // would throw away, and redirect_header() then builds a second theme of its
+        // own to render the redirect.
+        include $GLOBALS['xoops']->path('header.php');
+        $xoopsTpl->assign('showallbyuser', true);
         // Resolve the label BEFORE the try: the catch must never dereference $module,
         // or a failure there throws a second, uncaught error.
         //
