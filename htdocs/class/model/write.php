@@ -65,7 +65,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     $cleanv = !is_string($cleanv) && is_numeric($cleanv) ? date(_DBDATESTRING, $cleanv) : date(_DBDATESTRING, strtotime($cleanv));
                     $cleanv = str_replace('\\"', '"', $this->handler->db->quote($cleanv));
                     break;
-                case XOBJ_DTYPE_UNICODE_TXTBOX:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX:
                     if ($v['required'] && $cleanv != '0' && $cleanv == '') {
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
                         continue 2;
@@ -81,7 +81,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     $cleanv = str_replace('\\"', '"', $this->handler->db->quote($cleanv));
                     break;
 
-                case XOBJ_DTYPE_UNICODE_TXTAREA:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA:
                     if ($v['required'] && $cleanv != '0' && $cleanv == '') {
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
                         continue 2;
@@ -121,7 +121,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     $cleanv = str_replace('\\"', '"', $this->handler->db->quote($cleanv));
                     break;
                 // Should not be used!
-                case XOBJ_DTYPE_UNICODE_EMAIL:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_EMAIL:
                     $cleanv = trim($cleanv);
                     if ($v['required'] && $cleanv == '') {
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
@@ -144,7 +144,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     break;
 
                 // Should not be used!
-                case XOBJ_DTYPE_UNICODE_URL:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL:
                     $cleanv = trim($cleanv);
                     if ($v['required'] && $cleanv == '') {
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
@@ -168,7 +168,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     break;
 
                 // Should not be used!
-                case XOBJ_DTYPE_UNICODE_OTHER:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_OTHER:
                     $cleanv = str_replace('\\"', '"', $this->handler->db->quote(xoops_convert_encode($cleanv)));
                     break;
 
@@ -189,7 +189,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     break;
 
                 // Should not be used!
-                case XOBJ_DTYPE_UNICODE_ARRAY:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
                     if (!$v['not_gpc']) {
                         $cleanv = array_map([&$myts, 'stripSlashesGPC'], $cleanv);
                     }

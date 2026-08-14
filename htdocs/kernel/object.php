@@ -40,7 +40,25 @@ define('XOBJ_DTYPE_LTIME', 11);
 define('XOBJ_DTYPE_FLOAT', 13);
 define('XOBJ_DTYPE_DECIMAL', 14);
 define('XOBJ_DTYPE_ENUM', 15);
-// YOU SHOULD NEVER USE THE FOLLOWING TYPES, THEY WILL BE REMOVED
+/**
+ * DEPRECATED since XOOPS 2.7.3 — scheduled for removal in XOOPS 4.0.
+ *
+ * The UNICODE_* datatypes url-encode on write and url-decode on read (via
+ * xoops_convert_encode()/decode()), a pre-UTF-8 workaround that is harmful on
+ * modern utf8mb4 installs: it bloats storage and breaks SQL LIKE/FULLTEXT.
+ * Use the non-unicode successor instead:
+ *   UNICODE_TXTBOX  -> TXTBOX    UNICODE_TXTAREA -> TXTAREA
+ *   UNICODE_URL     -> URL       UNICODE_EMAIL   -> EMAIL
+ *   UNICODE_ARRAY   -> ARRAY     UNICODE_OTHER   -> OTHER
+ * Migration (XOOPS 2.8, before removal): existing Unicode-typed values must be
+ * DECODED (xoops_convert_decode, i.e. urldecode) and re-saved BEFORE the field's
+ * datatype metadata is changed to the non-unicode successor — never flip the
+ * metadata first, or the stored url-encoded bytes are misread. XOBJ_DTYPE_UNICODE_ARRAY
+ * must be decoded element-wise (unserialize, decode each element, re-serialize).
+ * Affects e.g. profile custom fields persisted in profile_field.field_valuetype.
+ *
+ * @deprecated 2.7.3
+ */
 define('XOBJ_DTYPE_UNICODE_TXTBOX', 16);
 define('XOBJ_DTYPE_UNICODE_TXTAREA', 17);
 define('XOBJ_DTYPE_UNICODE_URL', 18);
@@ -57,6 +75,16 @@ define('XOBJ_DTYPE_TIMESTAMP', 24);
  */
 class XoopsObject
 {
+    /**
+     * Ids of the datatypes deprecated in XOOPS 2.7.3 (XOBJ_DTYPE_UNICODE_* = 16-21),
+     * scheduled for removal in 4.0. Kept here as literal ids, in one place, so this
+     * reference site does not itself trip the deprecation check; see the deprecation
+     * doc block near the XOBJ_DTYPE_UNICODE_* defines in this file.
+     *
+     * @var int[]
+     */
+    private const DEPRECATED_UNICODE_DATATYPES = [16, 17, 18, 19, 20, 21];
+
     /**
      * holds all variables(properties) of an object
      *
@@ -193,6 +221,19 @@ class XoopsObject
      */
     public function initVar($key, $data_type, $value = null, $required = false, $maxlength = null, $options = '', $enumerations = '')
     {
+        // Deprecation notice (2.7.3): warn on the UNICODE_* datatypes (removal in 4.0).
+        // Warning-only; guarded so it is safe before the logger exists during bootstrap.
+        if (
+            in_array($data_type, self::DEPRECATED_UNICODE_DATATYPES, true)
+            && isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])
+        ) {
+            $GLOBALS['xoopsLogger']->addDeprecated(sprintf(
+                "XOBJ_DTYPE_UNICODE_* is deprecated since 2.7.3; use the non-unicode datatype for '%s' in %s.",
+                (string) $key,
+                get_class($this)
+            ));
+        }
+
         $this->vars[$key] = [
             'value'       => $value,
             'required'    => $required,
@@ -215,7 +256,7 @@ class XoopsObject
     {
         if (isset($key) && isset($this->vars[$key])) {
             switch ($this->vars[$key]['data_type']) {
-                case XOBJ_DTYPE_UNICODE_ARRAY:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
                     if (is_array($value)) {
                         $temp = $value;
                         array_walk($temp, 'xoops_aw_decode');
@@ -225,11 +266,11 @@ class XoopsObject
                         $this->vars[$key]['value'] = xoops_convert_decode($value);
                     }
                     break;
-                case XOBJ_DTYPE_UNICODE_URL:
-                case XOBJ_DTYPE_UNICODE_EMAIL:
-                case XOBJ_DTYPE_UNICODE_OTHER:
-                case XOBJ_DTYPE_UNICODE_TXTBOX:
-                case XOBJ_DTYPE_UNICODE_TXTAREA:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_EMAIL:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_OTHER:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX:
+                case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA:
                     $this->vars[$key]['value'] = xoops_convert_decode($value);
                     break;
                 case XOBJ_DTYPE_DATE:
@@ -439,7 +480,7 @@ class XoopsObject
             case XOBJ_DTYPE_INT:
                 $ret = (null === $ret) ? '' : (int) $ret;
                 break;
-            case XOBJ_DTYPE_UNICODE_TXTBOX:
+            case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX:
             case XOBJ_DTYPE_TXTBOX:
                 switch (strtolower($format)) {
                     case 's':
@@ -460,7 +501,7 @@ class XoopsObject
                         break 1;
                 }
                 break;
-            case XOBJ_DTYPE_UNICODE_TXTAREA:
+            case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA:
             case XOBJ_DTYPE_TXTAREA:
                 switch (strtolower($format)) {
                     case 's':
@@ -497,7 +538,7 @@ class XoopsObject
                         break 1;
                 }
                 break;
-            case XOBJ_DTYPE_UNICODE_ARRAY:
+            case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
                 switch (strtolower($format)) {
                     case 'n':
                     case 'none':
@@ -802,7 +843,7 @@ class XoopsObject
                             continue 2;
                         }
                         break;
-                    case XOBJ_DTYPE_UNICODE_TXTBOX:
+                    case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTBOX:
                         if ($v['required'] && $cleanv != '0' && $cleanv == '') {
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
@@ -814,7 +855,7 @@ class XoopsObject
                         }
                         $cleanv = $myts->censorString($cleanv);
                         break;
-                    case XOBJ_DTYPE_UNICODE_TXTAREA:
+                    case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_TXTAREA:
                         if ($v['required'] && $cleanv != '0' && $cleanv == '') {
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
@@ -822,7 +863,7 @@ class XoopsObject
                         $cleanv = xoops_convert_encode($cleanv);
                         $cleanv = $myts->censorString($cleanv);
                         break;
-                    case XOBJ_DTYPE_UNICODE_EMAIL:
+                    case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_EMAIL:
                         if ($v['required'] && $cleanv == '') {
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
@@ -833,7 +874,7 @@ class XoopsObject
                         }
                         $cleanv = xoops_convert_encode($cleanv);
                         break;
-                    case XOBJ_DTYPE_UNICODE_URL:
+                    case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL:
                         if ($v['required'] && $cleanv == '') {
                             $this->setErrors(sprintf(_XOBJ_ERR_REQUIRED, $k));
                             continue 2;
@@ -843,7 +884,7 @@ class XoopsObject
                         }
                         $cleanv = xoops_convert_encode($cleanv);
                         break;
-                    case XOBJ_DTYPE_UNICODE_ARRAY:
+                    case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
                         $cleanv = serialize(array_walk($cleanv, 'xoops_aw_encode'));
                         break;
                     default:
