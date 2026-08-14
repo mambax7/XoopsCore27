@@ -271,7 +271,9 @@ switch ($action) {
                         $results_arr[$i]['link'] = $results[$i]['link'];
                         $results_arr[$i]['link_title'] = $myts->htmlSpecialChars($results[$i]['title']);
 
-                        $results[$i]['uid'] = @(int) $results[$i]['uid'];
+                        // The @ suppressed an undefined-key warning for rows that
+                        // carry no uid; test for it instead.
+                        $results[$i]['uid'] = isset($results[$i]['uid']) ? (int) $results[$i]['uid'] : 0;
                         if (!empty($results[$i]['uid'])) {
                             $uname = XoopsUser::getUnameFromId($results[$i]['uid']);
                             $results_arr[$i]['uname'] = $uname;
@@ -399,7 +401,10 @@ switch ($action) {
                 }
                 $results_arr['link'] = $results[$i]['link'];
                 $results_arr['link_title'] = $myts->htmlSpecialChars($results[$i]['title']);
-                $results['uid'] = @(int) $results[$i]['uid'];
+                // Was $results['uid'], which wrote a stray key on the outer array
+                // and left this row's uid uncast, so a non-numeric value reached
+                // both the lookup below and the userinfo link built from it.
+                $results[$i]['uid'] = isset($results[$i]['uid']) ? (int) $results[$i]['uid'] : 0;
                 if (!empty($results[$i]['uid'])) {
                     $uname = XoopsUser::getUnameFromId($results[$i]['uid']);
                     $results_arr['uname'] = $uname;
