@@ -7,7 +7,7 @@ body:
   attributes:
     label: XOOPS Version
     description: Provide the XOOPS version that you are using.
-    options: ['2.5.11', '2.7.0', '4.0.0']
+    options: ['2.5.11', '2.7.0', '2.7.1', '2.7.2', '2.7.3', '4.0.0']
   validations:
     required: true
 - type: dropdown
