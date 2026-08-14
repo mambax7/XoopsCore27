@@ -49,9 +49,24 @@ final class SearchShowAllGuardTest extends TestCase
         // module_read, plus the isactive and hassearch columns the results
         // branch selects on. Dropping any one of them reopens a route the
         // results branch does not have.
-        self::assertStringContainsString('in_array((int) $mid, $available_modules, true)', $branch);
-        self::assertStringContainsString("(int) \$module->getVar('isactive')", $branch);
-        self::assertStringContainsString("(int) \$module->getVar('hassearch')", $branch);
+        //
+        // Matched loosely: these pin which checks run, not how they are spelled,
+        // so reformatting or renaming a local does not fail the test.
+        self::assertMatchesRegularExpression(
+            '/in_array\(.*\$mid.*,\s*\$available_modules\s*,\s*true\s*\)/',
+            $branch,
+            'module_read must be checked strictly'
+        );
+        self::assertMatchesRegularExpression(
+            "/getVar\(\s*'isactive'\s*\)/",
+            $branch,
+            'a deactivated module must be rejected'
+        );
+        self::assertMatchesRegularExpression(
+            "/getVar\(\s*'hassearch'\s*\)/",
+            $branch,
+            'a module without search support must be rejected'
+        );
     }
 
     #[Test]
@@ -78,8 +93,8 @@ final class SearchShowAllGuardTest extends TestCase
         // key $modules does not have.
         $src = file_get_contents(XOOPS_ROOT_PATH . '/search.php');
         self::assertNotFalse($src);
-        self::assertStringContainsString(
-            '!isset($modules[$mid]) || !is_object($modules[$mid])',
+        self::assertMatchesRegularExpression(
+            '/!isset\(\$modules\[\$mid\]\)\s*\|\|\s*!is_object\(\$modules\[\$mid\]\)/',
             $src,
             'The results branch should skip ids missing from the searchable module set'
         );
