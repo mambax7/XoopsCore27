@@ -13,46 +13,73 @@ use PHPUnit\Framework\TestCase;
  *
  * Source contracts, like BrowsePathContainmentTest: search.php is a front
  * controller that boots through mainfile.php and renders a page, so it cannot
- * be included from a unit test.
+ * be included from a unit test and its behaviour cannot be observed directly.
+ *
+ * Two consequences shape the assertions below. Patterns are matched with
+ * whitespace- and newline-tolerant regexes, so reformatting does not fail a
+ * test. Ordering is asserted by position, because "validate before rendering"
+ * is itself an ordering property: there is nothing else to compare when the
+ * file cannot be run. assertRunsBefore() keeps that intent readable.
  */
 final class SearchShowAllGuardTest extends TestCase
 {
-    private function showAllBranch(): string
+    private function source(): string
     {
         $src = file_get_contents(XOOPS_ROOT_PATH . '/search.php');
         self::assertNotFalse($src, 'search.php should be readable');
 
-        $start = strpos($src, "case 'showall':");
-        self::assertNotFalse($start, 'search.php should have a showall branch');
+        return $src;
+    }
 
-        return substr($src, $start);
+    /**
+     * The code of one switch branch, from its case label to $until's label.
+     */
+    private function branch(string $from, ?string $until = null): string
+    {
+        $src   = $this->source();
+        $start = strpos($src, "case '{$from}':");
+        self::assertNotFalse($start, "search.php should have a {$from} branch");
+
+        if (null === $until) {
+            return substr($src, $start);
+        }
+
+        $end = strpos($src, "case '{$until}':", $start);
+        self::assertNotFalse($end, "search.php should have a {$until} branch");
+
+        return substr($src, $start, $end - $start);
+    }
+
+    private function assertRunsBefore(string $earlier, string $later, string $code, string $message): void
+    {
+        $first  = strpos($code, $earlier);
+        $second = strpos($code, $later);
+
+        self::assertNotFalse($first, sprintf('expected to find %s', $earlier));
+        self::assertNotFalse($second, sprintf('expected to find %s', $later));
+        self::assertGreaterThan($first, $second, $message);
     }
 
     #[Test]
     public function showAllChecksTheModuleBeforeCallingSearch(): void
     {
-        $branch = $this->showAllBranch();
-
-        $guard  = strpos($branch, '!is_object($module)');
-        $search = strpos($branch, '$module->search(');
-
-        self::assertNotFalse($guard, 'The show-all branch should reject a missing module');
-        self::assertNotFalse($search, 'The show-all branch should call the module search');
-        self::assertGreaterThan($guard, $search, 'search() must not run before the guard');
+        $this->assertRunsBefore(
+            '!is_object($module)',
+            '$module->search(',
+            $this->branch('showall'),
+            'search() must not run before the guard'
+        );
     }
 
     #[Test]
     public function showAllAppliesTheSameCriteriaAsTheResultsBranch(): void
     {
-        $branch = $this->showAllBranch();
+        $branch = $this->branch('showall');
 
         // module_read, plus the isactive and hassearch columns the results
         // branch selects on. Dropping any one of them reopens a route the
-        // results branch does not have.
-        //
-        // Matched loosely: these pin which checks run, not how they are spelled.
-        // The two variable names are pinned deliberately -- the permission list
-        // is the behaviour under test -- but whitespace and line breaks are not.
+        // results branch does not have. The two variable names are pinned
+        // deliberately -- the permission list is the behaviour under test.
         self::assertMatchesRegularExpression(
             '/in_array\(.*\$mid.*,\s*\$available_modules\s*,\s*true\s*\)/s',
             $branch,
@@ -76,14 +103,12 @@ final class SearchShowAllGuardTest extends TestCase
         // header.php builds the theme and fires the core.header.* events; a
         // rejected request would discard all of it, and redirect_header() then
         // builds a second theme to render the redirect.
-        $branch = $this->showAllBranch();
-
-        $guard  = strpos($branch, 'redirect_header(');
-        $header = strpos($branch, "path('header.php')");
-
-        self::assertNotFalse($guard, 'The show-all branch should reject invalid requests');
-        self::assertNotFalse($header, 'The show-all branch should include the page header');
-        self::assertGreaterThan($guard, $header, 'header.php must be included after the guard');
+        $this->assertRunsBefore(
+            'redirect_header(',
+            "path('header.php')",
+            $this->branch('showall'),
+            'header.php must be included after the guard'
+        );
     }
 
     #[Test]
@@ -91,11 +116,9 @@ final class SearchShowAllGuardTest extends TestCase
     {
         // The loop assigned $results['uid'], a stray key on the outer array,
         // leaving this row's uid exactly as the search plugin returned it.
-        $src = file_get_contents(XOOPS_ROOT_PATH . '/search.php');
-        self::assertNotFalse($src);
         self::assertSame(
             0,
-            preg_match("/\\\$results\\['uid'\\]\s*=/", $src),
+            preg_match("/\\\$results\\['uid'\\]\s*=/", $this->source()),
             'uid belongs to the row: $results[$i][\'uid\'], never $results[\'uid\']'
         );
     }
@@ -105,11 +128,9 @@ final class SearchShowAllGuardTest extends TestCase
     {
         // Both branches test and render uid as an integer, so the shared row
         // normaliser owns the cast rather than each branch repeating it.
-        $src = file_get_contents(XOOPS_ROOT_PATH . '/search.php');
-        self::assertNotFalse($src);
         self::assertMatchesRegularExpression(
             "/\\\$row\\['uid'\\]\s*=[^;]*\(int\)/s",
-            $src,
+            $this->source(),
             'the row normaliser should cast uid to an integer'
         );
     }
@@ -117,17 +138,9 @@ final class SearchShowAllGuardTest extends TestCase
     #[Test]
     public function resultsBranchChecksModuleReadStrictly(): void
     {
-        $src = file_get_contents(XOOPS_ROOT_PATH . '/search.php');
-        self::assertNotFalse($src);
-
-        $start = strpos($src, "case 'results':");
-        $end   = strpos($src, "case 'showall':");
-        self::assertNotFalse($start, 'search.php should have a results branch');
-        self::assertNotFalse($end, 'search.php should have a showall branch');
-
         self::assertMatchesRegularExpression(
             '/in_array\(.*\$mid.*,\s*\$available_modules\s*,\s*true\s*\)/s',
-            substr($src, $start, $end - $start),
+            $this->branch('results', 'showall'),
             'the results branch should compare module ids strictly, as show-all does'
         );
     }
@@ -138,11 +151,9 @@ final class SearchShowAllGuardTest extends TestCase
         // $mids arrives from the query string and $available_modules is only a
         // module_read grant list, so a readable but non-searchable id indexes a
         // key $modules does not have.
-        $src = file_get_contents(XOOPS_ROOT_PATH . '/search.php');
-        self::assertNotFalse($src);
         self::assertMatchesRegularExpression(
             '/!isset\(\$modules\[\$mid\]\)\s*\|\|\s*!is_object\(\$modules\[\$mid\]\)/',
-            $src,
+            $this->branch('results', 'showall'),
             'The results branch should skip ids missing from the searchable module set'
         );
     }
