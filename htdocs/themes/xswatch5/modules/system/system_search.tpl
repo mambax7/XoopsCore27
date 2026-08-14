@@ -42,7 +42,7 @@
 										<br />
 										<small><span class="fa-solid fa-user fa-sm ms-2 text-muted"></span> <a href="<{$data.uname_link}>"><{$data.uname}></a></small>
 
-										<{if $data.time}>
+										<{if !empty($data.time)}>
 											<small><span class="text-muted"><span class="fa-solid fa-calendar fa-sm ms-2"></span> <{$data.time}></span></small>
 										<{/if}>
 									</div>
@@ -71,9 +71,9 @@
 						<h5><{$module_name}></h5>
 						<{$showing|replace:"-":"- "}>
 					</div>
-					<{if $previous || $next}>
+					<{if !empty($previous) || !empty($next)}>
 						<div>
-						<{if isset($previous)}>
+						<{if !empty($previous)}>
 							<span class="d-none d-sm-inline"><a class="btn btn-secondary" href="<{$previous}>" role="button"><{$smarty.const._SR_PREVIOUS|replace:"<<":"<span class='fa-solid fa-circle-chevron-left fa-lg'></span>"}></a></span>
 							<span class="d-inline d-sm-none"><a class="btn btn-secondary" href="<{$previous}>" role="button"><span class="fa-solid fa-circle-chevron-left"></span></a></span>
 						<{else}>
@@ -81,7 +81,7 @@
 							<span class="d-inline d-sm-none"><a class="btn btn-secondary disabled" role="button" tabindex="-1" aria-disabled="true"><span class="text-muted"><span class="fa-solid fa-circle-chevron-left"></span></span></a></span>
 						<{/if}>
 						<span class="mx-1"></span>
-						<{if isset($next)}>
+						<{if !empty($next)}>
 							<span class="d-none d-sm-inline"><a class="btn btn-secondary" href="<{$next}>" role="button"><{$smarty.const._SR_NEXT|replace:">>":"<span class='fa-solid fa-circle-chevron-right fa-lg'></span>"}></a></span>
 							<span class="d-inline d-sm-none"><a class="btn btn-secondary" href="<{$next}>" role="button"><span class="fa-solid fa-circle-chevron-right"></span></a></span>
 						<{else}>
@@ -106,13 +106,13 @@
 								<div class="d-inline"><img src="<{$data.image_link}>" title="<{$data.image_title}>" alt="<{$data.image_title}>"/> <a href="<{$data.link}>"><{$data.link_title}></a></div>
 							<{/if}>
 
-							<{if $data.uname}>
+							<{if !empty($data.uname)}>
 
 								<div class="d-none d-md-inline text-muted">
 									<br />
 									<small><span class="fa-solid fa-user fa-sm ms-2"></span> <a href="<{$data.uname_link}>"><{$data.uname}></a></small>
 
-									<{if $data.time}>
+									<{if !empty($data.time)}>
 										<small><span class="fa-solid fa-calendar fa-sm ms-2"></span> <{$data.time}></small>
 									<{/if}>
 								</div>
