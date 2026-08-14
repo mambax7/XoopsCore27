@@ -36,8 +36,8 @@
 <{/if}>
 <{if !empty($showallbyuser)}>
 	<h3><{$smarty.const._SR_SEARCHRESULTS}></h3>
-	<{if isset($nomatch) && $nomatch != true}>
-		<{if isset($showall)}>
+	<{if empty($nomatch)}>
+		<{if !empty($showall)}>
 			<{$smarty.const._SR_KEYWORDS}>: <strong><{$keywords}></strong>
 			<br>
 		<{/if}>
@@ -46,22 +46,17 @@
 		<{foreach item=data from=$results_arr|default:null}>
 			<img src="<{$data.image_link}>" title="<{$data.image_title}>" alt="<{$data.image_title}>"/> <a href="<{$data.link}>"><{$data.link_title}></a>
 			<br>
-			<{if $data.uname}>
+			<{if !empty($data.uname)}>
 				<span class='x-small'>
 					<a href="<{$data.uname_link}>"><{$data.uname}></a>
-					<{if $data.time}>
+					<{if !empty($data.time)}>
 						(<{$data.time}>)
 					<{/if}>
 				</span>
 				<br>
 			<{/if}>
 		<{/foreach}>
-		<{if isset($nomatch)}>
-			<p>
-				<{$smarty.const._SR_NOMATCH}>
-			</p>
-		<{/if}>
-		<{if $previous || $next}>
+		<{if !empty($previous) || !empty($next)}>
 			<br>
 			<table>
 				<tr>
@@ -78,6 +73,10 @@
 				</tr>
 			</table>
 		<{/if}>
+	<{else}>
+		<p>
+			<{$smarty.const._SR_NOMATCH}>
+		</p>
 	<{/if}>
 <{/if}>
 <{if isset($form)}>
