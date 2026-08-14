@@ -146,7 +146,8 @@ if ($action !== 'showallbyuser') {
  *
  * 'link' and 'title' are required and must be scalar because they are concatenated and
  * pattern-matched. 'image', 'uid' and 'time' are optional, so a non-scalar value is dropped
- * rather than rejecting the whole row.
+ * rather than rejecting the whole row. 'uid' is additionally cast to an integer, defaulting
+ * to 0, because both branches test and render it as one.
  *
  * @param  mixed $rows raw return value from a module search callback
  * @return array<int, array> rows safe to render
@@ -168,6 +169,10 @@ $xoopsNormaliseSearchRows = static function ($rows) {
                 unset($row[$optional]);
             }
         }
+        // Both branches read uid as an integer -- for the empty() test that decides
+        // whether to render a byline, and for the userinfo link built from it -- so
+        // normalise it here rather than repeating the cast in each of them.
+        $row['uid'] = isset($row['uid']) ? (int) $row['uid'] : 0;
         $clean[] = $row;
     }
 
@@ -271,9 +276,6 @@ switch ($action) {
                         $results_arr[$i]['link'] = $results[$i]['link'];
                         $results_arr[$i]['link_title'] = $myts->htmlSpecialChars($results[$i]['title']);
 
-                        // The @ suppressed an undefined-key warning for rows that
-                        // carry no uid; test for it instead.
-                        $results[$i]['uid'] = isset($results[$i]['uid']) ? (int) $results[$i]['uid'] : 0;
                         if (!empty($results[$i]['uid'])) {
                             $uname = XoopsUser::getUnameFromId($results[$i]['uid']);
                             $results_arr[$i]['uname'] = $uname;
@@ -405,10 +407,6 @@ switch ($action) {
                 }
                 $results_arr['link'] = $results[$i]['link'];
                 $results_arr['link_title'] = $myts->htmlSpecialChars($results[$i]['title']);
-                // Was $results['uid'], which wrote a stray key on the outer array
-                // and left this row's uid uncast, so a non-numeric value reached
-                // both the lookup below and the userinfo link built from it.
-                $results[$i]['uid'] = isset($results[$i]['uid']) ? (int) $results[$i]['uid'] : 0;
                 if (!empty($results[$i]['uid'])) {
                     $uname = XoopsUser::getUnameFromId($results[$i]['uid']);
                     $results_arr['uname'] = $uname;
