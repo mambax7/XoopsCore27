@@ -88,8 +88,12 @@ if (!isset($types[$ext])) {
 //Output now
 // seconds, minutes, hours, days
 $expires = 60 * 60 * 24 * 15;
-header('Pragma: public');
-header('Cache-Control: maxage=' . $expires);
+// "max-age" carries a hyphen (RFC 9111 5.2.2.1). This line sent "maxage=", which
+// is not a directive at all, and unrecognised directives are ignored -- so caches
+// reading Cache-Control saw no lifetime, and only the Expires header below kept
+// these assets cacheable. "public" replaces the former Pragma: public, which
+// never had any defined meaning as a response header.
+header('Cache-Control: public, max-age=' . $expires);
 header('Expires: ' . gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT');
 header('Content-type: ' . $types[$ext]);
 
