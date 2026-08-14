@@ -145,9 +145,10 @@ if ($action !== 'showallbyuser') {
  * guard exists to prevent.
  *
  * 'link' and 'title' are required and must be scalar because they are concatenated and
- * pattern-matched. 'image', 'uid' and 'time' are optional, so a non-scalar value is dropped
- * rather than rejecting the whole row. 'uid' is additionally cast to an integer, defaulting
- * to 0, because both branches test and render it as one.
+ * pattern-matched; both are cast to string here so the rendering code does not depend on
+ * PHP coercing them at each use. 'image', 'uid' and 'time' are optional, so a non-scalar
+ * value is dropped rather than rejecting the whole row. 'uid' is additionally cast to an
+ * integer, defaulting to 0, because both branches test and render it as one.
  *
  * @param  mixed $rows raw return value from a module search callback
  * @return array<int, array> rows safe to render
@@ -164,6 +165,11 @@ $xoopsNormaliseSearchRows = static function ($rows) {
             || !is_scalar($row['title'])) {
             continue;
         }
+        // Required fields are pattern-matched, concatenated and escaped downstream.
+        // A module may hand back an int or a bool, which PHP would coerce silently
+        // at each of those points; fix the type once here instead.
+        $row['link']  = (string) $row['link'];
+        $row['title'] = (string) $row['title'];
         foreach (['image', 'uid', 'time'] as $optional) {
             if (isset($row[$optional]) && !is_scalar($row[$optional])) {
                 unset($row[$optional]);

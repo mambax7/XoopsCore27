@@ -136,6 +136,26 @@ final class SearchShowAllGuardTest extends TestCase
     }
 
     #[Test]
+    public function theRowNormaliserCastsTheRequiredFieldsToStrings(): void
+    {
+        // link is pattern-matched and concatenated, title is escaped; neither
+        // rendering path should have to rely on PHP coercing a module's int or
+        // bool at the point of use.
+        $src = $this->source();
+
+        self::assertMatchesRegularExpression(
+            "/\\\$row\\['link'\\]\s*=\s*\(string\)/",
+            $src,
+            'the row normaliser should cast link to a string'
+        );
+        self::assertMatchesRegularExpression(
+            "/\\\$row\\['title'\\]\s*=\s*\(string\)/",
+            $src,
+            'the row normaliser should cast title to a string'
+        );
+    }
+
+    #[Test]
     public function resultsBranchChecksModuleReadStrictly(): void
     {
         self::assertMatchesRegularExpression(
