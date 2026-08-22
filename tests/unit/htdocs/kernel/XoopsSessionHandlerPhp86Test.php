@@ -419,4 +419,20 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
 
         $this->assertFalse($this->handler->updateTimestamp('sess_abc', 'payload'));
     }
+
+    /** The timestamp-only UPDATE branch must surface exec() failure too. */
+    public function testUpdateTimestampReturnsFalseWhenTimestampOnlyUpdateFails(): void
+    {
+        // The test above exercises only the insert branch (no prior read);
+        // this one establishes rowExistedAtRead first, so the failure comes
+        // out of the UPDATE path (CodeRabbit catch).
+        $this->db->method('query')->willReturn('mock_result');
+        $this->db->method('isResultSet')->willReturn(true);
+        $this->db->method('fetchRow')->willReturn(['the_payload', '192.168.1.100']);
+        $this->assertSame('the_payload', $this->handler->read('sess_read'));
+
+        $this->db->method('exec')->willReturn(false);
+
+        $this->assertFalse($this->handler->updateTimestamp('sess_read', 'the_payload'));
+    }
 }
