@@ -104,8 +104,9 @@ class XoopsSessionHandler implements
      *
      * PHP refuses ALL session.* ini changes not only while a session is
      * active but also once headers have been sent (any prior echo/output).
-     * ini_set() then returns false - so the result is checked, and failure
-     * is REPORTED via E_USER_NOTICE instead of silently claiming parity.
+     * ini_set() then returns false - so the result is checked, and EVERY
+     * failure path is reported via E_USER_WARNING (the codebase's standard
+     * severity) instead of silently claiming parity.
      * The practical exposure is bounded: a request that produced output
      * before this constructor also cannot set the session cookie, so its
      * session handling is already degraded; the notice makes that visible.
@@ -118,13 +119,19 @@ class XoopsSessionHandler implements
             return true; // already pinned (php.ini, earlier call, or PHP 8.6 default)
         }
         if (session_status() === PHP_SESSION_ACTIVE) {
-            return false; // cannot change mid-session; not pinned
+            trigger_error(
+                'XoopsSessionHandler: session.use_strict_mode cannot be changed'
+                . ' mid-session; PHP defaults apply',
+                E_USER_WARNING
+            );
+
+            return false;
         }
         if (false === ini_set('session.use_strict_mode', '1')) {
             trigger_error(
                 'XoopsSessionHandler: session.use_strict_mode could not be enabled'
                 . ' (output sent before session bootstrap?); PHP defaults apply',
-                E_USER_NOTICE
+                E_USER_WARNING
             );
 
             return false;
