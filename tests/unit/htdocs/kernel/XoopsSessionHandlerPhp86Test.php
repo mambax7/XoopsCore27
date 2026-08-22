@@ -31,8 +31,15 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
     /** @var \XoopsSessionHandler */
     private $handler;
 
+    /** @var string|null REMOTE_ADDR as found, so a forged one cannot outlive its test */
+    private ?string $savedRemoteAddr = null;
+
+    private bool $hadRemoteAddr = false;
+
     protected function setUp(): void
     {
+        $this->hadRemoteAddr   = isset($_SERVER['REMOTE_ADDR']);
+        $this->savedRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
         $_SERVER['REMOTE_ADDR'] = $_SERVER['REMOTE_ADDR'] ?? '192.168.1.100';
 
         $this->db = $this->createMockDatabase();
@@ -42,15 +49,26 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->setProtectedProperty($this->handler, 'db', $this->db);
     }
 
+    protected function tearDown(): void
+    {
+        if ($this->hadRemoteAddr) {
+            $_SERVER['REMOTE_ADDR'] = $this->savedRemoteAddr;
+        } else {
+            unset($_SERVER['REMOTE_ADDR']);
+        }
+    }
+
     // =========================================================================
     // SessionIdInterface / create_sid()
     // =========================================================================
 
+    /** PHP 8.6 checks for the method; the interface is declared as documentation. */
     public function testImplementsSessionIdInterface(): void
     {
         $this->assertInstanceOf(\SessionIdInterface::class, $this->handler);
     }
 
+    /** Fixed 32-hex format, independent of session.sid_* settings. */
     public function testCreateSidReturns32LowercaseHexCharacters(): void
     {
         $sid = $this->handler->create_sid();
@@ -58,6 +76,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $sid);
     }
 
+    /** IDs must pass include/common.php's SSL-bridge regex to be forwardable. */
     public function testCreateSidMatchesSslBridgePattern(): void
     {
         // include/common.php only forwards a POSTed session ID matching
@@ -67,6 +86,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertMatchesRegularExpression('/^[a-zA-Z0-9,-]{26,128}$/', $sid);
     }
 
+    /** 128 bits of randomness: 100 draws must not collide. */
     public function testCreateSidReturnsUniqueIds(): void
     {
         $seen = [];
@@ -77,6 +97,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertCount(100, $seen);
     }
 
+    /** ID generation is pure; validation happens later in validateId(). */
     public function testCreateSidDoesNotTouchDatabase(): void
     {
         $this->db->expects($this->never())->method('query');
@@ -90,6 +111,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
     // enforceStrictMode()
     // =========================================================================
 
+    /** Probe-first: assert the pin where possible, the honest failure report where not. */
     public function testEnforceStrictModePinsIniToOneWhenTheEnvironmentAllows(): void
     {
         // PHP refuses ALL session.* ini changes once headers are sent - and
@@ -102,10 +124,32 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $probe    = @ini_set('session.use_strict_mode', '0');
         try {
             if (false === $probe) {
+                if ('1' === ini_get('session.use_strict_mode')) {
+                    // Unchangeable but already strict: the short-circuit answers
+                    // true and no notice is owed.
+                    $this->assertTrue($this->handler->enforceStrictMode());
+                    $this->markTestSkipped('environment forbids session ini changes (already strict)');
+                }
+                // Capture the diagnostic instead of suppressing it: the contract
+                // is false PLUS an E_USER_WARNING naming the directive.
+                $captured = [];
+                set_error_handler(static function (int $errno, string $errstr) use (&$captured): bool {
+                    $captured[] = [$errno, $errstr];
+
+                    return true;
+                });
+                try {
+                    $result = $this->handler->enforceStrictMode();
+                } finally {
+                    restore_error_handler();
+                }
                 $this->assertFalse(
-                    @$this->handler->enforceStrictMode(),
+                    $result,
                     'when the directive cannot be changed, the helper must report failure, not pretend'
                 );
+                $this->assertNotEmpty($captured, 'the refusal must be accompanied by a diagnostic');
+                $this->assertSame(E_USER_WARNING, $captured[0][0]);
+                $this->assertStringContainsString('use_strict_mode', $captured[0][1]);
                 $this->markTestSkipped('environment forbids session ini changes (headers already sent)');
             }
 
@@ -116,6 +160,44 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         }
     }
 
+    /** A refusal while a session is active must warn, never fail silently. */
+    public function testEnforceStrictModeRefusesMidSessionWithAWarning(): void
+    {
+        if (PHP_SESSION_ACTIVE === session_status()) {
+            $this->markTestSkipped('a session is already active in this runner');
+        }
+        if (!@session_start()) {
+            $this->markTestSkipped('cannot start a session in this environment');
+        }
+        try {
+            $captured = [];
+            set_error_handler(static function (int $errno, string $errstr) use (&$captured): bool {
+                $captured[] = [$errno, $errstr];
+
+                return true;
+            });
+            try {
+                $result = $this->handler->enforceStrictMode();
+            } finally {
+                restore_error_handler();
+            }
+
+            if ('1' === ini_get('session.use_strict_mode')) {
+                // Already-strict short-circuits before the mid-session check.
+                $this->assertTrue($result);
+
+                return;
+            }
+            $this->assertFalse($result);
+            $this->assertNotEmpty($captured, 'the mid-session refusal must be accompanied by a diagnostic');
+            $this->assertSame(E_USER_WARNING, $captured[0][0]);
+            $this->assertStringContainsString('mid-session', $captured[0][1]);
+        } finally {
+            session_abort();
+        }
+    }
+
+    /** Already '1' (php.ini, earlier call, or the 8.6 default): success without changing anything. */
     public function testEnforceStrictModeShortCircuitsWhenAlreadyPinned(): void
     {
         $original = ini_get('session.use_strict_mode');
@@ -135,6 +217,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
     // updateTimestamp() upsert
     // =========================================================================
 
+    /** PHP 8.6 lazy-write routes new empty sessions here; a plain UPDATE would lose them. */
     public function testUpdateTimestampUsesUpsert(): void
     {
         // PHP 8.6 routes a new-and-still-empty session here instead of
@@ -156,6 +239,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertStringContainsString('new_empty_session', $sqlCaptured);
     }
 
+    /** The insert half of the upsert must carry IP and data. */
     public function testUpdateTimestampInsertsIpAndDataForNewRow(): void
     {
         $_SERVER['REMOTE_ADDR'] = '192.168.1.100';
@@ -174,6 +258,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertStringContainsString('the_session_payload', $sqlCaptured);
     }
 
+    /** The duplicate half must never rewrite sess_data or sess_ip. */
     public function testUpdateTimestampDuplicateClauseTouchesOnlyTimestamp(): void
     {
         // An existing session must keep its stored data: only
@@ -193,6 +278,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertStringNotContainsString('sess_ip', $duplicateClause);
     }
 
+    /** A failed exec() must surface as false, not success. */
     public function testUpdateTimestampReturnsFalseWhenExecFails(): void
     {
         $this->db->method('exec')->willReturn(false);
