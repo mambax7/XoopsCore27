@@ -51,16 +51,22 @@ switch ($op) {
     // Display tree folder
     case 'tpls_display_folder':
         $root = XOOPS_THEME_PATH;
-        $cleanDir = urldecode(Request::getString('dir', ''));
+        // No urldecode(): PHP already decoded the query string once, and
+        // Request::getString() sanitizes THAT value. Decoding again would
+        // re-materialize %00 / %2f sequences the sanitizer just cleared -
+        // a double-decode that reintroduced NUL bytes (uncaught ValueError
+        // in realpath() on PHP 8.4+) and encoded traversal shapes.
+        $cleanDir = Request::getString('dir', '');
         $requestDir = $root . $cleanDir;
-        //
-        $path_file = realpath($requestDir);
-        $check_path = realpath($root);
         try {
+            // realpath() belongs INSIDE the try: on PHP 8.4+ it throws
+            // ValueError for NUL bytes, which the old placement left uncaught.
+            $path_file = realpath($requestDir);
+            $check_path = realpath($root);
             Assert::true(is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
             Assert::true(is_dir($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
             Assert::startsWith($path_file, $check_path, _AM_SYSTEM_TEMPLATES_ERROR);
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException | \ValueError $e) {
             // handle the exception
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
             exit;

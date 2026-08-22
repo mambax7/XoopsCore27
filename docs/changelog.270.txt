@@ -33,6 +33,7 @@ Security:
 - enforce authorization on the image category create, update and delete handlers, which validated the CSRF token but not the caller's permission; the admin check governed only which controls were rendered (mamba) in #151
 - remove three stale copies of core renderers under the TinyMCE image-manager plugins, which were installed as the global renderer so those screens never received core renderer changes; the endpoints now xoops_load() the core class (mamba) in #151
 - guard getByDirname() on the module uninstall and update confirm screens (mamba) in #156
+- drop the second urldecode() in the tplsets jQuery file browser: PHP already decoded the query string once and Xmf\Request::getString() sanitizes that value, so decoding again re-materialized %00 and %2f sequences the sanitizer had just cleared - on PHP 8.6 a re-materialized NUL reaching the realpath() probe would be an uncaught ValueError; both realpath() calls now sit inside the try and the catch accepts ValueError as well (mamba)
 
 Database:
 - render an empty IN list as a constant predicate. Criteria::render() emitted the literal IN (), which MySQL rejects as a syntax error; an empty set is now 1=0 for IN and 1=1 for NOT IN. Returning an empty fragment would be wrong, since CriteriaCompo drops empty fragments and the condition would silently match every row. This also fixes search.php, which built the fragment "mid IN ()" for any user whose module-read permission list was empty (mamba) in #154
