@@ -40,7 +40,10 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
     {
         $this->hadRemoteAddr   = isset($_SERVER['REMOTE_ADDR']);
         $this->savedRemoteAddr = $_SERVER['REMOTE_ADDR'] ?? null;
-        $_SERVER['REMOTE_ADDR'] = $_SERVER['REMOTE_ADDR'] ?? '192.168.1.100';
+        // Unconditional: read()/validateId() run the securityLevel-3 subnet
+        // check against fixtures storing this address, so a runner exporting
+        // its own REMOTE_ADDR must not leak in (review catch).
+        $_SERVER['REMOTE_ADDR'] = '192.168.1.100';
 
         $this->db = $this->createMockDatabase();
 
@@ -174,7 +177,16 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         if (PHP_SESSION_ACTIVE === session_status()) {
             $this->markTestSkipped('a session is already active in this runner');
         }
+        // Force the directive to '0' BEFORE starting the session: on PHP 8.6
+        // the default is '1' and the helper would short-circuit at the
+        // already-strict check, leaving the mid-session branch unexercised on
+        // exactly the runtime this PR targets (review catch).
+        $original = ini_get('session.use_strict_mode');
+        if (false === @ini_set('session.use_strict_mode', '0')) {
+            $this->markTestSkipped('environment forbids session ini changes (headers already sent)');
+        }
         if (!@session_start()) {
+            @ini_set('session.use_strict_mode', (string) $original);
             $this->markTestSkipped('cannot start a session in this environment');
         }
         try {
@@ -190,18 +202,13 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
                 restore_error_handler();
             }
 
-            if ('1' === ini_get('session.use_strict_mode')) {
-                // Already-strict short-circuits before the mid-session check.
-                $this->assertTrue($result);
-
-                return;
-            }
             $this->assertFalse($result);
             $this->assertNotEmpty($captured, 'the mid-session refusal must be accompanied by a diagnostic');
             $this->assertSame(E_USER_WARNING, $captured[0][0]);
             $this->assertStringContainsString('mid-session', $captured[0][1]);
         } finally {
             session_abort();
+            @ini_set('session.use_strict_mode', (string) $original);
         }
     }
 
@@ -242,6 +249,9 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         require_once XOOPS_ROOT_PATH . '/include/xoopssetcookie.php';
 
         $savedConfig = $GLOBALS['xoopsConfig'] ?? [];
+        // The constructor calls session_set_cookie_params() - process-wide
+        // state a later test would inherit; restore it too (review catch).
+        $savedCookieParams = session_get_cookie_params();
         $GLOBALS['xoopsConfig'] = [
                 'use_mysession'  => 0,
                 'session_name'   => '',
@@ -259,6 +269,7 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         } finally {
             $GLOBALS['xoopsConfig'] = $savedConfig;
             @ini_set('session.use_strict_mode', (string) $original);
+            @session_set_cookie_params($savedCookieParams);
         }
     }
 
@@ -372,6 +383,33 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertTrue($this->handler->updateTimestamp('sess_new', ''));
         $this->assertStringContainsString('INSERT INTO xoops_session', $sqlCaptured);
         $this->assertStringContainsString('ON DUPLICATE KEY UPDATE', $sqlCaptured);
+    }
+
+    /** A row seen by validateId() keeps the no-resurrect gate even if read() then misses. */
+    public function testUpdateTimestampAfterValidateIdSawRowNeverInserts(): void
+    {
+        // Strict mode calls validateId() BEFORE read(); a parallel logout can
+        // delete the row between the two. The ID was observed to exist, so
+        // updateTimestamp() must keep the timestamp-only path - the read
+        // miss must not make the destroyed ID insertable again (review catch).
+        $this->db->method('query')->willReturn('mock_result');
+        $this->db->method('isResultSet')->willReturn(true);
+        $this->db->method('fetchRow')->willReturnOnConsecutiveCalls(['192.168.1.100'], false);
+
+        $this->assertTrue($this->handler->validateId('sess_raced'));
+        $this->assertSame('', $this->handler->read('sess_raced'));
+
+        $sqlCaptured = null;
+        $this->db->method('exec')
+            ->willReturnCallback(function (string $sql) use (&$sqlCaptured) {
+                $sqlCaptured = $sql;
+                return true;
+            });
+
+        $this->assertTrue($this->handler->updateTimestamp('sess_raced', ''));
+        $this->assertStringContainsString('UPDATE xoops_session', $sqlCaptured);
+        $this->assertStringNotContainsString('INSERT', $sqlCaptured);
+        $this->assertStringNotContainsString('ON DUPLICATE', $sqlCaptured);
     }
 
     /** A failed exec() must surface as false, not success. */
