@@ -220,7 +220,11 @@ class XoopsSessionHandler implements
         }
 
         $row = $this->db->fetchRow($result);
-        $this->rowExistedAtRead[$sessionId] = ($row !== false);
+        // Sticky-true: validateId() may have observed the row an instant
+        // before a parallel destroy - a miss here must not downgrade that
+        // observation, or updateTimestamp() would re-insert the dead ID.
+        $this->rowExistedAtRead[$sessionId] = ($row !== false)
+            || !empty($this->rowExistedAtRead[$sessionId]);
         if ($row === false) {
             return ''; // not found → empty string
         }
@@ -392,6 +396,15 @@ class XoopsSessionHandler implements
         if ($row === false) {
             return false;
         }
+
+        // The row exists: record it for updateTimestamp()'s no-resurrect
+        // gate. Strict mode calls validateId() BEFORE read(), and a parallel
+        // logout can delete the row between the two - the later read miss
+        // must not make the destroyed ID insertable again (the flag is
+        // sticky-true in read() for the same reason). Recorded even when the
+        // IP check below rejects the ID: existence, not validity, is what
+        // gates the insert.
+        $this->rowExistedAtRead[$id] = true;
 
         $storedIp = $row[0] ?? null;
         if (!$this->validateSessionIp(is_string($storedIp) ? $storedIp : null)) {
