@@ -127,10 +127,23 @@ class XoopsSessionHandler implements
 
             return false;
         }
+        // Check headers_sent() explicitly instead of letting ini_set() fail:
+        // PHP refuses session.* changes after output, and calling ini_set()
+        // anyway would add the engine's own E_WARNING on top of the explicit
+        // diagnostic - which can also name WHERE the output started.
+        if (headers_sent($file, $line)) {
+            trigger_error(
+                'XoopsSessionHandler: session.use_strict_mode could not be enabled'
+                . sprintf(' (output started at %s:%d); PHP defaults apply', $file, $line),
+                E_USER_WARNING
+            );
+
+            return false;
+        }
         if (false === ini_set('session.use_strict_mode', '1')) {
             trigger_error(
                 'XoopsSessionHandler: session.use_strict_mode could not be enabled'
-                . ' (output sent before session bootstrap?); PHP defaults apply',
+                . ' (ini change refused); PHP defaults apply',
                 E_USER_WARNING
             );
 
@@ -145,8 +158,10 @@ class XoopsSessionHandler implements
     /**
      * Generate a new session ID.
      *
-     * Required (with validateId()) by PHP 8.6: session_set_save_handler()
-     * deprecates object handlers that lack create_sid(). The ID is
+     * PHP 8.6 deprecates passing session_set_save_handler() an object
+     * handler that lacks create_sid() (alongside validateId()); PHP 9.0
+     * makes both methods mandatory. Implementing it now silences the 8.6
+     * deprecation and is ready for 9.0. The ID is
      * generated directly from random_bytes() for a fixed, predictable
      * format that does not depend on session.sid_* settings or session
      * machinery. (session_create_id() would also work - php-src skips
