@@ -327,6 +327,53 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         $this->assertStringNotContainsString('sess_ip', $duplicateClause);
     }
 
+    /** An ID whose row was seen by read() gets a timestamp-only UPDATE, never an insert. */
+    public function testUpdateTimestampAfterReadFoundRowNeverInserts(): void
+    {
+        // read() found the row; a parallel request (logout) may destroy it
+        // before updateTimestamp() runs. Zero affected rows must remain the
+        // outcome - an unconditional upsert would resurrect the destroyed
+        // session with this request's stale data (review catch).
+        $this->db->method('query')->willReturn('mock_result');
+        $this->db->method('isResultSet')->willReturn(true);
+        $this->db->method('fetchRow')->willReturn(['the_payload', '192.168.1.100']);
+        $this->assertSame('the_payload', $this->handler->read('sess_read'));
+
+        $sqlCaptured = null;
+        $this->db->method('exec')
+            ->willReturnCallback(function (string $sql) use (&$sqlCaptured) {
+                $sqlCaptured = $sql;
+                return true;
+            });
+
+        $this->assertTrue($this->handler->updateTimestamp('sess_read', 'the_payload'));
+        $this->assertStringContainsString('UPDATE xoops_session', $sqlCaptured);
+        $this->assertStringContainsString('sess_updated', $sqlCaptured);
+        $this->assertStringNotContainsString('INSERT', $sqlCaptured);
+        $this->assertStringNotContainsString('ON DUPLICATE', $sqlCaptured);
+        $this->assertStringNotContainsString('sess_data', $sqlCaptured);
+    }
+
+    /** A read miss marks the ID brand-new; the insert path stays available to it. */
+    public function testUpdateTimestampAfterReadMissStillUpserts(): void
+    {
+        $this->db->method('query')->willReturn('mock_result');
+        $this->db->method('isResultSet')->willReturn(true);
+        $this->db->method('fetchRow')->willReturn(false);
+        $this->assertSame('', $this->handler->read('sess_new'));
+
+        $sqlCaptured = null;
+        $this->db->method('exec')
+            ->willReturnCallback(function (string $sql) use (&$sqlCaptured) {
+                $sqlCaptured = $sql;
+                return true;
+            });
+
+        $this->assertTrue($this->handler->updateTimestamp('sess_new', ''));
+        $this->assertStringContainsString('INSERT INTO xoops_session', $sqlCaptured);
+        $this->assertStringContainsString('ON DUPLICATE KEY UPDATE', $sqlCaptured);
+    }
+
     /** A failed exec() must surface as false, not success. */
     public function testUpdateTimestampReturnsFalseWhenExecFails(): void
     {
