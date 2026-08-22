@@ -147,9 +147,17 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
                     $result,
                     'when the directive cannot be changed, the helper must report failure, not pretend'
                 );
-                $this->assertNotEmpty($captured, 'the refusal must be accompanied by a diagnostic');
-                $this->assertSame(E_USER_WARNING, $captured[0][0]);
-                $this->assertStringContainsString('use_strict_mode', $captured[0][1]);
+                // ini_set() itself emits a native E_WARNING here ("Session ini
+                // settings cannot be changed after headers have already been
+                // sent") BEFORE the helper's diagnostic, so captured[0] is the
+                // engine's entry, not ours (review catch on the first version
+                // of this branch). Filter to the promised E_USER_WARNING.
+                $userWarnings = array_values(array_filter(
+                    $captured,
+                    static fn (array $error): bool => E_USER_WARNING === $error[0]
+                ));
+                $this->assertNotEmpty($userWarnings, 'the refusal must be accompanied by an E_USER_WARNING diagnostic');
+                $this->assertStringContainsString('use_strict_mode', $userWarnings[0][1]);
                 $this->markTestSkipped('environment forbids session ini changes (headers already sent)');
             }
 
