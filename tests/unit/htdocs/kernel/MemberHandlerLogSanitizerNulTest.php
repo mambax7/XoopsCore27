@@ -85,7 +85,23 @@ final class MemberHandlerLogSanitizerNulTest extends TestCase
         // parse_url() shield was lost in a refactor.
         $result = (string) $this->method->invoke($this->handler);
 
-        $this->assertStringStartsWith('/x.php', $result);
+        // Pin the shield on PRE-8.6 runtimes too (review catch on the first
+        // version of this test): with the shield swapped for a raw
+        // explode('?'), pre-8.6 parse_str() silently truncates this fixture
+        // to '/x.php?note=b' - which still starts with '/x.php' and contains
+        // no NUL, so weaker assertions only caught the regression on 8.6.
+        // Derive the expectation THROUGH parse_url() itself: whatever this
+        // runtime normalizes the control character to, production must match
+        // it exactly - a truncating implementation cannot.
+        $parts = parse_url($_SERVER['REQUEST_URI']);
+        parse_str($parts['query'] ?? '', $expectedParams);
+        // 'note' is not in SENSITIVE_PARAMS, and the parse_url()-normalized
+        // value contains no control characters, so sanitizeForLog() passes it
+        // through unchanged.
+        $expected = ($parts['path'] ?? '/') . '?' . http_build_query($expectedParams);
+
+        $this->assertSame($expected, $result);
+        $this->assertNotSame('/x.php?note=b', $result, 'truncation-at-NUL means the parse_url() shield was lost');
         $this->assertStringNotContainsString("\0", $result);
     }
 
