@@ -38,7 +38,7 @@ class FunctionsUserTest extends TestCase
     {
         $result = @mod_getIP(true);
         // Should return an IP string or empty
-        $this->assertTrue(is_string($result) || is_long($result));
+        $this->assertTrue(is_string($result) || is_int($result));
     }
 
     #[Test]
