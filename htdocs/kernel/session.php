@@ -30,6 +30,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsSessionHandler implements
     \SessionHandlerInterface,
+    \SessionIdInterface,
     \SessionUpdateTimestampHandlerInterface
 {
     /** @var XoopsDatabase */
@@ -88,6 +89,71 @@ class XoopsSessionHandler implements
             'samesite' => $sameSite,
         ];
         session_set_cookie_params($options);
+
+        $this->enforceStrictMode();
+    }
+
+    /**
+     * Pin session.use_strict_mode to the PHP 8.6 default.
+     *
+     * PHP 8.6 flips the session.use_strict_mode ini default from 0 to 1
+     * (Secure Session Configuration Defaults RFC). Setting it explicitly
+     * makes PHP 8.2-8.5 behave identically to 8.6: an uninitialized
+     * session ID supplied by the client is rejected via validateId() and
+     * a fresh ID is generated.
+     *
+     * PHP refuses ALL session.* ini changes not only while a session is
+     * active but also once headers have been sent (any prior echo/output).
+     * ini_set() then returns false - so the result is checked, and failure
+     * is REPORTED via E_USER_NOTICE instead of silently claiming parity.
+     * The practical exposure is bounded: a request that produced output
+     * before this constructor also cannot set the session cookie, so its
+     * session handling is already degraded; the notice makes that visible.
+     *
+     * @return bool true when strict mode is verifiably in effect
+     */
+    public function enforceStrictMode(): bool
+    {
+        if ('1' === ini_get('session.use_strict_mode')) {
+            return true; // already pinned (php.ini, earlier call, or PHP 8.6 default)
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            return false; // cannot change mid-session; not pinned
+        }
+        if (false === ini_set('session.use_strict_mode', '1')) {
+            trigger_error(
+                'XoopsSessionHandler: session.use_strict_mode could not be enabled'
+                . ' (output sent before session bootstrap?); PHP defaults apply',
+                E_USER_NOTICE
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // --- SessionIdInterface ---
+
+    /**
+     * Generate a new session ID.
+     *
+     * Required (with validateId()) by PHP 8.6: session_set_save_handler()
+     * deprecates object handlers that lack create_sid(). The ID is
+     * generated directly from random_bytes() for a fixed, predictable
+     * format that does not depend on session.sid_* settings or session
+     * machinery. (session_create_id() would also work - php-src skips
+     * handler re-entry inside save-handler callbacks - but the direct
+     * generator is simpler and string-or-throw.) 32 lowercase hex
+     * characters carry 128 bits of entropy and match the SSL-bridge
+     * pattern in include/common.php (^[a-zA-Z0-9,-]{26,128}$).
+     *
+     * @return string new session ID
+     * @throws \Random\RandomException if no source of randomness is available
+     */
+    public function create_sid(): string
+    {
+        return bin2hex(random_bytes(16));
     }
 
     // --- SessionHandlerInterface (typed) ---
@@ -298,13 +364,37 @@ class XoopsSessionHandler implements
         return true;
     }
 
+    /**
+     * Refresh a session's timestamp without rewriting its data.
+     *
+     * PHP 8.6 routes an unchanged session here instead of write() under
+     * session.lazy_write - including a brand-new session that stayed
+     * empty, because session_encode() now returns '' instead of false
+     * for an empty session. A new empty session has no row yet, so a
+     * plain UPDATE would persist nothing and the next request's
+     * strict-mode validateId() would reject the ID, regenerating the
+     * session forever. The upsert covers both cases: insert the missing
+     * row (with IP and data), or touch only sess_updated on an existing
+     * one - preserving the lazy-write optimization.
+     *
+     * @param string $id   session ID
+     * @param string $data serialized session data (stored only when the row is first inserted)
+     * @return bool true on success
+     */
     public function updateTimestamp(string $id, string $data): bool
     {
+        $remoteAddress = \Xmf\IPAddress::fromRequest()->asReadable();
+        $now = time();
         $sql = sprintf(
-            'UPDATE %s SET sess_updated = %u WHERE sess_id = %s',
+            'INSERT INTO %s (sess_id, sess_updated, sess_ip, sess_data)
+             VALUES (%s, %u, %s, %s)
+             ON DUPLICATE KEY UPDATE sess_updated = %u',
             $this->db->prefix('session'),
-            time(),
-            $this->db->quote($id)
+            $this->db->quote($id),
+            $now,
+            $this->db->quote($remoteAddress),
+            $this->db->quote($data),
+            $now
         );
         return (bool)$this->db->exec($sql);
     }
