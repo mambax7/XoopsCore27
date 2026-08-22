@@ -108,13 +108,12 @@ class XoopsFileHandler
         if (!$this->exists()) {
             if ($create === true) {
                 if ($this->safe($path) && $this->create() === false) {
-                    return false;
+                    return;
                 }
             } else {
-                return false;
+                return;
             }
         }
-        return null;
     }
 
     /**

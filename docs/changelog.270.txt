@@ -14,6 +14,7 @@ Compatibility:
 - keep code-block whitespace intact and scope the trailing-break trim to XOOPS' own boxes (mamba) in #150
 - drop deprecated curl_close() calls for PHP 8.5 (mamba) in #153
 - replace the deprecated is_long() alias with is_int() in FunctionsUserTest, the lone repository-wide occurrence; PHP 8.6 deprecates the is_long/is_integer/is_double/doubleval type-alias functions and first-party htdocs/ code has none (mamba)
+- use bare returns in the four early-exit constructors (class/file/file.php, class/uploader.php, class/xoopsform/formdhtmltextarea.php, class/xoopsform/formselectuser.php): PHP 8.6 deprecates returning a value from __construct() at compile time; new never delivered these values, so the change is behavior-preserving. Verified by token scan - 7 constructor value-returns before, 0 after - and pinned by a direct-invocation test that observes the yielded value (mamba)
 - drop ReflectionProperty::setAccessible() from the test bootstrap; a no-op since 8.1 and deprecated in 8.5, and emitted during bootstrap it contaminated the output of every test asserting on a clean stream (mamba) in #157
 
 Debugging and logging:
