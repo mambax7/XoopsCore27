@@ -154,7 +154,7 @@ class XoopsMediaUploader
         if (!is_array($this->extensionToMime)) {
             $this->extensionToMime = [];
 
-            return false;
+            return;
         }
         if (is_array($allowedMimeTypes)) {
             $this->allowedMimeTypes = & $allowedMimeTypes;
