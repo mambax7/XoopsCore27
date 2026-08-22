@@ -1,3 +1,5 @@
+# Pull Request
+
 <!--
 Thanks for contributing to XOOPS! Fill in the sections below.
 The checklist encodes what the review bots and maintainers check on
@@ -22,6 +24,6 @@ every PR - working through it honestly shortens your review cycle.
 - [ ] Every changed conditional has both branches covered by a test, including the failure paths (a false return, a refused call)
 - [ ] New tests pass with their file run alone - no reliance on suite order, and every process-global they touch (`$_SERVER`, ini settings, session or cookie state, `$GLOBALS['xoopsConfig']`) is saved and restored
 - [ ] No diagnostic, log line, or error message emits a full server path - basename() or a root-relative path only
-- [ ] Failures are handled explicitly: no @ suppression (the pre-commit hook enforces this) and results of calls like ini_set() are checked
+- [ ] Production code (htdocs/) handles failures explicitly: no @ suppression, and results of calls like ini_set() are checked. Tests may use @ for expected diagnostics, per the testing guidance. The .githooks pre-commit check catches @ in staged production PHP when enabled locally (git config core.hooksPath .githooks) - it is an opt-in helper, not a guarantee
 - [ ] The PR description matches the implementation - when review changes a promised contract (severity, return type, behavior), the description is part of the diff
-- [ ] Commits follow the conventional-commit dialect used here (fix(scope):, test(scope):, compat(scope):), with code and tests in separate commits
+- [ ] Commits follow the conventional-commit dialect (for example fix(scope):, test(scope):, compat(scope): - the full accepted set is in cliff.toml), with code and tests in separate commits
