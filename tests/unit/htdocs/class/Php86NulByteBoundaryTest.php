@@ -151,8 +151,10 @@ final class Php86NulByteBoundaryTest extends TestCase
     private function redact(string $uri): string
     {
         $logger = (new ReflectionClass(\XoopsFileLogger::class))->newInstanceWithoutConstructor();
+        // No setAccessible(): a no-op since PHP 8.1 and deprecated in 8.5 -
+        // reflection invokes non-public methods without it on every
+        // supported runtime.
         $method = new ReflectionMethod(\XoopsFileLogger::class, 'redactSessionId');
-        $method->setAccessible(true);
 
         return (string) $method->invoke($logger, $uri);
     }

@@ -46,8 +46,8 @@ final class MemberHandlerLogSanitizerNulTest extends TestCase
         // sanitizeRequestUri() touches only $_SERVER and private helpers, so a
         // constructor-less instance (no database, no sub-handlers) is enough.
         $this->handler = (new ReflectionClass(\XoopsMemberHandler::class))->newInstanceWithoutConstructor();
+        // No setAccessible(): a no-op since PHP 8.1 and deprecated in 8.5.
         $this->method  = new ReflectionMethod(\XoopsMemberHandler::class, 'sanitizeRequestUri');
-        $this->method->setAccessible(true);
 
         $this->hadRequestUri   = isset($_SERVER['REQUEST_URI']);
         $this->savedRequestUri = $_SERVER['REQUEST_URI'] ?? null;
