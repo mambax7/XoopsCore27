@@ -221,6 +221,47 @@ class XoopsSessionHandlerPhp86Test extends KernelTestCase
         }
     }
 
+    /** The production wiring: constructing the handler must run the strict-mode pin. */
+    public function testConstructorPinsStrictModeThroughEnforceStrictMode(): void
+    {
+        // Every other test bypasses the constructor, so the suite would stay
+        // green if the constructor's enforceStrictMode() call were removed
+        // (review catch). This one exercises the real wiring.
+        if (PHP_SESSION_ACTIVE === session_status()) {
+            $this->markTestSkipped('a session is already active in this runner');
+        }
+        $original = ini_get('session.use_strict_mode');
+        if (false === @ini_set('session.use_strict_mode', '0')) {
+            $this->markTestSkipped('environment forbids session ini changes (headers already sent)');
+        }
+        // The directive is now changeable and '0': the only way it reads '1'
+        // after construction is the constructor's enforceStrictMode() call.
+        if (!defined('XOOPS_COOKIE_DOMAIN')) {
+            define('XOOPS_COOKIE_DOMAIN', 'localhost');
+        }
+        require_once XOOPS_ROOT_PATH . '/include/xoopssetcookie.php';
+
+        $savedConfig = $GLOBALS['xoopsConfig'] ?? [];
+        $GLOBALS['xoopsConfig'] = [
+                'use_mysession'  => 0,
+                'session_name'   => '',
+                'session_expire' => 15,
+            ] + $savedConfig;
+        try {
+            $handler = new \XoopsSessionHandler($this->db);
+
+            $this->assertSame($this->db, $handler->db);
+            $this->assertSame(
+                '1',
+                ini_get('session.use_strict_mode'),
+                'constructing the handler must pin session.use_strict_mode'
+            );
+        } finally {
+            $GLOBALS['xoopsConfig'] = $savedConfig;
+            @ini_set('session.use_strict_mode', (string) $original);
+        }
+    }
+
     // =========================================================================
     // updateTimestamp() upsert
     // =========================================================================
