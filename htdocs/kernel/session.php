@@ -47,6 +47,18 @@ class XoopsSessionHandler implements
 
     public bool $enableRegenerateId = true;
 
+    /**
+     * Whether read() observed an existing row for a session ID during this
+     * request. updateTimestamp() consults it: only an ID whose read MISSED
+     * (a brand-new or regenerated session) may insert a row - an ID read
+     * from an existing row gets a timestamp-only UPDATE, so a session a
+     * parallel request destroyed (logout) cannot be resurrected with this
+     * request's stale copy of its data.
+     *
+     * @var array<string, bool>
+     */
+    protected array $rowExistedAtRead = [];
+
     public function __construct(XoopsDatabase $db)
     {
         global $xoopsConfig;
@@ -134,7 +146,9 @@ class XoopsSessionHandler implements
         if (headers_sent($file, $line)) {
             trigger_error(
                 'XoopsSessionHandler: session.use_strict_mode could not be enabled'
-                . sprintf(' (output started at %s:%d); PHP defaults apply', $file, $line),
+                // basename() only: the full server path must not reach a
+                // diagnostic that can be rendered or logged to a client.
+                . sprintf(' (output started at %s:%d); PHP defaults apply', basename($file), $line),
                 E_USER_WARNING
             );
 
@@ -206,6 +220,7 @@ class XoopsSessionHandler implements
         }
 
         $row = $this->db->fetchRow($result);
+        $this->rowExistedAtRead[$sessionId] = ($row !== false);
         if ($row === false) {
             return ''; // not found → empty string
         }
@@ -395,9 +410,15 @@ class XoopsSessionHandler implements
      * for an empty session. A new empty session has no row yet, so a
      * plain UPDATE would persist nothing and the next request's
      * strict-mode validateId() would reject the ID, regenerating the
-     * session forever. The upsert covers both cases: insert the missing
-     * row (with IP and data), or touch only sess_updated on an existing
-     * one - preserving the lazy-write optimization.
+     * session forever.
+     *
+     * The insert half is gated on read() having MISSED for this ID (or the
+     * ID never passing read() at all - a mid-request regeneration): only a
+     * row that legitimately does not exist yet may be created here. An ID
+     * read from an existing row gets a timestamp-only UPDATE, where zero
+     * affected rows is the CORRECT outcome for a session a parallel request
+     * destroyed - an unconditional upsert would resurrect that session with
+     * this request's stale copy of its data (review catch).
      *
      * @param string $id   session ID
      * @param string $data serialized session data (stored only when the row is first inserted)
@@ -405,8 +426,19 @@ class XoopsSessionHandler implements
      */
     public function updateTimestamp(string $id, string $data): bool
     {
-        $remoteAddress = \Xmf\IPAddress::fromRequest()->asReadable();
         $now = time();
+        if (!empty($this->rowExistedAtRead[$id])) {
+            $sql = sprintf(
+                'UPDATE %s SET sess_updated = %u WHERE sess_id = %s',
+                $this->db->prefix('session'),
+                $now,
+                $this->db->quote($id)
+            );
+
+            return (bool)$this->db->exec($sql);
+        }
+
+        $remoteAddress = \Xmf\IPAddress::fromRequest()->asReadable();
         $sql = sprintf(
             'INSERT INTO %s (sess_id, sess_updated, sess_ip, sess_data)
              VALUES (%s, %u, %s, %s)
