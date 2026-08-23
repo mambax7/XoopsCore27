@@ -51,13 +51,18 @@ switch ($op) {
     // Display tree folder
     case 'tpls_display_folder':
         $root = XOOPS_THEME_PATH;
-        // No urldecode(): PHP already decoded the query string once, and
-        // Request::getString() sanitizes THAT value. Decoding again would
-        // re-materialize %00 / %2f sequences the sanitizer just cleared -
-        // a double-decode that reintroduced NUL bytes (an uncaught
-        // ValueError in realpath(), which rejects NULs on PHP 8) and
-        // encoded traversal shapes.
-        $cleanDir = Request::getString('dir', '');
+        // No urldecode(): PHP already decoded the request once, and a
+        // second decode would re-materialize %00 / %2f sequences as live
+        // bytes. getPath() (not getString(), whose trim() drops only EDGE
+        // NULs - an interior "ok\0evil" passes it intact, verified by
+        // execution) truncates at the first NUL, so no NUL can reach
+        // realpath(), which rejects them with ValueError on PHP 8. The
+        // ValueError catch below stays as a backstop. POST, matching the
+        // jqueryFileTree $.post() caller.
+        $cleanDir = Request::getPath('dir', '', 'POST');
+        if ('' !== $cleanDir && !str_ends_with($cleanDir, '/')) {
+            $cleanDir .= '/'; // the tree JS concatenates rel = dir + file
+        }
         $requestDir = $root . $cleanDir;
         try {
             // realpath() belongs INSIDE the try: PHP 8 throws ValueError
@@ -125,8 +130,11 @@ switch ($op) {
         break;
     // Edit File
     case 'tpls_edit_file':
-        $clean_file = XoopsRequest::getString('file', '');
-        $clean_path_file = XoopsRequest::getString('path_file', '');
+        // POST (templates.js sends type:"POST"); getPath() truncates at a
+        // NUL, so none reaches realpath() - the ValueError catch remains a
+        // backstop.
+        $clean_file = Request::getPath('file', '', 'POST');
+        $clean_path_file = Request::getPath('path_file', '', 'POST');
         try {
             // realpath() inside the try with ValueError in the catch, same
             // as tpls_display_folder: PHP 8 throws for NUL bytes.
@@ -141,6 +149,13 @@ switch ($op) {
             Assert::true(is_string($path_file) && is_file($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
             Assert::true(
                 str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
+                _AM_SYSTEM_TEMPLATES_ERROR
+            );
+            // The editor opens template types only - same allowlist the
+            // save path enforces, applied before any read.
+            $pathInfo = pathinfo($path_file);
+            Assert::true(
+                in_array(strtolower($pathInfo['extension'] ?? ''), ['css', 'html', 'htm', 'tpl'], true),
                 _AM_SYSTEM_TEMPLATES_ERROR
             );
         } catch (\InvalidArgumentException | \ValueError $e) {
@@ -208,14 +223,22 @@ switch ($op) {
         }
         $extensions = ['.html', '.htm', '.css', '.tpl'];
 
-        $restorePath = Request::getText('path_file', '', 'POST');
+        // getPath() truncates at a NUL; the try/catch is the backstop for
+        // anything else realpath() rejects (getText() passed interior NULs
+        // through raw - same class as the editor's old getString()).
+        $restorePath = Request::getPath('path_file', '', 'POST');
         $themesRoot  = realpath(XOOPS_ROOT_PATH . '/themes');
-        $resolved    = realpath($restorePath);
+        try {
+            $resolved = realpath($restorePath);
+        } catch (\ValueError $e) {
+            $resolved = false;
+        }
 
         // Require root-plus-separator containment, not a bare prefix: strpos(...) === 0
         // accepts a sibling dir whose path starts with the themes-root string, e.g.
         // ".../themes-evil/..." (SECURITY.md A2-M-3). Mirrors the tpls_save guard.
         $valid_dir = ($resolved !== false && $themesRoot !== false
+            && is_file($resolved)
             && str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR));
 
         $old_file = $resolved . '.back';
