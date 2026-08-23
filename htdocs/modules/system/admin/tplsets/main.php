@@ -472,7 +472,12 @@ switch ($op) {
                     redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 }
                 $temp = Request::getText('templates', '', 'POST');
-                if (!fwrite($open, xoops_utf8_encode($temp))) {
+                // === false, not falsy: clearing a template writes 0 bytes,
+                // and fwrite() returns int 0 for that legitimate save - the
+                // same 0-is-falsy trap the backup path already dodges
+                // (review catch). redirect_header() exits internally, so
+                // the failure branch never falls through.
+                if (false === fwrite($open, xoops_utf8_encode($temp))) {
                     fclose($open);
                     redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 }
