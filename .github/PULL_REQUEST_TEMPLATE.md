@@ -27,7 +27,7 @@ notes".
 
 - [ ] docs/changelog.270.txt has an entry (the root CHANGELOG.md is generated - never hand-edit it)
 - [ ] Changed conditionals have both branches covered by a test, including the failure paths
-- [ ] New tests pass with their file run alone and leave no process-global state behind (constants need process isolation - see notes)
+- [ ] New or changed tests pass with their file run alone and leave no process-global state behind (constants need process isolation - see notes)
 - [ ] No diagnostic, log line, or error message emits a full server path - basename() or root-relative only
 - [ ] Production code handles failures explicitly - no unchecked @ suppression, results of calls like ini_set() checked (see notes)
 - [ ] Factual claims in the description, comments, and changelog were verified by running them, not inferred
