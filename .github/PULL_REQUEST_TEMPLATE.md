@@ -25,6 +25,8 @@ checklist notes".
 ### Checklist
 <!-- An item that does not apply gets "N/A" plus the reason in
      Verification - honesty beats box-ticking. -->
+Notes for the items marked "see notes": [CONTRIBUTING.md - Pull request checklist notes](https://github.com/XOOPS/XoopsCore27/blob/master/CONTRIBUTING.md#pull-request-checklist-notes)
+
 
 - [ ] docs/changelog.270.txt has an entry (the root CHANGELOG.md is generated - never hand-edit it)
 - [ ] Changed conditionals have both branches covered by a test, including the failure paths
