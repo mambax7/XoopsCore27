@@ -402,6 +402,13 @@ switch ($op) {
                 redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit();
             }
+            // A directory named like "x.css" would pass the extension check
+            // below and reach copy()/fopen() - require a real file (review
+            // catch, mirrors the jquery.php editor guard).
+            if (!is_file($path_file)) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
             $pathInfo = pathinfo($path_file);
             if (!in_array($pathInfo['extension'], ['css', 'html', 'tpl'])) {
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);

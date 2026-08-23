@@ -54,13 +54,14 @@ switch ($op) {
         // No urldecode(): PHP already decoded the query string once, and
         // Request::getString() sanitizes THAT value. Decoding again would
         // re-materialize %00 / %2f sequences the sanitizer just cleared -
-        // a double-decode that reintroduced NUL bytes (uncaught ValueError
-        // in realpath() on PHP 8.4+) and encoded traversal shapes.
+        // a double-decode that reintroduced NUL bytes (an uncaught
+        // ValueError in realpath(), which rejects NULs on PHP 8) and
+        // encoded traversal shapes.
         $cleanDir = Request::getString('dir', '');
         $requestDir = $root . $cleanDir;
         try {
-            // realpath() belongs INSIDE the try: on PHP 8.4+ it throws
-            // ValueError for NUL bytes, which the old placement left uncaught.
+            // realpath() belongs INSIDE the try: PHP 8 throws ValueError
+            // for NUL bytes, which the old placement left uncaught.
             $path_file = realpath($requestDir);
             $check_path = realpath($root);
             // realpath() returns false for a non-existent path - refuse it
@@ -81,6 +82,11 @@ switch ($op) {
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
             exit;
         }
+        // Use the CANONICAL path for everything below: keeping the raw
+        // $requestDir string open would leave a time-of-check/time-of-use
+        // gap through symlink components between the containment check and
+        // the listing (review catch).
+        $requestDir = rtrim($path_file, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         //
         if (file_exists($requestDir)) {
             $files = scandir($requestDir);
@@ -100,7 +106,7 @@ switch ($op) {
                 }
                 // All files
                 foreach ($files as $file) {
-                    if (file_exists($root . $cleanDir . $file) && $file !== '.' && $file !== '..' && !is_dir($root . $cleanDir . $file) && $file !== 'index.html') {
+                    if (file_exists($requestDir . $file) && $file !== '.' && $file !== '..' && !is_dir($requestDir . $file) && $file !== 'index.html') {
                         $ext = preg_replace('/^.*\./', '', $file);
 
                         $extensions      = ['.html', '.htm', '.css', '.tpl'];
@@ -121,20 +127,23 @@ switch ($op) {
     case 'tpls_edit_file':
         $clean_file = XoopsRequest::getString('file', '');
         $clean_path_file = XoopsRequest::getString('path_file', '');
-        $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
-        $check_path = realpath(XOOPS_ROOT_PATH.'/themes');
         try {
-            // Same guard as tpls_display_folder / tpls_restore: refuse a
-            // false realpath() and require root-plus-separator containment,
-            // not the bare prefix a sibling directory can satisfy.
+            // realpath() inside the try with ValueError in the catch, same
+            // as tpls_display_folder: PHP 8 throws for NUL bytes.
+            $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
+            $check_path = realpath(XOOPS_ROOT_PATH.'/themes');
+            // Refuse a false realpath(), require an actual FILE (a bare
+            // "/" resolved to the themes root itself and reached the editor
+            // as a directory - review catch), and require root-plus-
+            // separator containment, not the bare prefix a sibling
+            // directory can satisfy.
             Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::true(is_string($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(is_string($path_file) && is_file($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
             Assert::true(
-                $path_file === $check_path
-                || str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
+                str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
                 _AM_SYSTEM_TEMPLATES_ERROR
             );
-        } catch (\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException | \ValueError $e) {
             // handle the exception
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
             exit;
