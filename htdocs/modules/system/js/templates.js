@@ -11,7 +11,10 @@ $(document).ready(
 
 
 //Edit
-function tpls_edit_file(path_file, path, file, extension) {
+// Two parameters: the old (path_file, path, file, extension) signature
+// carried a path/file pair nothing ever read - the endpoint derives the
+// name from the validated path itself.
+function tpls_edit_file(path_file, extension) {
     $('#display_contenu').hide();
     $('#display_form').hide();
     $('#loading').show();

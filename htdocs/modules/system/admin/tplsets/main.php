@@ -432,23 +432,34 @@ switch ($op) {
                 exit;
             }
             // copy file - a failed backup must abort the save, or the
-            // overwrite below destroys the only copy. Scoped handler keeps
-            // copy()'s native warning (which embeds the full path) out of
-            // the error handlers; the explicit diagnostic names only the
-            // basename (review catch, mirrors file_safety.php).
+            // overwrite below destroys the only copy. Delegated to the
+            // shared xoops_write_file_atomically() helper (loaded with
+            // cp_functions.php by admin.php): tempnam() in the target
+            // directory, short-write check, permissions carried with a
+            // 0644 fallback, and an atomic rename() - which REPLACES a
+            // planted symlink at .back instead of following it. A direct
+            // copy() follows an existing link and PHP's emulated fopen('x')
+            // follows a dangling one - both verified by execution - which
+            // rules those routes out. The residual window (the helper
+            // reopens its temp file by name) requires an attacker who can
+            // already write inside themes/, and such an attacker can
+            // replace the templates directly: that is the threat boundary
+            // here, not a gap this call path can close. The helper's
+            // diagnostics name only the file's basename; the scoped
+            // handler keeps file_get_contents()' native full-path warning
+            // out of the error handlers the same way (review catch,
+            // mirrors file_safety.php).
             $copy_file = $path_file . '.back';
-            // Initialized OUTSIDE the try: if copy() ever throws instead of
-            // warning, the finally runs but the assignment does not, and the
-            // check below would read an undefined variable (review catch).
-            $copied = false;
+            $content   = false;
             set_error_handler(static function (): bool {
                 return true;
             }, E_WARNING);
             try {
-                $copied = copy($path_file, $copy_file);
+                $content = file_get_contents($path_file);
             } finally {
                 restore_error_handler();
             }
+            $copied = (false !== $content) && xoops_write_file_atomically($copy_file, $content);
             if (!$copied) {
                 trigger_error('Template backup failed for ' . basename($path_file), E_USER_WARNING);
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);

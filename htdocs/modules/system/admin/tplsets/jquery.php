@@ -110,7 +110,11 @@ switch ($op) {
                         $file_no_valid = ['.svn', 'icons', 'img', 'images', 'language'];
 
                         if (!in_array($file, $file_no_valid)) {
-                            echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "/\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                            // House encoder for every output in this endpoint:
+                            // htmlspecialchars(ENT_QUOTES, UTF-8) - same escapes
+                            // where it matters, without entity-encoding multibyte
+                            // text (review catch).
+                            echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlspecialchars($cleanDir . $file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "/\">" . htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></li>';
                         }
                     }
                 }
@@ -130,14 +134,22 @@ switch ($op) {
                             // decode before the JS parser runs, so htmlentities()
                             // alone left an apostrophe filename ("it's.css") free
                             // to terminate the literal (review catch - same
-                            // encoder the restore button already uses). Built
-                            // once, used for both onclick and its rel mirror.
+                            // encoder the restore button already uses). The
+                            // SUBSTITUTE flags matter: a filename need not be
+                            // valid UTF-8, and without them json_encode()
+                            // returns false (emitting a JS parse error) and
+                            // htmlspecialchars() returns '' - such an entry now
+                            // renders with U+FFFD and fails realpath validation
+                            // on click instead of breaking the page (review
+                            // catch, verified by execution). Two arguments only:
+                            // the handler never used the old path/file pair.
+                            $enc = static fn($v) => json_encode($v, JSON_INVALID_UTF8_SUBSTITUTE);
                             $jsCall = htmlspecialchars(
-                                'tpls_edit_file(' . json_encode($cleanDir . $file) . ', ' . json_encode($cleanDir) . ', ' . json_encode($file) . ', ' . json_encode($ext) . ');',
-                                ENT_QUOTES,
+                                'tpls_edit_file(' . $enc($cleanDir . $file) . ', ' . $enc($ext) . ');',
+                                ENT_QUOTES | ENT_SUBSTITUTE,
                                 'UTF-8'
                             );
-                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"" . $jsCall . "\" rel=\"" . $jsCall . "\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"" . $jsCall . "\" rel=\"" . $jsCall . "\">" . htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></li>';
                         } else {
                             //echo "<li class=\"file ext_$ext\">" . htmlentities($file) . "</li>";
                         }
@@ -198,7 +210,10 @@ switch ($op) {
             // root into admin HTML and forced a Windows special case in the
             // handler. json_encode() then htmlspecialchars(): the correct
             // encoder for a JS string literal inside an HTML attribute.
-            $restoreArg = htmlspecialchars((string) json_encode($relPath), ENT_QUOTES, 'UTF-8');
+            // SUBSTITUTE flags: without them a non-UTF-8 path yields
+            // json_encode() false, the (string) cast turns that into '',
+            // and the button renders a silent no-op tpls_restore().
+            $restoreArg = htmlspecialchars((string) json_encode($relPath, JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $restore = '<button class="ui-corner-all tooltip" type="button" onclick="tpls_restore(' . $restoreArg . ')" value="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" title="' . _AM_SYSTEM_TEMPLATES_RESTORE . '">
                             <img src="' . system_AdminIcons('revert.png') . '" alt="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" />
                         </button>';
@@ -231,7 +246,7 @@ switch ($op) {
                 </tr>
                 <tr>
                     <td><textarea id="code_mirror" name="templates" rows=24 cols=110>'
-                        . htmlentities((string) $content, ENT_QUOTES | ENT_HTML5)
+                        . htmlspecialchars((string) $content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
                     . '</textarea></td>
                 </tr>
               </table>';
@@ -247,7 +262,7 @@ switch ($op) {
         // path_file re-derived from the validated path; the old hidden
         // "file" and "ext" fields are gone - tpls_save never read either
         // (review catch).
-        echo '<input type="hidden" name="path_file" value="' . htmlspecialchars($relPath, ENT_QUOTES, 'UTF-8') . '"></form>';
+        echo '<input type="hidden" name="path_file" value="' . htmlspecialchars($relPath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></form>';
         break;
 
     // Restore backup file
@@ -298,12 +313,22 @@ switch ($op) {
         $new_file = $resolved;
 
         $extension_verif = strtolower((string) strrchr($new_file, '.'));
-        if (in_array($extension_verif, $extensions, true) && file_exists($old_file) && file_exists($new_file)) {
-            if (unlink($new_file)) {
-                if (rename($old_file, $new_file)) {
-                    xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);
-                    exit();
-                }
+        // is_link(): a planted symlink at .back must never become the live
+        // template via rename() - rename moves the LINK itself into place,
+        // and the web server may then follow it when serving the file. The
+        // realpath guards refuse such a file at edit/save time, but the
+        // served path would bypass them (review catch; the save-side backup
+        // is symlink-proof the same way).
+        if (in_array($extension_verif, $extensions, true) && !is_link($old_file) && file_exists($old_file) && file_exists($new_file)) {
+            // No unlink() first: the old delete-then-rename pair could
+            // remove the live template and then fail the rename, leaving
+            // NEITHER file. rename() replaces the destination atomically
+            // (verified on Windows PHP 8.5 too); where a filesystem
+            // refuses the replace, the restore reports failure with the
+            // template intact (review catch).
+            if (rename($old_file, $new_file)) {
+                xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);
+                exit();
             }
         }
         xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
