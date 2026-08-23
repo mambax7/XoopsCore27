@@ -46,7 +46,11 @@ final class ConstructorReturnConventionTest extends TestCase
                 }
             }
             $source = file_get_contents($path);
-            if (false === $source || false === strpos($source, '__construct')) {
+            // An unreadable file must FAIL the guard, not silently shrink
+            // its coverage (review catch).
+            $this->assertIsString($source, 'unreadable file: ' . $path);
+            // Case-insensitive prefilter: __CONSTRUCT is legal PHP.
+            if (false === stripos($source, '__construct')) {
                 continue;
             }
             $scanned++;
@@ -87,7 +91,17 @@ final class ConstructorReturnConventionTest extends TestCase
             if (is_array($token) && T_FUNCTION === $token[0]) {
                 for ($j = $index + 1; $j < count($tokens); $j++) {
                     $next = $tokens[$j];
-                    if (is_array($next) && (T_WHITESPACE === $next[0] || T_COMMENT === $next[0])) {
+                    // Skip trivia AND the by-ref ampersand of "function &name()"
+                    // - stopping at either misclassified the function
+                    // (review catches: doc-commented closures, by-ref).
+                    if ('&' === $next
+                        || (is_array($next) && in_array($next[0], [
+                            T_WHITESPACE,
+                            T_COMMENT,
+                            T_DOC_COMMENT,
+                            T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG,
+                            T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG,
+                        ], true))) {
                         continue;
                     }
                     if (is_array($next) && T_STRING === $next[0] && '__construct' === strtolower($next[1])) {
@@ -97,6 +111,13 @@ final class ConstructorReturnConventionTest extends TestCase
                     }
                     break;
                 }
+                continue;
+            }
+            if (';' === $token && $expectCtor) {
+                // Bodyless declaration (interface / abstract): there is no
+                // constructor body - the next brace belongs to something
+                // else (review catch).
+                $expectCtor = false;
                 continue;
             }
             if ('{' === $token || (is_array($token) && in_array($token[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true))) {
