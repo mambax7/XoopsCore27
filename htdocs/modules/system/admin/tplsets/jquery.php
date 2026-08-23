@@ -234,18 +234,24 @@ switch ($op) {
             $resolved = false;
         }
 
-        // Require root-plus-separator containment, not a bare prefix: strpos(...) === 0
-        // accepts a sibling dir whose path starts with the themes-root string, e.g.
-        // ".../themes-evil/..." (SECURITY.md A2-M-3). Mirrors the tpls_save guard.
-        $valid_dir = ($resolved !== false && $themesRoot !== false
-            && is_file($resolved)
-            && str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR));
+        // Early guard narrows $resolved to a real file path before ANY use -
+        // static analysis flagged the old shape, where a false $resolved
+        // reached the concatenation and the filesystem calls (Scrutinizer).
+        // Root-plus-separator containment, not a bare prefix: strpos(...)===0
+        // accepts a sibling dir whose path starts with the themes-root
+        // string, e.g. ".../themes-evil/..." (SECURITY.md A2-M-3).
+        if (!is_string($resolved) || !is_string($themesRoot)
+            || !is_file($resolved)
+            || !str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR)) {
+            xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
+            break;
+        }
 
         $old_file = $resolved . '.back';
         $new_file = $resolved;
 
-        $extension_verif = strrchr((string) $new_file, '.');
-        if ($valid_dir && in_array($extension_verif, $extensions) && file_exists($old_file) && file_exists($new_file)) {
+        $extension_verif = strrchr($new_file, '.');
+        if (in_array($extension_verif, $extensions) && file_exists($old_file) && file_exists($new_file)) {
             if (unlink($new_file)) {
                 if (rename($old_file, $new_file)) {
                     xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);

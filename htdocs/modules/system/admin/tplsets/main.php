@@ -385,13 +385,22 @@ switch ($op) {
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header('admin.php?fct=tplsets', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
-        $clean_path_file = Request::getString('path_file', '', 'POST');
+        // getPath() truncates at the first NUL (getString()'s trim() drops
+        // only edge NULs - an interior one passes intact), and realpath()
+        // sits inside a try because PHP 8 throws ValueError for NULs - the
+        // same contract as the browser, editor, and restore endpoints.
+        $clean_path_file = Request::getPath('path_file', '', 'POST');
         if (!empty($clean_path_file)) {
             // Confine writes to the themes/ tree: realpath() resolves any ../ traversal
             // in path_file, so reject anything that escapes themes/ — otherwise the editor
             // can overwrite files anywhere under the XOOPS root (SECURITY.md M-9).
-            $path_file  = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
-            $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            try {
+                $path_file  = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
+                $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            } catch (\ValueError $e) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
             if ($path_file === false || $themesRoot === false) {
                 redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit();
@@ -410,7 +419,10 @@ switch ($op) {
                 exit();
             }
             $pathInfo = pathinfo($path_file);
-            if (!in_array($pathInfo['extension'], ['css', 'html', 'tpl'])) {
+            // htm added and matching made case-insensitive: the browser
+            // lists .htm and the editor opens it - a save allowlist without
+            // it made every edited .htm unsaveable (review catch).
+            if (!in_array(strtolower($pathInfo['extension'] ?? ''), ['css', 'html', 'htm', 'tpl'], true)) {
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit;
             }
