@@ -63,9 +63,19 @@ switch ($op) {
             // ValueError for NUL bytes, which the old placement left uncaught.
             $path_file = realpath($requestDir);
             $check_path = realpath($root);
-            Assert::true(is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::true(is_dir($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::startsWith($path_file, $check_path, _AM_SYSTEM_TEMPLATES_ERROR);
+            // realpath() returns false for a non-existent path - refuse it
+            // explicitly instead of feeding false onward (review catch).
+            Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(is_string($path_file) && is_dir($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
+            // Boundary-aware containment: exact root, or root plus a
+            // separator. A bare prefix check accepts a SIBLING whose name
+            // merely begins with the root ("/themes" matching "/themes2"),
+            // which a traversal path can reach (review catch).
+            Assert::true(
+                $path_file === $check_path
+                || str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
+                _AM_SYSTEM_TEMPLATES_ERROR
+            );
         } catch (\InvalidArgumentException | \ValueError $e) {
             // handle the exception
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
@@ -114,7 +124,16 @@ switch ($op) {
         $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
         $check_path = realpath(XOOPS_ROOT_PATH.'/themes');
         try {
-            Assert::startsWith($path_file, $check_path, _AM_SYSTEM_TEMPLATES_ERROR);
+            // Same guard as tpls_display_folder / tpls_restore: refuse a
+            // false realpath() and require root-plus-separator containment,
+            // not the bare prefix a sibling directory can satisfy.
+            Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(is_string($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(
+                $path_file === $check_path
+                || str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
+                _AM_SYSTEM_TEMPLATES_ERROR
+            );
         } catch (\InvalidArgumentException $e) {
             // handle the exception
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
