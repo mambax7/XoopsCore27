@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use testsupport\ConstructorReturnScanner;
 
 /**
  * Convention: no first-party constructor returns a value.
@@ -14,9 +15,11 @@ use PHPUnit\Framework\TestCase;
  * guard so the pattern cannot be reintroduced anywhere in first-party code.
  *
  * Bundled third-party code (composer vendor trees) is excluded - those fixes
- * arrive via dependency bumps, not local edits. The scanner is closure-aware:
- * a `function` nested inside a constructor body opens a region whose returns
- * are legitimate and ignored.
+ * arrive via dependency bumps, not local edits. The scan itself lives in the
+ * shared testsupport\ConstructorReturnScanner (one implementation for both
+ * convention tests, pinned by its own truth-table test - review catch); it is
+ * frame-stack based, so nested functions and nested constructors attribute
+ * correctly by construction.
  */
 final class ConstructorReturnConventionTest extends TestCase
 {
@@ -35,7 +38,16 @@ final class ConstructorReturnConventionTest extends TestCase
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator(XOOPS_ROOT_PATH, FilesystemIterator::SKIP_DOTS)
         );
-        foreach ($iterator as $file) {
+        // No CATCH_GET_CHILD: an unreadable child directory must FAIL the
+        // guard explicitly, never shrink its coverage. The wrap turns the
+        // iterator's UnexpectedValueException into a named test failure
+        // (review catch).
+        try {
+            $files = iterator_to_array($iterator);
+        } catch (UnexpectedValueException $e) {
+            $this->fail('directory traversal failed - unreadable path during scan: ' . $e->getMessage());
+        }
+        foreach ($files as $file) {
             if ('php' !== strtolower($file->getExtension())) {
                 continue;
             }
@@ -54,7 +66,7 @@ final class ConstructorReturnConventionTest extends TestCase
                 continue;
             }
             $scanned++;
-            foreach ($this->constructorValueReturns($source) as $line) {
+            foreach (ConstructorReturnScanner::scan($source) as $line) {
                 $violations[] = sprintf(
                     '%s:%d returns a value from __construct()',
                     substr($path, strlen(XOOPS_ROOT_PATH) + 1),
@@ -63,7 +75,18 @@ final class ConstructorReturnConventionTest extends TestCase
             }
         }
 
-        $this->assertGreaterThan(0, $scanned, 'the scan must actually cover files');
+        // Floor well above 1: a wrong root, broken extension check, or
+        // over-broad exclusion would otherwise shrink the guard to
+        // near-zero coverage while staying green (review catch). $scanned
+        // counts files that CONTAIN __construct after the prefilter - 173
+        // of 1,082 first-party files when this floor was set, both
+        // measured by execution; the reviewer-suggested floor of 500
+        // conflated the two counts and would have failed immediately.
+        $this->assertGreaterThan(
+            100,
+            $scanned,
+            sprintf('the scan covered only %d __construct-bearing files; the repository-wide guard has lost most of its coverage', $scanned)
+        );
         $this->assertSame(
             [],
             $violations,
@@ -72,87 +95,4 @@ final class ConstructorReturnConventionTest extends TestCase
         );
     }
 
-    /**
-     * Token-scan a file for value-carrying returns inside __construct().
-     *
-     * @return array<int, int> source line numbers, empty when clean
-     */
-    private function constructorValueReturns(string $source): array
-    {
-        $tokens     = token_get_all($source);
-        $violations = [];
-        $inCtor     = false;  // between __construct's opening { and its matching }
-        $ctorDepth  = 0;      // brace depth where the constructor body opened
-        $depth      = 0;      // current brace depth
-        $closures   = [];     // stack of brace depths where nested functions opened
-        $expectCtor = false;  // saw "function __construct", waiting for its {
-
-        foreach ($tokens as $index => $token) {
-            if (is_array($token) && T_FUNCTION === $token[0]) {
-                for ($j = $index + 1; $j < count($tokens); $j++) {
-                    $next = $tokens[$j];
-                    // Skip trivia AND the by-ref ampersand of "function &name()"
-                    // - stopping at either misclassified the function
-                    // (review catches: doc-commented closures, by-ref).
-                    if ('&' === $next
-                        || (is_array($next) && in_array($next[0], [
-                            T_WHITESPACE,
-                            T_COMMENT,
-                            T_DOC_COMMENT,
-                            T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG,
-                            T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG,
-                        ], true))) {
-                        continue;
-                    }
-                    if (is_array($next) && T_STRING === $next[0] && '__construct' === strtolower($next[1])) {
-                        $expectCtor = true;
-                    } elseif ($inCtor) {
-                        $closures[] = $depth; // named or anonymous function nested in the ctor
-                    }
-                    break;
-                }
-                continue;
-            }
-            if (';' === $token && $expectCtor) {
-                // Bodyless declaration (interface / abstract): there is no
-                // constructor body - the next brace belongs to something
-                // else (review catch).
-                $expectCtor = false;
-                continue;
-            }
-            if ('{' === $token || (is_array($token) && in_array($token[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true))) {
-                $depth++;
-                if ($expectCtor && !$inCtor) {
-                    $inCtor     = true;
-                    $ctorDepth  = $depth;
-                    $expectCtor = false;
-                }
-                continue;
-            }
-            if ('}' === $token) {
-                $depth--;
-                while ($closures && end($closures) >= $depth) {
-                    array_pop($closures);
-                }
-                if ($inCtor && $depth < $ctorDepth) {
-                    $inCtor = false;
-                }
-                continue;
-            }
-            if ($inCtor && empty($closures) && is_array($token) && T_RETURN === $token[0]) {
-                for ($j = $index + 1; $j < count($tokens); $j++) {
-                    $next = $tokens[$j];
-                    if (is_array($next) && (T_WHITESPACE === $next[0] || T_COMMENT === $next[0] || T_DOC_COMMENT === $next[0])) {
-                        continue;
-                    }
-                    if (';' !== $next) {
-                        $violations[] = (int) $token[2];
-                    }
-                    break;
-                }
-            }
-        }
-
-        return $violations;
-    }
 }

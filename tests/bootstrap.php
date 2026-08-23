@@ -539,6 +539,7 @@ if (!isset($GLOBALS['xoopsSecurity'])) {
 spl_autoload_register(function ($class) {
     $map = [
         'kernel\\'         => __DIR__ . '/unit/htdocs/kernel/',
+        'testsupport\\'    => __DIR__ . '/unit/support/',
         'xoopsforms\\'     => __DIR__ . '/unit/htdocs/class/xoopsforms/',
         'xoopsclass\\'     => __DIR__ . '/unit/htdocs/class/',
         'xoopsauth\\'      => __DIR__ . '/unit/htdocs/class/auth/',
