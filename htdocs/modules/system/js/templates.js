@@ -84,7 +84,9 @@ function tpls_code_mirror(extension) {
             textWrapping: false,
             path: "js/code_mirror/"
         });
-    } else if (extension == "html") {
+    // "htm" too: the server allowlist accepts both, and without this the
+    // .htm case fell through to the heavier mixed-mode parser set.
+    } else if (extension == "html" || extension == "htm") {
         var editor = CodeMirror.fromTextArea("code_mirror", {
             height: "350px",
             parserfile: "parsexml.js",
