@@ -36,7 +36,7 @@ if (!is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin($
 error_reporting(0);
 $GLOBALS['xoopsLogger']->activated = false;
 
-if (file_exists(__DIR__ . '/../../language/' . $xoopsConfig['language'] . '"/admin/tplsets.php')) {
+if (file_exists(__DIR__ . '/../../language/' . $xoopsConfig['language'] . '/admin/tplsets.php')) {
     include_once __DIR__ . '/../../language/' . $xoopsConfig['language'] . '/admin/tplsets.php';
 } else {
     include_once __DIR__ . '/../../language/english/admin/tplsets.php';
@@ -53,20 +53,23 @@ switch ($op) {
         $root = XOOPS_THEME_PATH;
         // No urldecode(): PHP already decoded the request once, and a
         // second decode would re-materialize %00 / %2f sequences as live
-        // bytes. getPath() (not getString(), whose trim() drops only EDGE
-        // NULs - an interior "ok\0evil" passes it intact, verified by
-        // execution) truncates at the first NUL, so no NUL can reach
-        // realpath(), which rejects them with ValueError on PHP 8. The
-        // ValueError catch below stays as a backstop. POST, matching the
-        // jqueryFileTree $.post() caller.
-        $cleanDir = Request::getPath('dir', '', 'POST');
+        // bytes. getString() is kept deliberately - its trim() drops only
+        // EDGE NULs (an interior "ok\0evil" passes intact, verified by
+        // execution), so the NUL is REJECTED explicitly inside the try
+        // below. Not getPath(): its PATH filter truncates at the first
+        // byte outside [-_./A-Z0-9=&%?~], which breaks non-ASCII theme
+        // names ("/thème/" becomes "/th") - also verified by execution.
+        // POST, matching the jqueryFileTree $.post() caller.
+        $cleanDir = Request::getString('dir', '', 'POST');
         if ('' !== $cleanDir && !str_ends_with($cleanDir, '/')) {
             $cleanDir .= '/'; // the tree JS concatenates rel = dir + file
         }
         $requestDir = $root . $cleanDir;
         try {
+            // A NUL cannot occur in a legitimate path - refuse it outright.
+            Assert::true(!str_contains($cleanDir, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
             // realpath() belongs INSIDE the try: PHP 8 throws ValueError
-            // for NUL bytes, which the old placement left uncaught.
+            // for NUL bytes, the backstop should this check ever regress.
             $path_file = realpath($requestDir);
             $check_path = realpath($root);
             // realpath() returns false for a non-existent path - refuse it
@@ -115,7 +118,7 @@ switch ($op) {
                         $ext = preg_replace('/^.*\./', '', $file);
 
                         $extensions      = ['.html', '.htm', '.css', '.tpl'];
-                        $extension_verif = strrchr($file, '.');
+                        $extension_verif = strtolower((string) strrchr($file, '.'));
 
                         if (in_array($extension_verif, $extensions)) {
                             echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\" rel=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
@@ -130,12 +133,13 @@ switch ($op) {
         break;
     // Edit File
     case 'tpls_edit_file':
-        // POST (templates.js sends type:"POST"); getPath() truncates at a
-        // NUL, so none reaches realpath() - the ValueError catch remains a
-        // backstop.
-        $clean_file = Request::getPath('file', '', 'POST');
-        $clean_path_file = Request::getPath('path_file', '', 'POST');
+        // POST (templates.js sends type:"POST"). getString(), not
+        // getPath(), so non-ASCII template paths survive; the NUL is
+        // rejected explicitly below, ValueError as backstop.
+        $clean_file = Request::getString('file', '', 'POST');
+        $clean_path_file = Request::getString('path_file', '', 'POST');
         try {
+            Assert::true(!str_contains($clean_path_file, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
             // realpath() inside the try with ValueError in the catch, same
             // as tpls_display_folder: PHP 8 throws for NUL bytes.
             $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
@@ -223,10 +227,16 @@ switch ($op) {
         }
         $extensions = ['.html', '.htm', '.css', '.tpl'];
 
-        // getPath() truncates at a NUL; the try/catch is the backstop for
-        // anything else realpath() rejects (getText() passed interior NULs
-        // through raw - same class as the editor's old getString()).
-        $restorePath = Request::getPath('path_file', '', 'POST');
+        // getText() preserved deliberately: the JS posts the ABSOLUTE
+        // canonical path, and getPath()'s filter truncates it at the first
+        // byte outside its ASCII set - "C:\..." becomes "C", breaking
+        // restore on Windows outright (verified by execution). The NUL is
+        // rejected explicitly instead; ValueError stays as backstop.
+        $restorePath = Request::getText('path_file', '', 'POST');
+        if (str_contains($restorePath, "\0")) {
+            xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
+            break;
+        }
         $themesRoot  = realpath(XOOPS_ROOT_PATH . '/themes');
         try {
             $resolved = realpath($restorePath);
@@ -250,7 +260,7 @@ switch ($op) {
         $old_file = $resolved . '.back';
         $new_file = $resolved;
 
-        $extension_verif = strrchr($new_file, '.');
+        $extension_verif = strtolower((string) strrchr($new_file, '.'));
         if (in_array($extension_verif, $extensions) && file_exists($old_file) && file_exists($new_file)) {
             if (unlink($new_file)) {
                 if (rename($old_file, $new_file)) {

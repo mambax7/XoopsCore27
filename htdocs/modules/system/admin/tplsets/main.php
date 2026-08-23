@@ -385,11 +385,16 @@ switch ($op) {
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header('admin.php?fct=tplsets', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
-        // getPath() truncates at the first NUL (getString()'s trim() drops
-        // only edge NULs - an interior one passes intact), and realpath()
-        // sits inside a try because PHP 8 throws ValueError for NULs - the
-        // same contract as the browser, editor, and restore endpoints.
-        $clean_path_file = Request::getPath('path_file', '', 'POST');
+        // getString() kept deliberately (getPath()'s filter truncates at
+        // the first non-ASCII byte, breaking accented or CJK theme paths);
+        // its trim() drops only edge NULs, so the interior NUL is rejected
+        // explicitly, with realpath() inside a try because PHP 8 throws
+        // ValueError for NULs - the same contract as the other endpoints.
+        $clean_path_file = Request::getString('path_file', '', 'POST');
+        if (str_contains($clean_path_file, "\0")) {
+            redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+            exit();
+        }
         if (!empty($clean_path_file)) {
             // Confine writes to the themes/ tree: realpath() resolves any ../ traversal
             // in path_file, so reject anything that escapes themes/ — otherwise the editor
