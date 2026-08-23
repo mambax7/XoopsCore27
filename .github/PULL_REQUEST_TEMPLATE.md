@@ -2,9 +2,10 @@
 <!--
 Thanks for contributing to XOOPS! Fill in the sections below.
 The checklist encodes what review actually catches here - working
-through it honestly shortens your review cycle. The details behind
-each item live in CONTRIBUTING.md under "Pull request checklist
-notes".
+through it honestly shortens your review cycle. The items that need
+background (changelog location, test isolation, error suppression,
+commit style) have notes in CONTRIBUTING.md under "Pull request
+checklist notes".
 -->
 
 ### Why
