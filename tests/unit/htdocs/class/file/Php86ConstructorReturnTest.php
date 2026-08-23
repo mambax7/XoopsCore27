@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace xoopsfile;
 
 use PHPUnit\Framework\TestCase;
+use testsupport\ConstructorReturnScanner;
 use ReflectionClass;
 use XoopsFile;
 use XoopsFileHandler;
@@ -79,7 +80,7 @@ final class Php86ConstructorReturnTest extends TestCase
             $source = file_get_contents(XOOPS_ROOT_PATH . '/' . $relativePath);
             $this->assertIsString($source, $relativePath . ' must be readable');
 
-            $violations = $this->constructorValueReturns($source);
+            $violations = ConstructorReturnScanner::scan($source);
 
             $this->assertSame(
                 [],
@@ -89,76 +90,4 @@ final class Php86ConstructorReturnTest extends TestCase
         }
     }
 
-    /**
-     * Token-scan a file for value-carrying returns inside __construct().
-     *
-     * Closure-aware: a `function` keyword inside a constructor body opens a
-     * nested region whose returns are legitimate and ignored - the false
-     * positive the naive grep-based sweeps hit during the 8.6 review.
-     *
-     * @return array<int, string> "line N: return ..." entries, empty when clean
-     */
-    private function constructorValueReturns(string $source): array
-    {
-        $tokens     = token_get_all($source);
-        $violations = [];
-        $inCtor     = false;  // between __construct's opening { and its matching }
-        $ctorDepth  = 0;      // brace depth where the constructor body opened
-        $depth      = 0;      // current brace depth
-        $closures   = [];     // stack of brace depths where nested functions opened
-        $expectCtor = false;  // saw "function __construct", waiting for its {
-
-        foreach ($tokens as $index => $token) {
-            if (is_array($token) && T_FUNCTION === $token[0]) {
-                // Which function follows? Peek for the name.
-                for ($j = $index + 1; $j < count($tokens); $j++) {
-                    $next = $tokens[$j];
-                    if (is_array($next) && (T_WHITESPACE === $next[0] || T_COMMENT === $next[0])) {
-                        continue;
-                    }
-                    if (is_array($next) && T_STRING === $next[0] && '__construct' === strtolower($next[1])) {
-                        $expectCtor = true;
-                    } elseif ($inCtor) {
-                        $closures[] = $depth; // named or anonymous function nested in the ctor
-                    }
-                    break;
-                }
-                continue;
-            }
-            if ('{' === $token || (is_array($token) && in_array($token[0], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES], true))) {
-                $depth++;
-                if ($expectCtor && !$inCtor) {
-                    $inCtor     = true;
-                    $ctorDepth  = $depth;
-                    $expectCtor = false;
-                }
-                continue;
-            }
-            if ('}' === $token) {
-                $depth--;
-                while ($closures && end($closures) >= $depth) {
-                    array_pop($closures);
-                }
-                if ($inCtor && $depth < $ctorDepth) {
-                    $inCtor = false;
-                }
-                continue;
-            }
-            if ($inCtor && empty($closures) && is_array($token) && T_RETURN === $token[0]) {
-                // A value-carrying return has a non-';' meaningful token next.
-                for ($j = $index + 1; $j < count($tokens); $j++) {
-                    $next = $tokens[$j];
-                    if (is_array($next) && (T_WHITESPACE === $next[0] || T_COMMENT === $next[0] || T_DOC_COMMENT === $next[0])) {
-                        continue;
-                    }
-                    if (';' !== $next) {
-                        $violations[] = sprintf('line %d: return with a value', $token[2]);
-                    }
-                    break;
-                }
-            }
-        }
-
-        return $violations;
-    }
 }
