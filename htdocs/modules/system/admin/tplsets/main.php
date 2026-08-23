@@ -385,13 +385,27 @@ switch ($op) {
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header('admin.php?fct=tplsets', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
+        // getString() kept deliberately (getPath()'s filter truncates at
+        // the first non-ASCII byte, breaking accented or CJK theme paths);
+        // its trim() drops only edge NULs, so the interior NUL is rejected
+        // explicitly, with realpath() inside a try because PHP 8 throws
+        // ValueError for NULs - the same contract as the other endpoints.
         $clean_path_file = Request::getString('path_file', '', 'POST');
+        if (str_contains($clean_path_file, "\0")) {
+            redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+            exit();
+        }
         if (!empty($clean_path_file)) {
             // Confine writes to the themes/ tree: realpath() resolves any ../ traversal
             // in path_file, so reject anything that escapes themes/ — otherwise the editor
             // can overwrite files anywhere under the XOOPS root (SECURITY.md M-9).
-            $path_file  = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
-            $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            try {
+                $path_file  = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
+                $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            } catch (\ValueError $e) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
             if ($path_file === false || $themesRoot === false) {
                 redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit();
@@ -402,14 +416,55 @@ switch ($op) {
                 redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit();
             }
+            // A directory named like "x.css" would pass the extension check
+            // below and reach copy()/fopen() - require a real file (review
+            // catch, mirrors the jquery.php editor guard).
+            if (!is_file($path_file)) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
             $pathInfo = pathinfo($path_file);
-            if (!in_array($pathInfo['extension'], ['css', 'html', 'tpl'])) {
+            // htm added and matching made case-insensitive: the browser
+            // lists .htm and the editor opens it - a save allowlist without
+            // it made every edited .htm unsaveable (review catch).
+            if (!in_array(strtolower($pathInfo['extension'] ?? ''), ['css', 'html', 'htm', 'tpl'], true)) {
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit;
             }
-            // copy file
+            // copy file - a failed backup must abort the save, or the
+            // overwrite below destroys the only copy. Delegated to the
+            // shared xoops_write_file_atomically() helper (loaded with
+            // cp_functions.php by admin.php): tempnam() in the target
+            // directory, short-write check, permissions carried with a
+            // 0644 fallback, and an atomic rename() - which REPLACES a
+            // planted symlink at .back instead of following it. A direct
+            // copy() follows an existing link and PHP's emulated fopen('x')
+            // follows a dangling one - both verified by execution - which
+            // rules those routes out. The residual window (the helper
+            // reopens its temp file by name) requires an attacker who can
+            // already write inside themes/, and such an attacker can
+            // replace the templates directly: that is the threat boundary
+            // here, not a gap this call path can close. The helper's
+            // diagnostics name only the file's basename; the scoped
+            // handler keeps file_get_contents()' native full-path warning
+            // out of the error handlers the same way (review catch,
+            // mirrors file_safety.php).
             $copy_file = $path_file . '.back';
-            copy($path_file, $copy_file);
+            $content   = false;
+            set_error_handler(static function (): bool {
+                return true;
+            }, E_WARNING);
+            try {
+                $content = file_get_contents($path_file);
+            } finally {
+                restore_error_handler();
+            }
+            $copied = (false !== $content) && xoops_write_file_atomically($copy_file, $content);
+            if (!$copied) {
+                trigger_error('Template backup failed for ' . basename($path_file), E_USER_WARNING);
+                redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit;
+            }
             // Save modif
             if (Request::hasVar('templates', 'POST')) {
                 $open = fopen($path_file, 'w+');
@@ -417,7 +472,12 @@ switch ($op) {
                     redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 }
                 $temp = Request::getText('templates', '', 'POST');
-                if (!fwrite($open, xoops_utf8_encode($temp))) {
+                // === false, not falsy: clearing a template writes 0 bytes,
+                // and fwrite() returns int 0 for that legitimate save - the
+                // same 0-is-falsy trap the backup path already dodges
+                // (review catch). redirect_header() exits internally, so
+                // the failure branch never falls through.
+                if (false === fwrite($open, xoops_utf8_encode($temp))) {
                     fclose($open);
                     redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 }

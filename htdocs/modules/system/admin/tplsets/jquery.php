@@ -36,7 +36,7 @@ if (!is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin($
 error_reporting(0);
 $GLOBALS['xoopsLogger']->activated = false;
 
-if (file_exists(__DIR__ . '/../../language/' . $xoopsConfig['language'] . '"/admin/tplsets.php')) {
+if (file_exists(__DIR__ . '/../../language/' . $xoopsConfig['language'] . '/admin/tplsets.php')) {
     include_once __DIR__ . '/../../language/' . $xoopsConfig['language'] . '/admin/tplsets.php';
 } else {
     include_once __DIR__ . '/../../language/english/admin/tplsets.php';
@@ -51,20 +51,52 @@ switch ($op) {
     // Display tree folder
     case 'tpls_display_folder':
         $root = XOOPS_THEME_PATH;
-        $cleanDir = urldecode(Request::getString('dir', ''));
+        // No urldecode(): PHP already decoded the request once, and a
+        // second decode would re-materialize %00 / %2f sequences as live
+        // bytes. getString() is kept deliberately - its trim() silently
+        // drops EDGE NULs, so "x\0" arrives as the VALID "x" and then
+        // faces the same containment checks as any other value, while an
+        // interior "ok\0evil" passes intact (verified by execution), so
+        // the interior NUL is REJECTED explicitly inside the try below.
+        // Not getPath(): its PATH filter truncates at the first
+        // byte outside [-_./A-Z0-9=&%?~], which breaks non-ASCII theme
+        // names ("/thème/" becomes "/th") - also verified by execution.
+        // POST, matching the jqueryFileTree $.post() caller.
+        $cleanDir = Request::getString('dir', '', 'POST');
+        if ('' !== $cleanDir && !str_ends_with($cleanDir, '/')) {
+            $cleanDir .= '/'; // the tree JS concatenates rel = dir + file
+        }
         $requestDir = $root . $cleanDir;
-        //
-        $path_file = realpath($requestDir);
-        $check_path = realpath($root);
         try {
-            Assert::true(is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::true(is_dir($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::startsWith($path_file, $check_path, _AM_SYSTEM_TEMPLATES_ERROR);
-        } catch (\InvalidArgumentException $e) {
+            // A NUL cannot occur in a legitimate path - refuse it outright.
+            Assert::true(!str_contains($cleanDir, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
+            // realpath() belongs INSIDE the try: PHP 8 throws ValueError
+            // for NUL bytes, the backstop should this check ever regress.
+            $path_file = realpath($requestDir);
+            $check_path = realpath($root);
+            // realpath() returns false for a non-existent path - refuse it
+            // explicitly instead of feeding false onward (review catch).
+            Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(is_string($path_file) && is_dir($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
+            // Boundary-aware containment: exact root, or root plus a
+            // separator. A bare prefix check accepts a SIBLING whose name
+            // merely begins with the root ("/themes" matching "/themes2"),
+            // which a traversal path can reach (review catch).
+            Assert::true(
+                $path_file === $check_path
+                || str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
+                _AM_SYSTEM_TEMPLATES_ERROR
+            );
+        } catch (\InvalidArgumentException | \ValueError $e) {
             // handle the exception
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
             exit;
         }
+        // Use the CANONICAL path for everything below: keeping the raw
+        // $requestDir string open would leave a time-of-check/time-of-use
+        // gap through symlink components between the containment check and
+        // the listing (review catch).
+        $requestDir = rtrim($path_file, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         //
         if (file_exists($requestDir)) {
             $files = scandir($requestDir);
@@ -78,20 +110,46 @@ switch ($op) {
                         $file_no_valid = ['.svn', 'icons', 'img', 'images', 'language'];
 
                         if (!in_array($file, $file_no_valid)) {
-                            echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "/\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                            // House encoder for every output in this endpoint:
+                            // htmlspecialchars(ENT_QUOTES, UTF-8) - same escapes
+                            // where it matters, without entity-encoding multibyte
+                            // text (review catch).
+                            echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlspecialchars($cleanDir . $file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "/\">" . htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></li>';
                         }
                     }
                 }
                 // All files
                 foreach ($files as $file) {
-                    if (file_exists($root . $cleanDir . $file) && $file !== '.' && $file !== '..' && !is_dir($root . $cleanDir . $file) && $file !== 'index.html') {
-                        $ext = preg_replace('/^.*\./', '', $file);
-
+                    if (file_exists($requestDir . $file) && $file !== '.' && $file !== '..' && !is_dir($requestDir . $file) && $file !== 'index.html') {
                         $extensions      = ['.html', '.htm', '.css', '.tpl'];
-                        $extension_verif = strrchr($file, '.');
+                        $extension_verif = strtolower((string) strrchr($file, '.'));
+                        // Safe by construction: the allowlist below admits
+                        // only these four tokens, so $ext can never carry
+                        // attribute- or JS-breaking characters (review catch).
+                        $ext = ltrim($extension_verif, '.');
 
-                        if (in_array($extension_verif, $extensions)) {
-                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\" rel=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                        if (in_array($extension_verif, $extensions, true)) {
+                            // JS string literals inside an HTML attribute need
+                            // json_encode() THEN htmlspecialchars(): entities
+                            // decode before the JS parser runs, so htmlentities()
+                            // alone left an apostrophe filename ("it's.css") free
+                            // to terminate the literal (review catch - same
+                            // encoder the restore button already uses). The
+                            // SUBSTITUTE flags matter: a filename need not be
+                            // valid UTF-8, and without them json_encode()
+                            // returns false (emitting a JS parse error) and
+                            // htmlspecialchars() returns '' - such an entry now
+                            // renders with U+FFFD and fails realpath validation
+                            // on click instead of breaking the page (review
+                            // catch, verified by execution). Two arguments only:
+                            // the handler never used the old path/file pair.
+                            $enc = static fn($v) => json_encode($v, JSON_INVALID_UTF8_SUBSTITUTE);
+                            $jsCall = htmlspecialchars(
+                                'tpls_edit_file(' . $enc($cleanDir . $file) . ', ' . $enc($ext) . ');',
+                                ENT_QUOTES | ENT_SUBSTITUTE,
+                                'UTF-8'
+                            );
+                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"" . $jsCall . "\" rel=\"" . $jsCall . "\">" . htmlspecialchars($file, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></li>';
                         } else {
                             //echo "<li class=\"file ext_$ext\">" . htmlentities($file) . "</li>";
                         }
@@ -103,24 +161,60 @@ switch ($op) {
         break;
     // Edit File
     case 'tpls_edit_file':
-        $clean_file = XoopsRequest::getString('file', '');
-        $clean_path_file = XoopsRequest::getString('path_file', '');
-        $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
-        $check_path = realpath(XOOPS_ROOT_PATH.'/themes');
+        // POST (templates.js sends type:"POST"). getString(), not
+        // getPath(), so non-ASCII template paths survive; the NUL is
+        // rejected explicitly below, ValueError as backstop.
+        $clean_path_file = Request::getString('path_file', '', 'POST');
         try {
-            Assert::startsWith($path_file, $check_path, _AM_SYSTEM_TEMPLATES_ERROR);
-        } catch (\InvalidArgumentException $e) {
+            Assert::true(!str_contains($clean_path_file, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
+            // realpath() inside the try with ValueError in the catch, same
+            // as tpls_display_folder: PHP 8 throws for NUL bytes.
+            $path_file = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
+            $check_path = realpath(XOOPS_ROOT_PATH . '/themes');
+            // Refuse a false realpath(), require an actual FILE (a bare
+            // "/" resolved to the themes root itself and reached the editor
+            // as a directory - review catch), and require root-plus-
+            // separator containment, not the bare prefix a sibling
+            // directory can satisfy.
+            Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(is_string($path_file) && is_file($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
+            Assert::true(
+                str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
+                _AM_SYSTEM_TEMPLATES_ERROR
+            );
+            // The editor opens template types only - same allowlist the
+            // save path enforces, applied before any read.
+            $pathInfo = pathinfo($path_file);
+            Assert::true(
+                in_array(strtolower($pathInfo['extension'] ?? ''), ['css', 'html', 'htm', 'tpl'], true),
+                _AM_SYSTEM_TEMPLATES_ERROR
+            );
+        } catch (\InvalidArgumentException | \ValueError $e) {
             // handle the exception
             redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
             exit;
         }
+
+        // Relative form of the VALIDATED path, not the raw request value:
+        // the restore button and the hidden path_file field below both
+        // re-derive from what the checks actually approved (review catch).
+        $relPath = str_replace('\\', '/', substr($path_file, strlen($check_path)));
 
         $path_file = str_replace('\\', '/', $path_file);
 
         //Button restore
         $restore = '';
         if (file_exists($path_file . '.back')) {
-            $restore = '<button class="ui-corner-all tooltip" type="button" onclick="tpls_restore(\'' . $path_file . '\')" value="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" title="' . _AM_SYSTEM_TEMPLATES_RESTORE . '">
+            // Pass the validated RELATIVE path (the server rebuilds the root
+            // side), not the absolute server path - which leaked the server
+            // root into admin HTML and forced a Windows special case in the
+            // handler. json_encode() then htmlspecialchars(): the correct
+            // encoder for a JS string literal inside an HTML attribute.
+            // SUBSTITUTE flags: without them a non-UTF-8 path yields
+            // json_encode() false, the (string) cast turns that into '',
+            // and the button renders a silent no-op tpls_restore().
+            $restoreArg = htmlspecialchars((string) json_encode($relPath, JSON_INVALID_UTF8_SUBSTITUTE), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $restore = '<button class="ui-corner-all tooltip" type="button" onclick="tpls_restore(' . $restoreArg . ')" value="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" title="' . _AM_SYSTEM_TEMPLATES_RESTORE . '">
                             <img src="' . system_AdminIcons('revert.png') . '" alt="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" />
                         </button>';
         }
@@ -132,8 +226,6 @@ switch ($op) {
         if (empty($content)) {
             echo _AM_SYSTEM_TEMPLATES_EMPTY_FILE;
         }
-        $ext = preg_replace('/^.*\./', '', $clean_path_file);
-
         echo '<form name="back" action="admin.php?fct=tplsets&op=tpls_save" method="POST">
               <table border="0">
                 <tr>
@@ -154,47 +246,105 @@ switch ($op) {
                 </tr>
                 <tr>
                     <td><textarea id="code_mirror" name="templates" rows=24 cols=110>'
-                        . htmlentities((string) $content, ENT_QUOTES | ENT_HTML5)
+                        . htmlspecialchars((string) $content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
                     . '</textarea></td>
                 </tr>
               </table>';
+        // The ONE token this form renders. It serves BOTH posts: the restore
+        // JS reads it with .val() (validated without consuming - see
+        // tpls_restore below) and the save submits it normally. A second
+        // getTokenHTML() here would put two same-name inputs in the form and
+        // make each path depend silently on input order - one token, shared,
+        // is the contract (review catch).
         XoopsLoad::load('XoopsFormHiddenToken');
         $xoopsToken = new XoopsFormHiddenToken();
         echo $xoopsToken->render();
-        echo '<input type="hidden" name="path_file" value="' . htmlentities($clean_path_file, ENT_QUOTES | ENT_HTML5)
-            .'"><input type="hidden" name="file" value="' . htmlentities(trim($clean_file), ENT_QUOTES | ENT_HTML5)
-            .'"><input type="hidden" name="ext" value="' . htmlentities($ext, ENT_QUOTES | ENT_HTML5) . '"></form>';
+        // path_file re-derived from the validated path; the old hidden
+        // "file" and "ext" fields are gone - tpls_save never read either
+        // (review catch).
+        echo '<input type="hidden" name="path_file" value="' . htmlspecialchars($relPath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"></form>';
         break;
 
     // Restore backup file
     case 'tpls_restore':
-        if (!$GLOBALS['xoopsSecurity']->check()) {
+        // check(false): validate WITHOUT consuming. The editor form renders
+        // one token shared by restore and save - the default check() would
+        // burn it here and refuse the save that follows (review catch).
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
             xoops_error(implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
             break;
         }
         $extensions = ['.html', '.htm', '.css', '.tpl'];
 
-        $restorePath = Request::getText('path_file', '', 'POST');
-        $themesRoot  = realpath(XOOPS_ROOT_PATH . '/themes');
-        $resolved    = realpath($restorePath);
+        // The button now posts the validated RELATIVE path and the server
+        // rebuilds the root side - the same contract as the editor and the
+        // save, which removes the old absolute-path special case (and the
+        // server-path leak into admin HTML). Interior NULs are rejected
+        // explicitly; edge NULs are silently trimmed by getString(), so the
+        // value that arrives here is a NUL-free path facing the same
+        // containment checks as any other input. ValueError stays as backstop.
+        $restoreRel = Request::getString('path_file', '', 'POST');
+        if ('' === $restoreRel || str_contains($restoreRel, "\0")) {
+            xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
+            break;
+        }
+        try {
+            $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            $resolved   = realpath(XOOPS_ROOT_PATH . '/themes' . trim($restoreRel));
+        } catch (\ValueError $e) {
+            $resolved   = false;
+            $themesRoot = false;
+        }
 
-        // Require root-plus-separator containment, not a bare prefix: strpos(...) === 0
-        // accepts a sibling dir whose path starts with the themes-root string, e.g.
-        // ".../themes-evil/..." (SECURITY.md A2-M-3). Mirrors the tpls_save guard.
-        $valid_dir = ($resolved !== false && $themesRoot !== false
-            && str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR));
+        // Early guard narrows $resolved to a real file path before ANY use -
+        // static analysis flagged the old shape, where a false $resolved
+        // reached the concatenation and the filesystem calls (Scrutinizer).
+        // Root-plus-separator containment, not a bare prefix: strpos(...)===0
+        // accepts a sibling dir whose path starts with the themes-root
+        // string, e.g. ".../themes-evil/..." (SECURITY.md A2-M-3).
+        if (!is_string($resolved) || !is_string($themesRoot)
+            || !is_file($resolved)
+            || !str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR)) {
+            xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
+            break;
+        }
 
         $old_file = $resolved . '.back';
         $new_file = $resolved;
 
-        $extension_verif = strrchr((string) $new_file, '.');
-        if ($valid_dir && in_array($extension_verif, $extensions) && file_exists($old_file) && file_exists($new_file)) {
-            if (unlink($new_file)) {
-                if (rename($old_file, $new_file)) {
-                    xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);
-                    exit();
-                }
+        $extension_verif = strtolower((string) strrchr($new_file, '.'));
+        // is_link(): a planted symlink at .back must never become the live
+        // template via rename() - rename moves the LINK itself into place,
+        // and the web server may then follow it when serving the file. The
+        // realpath guards refuse such a file at edit/save time, but the
+        // served path would bypass them (review catch; the save-side backup
+        // is symlink-proof the same way).
+        if (in_array($extension_verif, $extensions, true) && !is_link($old_file) && file_exists($old_file) && file_exists($new_file)) {
+            // No unlink() first: the old delete-then-rename pair could
+            // remove the live template and then fail the rename, leaving
+            // NEITHER file. rename() replaces the destination atomically
+            // (verified on Windows PHP 8.5 too); where a filesystem
+            // refuses the replace, the restore reports failure with the
+            // template intact (review catch).
+            // Scoped handler: rename()'s native warning embeds both full
+            // server paths, and a registered error handler still receives
+            // it even under this file's error_reporting(0) - verified by
+            // execution. The explicit diagnostic names only the basename
+            // (review catch, mirrors the save path).
+            $renamed = false;
+            set_error_handler(static function (): bool {
+                return true;
+            }, E_WARNING);
+            try {
+                $renamed = rename($old_file, $new_file);
+            } finally {
+                restore_error_handler();
             }
+            if ($renamed) {
+                xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);
+                exit();
+            }
+            trigger_error('Template restore failed for ' . basename($new_file), E_USER_WARNING);
         }
         xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
         break;
