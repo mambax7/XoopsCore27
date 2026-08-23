@@ -49,6 +49,9 @@ Tests:
 - cover each term of the developer gate with a case that fails when that term alone is removed, six in all, and they are the only cases in that file which run the real xoops_isDeveloperRequest() rather than the fixture's stub. The fixture gained a mainfile_debug_constant key so a case can define XOOPS_DEBUG before debugconfig.php loads, which is the only way to reproduce an upgraded site. Written first as a pair; mutation testing showed the pair passed a rewrite that substituted the configuration read for the constant read, which would have silently dropped every development site running a hand-edited XOOPS_DEBUG (mamba)
 - stop two tests leaking state into the rest of the suite: MyTextSanitizerTest popped two handler frames believing displayTarea() installed them, when XoopsLogger::getInstance() installs them and only on its first call in the process; and LostPassSecurityTest never cleared its rate-limit cache, so with an idLimit of 3 the suite was reproducible exactly twice in one working copy and failed on the third run (mamba) in #157
 
+Build:
+- add a pull request template whose checklist encodes what automated review actually caught on the PHP 8.6 train: a changelog entry in docs/changelog.270.txt, both-branch test coverage, standalone-runnable tests that restore every process-global they touch, no full server paths in diagnostics, explicit failure handling in production code, a description kept in sync with the implementation, and the conventional-commit dialect (mamba) in #175
+
 ===================================
 2.7.3 Beta 1                  2026-07
 ===================================
