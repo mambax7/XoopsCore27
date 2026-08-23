@@ -45,7 +45,12 @@ final class ConstructorReturnConventionTest extends TestCase
         try {
             $files = iterator_to_array($iterator);
         } catch (UnexpectedValueException $e) {
-            $this->fail('directory traversal failed - unreadable path during scan: ' . $e->getMessage());
+            // Path-safe per the checklist: strip the root (either separator
+            // form) from the iterator's message before it reaches CI logs.
+            $this->fail(
+                'directory traversal failed - unreadable path during scan: '
+                . str_replace([XOOPS_ROOT_PATH, str_replace('\\', '/', XOOPS_ROOT_PATH)], '', $e->getMessage())
+            );
         }
         foreach ($files as $file) {
             if ('php' !== strtolower($file->getExtension())) {
@@ -60,7 +65,7 @@ final class ConstructorReturnConventionTest extends TestCase
             $source = file_get_contents($path);
             // An unreadable file must FAIL the guard, not silently shrink
             // its coverage (review catch).
-            $this->assertIsString($source, 'unreadable file: ' . $path);
+            $this->assertIsString($source, 'unreadable file: ' . substr($path, strlen(XOOPS_ROOT_PATH) + 1));
             // Case-insensitive prefilter: __CONSTRUCT is legal PHP.
             if (false === stripos($source, '__construct')) {
                 continue;
