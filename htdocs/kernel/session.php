@@ -30,6 +30,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class XoopsSessionHandler implements
     \SessionHandlerInterface,
+    \SessionIdInterface,
     \SessionUpdateTimestampHandlerInterface
 {
     /** @var XoopsDatabase */
@@ -45,6 +46,18 @@ class XoopsSessionHandler implements
     ];
 
     public bool $enableRegenerateId = true;
+
+    /**
+     * Whether read() observed an existing row for a session ID during this
+     * request. updateTimestamp() consults it: only an ID whose read MISSED
+     * (a brand-new or regenerated session) may insert a row - an ID read
+     * from an existing row gets a timestamp-only UPDATE, so a session a
+     * parallel request destroyed (logout) cannot be resurrected with this
+     * request's stale copy of its data.
+     *
+     * @var array<string, bool>
+     */
+    protected array $rowExistedAtRead = [];
 
     public function __construct(XoopsDatabase $db)
     {
@@ -88,6 +101,95 @@ class XoopsSessionHandler implements
             'samesite' => $sameSite,
         ];
         session_set_cookie_params($options);
+
+        $this->enforceStrictMode();
+    }
+
+    /**
+     * Pin session.use_strict_mode to the PHP 8.6 default.
+     *
+     * PHP 8.6 flips the session.use_strict_mode ini default from 0 to 1
+     * (Secure Session Configuration Defaults RFC). Setting it explicitly
+     * makes PHP 8.2-8.5 behave identically to 8.6: an uninitialized
+     * session ID supplied by the client is rejected via validateId() and
+     * a fresh ID is generated.
+     *
+     * PHP refuses ALL session.* ini changes not only while a session is
+     * active but also once headers have been sent (any prior echo/output).
+     * ini_set() then returns false - so the result is checked, and EVERY
+     * failure path is reported via E_USER_WARNING (the codebase's standard
+     * severity) instead of silently claiming parity.
+     * The practical exposure is bounded: a request that produced output
+     * before this constructor also cannot set the session cookie, so its
+     * session handling is already degraded; the notice makes that visible.
+     *
+     * @return bool true when strict mode is verifiably in effect
+     */
+    public function enforceStrictMode(): bool
+    {
+        if ('1' === ini_get('session.use_strict_mode')) {
+            return true; // already pinned (php.ini, earlier call, or PHP 8.6 default)
+        }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            trigger_error(
+                'XoopsSessionHandler: session.use_strict_mode cannot be changed'
+                . ' mid-session; PHP defaults apply',
+                E_USER_WARNING
+            );
+
+            return false;
+        }
+        // Check headers_sent() explicitly instead of letting ini_set() fail:
+        // PHP refuses session.* changes after output, and calling ini_set()
+        // anyway would add the engine's own E_WARNING on top of the explicit
+        // diagnostic - which can also name WHERE the output started.
+        if (headers_sent($file, $line)) {
+            trigger_error(
+                'XoopsSessionHandler: session.use_strict_mode could not be enabled'
+                // basename() only: the full server path must not reach a
+                // diagnostic that can be rendered or logged to a client.
+                . sprintf(' (output started at %s:%d); PHP defaults apply', basename($file), $line),
+                E_USER_WARNING
+            );
+
+            return false;
+        }
+        if (false === ini_set('session.use_strict_mode', '1')) {
+            trigger_error(
+                'XoopsSessionHandler: session.use_strict_mode could not be enabled'
+                . ' (ini change refused); PHP defaults apply',
+                E_USER_WARNING
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // --- SessionIdInterface ---
+
+    /**
+     * Generate a new session ID.
+     *
+     * PHP 8.6 deprecates passing session_set_save_handler() an object
+     * handler that lacks create_sid() (alongside validateId()); PHP 9.0
+     * makes both methods mandatory. Implementing it now silences the 8.6
+     * deprecation and is ready for 9.0. The ID is
+     * generated directly from random_bytes() for a fixed, predictable
+     * format that does not depend on session.sid_* settings or session
+     * machinery. (session_create_id() would also work - php-src skips
+     * handler re-entry inside save-handler callbacks - but the direct
+     * generator is simpler and string-or-throw.) 32 lowercase hex
+     * characters carry 128 bits of entropy and match the SSL-bridge
+     * pattern in include/common.php (^[a-zA-Z0-9,-]{26,128}$).
+     *
+     * @return string new session ID
+     * @throws \Random\RandomException if no source of randomness is available
+     */
+    public function create_sid(): string
+    {
+        return bin2hex(random_bytes(16));
     }
 
     // --- SessionHandlerInterface (typed) ---
@@ -118,6 +220,11 @@ class XoopsSessionHandler implements
         }
 
         $row = $this->db->fetchRow($result);
+        // Sticky-true: validateId() may have observed the row an instant
+        // before a parallel destroy - a miss here must not downgrade that
+        // observation, or updateTimestamp() would re-insert the dead ID.
+        $this->rowExistedAtRead[$sessionId] = ($row !== false)
+            || !empty($this->rowExistedAtRead[$sessionId]);
         if ($row === false) {
             return ''; // not found → empty string
         }
@@ -290,6 +397,15 @@ class XoopsSessionHandler implements
             return false;
         }
 
+        // The row exists: record it for updateTimestamp()'s no-resurrect
+        // gate. Strict mode calls validateId() BEFORE read(), and a parallel
+        // logout can delete the row between the two - the later read miss
+        // must not make the destroyed ID insertable again (the flag is
+        // sticky-true in read() for the same reason). Recorded even when the
+        // IP check below rejects the ID: existence, not validity, is what
+        // gates the insert.
+        $this->rowExistedAtRead[$id] = true;
+
         $storedIp = $row[0] ?? null;
         if (!$this->validateSessionIp(is_string($storedIp) ? $storedIp : null)) {
             return false;
@@ -298,13 +414,54 @@ class XoopsSessionHandler implements
         return true;
     }
 
+    /**
+     * Refresh a session's timestamp without rewriting its data.
+     *
+     * PHP 8.6 routes an unchanged session here instead of write() under
+     * session.lazy_write - including a brand-new session that stayed
+     * empty, because session_encode() now returns '' instead of false
+     * for an empty session. A new empty session has no row yet, so a
+     * plain UPDATE would persist nothing and the next request's
+     * strict-mode validateId() would reject the ID, regenerating the
+     * session forever.
+     *
+     * The insert half is gated on read() having MISSED for this ID (or the
+     * ID never passing read() at all - a mid-request regeneration): only a
+     * row that legitimately does not exist yet may be created here. An ID
+     * read from an existing row gets a timestamp-only UPDATE, where zero
+     * affected rows is the CORRECT outcome for a session a parallel request
+     * destroyed - an unconditional upsert would resurrect that session with
+     * this request's stale copy of its data (review catch).
+     *
+     * @param string $id   session ID
+     * @param string $data serialized session data (stored only when the row is first inserted)
+     * @return bool true on success
+     */
     public function updateTimestamp(string $id, string $data): bool
     {
+        $now = time();
+        if (!empty($this->rowExistedAtRead[$id])) {
+            $sql = sprintf(
+                'UPDATE %s SET sess_updated = %u WHERE sess_id = %s',
+                $this->db->prefix('session'),
+                $now,
+                $this->db->quote($id)
+            );
+
+            return (bool)$this->db->exec($sql);
+        }
+
+        $remoteAddress = \Xmf\IPAddress::fromRequest()->asReadable();
         $sql = sprintf(
-            'UPDATE %s SET sess_updated = %u WHERE sess_id = %s',
+            'INSERT INTO %s (sess_id, sess_updated, sess_ip, sess_data)
+             VALUES (%s, %u, %s, %s)
+             ON DUPLICATE KEY UPDATE sess_updated = %u',
             $this->db->prefix('session'),
-            time(),
-            $this->db->quote($id)
+            $this->db->quote($id),
+            $now,
+            $this->db->quote($remoteAddress),
+            $this->db->quote($data),
+            $now
         );
         return (bool)$this->db->exec($sql);
     }
