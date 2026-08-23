@@ -431,9 +431,13 @@ switch ($op) {
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit;
             }
-            // copy file
+            // copy file - a failed backup must abort the save, or the
+            // overwrite below destroys the only copy (review catch)
             $copy_file = $path_file . '.back';
-            copy($path_file, $copy_file);
+            if (!copy($path_file, $copy_file)) {
+                redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit;
+            }
             // Save modif
             if (Request::hasVar('templates', 'POST')) {
                 $open = fopen($path_file, 'w+');

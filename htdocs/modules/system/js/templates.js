@@ -18,7 +18,9 @@ function tpls_edit_file(path_file, path, file, extension) {
     $.ajax({
         type: "POST",
         url: "./admin/tplsets/jquery.php",
-        data: "op=tpls_edit_file&path_file=" + path_file + "&file=" + file,
+        // Object form: jQuery encodes each value once - concatenation
+        // corrupted paths containing &, +, or =.
+        data: {op: "tpls_edit_file", path_file: path_file, file: file},
         success: function (msg) {
 
             $('#display_contenu').html(msg);
@@ -36,7 +38,7 @@ function tpls_restore(path_file) {
     $.ajax({
         type: "POST",
         url: "./admin/tplsets/jquery.php",
-        data: "op=tpls_restore&path_file=" + path_file,
+        data: {op: "tpls_restore", path_file: path_file},
         success: function (msg) {
             $('#display_message').html(msg);
             $('#display_message').show();

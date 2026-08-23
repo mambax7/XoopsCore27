@@ -53,10 +53,11 @@ switch ($op) {
         $root = XOOPS_THEME_PATH;
         // No urldecode(): PHP already decoded the request once, and a
         // second decode would re-materialize %00 / %2f sequences as live
-        // bytes. getString() is kept deliberately - its trim() drops only
-        // EDGE NULs (an interior "ok\0evil" passes intact, verified by
-        // execution), so the NUL is REJECTED explicitly inside the try
-        // below. Not getPath(): its PATH filter truncates at the first
+        // bytes. getString() is kept deliberately - its trim() silently
+        // drops EDGE NULs (an edge-trimmed path simply fails to resolve)
+        // while an interior "ok\0evil" passes intact (verified by
+        // execution), so the interior NUL is REJECTED explicitly inside
+        // the try below. Not getPath(): its PATH filter truncates at the first
         // byte outside [-_./A-Z0-9=&%?~], which breaks non-ASCII theme
         // names ("/thème/" becomes "/th") - also verified by execution.
         // POST, matching the jqueryFileTree $.post() caller.
@@ -120,7 +121,7 @@ switch ($op) {
                         $extensions      = ['.html', '.htm', '.css', '.tpl'];
                         $extension_verif = strtolower((string) strrchr($file, '.'));
 
-                        if (in_array($extension_verif, $extensions)) {
+                        if (in_array($extension_verif, $extensions, true)) {
                             echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\" rel=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
                         } else {
                             //echo "<li class=\"file ext_$ext\">" . htmlentities($file) . "</li>";
@@ -136,7 +137,6 @@ switch ($op) {
         // POST (templates.js sends type:"POST"). getString(), not
         // getPath(), so non-ASCII template paths survive; the NUL is
         // rejected explicitly below, ValueError as backstop.
-        $clean_file = Request::getString('file', '', 'POST');
         $clean_path_file = Request::getString('path_file', '', 'POST');
         try {
             Assert::true(!str_contains($clean_path_file, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
@@ -173,7 +173,13 @@ switch ($op) {
         //Button restore
         $restore = '';
         if (file_exists($path_file . '.back')) {
-            $restore = '<button class="ui-corner-all tooltip" type="button" onclick="tpls_restore(\'' . $path_file . '\')" value="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" title="' . _AM_SYSTEM_TEMPLATES_RESTORE . '">
+            // Pass the validated RELATIVE path (the server rebuilds the root
+            // side), not the absolute server path - which leaked the server
+            // root into admin HTML and forced a Windows special case in the
+            // handler. json_encode() then htmlentities(): the correct
+            // encoder for a JS string literal inside an HTML attribute.
+            $restoreArg = htmlentities(json_encode($clean_path_file), ENT_QUOTES | ENT_HTML5);
+            $restore = '<button class="ui-corner-all tooltip" type="button" onclick="tpls_restore(' . $restoreArg . ')" value="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" title="' . _AM_SYSTEM_TEMPLATES_RESTORE . '">
                             <img src="' . system_AdminIcons('revert.png') . '" alt="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" />
                         </button>';
         }
@@ -185,7 +191,10 @@ switch ($op) {
         if (empty($content)) {
             echo _AM_SYSTEM_TEMPLATES_EMPTY_FILE;
         }
-        $ext = preg_replace('/^.*\./', '', $clean_path_file);
+        // Derived from the VALIDATED path, not the raw request - these
+        // values reach a class attribute and a JS argument downstream.
+        $clean_file = basename($path_file);
+        $ext = strtolower(pathinfo($path_file, PATHINFO_EXTENSION));
 
         echo '<form name="back" action="admin.php?fct=tplsets&op=tpls_save" method="POST">
               <table border="0">
@@ -227,21 +236,24 @@ switch ($op) {
         }
         $extensions = ['.html', '.htm', '.css', '.tpl'];
 
-        // getText() preserved deliberately: the JS posts the ABSOLUTE
-        // canonical path, and getPath()'s filter truncates it at the first
-        // byte outside its ASCII set - "C:\..." becomes "C", breaking
-        // restore on Windows outright (verified by execution). The NUL is
-        // rejected explicitly instead; ValueError stays as backstop.
-        $restorePath = Request::getText('path_file', '', 'POST');
-        if (str_contains($restorePath, "\0")) {
+        // The button now posts the validated RELATIVE path and the server
+        // rebuilds the root side - the same contract as the editor and the
+        // save, which removes the old absolute-path special case (and the
+        // server-path leak into admin HTML). Interior NULs are rejected
+        // explicitly; edge NULs never reach the check because getString()'s
+        // trim() drops them, and an edge-trimmed path simply fails to
+        // resolve. ValueError stays as backstop.
+        $restoreRel = Request::getString('path_file', '', 'POST');
+        if ('' === $restoreRel || str_contains($restoreRel, "\0")) {
             xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
             break;
         }
-        $themesRoot  = realpath(XOOPS_ROOT_PATH . '/themes');
         try {
-            $resolved = realpath($restorePath);
+            $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
+            $resolved   = realpath(XOOPS_ROOT_PATH . '/themes' . trim($restoreRel));
         } catch (\ValueError $e) {
-            $resolved = false;
+            $resolved   = false;
+            $themesRoot = false;
         }
 
         // Early guard narrows $resolved to a real file path before ANY use -
@@ -261,7 +273,7 @@ switch ($op) {
         $new_file = $resolved;
 
         $extension_verif = strtolower((string) strrchr($new_file, '.'));
-        if (in_array($extension_verif, $extensions) && file_exists($old_file) && file_exists($new_file)) {
+        if (in_array($extension_verif, $extensions, true) && file_exists($old_file) && file_exists($new_file)) {
             if (unlink($new_file)) {
                 if (rename($old_file, $new_file)) {
                     xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);
