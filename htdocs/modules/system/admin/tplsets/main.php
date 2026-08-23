@@ -432,9 +432,25 @@ switch ($op) {
                 exit;
             }
             // copy file - a failed backup must abort the save, or the
-            // overwrite below destroys the only copy (review catch)
+            // overwrite below destroys the only copy. Scoped handler keeps
+            // copy()'s native warning (which embeds the full path) out of
+            // the error handlers; the explicit diagnostic names only the
+            // basename (review catch, mirrors file_safety.php).
             $copy_file = $path_file . '.back';
-            if (!copy($path_file, $copy_file)) {
+            // Initialized OUTSIDE the try: if copy() ever throws instead of
+            // warning, the finally runs but the assignment does not, and the
+            // check below would read an undefined variable (review catch).
+            $copied = false;
+            set_error_handler(static function (): bool {
+                return true;
+            }, E_WARNING);
+            try {
+                $copied = copy($path_file, $copy_file);
+            } finally {
+                restore_error_handler();
+            }
+            if (!$copied) {
+                trigger_error('Template backup failed for ' . basename($path_file), E_USER_WARNING);
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit;
             }

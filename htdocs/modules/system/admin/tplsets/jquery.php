@@ -54,10 +54,11 @@ switch ($op) {
         // No urldecode(): PHP already decoded the request once, and a
         // second decode would re-materialize %00 / %2f sequences as live
         // bytes. getString() is kept deliberately - its trim() silently
-        // drops EDGE NULs (an edge-trimmed path simply fails to resolve)
-        // while an interior "ok\0evil" passes intact (verified by
-        // execution), so the interior NUL is REJECTED explicitly inside
-        // the try below. Not getPath(): its PATH filter truncates at the first
+        // drops EDGE NULs, so "x\0" arrives as the VALID "x" and then
+        // faces the same containment checks as any other value, while an
+        // interior "ok\0evil" passes intact (verified by execution), so
+        // the interior NUL is REJECTED explicitly inside the try below.
+        // Not getPath(): its PATH filter truncates at the first
         // byte outside [-_./A-Z0-9=&%?~], which breaks non-ASCII theme
         // names ("/thème/" becomes "/th") - also verified by execution.
         // POST, matching the jqueryFileTree $.post() caller.
@@ -116,13 +117,27 @@ switch ($op) {
                 // All files
                 foreach ($files as $file) {
                     if (file_exists($requestDir . $file) && $file !== '.' && $file !== '..' && !is_dir($requestDir . $file) && $file !== 'index.html') {
-                        $ext = preg_replace('/^.*\./', '', $file);
-
                         $extensions      = ['.html', '.htm', '.css', '.tpl'];
                         $extension_verif = strtolower((string) strrchr($file, '.'));
+                        // Safe by construction: the allowlist below admits
+                        // only these four tokens, so $ext can never carry
+                        // attribute- or JS-breaking characters (review catch).
+                        $ext = ltrim($extension_verif, '.');
 
                         if (in_array($extension_verif, $extensions, true)) {
-                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\" rel=\"tpls_edit_file('" . htmlentities($cleanDir . $file, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($cleanDir, ENT_QUOTES | ENT_HTML5) . "', '" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . "', '" . $ext . "');\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
+                            // JS string literals inside an HTML attribute need
+                            // json_encode() THEN htmlspecialchars(): entities
+                            // decode before the JS parser runs, so htmlentities()
+                            // alone left an apostrophe filename ("it's.css") free
+                            // to terminate the literal (review catch - same
+                            // encoder the restore button already uses). Built
+                            // once, used for both onclick and its rel mirror.
+                            $jsCall = htmlspecialchars(
+                                'tpls_edit_file(' . json_encode($cleanDir . $file) . ', ' . json_encode($cleanDir) . ', ' . json_encode($file) . ', ' . json_encode($ext) . ');',
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
+                            echo "<li class=\"file ext_$ext\"><a href=\"#\" onclick=\"" . $jsCall . "\" rel=\"" . $jsCall . "\">" . htmlentities($file, ENT_QUOTES | ENT_HTML5) . '</a></li>';
                         } else {
                             //echo "<li class=\"file ext_$ext\">" . htmlentities($file) . "</li>";
                         }
@@ -142,8 +157,8 @@ switch ($op) {
             Assert::true(!str_contains($clean_path_file, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
             // realpath() inside the try with ValueError in the catch, same
             // as tpls_display_folder: PHP 8 throws for NUL bytes.
-            $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
-            $check_path = realpath(XOOPS_ROOT_PATH.'/themes');
+            $path_file = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
+            $check_path = realpath(XOOPS_ROOT_PATH . '/themes');
             // Refuse a false realpath(), require an actual FILE (a bare
             // "/" resolved to the themes root itself and reached the editor
             // as a directory - review catch), and require root-plus-
@@ -168,6 +183,11 @@ switch ($op) {
             exit;
         }
 
+        // Relative form of the VALIDATED path, not the raw request value:
+        // the restore button and the hidden path_file field below both
+        // re-derive from what the checks actually approved (review catch).
+        $relPath = str_replace('\\', '/', substr($path_file, strlen($check_path)));
+
         $path_file = str_replace('\\', '/', $path_file);
 
         //Button restore
@@ -176,9 +196,9 @@ switch ($op) {
             // Pass the validated RELATIVE path (the server rebuilds the root
             // side), not the absolute server path - which leaked the server
             // root into admin HTML and forced a Windows special case in the
-            // handler. json_encode() then htmlentities(): the correct
+            // handler. json_encode() then htmlspecialchars(): the correct
             // encoder for a JS string literal inside an HTML attribute.
-            $restoreArg = htmlentities(json_encode($clean_path_file), ENT_QUOTES | ENT_HTML5);
+            $restoreArg = htmlspecialchars((string) json_encode($relPath), ENT_QUOTES, 'UTF-8');
             $restore = '<button class="ui-corner-all tooltip" type="button" onclick="tpls_restore(' . $restoreArg . ')" value="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" title="' . _AM_SYSTEM_TEMPLATES_RESTORE . '">
                             <img src="' . system_AdminIcons('revert.png') . '" alt="' . _AM_SYSTEM_TEMPLATES_RESTORE . '" />
                         </button>';
@@ -191,11 +211,6 @@ switch ($op) {
         if (empty($content)) {
             echo _AM_SYSTEM_TEMPLATES_EMPTY_FILE;
         }
-        // Derived from the VALIDATED path, not the raw request - these
-        // values reach a class attribute and a JS argument downstream.
-        $clean_file = basename($path_file);
-        $ext = strtolower(pathinfo($path_file, PATHINFO_EXTENSION));
-
         echo '<form name="back" action="admin.php?fct=tplsets&op=tpls_save" method="POST">
               <table border="0">
                 <tr>
@@ -220,17 +235,27 @@ switch ($op) {
                     . '</textarea></td>
                 </tr>
               </table>';
+        // The ONE token this form renders. It serves BOTH posts: the restore
+        // JS reads it with .val() (validated without consuming - see
+        // tpls_restore below) and the save submits it normally. A second
+        // getTokenHTML() here would put two same-name inputs in the form and
+        // make each path depend silently on input order - one token, shared,
+        // is the contract (review catch).
         XoopsLoad::load('XoopsFormHiddenToken');
         $xoopsToken = new XoopsFormHiddenToken();
         echo $xoopsToken->render();
-        echo '<input type="hidden" name="path_file" value="' . htmlentities($clean_path_file, ENT_QUOTES | ENT_HTML5)
-            .'"><input type="hidden" name="file" value="' . htmlentities(trim($clean_file), ENT_QUOTES | ENT_HTML5)
-            .'"><input type="hidden" name="ext" value="' . htmlentities($ext, ENT_QUOTES | ENT_HTML5) . '"></form>';
+        // path_file re-derived from the validated path; the old hidden
+        // "file" and "ext" fields are gone - tpls_save never read either
+        // (review catch).
+        echo '<input type="hidden" name="path_file" value="' . htmlspecialchars($relPath, ENT_QUOTES, 'UTF-8') . '"></form>';
         break;
 
     // Restore backup file
     case 'tpls_restore':
-        if (!$GLOBALS['xoopsSecurity']->check()) {
+        // check(false): validate WITHOUT consuming. The editor form renders
+        // one token shared by restore and save - the default check() would
+        // burn it here and refuse the save that follows (review catch).
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
             xoops_error(implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
             break;
         }
@@ -240,9 +265,9 @@ switch ($op) {
         // rebuilds the root side - the same contract as the editor and the
         // save, which removes the old absolute-path special case (and the
         // server-path leak into admin HTML). Interior NULs are rejected
-        // explicitly; edge NULs never reach the check because getString()'s
-        // trim() drops them, and an edge-trimmed path simply fails to
-        // resolve. ValueError stays as backstop.
+        // explicitly; edge NULs are silently trimmed by getString(), so the
+        // value that arrives here is a NUL-free path facing the same
+        // containment checks as any other input. ValueError stays as backstop.
         $restoreRel = Request::getString('path_file', '', 'POST');
         if ('' === $restoreRel || str_contains($restoreRel, "\0")) {
             xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);

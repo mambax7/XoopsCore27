@@ -19,8 +19,9 @@ function tpls_edit_file(path_file, path, file, extension) {
         type: "POST",
         url: "./admin/tplsets/jquery.php",
         // Object form: jQuery encodes each value once - concatenation
-        // corrupted paths containing &, +, or =.
-        data: {op: "tpls_edit_file", path_file: path_file, file: file},
+        // corrupted paths containing &, +, or =. No "file" field: the
+        // endpoint derives the name from the validated path itself.
+        data: {op: "tpls_edit_file", path_file: path_file},
         success: function (msg) {
 
             $('#display_contenu').html(msg);
@@ -38,7 +39,14 @@ function tpls_restore(path_file) {
     $.ajax({
         type: "POST",
         url: "./admin/tplsets/jquery.php",
-        data: {op: "tpls_restore", path_file: path_file},
+        // XoopsSecurity::check() requires the request token; read it from
+        // the editor form, which now renders it (review catch - without it
+        // the handler refused the restore before touching the backup).
+        data: {
+            op: "tpls_restore",
+            path_file: path_file,
+            XOOPS_TOKEN_REQUEST: $('form[name="back"] input[name="XOOPS_TOKEN_REQUEST"]').val()
+        },
         success: function (msg) {
             $('#display_message').html(msg);
             $('#display_message').show();

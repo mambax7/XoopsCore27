@@ -75,7 +75,10 @@ if (jQuery) (function ($) {
                                 // No escape(): jQuery's $.post encodes the value once already - the
                                 // legacy escape() made every spaced or non-ASCII folder arrive
                                 // double-encoded (and %uXXXX for non-ASCII, which PHP never decodes).
-                                showTree($(this).parent(), $(this).attr('rel').match(/.*\//)[0]);
+                                // || [''] : a rel without a trailing slash would make
+                                // match() return null and [0] throw - fall back to the
+                                // root listing instead of a dead branch.
+                                showTree($(this).parent(), ($(this).attr('rel').match(/.*\//) || [''])[0]);
                                 $(this).parent().removeClass('collapsed').addClass('expanded');
                             } else {
                                 // Collapse
