@@ -326,10 +326,25 @@ switch ($op) {
             // (verified on Windows PHP 8.5 too); where a filesystem
             // refuses the replace, the restore reports failure with the
             // template intact (review catch).
-            if (rename($old_file, $new_file)) {
+            // Scoped handler: rename()'s native warning embeds both full
+            // server paths, and a registered error handler still receives
+            // it even under this file's error_reporting(0) - verified by
+            // execution. The explicit diagnostic names only the basename
+            // (review catch, mirrors the save path).
+            $renamed = false;
+            set_error_handler(static function (): bool {
+                return true;
+            }, E_WARNING);
+            try {
+                $renamed = rename($old_file, $new_file);
+            } finally {
+                restore_error_handler();
+            }
+            if ($renamed) {
                 xoops_result(_AM_SYSTEM_TEMPLATES_RESTORE_OK);
                 exit();
             }
+            trigger_error('Template restore failed for ' . basename($new_file), E_USER_WARNING);
         }
         xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
         break;
