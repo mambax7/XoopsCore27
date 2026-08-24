@@ -125,6 +125,15 @@ switch ($op) {
                 $verif_write     = false;
                 $text            = '';
 
+                // The four generate loops below write through
+                // xoops_write_file_atomically(): tempnam + atomic rename, so
+                // the DESTINATION is never truncated before the replacement
+                // is durable - a failed write leaves the existing override
+                // intact instead of a corrupted file that a later non-forced
+                // generation would skip (review catch, Greptile P1). The
+                // helper carries the full-byte-count check, the 0-byte
+                // empty-source case, and basename-only diagnostics.
+
                 if (!is_dir($theme_surcharge)) {
                     //Create the modules folder
 
@@ -197,8 +206,7 @@ switch ($op) {
 
                                             if (is_object($tplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
-                                                    $open = fopen('' . $physical_file . '', 'w+');
-                                                    if (fwrite($open, '' . $tplfile->getVar('tpl_source', 'n'))) {
+                                                    if (xoops_write_file_atomically($physical_file, (string) $tplfile->getVar('tpl_source', 'n'))) {
                                                         $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_TEMPLATES . '</td><td>' . $physical_file . '</td><td align="center">';
                                                         if (file_exists($physical_file)) {
                                                             $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -207,7 +215,6 @@ switch ($op) {
                                                         }
                                                         $verif_write = true;
                                                     }
-                                                    fclose($open);
                                                     $class = ($class === 'even') ? 'odd' : 'even';
                                                 }
                                             }
@@ -225,8 +232,7 @@ switch ($op) {
 
                                             if (is_object($btplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
-                                                    $open = fopen($physical_file, 'w+');
-                                                    if (fwrite($open, (string) $btplfile->getVar('tpl_source', 'n'))) {
+                                                    if (xoops_write_file_atomically($physical_file, (string) $btplfile->getVar('tpl_source', 'n'))) {
                                                         $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_BLOCKS . '</td><td>' . $physical_file . '</td><td align="center">';
                                                         if (file_exists($physical_file)) {
                                                             $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -235,7 +241,6 @@ switch ($op) {
                                                         }
                                                         $verif_write = true;
                                                     }
-                                                    fclose($open);
                                                     $class = ($class === 'even') ? 'odd' : 'even';
                                                 }
                                             }
@@ -293,8 +298,7 @@ switch ($op) {
                                             if (is_object($tplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
                                                     if ($select_templates_modules[$l] == $filename) {
-                                                        $open = fopen('' . $physical_file . '', 'w+');
-                                                        if (fwrite($open, '' . $tplfile->getVar('tpl_source', 'n'))) {
+                                                        if (xoops_write_file_atomically($physical_file, (string) $tplfile->getVar('tpl_source', 'n'))) {
                                                             $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_TEMPLATES . '</td><td>' . $physical_file . '</td><td align="center">';
                                                             if (file_exists($physical_file)) {
                                                                 $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -303,7 +307,6 @@ switch ($op) {
                                                             }
                                                             $verif_write = true;
                                                         }
-                                                        fclose($open);
                                                     }
                                                     $class = ($class === 'even') ? 'odd' : 'even';
                                                 }
@@ -323,8 +326,7 @@ switch ($op) {
                                             if (is_object($btplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
                                                     if ($select_templates_modules[$l] == $filename) {
-                                                        $open = fopen('' . $physical_file . '', 'w+');
-                                                        if (fwrite($open, '' . $btplfile->getVar('tpl_source', 'n') . '')) {
+                                                        if (xoops_write_file_atomically($physical_file, (string) $btplfile->getVar('tpl_source', 'n'))) {
                                                             $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_BLOCKS . '</td><td>' . $physical_file . '</td><td align="center">';
                                                             if (file_exists($physical_file)) {
                                                                 $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -333,7 +335,6 @@ switch ($op) {
                                                             }
                                                             $verif_write = true;
                                                         }
-                                                        fclose($open);
                                                     }
                                                     $class = ($class === 'even') ? 'odd' : 'even';
                                                 }
@@ -386,51 +387,22 @@ switch ($op) {
             redirect_header('admin.php?fct=tplsets', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // getString() kept deliberately (getPath()'s filter truncates at
-        // the first non-ASCII byte, breaking accented or CJK theme paths);
-        // its trim() drops only edge NULs, so the interior NUL is rejected
-        // explicitly, with realpath() inside a try because PHP 8 throws
-        // ValueError for NULs - the same contract as the other endpoints.
+        // the first non-ASCII byte, breaking accented or CJK theme paths).
+        // PathGuard file mode carries the rest of the contract (SECURITY.md
+        // M-9): NUL refusal with ValueError backstop, false-realpath
+        // refusal, boundary-aware themes/ containment, is_file() so a
+        // directory named like "x.css" never reaches the file handlers,
+        // and the case-insensitive template-extension allowlist - pinned
+        // by the PathGuard truth-table test.
         $clean_path_file = Request::getString('path_file', '', 'POST');
-        if (str_contains($clean_path_file, "\0")) {
-            redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
-            exit();
-        }
         if (!empty($clean_path_file)) {
-            // Confine writes to the themes/ tree: realpath() resolves any ../ traversal
-            // in path_file, so reject anything that escapes themes/ — otherwise the editor
-            // can overwrite files anywhere under the XOOPS root (SECURITY.md M-9).
-            try {
-                $path_file  = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
-                $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
-            } catch (\ValueError $e) {
+            require_once XOOPS_ROOT_PATH . '/class/PathGuard.php';
+            $path_file = PathGuard::resolveFile(XOOPS_ROOT_PATH . '/themes', trim($clean_path_file), ['css', 'html', 'htm', 'tpl']);
+            if (false === $path_file) {
                 redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
                 exit();
             }
-            if ($path_file === false || $themesRoot === false) {
-                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
-                exit();
-            }
-            $path_file  = str_replace('\\', '/', $path_file);
-            $themesRoot = str_replace('\\', '/', $themesRoot);
-            if (!str_starts_with($path_file, $themesRoot . '/')) {
-                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
-                exit();
-            }
-            // A directory named like "x.css" would pass the extension check
-            // below and reach copy()/fopen() - require a real file (review
-            // catch, mirrors the jquery.php editor guard).
-            if (!is_file($path_file)) {
-                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
-                exit();
-            }
-            $pathInfo = pathinfo($path_file);
-            // htm added and matching made case-insensitive: the browser
-            // lists .htm and the editor opens it - a save allowlist without
-            // it made every edited .htm unsaveable (review catch).
-            if (!in_array(strtolower($pathInfo['extension'] ?? ''), ['css', 'html', 'htm', 'tpl'], true)) {
-                redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
-                exit;
-            }
+            $path_file = str_replace('\\', '/', $path_file);
             // copy file - a failed backup must abort the save, or the
             // overwrite below destroys the only copy. Delegated to the
             // shared xoops_write_file_atomically() helper (loaded with
