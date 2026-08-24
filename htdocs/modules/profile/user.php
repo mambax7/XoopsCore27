@@ -100,6 +100,10 @@ if ($op === 'logout') {
     // immediately, so the many cached theme and block templates that emit
     // user.php?op=logout links need no change.
     if (!$GLOBALS['xoopsSecurity']->check()) {
+        // Translation packs predating 2.7.3 Final lack this constant, and an
+        // undefined constant is a fatal Error on PHP 8 — fall back to the
+        // English string rather than taking down the logout page.
+        defined('_US_SURETOLOGOUT') || define('_US_SURETOLOGOUT', 'Are you sure you want to log out?');
         include $GLOBALS['xoops']->path('header.php');
         include __DIR__ . '/header.php';
         xoops_confirm(['op' => 'logout'], 'user.php', _US_SURETOLOGOUT);
