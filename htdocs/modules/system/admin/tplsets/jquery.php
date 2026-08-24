@@ -1,6 +1,5 @@
 <?php
 
-use Xmf\Assert;
 use Xmf\Request;
 
 /**
@@ -43,6 +42,11 @@ if (file_exists(__DIR__ . '/../../language/' . $xoopsConfig['language'] . '/admi
 }
 
 XoopsLoad::load('XoopsRequest');
+// The containment contract shared by all four tplsets endpoints, pinned
+// by the PathGuard truth-table test: NUL refusal, realpath with
+// ValueError backstop, false-result refusal, boundary-aware root
+// containment, is_dir/is_file by mode, extension allowlist.
+require_once XOOPS_ROOT_PATH . '/class/PathGuard.php';
 
 $GLOBALS['xoopsLogger']->usePopup = true;
 
@@ -66,34 +70,13 @@ switch ($op) {
         if ('' !== $cleanDir && !str_ends_with($cleanDir, '/')) {
             $cleanDir .= '/'; // the tree JS concatenates rel = dir + file
         }
-        $requestDir = $root . $cleanDir;
-        try {
-            // A NUL cannot occur in a legitimate path - refuse it outright.
-            Assert::true(!str_contains($cleanDir, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
-            // realpath() belongs INSIDE the try: PHP 8 throws ValueError
-            // for NUL bytes, the backstop should this check ever regress.
-            $path_file = realpath($requestDir);
-            $check_path = realpath($root);
-            // realpath() returns false for a non-existent path - refuse it
-            // explicitly instead of feeding false onward (review catch).
-            Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::true(is_string($path_file) && is_dir($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
-            // Boundary-aware containment: exact root, or root plus a
-            // separator. A bare prefix check accepts a SIBLING whose name
-            // merely begins with the root ("/themes" matching "/themes2"),
-            // which a traversal path can reach (review catch).
-            Assert::true(
-                $path_file === $check_path
-                || str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
-                _AM_SYSTEM_TEMPLATES_ERROR
-            );
-        } catch (\InvalidArgumentException | \ValueError $e) {
-            // handle the exception
-            redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
+        $path_file = PathGuard::resolveDir($root, $cleanDir);
+        if (false === $path_file) {
+            redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
             exit;
         }
         // Use the CANONICAL path for everything below: keeping the raw
-        // $requestDir string open would leave a time-of-check/time-of-use
+        // request string open would leave a time-of-check/time-of-use
         // gap through symlink components between the containment check and
         // the listing (review catch).
         $requestDir = rtrim($path_file, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
@@ -162,38 +145,16 @@ switch ($op) {
     // Edit File
     case 'tpls_edit_file':
         // POST (templates.js sends type:"POST"). getString(), not
-        // getPath(), so non-ASCII template paths survive; the NUL is
-        // rejected explicitly below, ValueError as backstop.
+        // getPath(), so non-ASCII template paths survive. PathGuard file
+        // mode: real file strictly inside themes/, template extensions only.
         $clean_path_file = Request::getString('path_file', '', 'POST');
-        try {
-            Assert::true(!str_contains($clean_path_file, "\0"), _AM_SYSTEM_TEMPLATES_ERROR);
-            // realpath() inside the try with ValueError in the catch, same
-            // as tpls_display_folder: PHP 8 throws for NUL bytes.
-            $path_file = realpath(XOOPS_ROOT_PATH . '/themes' . trim($clean_path_file));
-            $check_path = realpath(XOOPS_ROOT_PATH . '/themes');
-            // Refuse a false realpath(), require an actual FILE (a bare
-            // "/" resolved to the themes root itself and reached the editor
-            // as a directory - review catch), and require root-plus-
-            // separator containment, not the bare prefix a sibling
-            // directory can satisfy.
-            Assert::true(is_string($check_path) && is_dir($check_path), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::true(is_string($path_file) && is_file($path_file), _AM_SYSTEM_TEMPLATES_ERROR);
-            Assert::true(
-                str_starts_with($path_file, $check_path . DIRECTORY_SEPARATOR),
-                _AM_SYSTEM_TEMPLATES_ERROR
-            );
-            // The editor opens template types only - same allowlist the
-            // save path enforces, applied before any read.
-            $pathInfo = pathinfo($path_file);
-            Assert::true(
-                in_array(strtolower($pathInfo['extension'] ?? ''), ['css', 'html', 'htm', 'tpl'], true),
-                _AM_SYSTEM_TEMPLATES_ERROR
-            );
-        } catch (\InvalidArgumentException | \ValueError $e) {
-            // handle the exception
-            redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, $e->getMessage());
+        $path_file = PathGuard::resolveFile(XOOPS_ROOT_PATH . '/themes', trim($clean_path_file), ['css', 'html', 'htm', 'tpl']);
+        if (false === $path_file) {
+            redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);
             exit;
         }
+        // The guard just proved the root resolves.
+        $check_path = realpath(XOOPS_ROOT_PATH . '/themes');
 
         // Relative form of the VALIDATED path, not the raw request value:
         // the restore button and the hidden path_file field below both
@@ -274,8 +235,6 @@ switch ($op) {
             xoops_error(implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
             break;
         }
-        $extensions = ['.html', '.htm', '.css', '.tpl'];
-
         // The button now posts the validated RELATIVE path and the server
         // rebuilds the root side - the same contract as the editor and the
         // save, which removes the old absolute-path special case (and the
@@ -284,42 +243,27 @@ switch ($op) {
         // value that arrives here is a NUL-free path facing the same
         // containment checks as any other input. ValueError stays as backstop.
         $restoreRel = Request::getString('path_file', '', 'POST');
-        if ('' === $restoreRel || str_contains($restoreRel, "\0")) {
-            xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
-            break;
-        }
-        try {
-            $themesRoot = realpath(XOOPS_ROOT_PATH . '/themes');
-            $resolved   = realpath(XOOPS_ROOT_PATH . '/themes' . trim($restoreRel));
-        } catch (\ValueError $e) {
-            $resolved   = false;
-            $themesRoot = false;
-        }
-
-        // Early guard narrows $resolved to a real file path before ANY use -
-        // static analysis flagged the old shape, where a false $resolved
-        // reached the concatenation and the filesystem calls (Scrutinizer).
-        // Root-plus-separator containment, not a bare prefix: strpos(...)===0
-        // accepts a sibling dir whose path starts with the themes-root
-        // string, e.g. ".../themes-evil/..." (SECURITY.md A2-M-3).
-        if (!is_string($resolved) || !is_string($themesRoot)
-            || !is_file($resolved)
-            || !str_starts_with($resolved, $themesRoot . DIRECTORY_SEPARATOR)) {
+        // PathGuard file mode covers the NUL refusal, the false-realpath
+        // narrowing static analysis asked for, the root-plus-separator
+        // containment (SECURITY.md A2-M-3), and the template-extension
+        // allowlist in one call.
+        $resolved = ('' === $restoreRel)
+            ? false
+            : PathGuard::resolveFile(XOOPS_ROOT_PATH . '/themes', trim($restoreRel), ['css', 'html', 'htm', 'tpl']);
+        if (false === $resolved) {
             xoops_error(_AM_SYSTEM_TEMPLATES_RESTORE_NOTOK);
             break;
         }
 
         $old_file = $resolved . '.back';
         $new_file = $resolved;
-
-        $extension_verif = strtolower((string) strrchr($new_file, '.'));
         // is_link(): a planted symlink at .back must never become the live
         // template via rename() - rename moves the LINK itself into place,
         // and the web server may then follow it when serving the file. The
         // realpath guards refuse such a file at edit/save time, but the
         // served path would bypass them (review catch; the save-side backup
         // is symlink-proof the same way).
-        if (in_array($extension_verif, $extensions, true) && !is_link($old_file) && file_exists($old_file) && file_exists($new_file)) {
+        if (!is_link($old_file) && file_exists($old_file) && file_exists($new_file)) {
             // No unlink() first: the old delete-then-rename pair could
             // remove the live template and then fail the rename, leaving
             // NEITHER file. rename() replaces the destination atomically
