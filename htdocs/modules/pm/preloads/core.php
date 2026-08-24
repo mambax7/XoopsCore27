@@ -30,11 +30,27 @@
 class PmCorePreload extends XoopsPreloadItem
 {
     /**
+     * The current request's query string, '?' included, ready to append to a
+     * redirect target — or '' when it is absent or contains anything outside a
+     * conservative allowlist. The raw QUERY_STRING is attacker-controlled, and
+     * reflecting it unchecked into a Location header invites cache-poisoning
+     * and phishing parameter injection (CRLF itself is already blocked by PHP).
+     *
+     * @return string
+     */
+    private static function filteredQueryString()
+    {
+        $queryString = $_SERVER['QUERY_STRING'] ?? '';
+
+        return preg_match('/^[A-Za-z0-9_\[\]=&%;.\-]{1,512}$/', $queryString) ? ('?' . $queryString) : '';
+    }
+
+    /**
      * @param $args
      */
     public static function eventCorePmliteStart($args)
     {
-        header('location: ./modules/pm/pmlite.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/pm/pmlite.php' . self::filteredQueryString());
         exit();
     }
 
@@ -43,7 +59,7 @@ class PmCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreReadpmsgStart($args)
     {
-        header('location: ./modules/pm/readpmsg.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/pm/readpmsg.php' . self::filteredQueryString());
         exit();
     }
 
@@ -52,7 +68,7 @@ class PmCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreViewpmsgStart($args)
     {
-        header('location: ./modules/pm/viewpmsg.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/pm/viewpmsg.php' . self::filteredQueryString());
         exit();
     }
 

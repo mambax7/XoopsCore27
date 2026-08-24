@@ -32,6 +32,22 @@ use Xmf\Request;
 class ProfileCorePreload extends XoopsPreloadItem
 {
     /**
+     * The current request's query string, '?' included, ready to append to a
+     * redirect target — or '' when it is absent or contains anything outside a
+     * conservative allowlist. The raw QUERY_STRING is attacker-controlled, and
+     * reflecting it unchecked into a Location header invites cache-poisoning
+     * and phishing parameter injection (CRLF itself is already blocked by PHP).
+     *
+     * @return string
+     */
+    private static function filteredQueryString()
+    {
+        $queryString = $_SERVER['QUERY_STRING'] ?? '';
+
+        return preg_match('/^[A-Za-z0-9_\[\]=&%;.\-]{1,512}$/', $queryString) ? ('?' . $queryString) : '';
+    }
+
+    /**
      * @param $args
      */
     public static function eventCoreUserStart($args)
@@ -44,7 +60,7 @@ class ProfileCorePreload extends XoopsPreloadItem
         }
         $from = Request::getString('from', '', 'GET');
         if ($op !== 'login' && $from !== 'profile') {
-            header('location: ./modules/profile/user.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+            header('location: ./modules/profile/user.php' . self::filteredQueryString());
             exit();
         }
     }
@@ -54,7 +70,7 @@ class ProfileCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreEdituserStart($args)
     {
-        header('location: ./modules/profile/edituser.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/profile/edituser.php' . self::filteredQueryString());
         exit();
     }
 
@@ -74,7 +90,7 @@ class ProfileCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreRegisterStart($args)
     {
-        header('location: ./modules/profile/register.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/profile/register.php' . self::filteredQueryString());
         exit();
     }
 
@@ -83,7 +99,7 @@ class ProfileCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreUserinfoStart($args)
     {
-        header('location: ./modules/profile/userinfo.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/profile/userinfo.php' . self::filteredQueryString());
         exit();
     }
 }

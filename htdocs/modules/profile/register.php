@@ -29,7 +29,13 @@ if ($GLOBALS['xoopsUser']) {
 
 $regOp = Request::getString('op', '', 'GET');
 if ($regOp !== '' && in_array($regOp, ['actv', 'activate'])) {
-    header('location: ./activate.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+    // Append the query string only when it fits a conservative allowlist: the
+    // raw QUERY_STRING is attacker-controlled, and reflecting it unchecked into
+    // a Location header invites cache-poisoning and phishing parameter
+    // injection (CRLF itself is already blocked by PHP).
+    $queryString = $_SERVER['QUERY_STRING'] ?? '';
+    $queryString = preg_match('/^[A-Za-z0-9_\[\]=&%;.\-]{1,512}$/', $queryString) ? ('?' . $queryString) : '';
+    header('location: ./activate.php' . $queryString);
     exit();
 }
 
