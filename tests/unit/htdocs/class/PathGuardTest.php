@@ -89,6 +89,7 @@ final class PathGuardTest extends TestCase
             'themes root itself ("")'          => ['', true],
             'themes root itself ("/")'         => ['/', true],
             'plain subdirectory'               => ['/default', true],
+            'no leading separator'             => ['default', true],
             'trailing slash'                   => ['/default/', true],
             'non-ASCII directory'              => ['/thème', true],
             'traversal to sibling'             => ['/../themes2', false],
@@ -125,6 +126,7 @@ final class PathGuardTest extends TestCase
     {
         return [
             'plain template file'          => ['/default/style.css', true],
+            'no leading separator'         => ['default/style.css', true],
             'uppercase extension'          => ['/default/page.TPL', true],
             'non-ASCII path'               => ['/thème/écran.css', true],
             'extension outside allowlist'  => ['/default/evil.php', false],

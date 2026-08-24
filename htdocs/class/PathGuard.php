@@ -61,6 +61,8 @@ final class PathGuard
      * @param string $relative request-supplied path fragment, appended to $root
      *
      * @return string|false canonical directory path, or false when refused
+     *
+     * @throws \TypeError when a caller passes non-string arguments (strict_types)
      */
     public static function resolveDir(string $root, string $relative): string|false
     {
@@ -76,6 +78,8 @@ final class PathGuard
      *                                    empty accepts any extension
      *
      * @return string|false canonical file path, or false when refused
+     *
+     * @throws \TypeError when a caller passes non-string arguments (strict_types)
      */
     public static function resolveFile(string $root, string $relative, array $allowedExtensions = []): string|false
     {
@@ -97,24 +101,38 @@ final class PathGuard
         if (str_contains($root, "\0") || str_contains($relative, "\0")) {
             return false;
         }
+        // Join explicitly when neither side supplies the separator:
+        // "themes" + "default" must probe themes/default, not the sibling
+        // "themesdefault" (review catch - the concatenation failed CLOSED,
+        // but a shared API should not refuse legitimate callers).
+        $joiner = ('' === $relative
+            || str_starts_with($relative, '/')
+            || str_starts_with($relative, '\\')
+            || str_ends_with($root, '/')
+            || str_ends_with($root, '\\'))
+            ? ''
+            : DIRECTORY_SEPARATOR;
         try {
             // realpath() belongs INSIDE the try: PHP 8 throws \ValueError
             // for NUL bytes, the backstop should the check above regress.
             $rootReal  = realpath($root);
-            $candidate = realpath($root . $relative);
+            $candidate = realpath($root . $joiner . $relative);
         } catch (\ValueError $e) {
             return false;
         }
         if (!is_string($rootReal) || !is_dir($rootReal) || !is_string($candidate)) {
             return false;
         }
+        // Boundary prefix built from a right-trimmed root: when the root IS
+        // a filesystem root ("/", "C:\"), the naive $rootReal . SEPARATOR
+        // would double the separator and refuse every child (review catch).
+        $boundary = rtrim($rootReal, '/\\') . DIRECTORY_SEPARATOR;
         if ($wantDir) {
             if (!is_dir($candidate)) {
                 return false;
             }
             // Exact root, or root plus separator - never a bare prefix.
-            if ($candidate !== $rootReal
-                && !str_starts_with($candidate, $rootReal . DIRECTORY_SEPARATOR)) {
+            if ($candidate !== $rootReal && !str_starts_with($candidate, $boundary)) {
                 return false;
             }
 
@@ -124,7 +142,7 @@ final class PathGuard
             return false;
         }
         // A file is never the root itself; it must sit strictly inside.
-        if (!str_starts_with($candidate, $rootReal . DIRECTORY_SEPARATOR)) {
+        if (!str_starts_with($candidate, $boundary)) {
             return false;
         }
         if ([] !== $allowedExtensions) {

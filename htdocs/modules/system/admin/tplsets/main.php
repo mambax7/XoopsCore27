@@ -127,18 +127,39 @@ switch ($op) {
 
                 // Shared writer for the four generate loops below: fopen()
                 // checked - an unchecked false handle reaches fwrite() as a
-                // TypeError on PHP 8 - and fwrite() compared against false,
-                // not falsy: an empty template source is a legitimate
-                // 0-byte write (review catch, mirrors the tpls_save fix).
+                // TypeError on PHP 8 - and success requires the FULL byte
+                // count, not merely a non-false fwrite(): a short write
+                // would leave a truncated template reported as written
+                // (review catch, three reviewers). An empty source still
+                // passes (0 === strlen('')). fflush() and fclose() are part
+                // of success so buffered bytes that never reach disk count
+                // as failure. No retry loop: on a local file a short write
+                // is a disk-level fault a retry will not repair - failing
+                // the row (red icon, $verif_write stays false) is the
+                // honest outcome. Scoped handler keeps the streams' native
+                // full-path warnings out of the error handlers; the
+                // explicit diagnostic names only the basename.
                 $writeTemplate = static function (string $physicalFile, string $source): bool {
-                    $handle = fopen($physicalFile, 'w+');
-                    if (false === $handle) {
-                        return false;
+                    $ok = false;
+                    set_error_handler(static function (): bool {
+                        return true;
+                    }, E_WARNING);
+                    try {
+                        $handle = fopen($physicalFile, 'w+');
+                        if (false !== $handle) {
+                            $written = fwrite($handle, $source);
+                            $flushed = fflush($handle);
+                            $closed  = fclose($handle);
+                            $ok      = strlen($source) === $written && $flushed && $closed;
+                        }
+                    } finally {
+                        restore_error_handler();
                     }
-                    $written = fwrite($handle, $source);
-                    fclose($handle);
+                    if (!$ok) {
+                        trigger_error('Template write failed for ' . basename($physicalFile), E_USER_WARNING);
+                    }
 
-                    return false !== $written;
+                    return $ok;
                 };
 
                 if (!is_dir($theme_surcharge)) {
