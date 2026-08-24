@@ -183,8 +183,9 @@ function imageCreateCorners($sourceImage, $radii)
     imagefilledrectangle($destinationImage, 0, 0, $imageWidth, $imageHeight, $alphaColor);
     imagecopyresampled($destinationImage, $workingImage, 0, 0, 0, 0, $imageWidth, $imageHeight, $workingWidth, $workingHeight);
 
-    // imagedestroy($sourceImage);
-    imagedestroy($workingImage);
+    // GdImage frees itself when the last reference goes away (PHP 8.0+);
+    // imagedestroy() is a no-op there and deprecated in PHP 8.5.
+    unset($workingImage);
 
     return $destinationImage;
 }
@@ -712,9 +713,9 @@ ob_end_clean();
 // Update $image_created_time
 $imageCreatedTime = time();
 
-// Clean up the memory
-imagedestroy($sourceImage);
-imagedestroy($destination_image);
+// Clean up the memory — dropping the last reference frees the GdImage on
+// PHP 8.0+; imagedestroy() is a no-op there and deprecated in PHP 8.5.
+unset($sourceImage, $destination_image);
 
 /*
  * Write the just edited image into the Xoops cache

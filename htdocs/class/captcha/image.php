@@ -42,7 +42,6 @@ class XoopsCaptchaImage extends XoopsCaptchaMethod
                 'imagecolorallocate',
                 'imagefilledrectangle',
                 'imagejpeg',
-                'imagedestroy',
                 'imageftbbox',
             ];
             foreach ($required_functions as $func) {

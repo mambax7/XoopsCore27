@@ -54,7 +54,7 @@ if ($draw_dirname && function_exists('imagecreatefrompng') && function_exists('i
     $px    = (92 - 6 * strlen($mydirname)) / 2;
     imagestring($im, 3, $px, 34, $mydirname, $color);
     imagepng($im);
-    imagedestroy($im);
+    unset($im); // frees the GdImage; imagedestroy() is deprecated in PHP 8.5
 } else {
     readfile($icon_fullpath);
 }
