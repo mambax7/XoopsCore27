@@ -191,10 +191,9 @@ class XoopsCaptchaImageHandler
             return false;
         }
 
-        if (!imagedestroy($this->oImage)) {
-            // Log or handle the error as you see fit
-            return false;
-        }
+        // GdImage frees itself when the last reference goes away (PHP 8.0+);
+        // imagedestroy() is a no-op there and deprecated in PHP 8.5.
+        unset($this->oImage);
 
         return true;
     }
@@ -225,7 +224,7 @@ class XoopsCaptchaImageHandler
                 }
             }
         }
-        imagedestroy($oImage);
+        unset($oImage); // frees the GdImage; imagedestroy() is deprecated in PHP 8.5
 
         $this->height  = $MaxCharHeight + 2;
         $this->spacing = (int)(($this->config['num_chars'] * $MaxCharWidth) / $this->config['num_chars']);
@@ -272,7 +271,7 @@ class XoopsCaptchaImageHandler
         }
         if (!empty($BackgroundImage)) {
             imagecopyresized($this->oImage, $BackgroundImage, 0, 0, 0, 0, imagesx($this->oImage), imagesy($this->oImage), imagesx($BackgroundImage), imagesy($BackgroundImage));
-            imagedestroy($BackgroundImage);
+            unset($BackgroundImage); // frees the GdImage; imagedestroy() is deprecated in PHP 8.5
         } else {
             $this->drawBars();
         }

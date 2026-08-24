@@ -29,7 +29,13 @@ if ($GLOBALS['xoopsUser']) {
 
 $regOp = Request::getString('op', '', 'GET');
 if ($regOp !== '' && in_array($regOp, ['actv', 'activate'])) {
-    header('location: ./activate.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+    // Rebuild the query string before reflecting it into the Location header:
+    // reflected verbatim, the attacker-controlled QUERY_STRING invites
+    // cache-poisoning and phishing parameter injection. One shared
+    // implementation: see xoops_rebuildQueryString() in include/file_safety.php
+    // for the threat model.
+    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+    header('location: ./activate.php' . xoops_rebuildQueryString($_SERVER['QUERY_STRING'] ?? ''));
     exit();
 }
 

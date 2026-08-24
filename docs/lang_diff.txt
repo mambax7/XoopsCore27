@@ -4,7 +4,14 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
-2026/08: Version 2.7.3
+2026/08: Version 2.7.3-Final
+================================
+/htdocs/language/english/user.php
+- added define('_US_SURETOLOGOUT', 'Are you sure you want to log out?');
+  (logout now asks for confirmation when the request carries no session token)
+
+================================
+2026/08: Version 2.7.3-RC1
 ================================
 /htdocs/class/xoopseditor/sceditor/language/english.php (new file — SCEditor editor)
 - added define('_XOOPS_EDITOR_SCEDITOR', 'SCEditor (BBCode)');

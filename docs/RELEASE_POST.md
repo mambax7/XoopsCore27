@@ -1,80 +1,128 @@
-# XOOPS 2.7.2 Final — installer fixes
+# XOOPS 2.7.3 Final — security hardening and PHP 8.6 readiness
 
-The XOOPS Development Team is pleased to announce **XOOPS 2.7.2 Final**. This is
-a focused patch release that repairs the installer so fresh installations and
-re-installations complete reliably on current PHP versions. It contains no
-database, template, or API changes.
+The XOOPS Development Team is pleased to announce **XOOPS 2.7.3 Final**. This
+release hardens security across the core, prepares XOOPS for PHP 8.6 while
+remaining fully supported on PHP 8.2 through 8.5, adds SCEditor as an optional
+BBCode editor, introduces file-based debug configuration with a rotating file
+logger, and folds in a series of reliability fixes proven in production on
+xoops.org.
 
-Existing XOOPS 2.7.1 sites do not need to upgrade unless they intend to run the
-installer again; 2.7.2 changes only the `install/` wizard and the version
-string.
-
-Download XOOPS 2.7.2:
+Download XOOPS 2.7.3:
 **[https://github.com/XOOPS/XoopsCore27/releases](https://github.com/XOOPS/XoopsCore27/releases)**
 
 ---
 
-## Why 2.7.2
+## Security hardening
 
-Shortly after 2.7.1 Final, a fresh install on PHP 8.2 was reported to fail
-during the "Creating tables" step with a fatal `mysqli_sql_exception`
-([#126](https://github.com/XOOPS/XoopsCore27/issues/126)). Investigating it
-surfaced a small cluster of related installer problems affecting fresh installs,
-re-installs, and the front page of a newly installed site. 2.7.2 fixes all of
-them.
+Security received sustained attention across the whole 2.7.3 cycle:
 
----
+- **Form renderer escaping.** Element values are escaped in all five form
+  renderers through a shared trait, and JavaScript arguments are built with
+  `json_encode()` — the correct encoder for a JS string literal inside an HTML
+  attribute.
+- **Template-set browser and editor contained by PathGuard.** The tplsets
+  browse, edit, restore, and save endpoints were hardened end-to-end —
+  double-decode removed, NUL bytes rejected, symlink escapes refused, backups
+  written atomically — and the path-containment contract now lives in a shared
+  `PathGuard` class pinned by a truth-table test suite against a real fixture
+  tree.
+- **Logout requires a session token.** A bare GET could previously end a
+  visitor's session from any third-party page (forced-logout CSRF). A tokenless
+  request now renders a POST confirmation instead of acting immediately, so
+  every existing logout link keeps working at the cost of one extra click.
+- **Redirect query strings are rebuilt, not reflected.** Eight redirect sites
+  appended the raw `QUERY_STRING` verbatim to their `Location` headers. The
+  string is now parsed and re-emitted via a shared, unit-tested helper
+  (`xoops_rebuildQueryString()`), so every reflected byte is RFC 3986-safe by
+  construction.
+- **image.php's remote-image branch is closed.** With `ONLY_LOCAL_IMAGES`
+  disabled, the raw request URL previously reached `getimagesize()` and
+  `file_get_contents()` — an SSRF and phar-deserialization surface. The branch
+  had never worked (it truncated every rooted URL to a single character), so
+  nothing real is lost: it now fails closed.
+- **Module manifests and the image manager.** Manifest values are escaped at
+  the point of output on the module admin log pages, the image category
+  handlers now enforce authorization and not just CSRF, and three stale
+  renderer copies under TinyMCE plugins were replaced with the core class.
 
-## What's fixed
+## Ready for PHP 8.6
 
-### Fresh install no longer fatals on PHP 8.2+
+XOOPS 2.7.3 runs on PHP 8.2 through 8.5 and is prepared for PHP 8.6:
 
-`install_isInstalled()` probed for the users table before it existed. Since PHP
-8.1, mysqli defaults to exception mode — and XOOPS runs on PHP 8.2 and later —
-where the `@` silence operator does **not** suppress those exceptions, so the
-probe threw a fatal `mysqli_sql_exception` ("Table '…_users' doesn't exist") on
-every fresh install. The probe is now guarded so that only a confirmed missing
-table means "not installed", and any other database error keeps the installer
-locked.
+- The session save-handler contract is complete — `create_sid()` is
+  implemented ahead of its PHP 9.0 requirement, brand-new sessions survive
+  8.6's `updateTimestamp()` routing, and `session.use_strict_mode` is pinned
+  to 1 (the 8.6 default) on today's PHP versions as well.
+- Deprecations are cleared ahead of time: constructor value-returns (compile-time
+  deprecated in 8.6) are gone and guarded by a repository-wide test,
+  `is_long()` is replaced, and the deprecated `curl_close()` and
+  `imagedestroy()` calls are dropped.
 
-### The wizard no longer locks itself out mid-install
+## Editors
 
-The site-configuration, theme, and module-installation pages boot the full XOOPS
-environment, which swaps the installer's session for XOOPS's own session store.
-That hid the in-progress installation flags and caused the "This site is already
-installed" lock to fire in the middle of a legitimate install. The lock now also
-recognises the authenticated in-progress administrator — already established on
-those pages via a signed one-time token — so the wizard runs to completion.
+- **SCEditor 3.2.1** ships bundled as an optional BBCode editor, selectable
+  from the editor preference dropdown. It is deliberately locked to source
+  mode so existing content never passes through a WYSIWYG round-trip that
+  could rewrite XOOPS-specific BBCode.
+- **One shared dhtml toolbar.** The same editor used to show a different
+  toolbar in the control panel than on the front end; all five renderers now
+  delegate to a single toolbar implementation with framework-neutral classes.
 
-### Default theme is a shipped theme
+## Debugging and logging
 
-A new install set its default theme to `xswatch4`, which is not shipped, so the
-front page failed with "Theme not found". The default is now `xbootstrap5`.
+- **File-based debug configuration.** Error display, error_reporting, and
+  query logging are set in one place — `xoops_data/data/debug.php` — instead
+  of being edited into mainfile.php. Nothing changes until an administrator
+  creates the file.
+- **A rotating, redacting file logger** records notices, warnings, errors and
+  SQL with backtraces, so a blank page or an error on a redirect can still be
+  read afterwards. Server paths, session ids, and session rows are redacted;
+  control characters are stripped so log lines cannot be forged.
+- **The error screen has one declared owner**, resolved deterministically, so
+  error-screen providers such as Whoops or Tracy no longer compete for the
+  seat, and a contested registration is detected and reported.
 
-### Re-installing over an existing site works
+## Reliability fixes from xoops.org production
 
-- `license.php`, left read-only by a previous install, is made writable again
-  before it is rewritten, instead of failing with "Make … Writable".
-- A stale one-time install cookie from an earlier attempt is cleared and
-  re-authenticated, instead of aborting the wizard with "Init Error".
-- Per-attempt installer key files are cleaned up at the start of a run so they
-  no longer accumulate.
+- One module with PHP4-style constructors no longer takes global search down
+  for every visitor; failing modules are contained and logged.
+- The search "Show all" / "Show all by user" pages render results (and the
+  "no match" message) again, `search.php` no longer fatals on unvalidated
+  module ids, `showall` respects `module_read` permissions, and `browse.php`
+  sends a well-formed `Cache-Control` header — all reported by
+  [CHCCD](https://github.com/CHCCD) in
+  [#161](https://github.com/XOOPS/XoopsCore27/issues/161),
+  [#162](https://github.com/XOOPS/XoopsCore27/issues/162), and
+  [#163](https://github.com/XOOPS/XoopsCore27/issues/163).
+- `xoops_getrank()` no longer fatals when no rank row matches.
+- A failed query handed to a result-set method returns the documented failure
+  value instead of blanking the page with a TypeError.
+- `Criteria` renders an empty `IN ()` list as a constant predicate instead of
+  invalid SQL, and preserves the caller's PHP type in IN lists.
+- The unfiltered group list is memoised per request, removing roughly 48
+  identical queries per page; comment listings gained an index that took one
+  query from 541ms to 0.5ms.
+- The login redirect no longer accumulates escaped ampersands hop by hop.
 
-### Cleaner install log
+## Deprecations
 
-The initial-settings page ran its "does an administrator already exist?" check
-on a connection that had not selected the database, logging a spurious
-"No database selected" error. It now uses the database-aware query path.
+The `XOBJ_DTYPE_UNICODE_*` object datatypes are deprecated in 2.7.3 — they
+url-encode on write and url-decode on read, a pre-UTF-8 workaround that bloats
+storage and breaks `LIKE`/`FULLTEXT` search on modern utf8mb4 installs. This
+release only reports their use; behavior is unchanged. Data migration is
+planned for 2.8 and constant removal for 4.0.
 
 ---
 
 ## Upgrading
 
-### From XOOPS 2.7.1
+### From XOOPS 2.7.2
 
-2.7.2 has no database or template changes and does not require the upgrade
-wizard. To move an existing 2.7.1 site to 2.7.2, copy the new `htdocs/` files
-over the web root. There is nothing else to do.
+XOOPS 2.7.3 includes schema changes, so after copying the new `htdocs/` files
+over the web root, **run the upgrade wizard**. No mainfile.php changes are
+needed: the debug configuration, error screen, and developer gate all read
+`xoops_data/data/debug.php` directly, so creating that file is sufficient on
+its own.
 
 ### Installing fresh or from older versions
 
@@ -87,7 +135,7 @@ Follow the standard installation and upgrade guidance:
 
 | | |
 |---|---|
-| **PHP** | >= 8.2.0; PHP 8.4 or 8.5 recommended |
+| **PHP** | >= 8.2.0; PHP 8.4 or 8.5 recommended, prepared for 8.6 |
 | **MySQL / MariaDB** | MySQL >= 5.7.8 or MariaDB >= 10.5; a supported MySQL 8.x or MariaDB LTS release is recommended |
 | **Web server** | Apache 2.4+ or nginx |
 
@@ -95,11 +143,13 @@ Follow the standard installation and upgrade guidance:
 
 ## Translations
 
-XOOPS 2.7.2 introduces no new or changed English language constants, so no
-translation updates are required. XOOPS remains maintained in **37 community
-translations** under the [XoopsLanguages](https://github.com/XoopsLanguages)
-organization; see [`docs/TRANSLATIONS.md`](TRANSLATIONS.md) for the current
-release page of each language.
+XOOPS 2.7.3 adds new English language constants: the SCEditor editor strings
+introduced in RC 1 and one logout-confirmation string added in Final — see
+[`docs/lang_diff.txt`](lang_diff.txt) for their exact definitions. XOOPS
+remains maintained in **37 community translations** under the
+[XoopsLanguages](https://github.com/XoopsLanguages) organization; see
+[`docs/TRANSLATIONS.md`](TRANSLATIONS.md) for the current release page of each
+language.
 
 ---
 
@@ -113,19 +163,26 @@ release page of each language.
 
 ## Thank you
 
-Thank you to everyone who reported the installation problems, tested the fixes,
-and helped confirm the release. Bug reports like
-[#126](https://github.com/XOOPS/XoopsCore27/issues/126) make XOOPS better for
-everyone.
+A release this size doesn't happen without contributors. Thank you to everyone
+who submitted pull requests, reported issues, tested the beta and RC packages,
+translated strings, reviewed security findings, and kept the conversation going
+on the forums and on GitHub throughout the 2.7.3 cycle.
+
+A special thank-you to [CHCCD](https://github.com/CHCCD) for testing the
+release candidates and reporting the search and browse bugs fixed in this
+release ([#161](https://github.com/XOOPS/XoopsCore27/issues/161),
+[#162](https://github.com/XOOPS/XoopsCore27/issues/162),
+[#163](https://github.com/XOOPS/XoopsCore27/issues/163)). Bug reports like
+these make XOOPS better for everyone.
 
 We also thank [JetBrains](https://www.jetbrains.com/) for supporting the project
 with [PhpStorm](https://www.jetbrains.com/phpstorm/) licenses.
 
-**Download XOOPS 2.7.2:**
+**Download XOOPS 2.7.3:**
 [https://github.com/XOOPS/XoopsCore27/releases](https://github.com/XOOPS/XoopsCore27/releases)
 
 ---
 
 **The XOOPS Development Team**
 
-July 2026
+August 2026

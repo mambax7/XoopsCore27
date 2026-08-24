@@ -30,11 +30,26 @@
 class PmCorePreload extends XoopsPreloadItem
 {
     /**
+     * The current request's query string, rebuilt for safe reflection into a
+     * redirect Location target, '?' included — or '' when there is nothing
+     * usable. One shared implementation: see xoops_rebuildQueryString() in
+     * include/file_safety.php for the threat model.
+     *
+     * @return string
+     */
+    private static function filteredQueryString()
+    {
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+
+        return xoops_rebuildQueryString($_SERVER['QUERY_STRING'] ?? '');
+    }
+
+    /**
      * @param $args
      */
     public static function eventCorePmliteStart($args)
     {
-        header('location: ./modules/pm/pmlite.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/pm/pmlite.php' . self::filteredQueryString());
         exit();
     }
 
@@ -43,7 +58,7 @@ class PmCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreReadpmsgStart($args)
     {
-        header('location: ./modules/pm/readpmsg.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/pm/readpmsg.php' . self::filteredQueryString());
         exit();
     }
 
@@ -52,7 +67,7 @@ class PmCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreViewpmsgStart($args)
     {
-        header('location: ./modules/pm/viewpmsg.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/pm/viewpmsg.php' . self::filteredQueryString());
         exit();
     }
 
