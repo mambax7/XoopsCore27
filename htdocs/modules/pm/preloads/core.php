@@ -30,30 +30,18 @@
 class PmCorePreload extends XoopsPreloadItem
 {
     /**
-     * The current request's query string, '?' included, ready to append to a
-     * redirect target — or '' when there is nothing usable. The raw
-     * QUERY_STRING is attacker-controlled, and reflecting it unchecked into a
-     * Location header invites cache-poisoning and phishing parameter injection
-     * (CRLF itself is already blocked by PHP). Rather than gate on a character
-     * allowlist — which reflected malformed percent-escapes verbatim and cost
-     * a long urlencoded xoops_redirect its whole query — the string is parsed
-     * with parse_str(), which mirrors how the redirect target itself will read
-     * it, and re-emitted with http_build_query(), so every reflected byte is
-     * RFC 3986-safe or a valid escape by construction. The length cap is
-     * header-size sanity only.
+     * The current request's query string, rebuilt for safe reflection into a
+     * redirect Location target, '?' included — or '' when there is nothing
+     * usable. One shared implementation: see xoops_rebuildQueryString() in
+     * include/file_safety.php for the threat model.
      *
      * @return string
      */
     private static function filteredQueryString()
     {
-        $queryString = $_SERVER['QUERY_STRING'] ?? '';
-        if ('' === $queryString || strlen($queryString) > 2000) {
-            return '';
-        }
-        parse_str($queryString, $params);
-        $rebuilt = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
 
-        return ('' === $rebuilt) ? '' : ('?' . $rebuilt);
+        return xoops_rebuildQueryString($_SERVER['QUERY_STRING'] ?? '');
     }
 
     /**

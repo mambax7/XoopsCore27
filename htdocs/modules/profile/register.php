@@ -29,22 +29,13 @@ if ($GLOBALS['xoopsUser']) {
 
 $regOp = Request::getString('op', '', 'GET');
 if ($regOp !== '' && in_array($regOp, ['actv', 'activate'])) {
-    // Rebuild the query string before reflecting it: the raw QUERY_STRING is
-    // attacker-controlled, and appended unchecked to a Location header it
-    // invites cache-poisoning and phishing parameter injection (CRLF itself is
-    // already blocked by PHP). parse_str() mirrors how activate.php will read
-    // the parameters, and http_build_query() re-emits them with every byte
-    // RFC 3986-safe or a valid escape by construction; the length cap is
-    // header-size sanity only.
-    $queryString = $_SERVER['QUERY_STRING'] ?? '';
-    if ('' === $queryString || strlen($queryString) > 2000) {
-        $queryString = '';
-    } else {
-        parse_str($queryString, $queryParams);
-        $rebuilt     = http_build_query($queryParams, '', '&', PHP_QUERY_RFC3986);
-        $queryString = ('' === $rebuilt) ? '' : ('?' . $rebuilt);
-    }
-    header('location: ./activate.php' . $queryString);
+    // Rebuild the query string before reflecting it into the Location header:
+    // reflected verbatim, the attacker-controlled QUERY_STRING invites
+    // cache-poisoning and phishing parameter injection. One shared
+    // implementation: see xoops_rebuildQueryString() in include/file_safety.php
+    // for the threat model.
+    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+    header('location: ./activate.php' . xoops_rebuildQueryString($_SERVER['QUERY_STRING'] ?? ''));
     exit();
 }
 
