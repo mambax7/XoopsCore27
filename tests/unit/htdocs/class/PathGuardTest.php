@@ -179,6 +179,15 @@ final class PathGuardTest extends TestCase
     }
 
     #[Test]
+    public function mixedCaseAllowlistIsNormalized(): void
+    {
+        // The contract says case-insensitive - that must hold for the
+        // caller's allowlist too, not only the candidate's extension.
+        $this->assertIsString(PathGuard::resolveFile(self::$themes, '/default/style.css', ['CSS']));
+        $this->assertIsString(PathGuard::resolveFile(self::$themes, '/default/page.TPL', ['Tpl']));
+    }
+
+    #[Test]
     public function canonicalResultNeverEchoesTheRawRequest(): void
     {
         $result = PathGuard::resolveDir(self::$themes, '/default/../default/');

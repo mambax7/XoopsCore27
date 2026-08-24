@@ -125,42 +125,14 @@ switch ($op) {
                 $verif_write     = false;
                 $text            = '';
 
-                // Shared writer for the four generate loops below: fopen()
-                // checked - an unchecked false handle reaches fwrite() as a
-                // TypeError on PHP 8 - and success requires the FULL byte
-                // count, not merely a non-false fwrite(): a short write
-                // would leave a truncated template reported as written
-                // (review catch, three reviewers). An empty source still
-                // passes (0 === strlen('')). fflush() and fclose() are part
-                // of success so buffered bytes that never reach disk count
-                // as failure. No retry loop: on a local file a short write
-                // is a disk-level fault a retry will not repair - failing
-                // the row (red icon, $verif_write stays false) is the
-                // honest outcome. Scoped handler keeps the streams' native
-                // full-path warnings out of the error handlers; the
-                // explicit diagnostic names only the basename.
-                $writeTemplate = static function (string $physicalFile, string $source): bool {
-                    $ok = false;
-                    set_error_handler(static function (): bool {
-                        return true;
-                    }, E_WARNING);
-                    try {
-                        $handle = fopen($physicalFile, 'w+');
-                        if (false !== $handle) {
-                            $written = fwrite($handle, $source);
-                            $flushed = fflush($handle);
-                            $closed  = fclose($handle);
-                            $ok      = strlen($source) === $written && $flushed && $closed;
-                        }
-                    } finally {
-                        restore_error_handler();
-                    }
-                    if (!$ok) {
-                        trigger_error('Template write failed for ' . basename($physicalFile), E_USER_WARNING);
-                    }
-
-                    return $ok;
-                };
+                // The four generate loops below write through
+                // xoops_write_file_atomically(): tempnam + atomic rename, so
+                // the DESTINATION is never truncated before the replacement
+                // is durable - a failed write leaves the existing override
+                // intact instead of a corrupted file that a later non-forced
+                // generation would skip (review catch, Greptile P1). The
+                // helper carries the full-byte-count check, the 0-byte
+                // empty-source case, and basename-only diagnostics.
 
                 if (!is_dir($theme_surcharge)) {
                     //Create the modules folder
@@ -234,7 +206,7 @@ switch ($op) {
 
                                             if (is_object($tplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
-                                                    if ($writeTemplate($physical_file, (string) $tplfile->getVar('tpl_source', 'n'))) {
+                                                    if (xoops_write_file_atomically($physical_file, (string) $tplfile->getVar('tpl_source', 'n'))) {
                                                         $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_TEMPLATES . '</td><td>' . $physical_file . '</td><td align="center">';
                                                         if (file_exists($physical_file)) {
                                                             $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -260,7 +232,7 @@ switch ($op) {
 
                                             if (is_object($btplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
-                                                    if ($writeTemplate($physical_file, (string) $btplfile->getVar('tpl_source', 'n'))) {
+                                                    if (xoops_write_file_atomically($physical_file, (string) $btplfile->getVar('tpl_source', 'n'))) {
                                                         $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_BLOCKS . '</td><td>' . $physical_file . '</td><td align="center">';
                                                         if (file_exists($physical_file)) {
                                                             $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -326,7 +298,7 @@ switch ($op) {
                                             if (is_object($tplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
                                                     if ($select_templates_modules[$l] == $filename) {
-                                                        if ($writeTemplate($physical_file, (string) $tplfile->getVar('tpl_source', 'n'))) {
+                                                        if (xoops_write_file_atomically($physical_file, (string) $tplfile->getVar('tpl_source', 'n'))) {
                                                             $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_TEMPLATES . '</td><td>' . $physical_file . '</td><td align="center">';
                                                             if (file_exists($physical_file)) {
                                                                 $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';
@@ -354,7 +326,7 @@ switch ($op) {
                                             if (is_object($btplfile)) {
                                                 if (!file_exists($physical_file) || 1 == $forceGenerated) {
                                                     if ($select_templates_modules[$l] == $filename) {
-                                                        if ($writeTemplate($physical_file, (string) $btplfile->getVar('tpl_source', 'n'))) {
+                                                        if (xoops_write_file_atomically($physical_file, (string) $btplfile->getVar('tpl_source', 'n'))) {
                                                             $text .= '<tr class="' . $class . '"><td align="center">' . _AM_SYSTEM_TEMPLATES_BLOCKS . '</td><td>' . $physical_file . '</td><td align="center">';
                                                             if (file_exists($physical_file)) {
                                                                 $text .= '<img width="16" src="' . system_AdminIcons('success.png') . '" /></td></tr>';

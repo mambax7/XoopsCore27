@@ -120,7 +120,10 @@ final class PathGuard
         } catch (\ValueError $e) {
             return false;
         }
-        if (!is_string($rootReal) || !is_dir($rootReal) || !is_string($candidate)) {
+        // Explicit false comparisons: realpath() returns string|false, and
+        // spelling the failure value out keeps static analyzers from
+        // modeling the is_string() check as always-true (Scrutinizer).
+        if (false === $rootReal || !is_dir($rootReal) || false === $candidate) {
             return false;
         }
         // Boundary prefix built from a right-trimmed root: when the root IS
@@ -146,8 +149,13 @@ final class PathGuard
             return false;
         }
         if ([] !== $allowedExtensions) {
+            // Case-insensitive on BOTH sides: the candidate's extension is
+            // lowercased AND the caller's allowlist is normalized, so
+            // ['CSS'] admits style.css as the contract documents (review
+            // catch - one-sided lowercasing silently rejected mixed-case
+            // allowlists).
             $ext = strtolower((string) pathinfo($candidate, PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowedExtensions, true)) {
+            if (!in_array($ext, array_map('strtolower', $allowedExtensions), true)) {
                 return false;
             }
         }
