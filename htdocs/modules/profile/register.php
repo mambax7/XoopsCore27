@@ -29,12 +29,21 @@ if ($GLOBALS['xoopsUser']) {
 
 $regOp = Request::getString('op', '', 'GET');
 if ($regOp !== '' && in_array($regOp, ['actv', 'activate'])) {
-    // Append the query string only when it fits a conservative allowlist: the
-    // raw QUERY_STRING is attacker-controlled, and reflecting it unchecked into
-    // a Location header invites cache-poisoning and phishing parameter
-    // injection (CRLF itself is already blocked by PHP).
+    // Rebuild the query string before reflecting it: the raw QUERY_STRING is
+    // attacker-controlled, and appended unchecked to a Location header it
+    // invites cache-poisoning and phishing parameter injection (CRLF itself is
+    // already blocked by PHP). parse_str() mirrors how activate.php will read
+    // the parameters, and http_build_query() re-emits them with every byte
+    // RFC 3986-safe or a valid escape by construction; the length cap is
+    // header-size sanity only.
     $queryString = $_SERVER['QUERY_STRING'] ?? '';
-    $queryString = preg_match('/^[A-Za-z0-9_\[\]=&%;.\-]{1,512}$/', $queryString) ? ('?' . $queryString) : '';
+    if ('' === $queryString || strlen($queryString) > 2000) {
+        $queryString = '';
+    } else {
+        parse_str($queryString, $queryParams);
+        $rebuilt     = http_build_query($queryParams, '', '&', PHP_QUERY_RFC3986);
+        $queryString = ('' === $rebuilt) ? '' : ('?' . $rebuilt);
+    }
     header('location: ./activate.php' . $queryString);
     exit();
 }
