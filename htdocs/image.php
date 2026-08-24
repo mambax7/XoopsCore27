@@ -334,19 +334,20 @@ if (!empty($imageId)) {
             exitInvalidRequest();
         }
     } else {
-        if ($imageUrl[0] === '/') {
-            $imageUrl = substr($imageUrl, 0, 1);
-        }
-        $imagePath = $imageUrl;
+        // The remote-image branch is gone (2.7.3): it handed the raw request URL
+        // to getimagesize()/file_get_contents(), honoring http://, phar:// and
+        // data:// (SSRF and phar-deserialization surface) — and it had never
+        // worked anyway, since it truncated any rooted URL to a single character
+        // (substr($imageUrl, 0, 1) where substr($imageUrl, 1) was meant). The
+        // constant stays so a fork that flips it fails closed instead of fatal.
+        exitInvalidRequest();
     }
     // Get the size and MIME type of the requested image
     $imageFilename = basename($imagePath);  // image filename
     $imagesize = getimagesize($imagePath);
     // Reject before decode if the source is unreadable or would decode to an
-    // excessive pixel count (M-14). The byte cap only applies to a local file —
-    // if ONLY_LOCAL_IMAGES is ever disabled, $imagePath may be a remote URL, where
-    // is_file()/filesize() do not apply (the pixel cap from getimagesize() still
-    // does). For a local file a stat failure is a rejection, not a pass.
+    // excessive pixel count (M-14). $imagePath is always a local file here (the
+    // remote branch above is closed), so a stat failure is a rejection, not a pass.
     $isLocalSource = is_file($imagePath);
     $srcBytes      = $isLocalSource ? filesize($imagePath) : false;
     if (false === $imagesize
