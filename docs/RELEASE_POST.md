@@ -104,6 +104,14 @@ XOOPS 2.7.3 runs on PHP 8.2 through 8.5 and is prepared for PHP 8.6:
   query from 541ms to 0.5ms.
 - The login redirect no longer accumulates escaped ampersands hop by hop.
 
+## Deprecations
+
+The `XOBJ_DTYPE_UNICODE_*` object datatypes are deprecated in 2.7.3 — they
+url-encode on write and url-decode on read, a pre-UTF-8 workaround that bloats
+storage and breaks `LIKE`/`FULLTEXT` search on modern utf8mb4 installs. This
+release only reports their use; behavior is unchanged. Data migration is
+planned for 2.8 and constant removal for 4.0.
+
 ---
 
 ## Upgrading
