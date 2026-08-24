@@ -93,6 +93,19 @@ if ($op === 'login') {
 }
 
 if ($op === 'logout') {
+    // A logout must present a valid session token: with none required, any
+    // third-party page could end the visitor's session through a bare GET
+    // (forced-logout CSRF). Existing tokenless links keep working — they land
+    // on a POST confirmation (which carries the token) instead of acting
+    // immediately, so the many cached theme and block templates that emit
+    // user.php?op=logout links need no change.
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        include $GLOBALS['xoops']->path('header.php');
+        include __DIR__ . '/header.php';
+        xoops_confirm(['op' => 'logout'], 'user.php', _US_SURETOLOGOUT);
+        include __DIR__ . '/footer.php';
+        exit();
+    }
     $message = '';
     // Regenerate a new session id and destroy old session
     $GLOBALS['sess_handler']->regenerate_id(true);

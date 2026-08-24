@@ -84,6 +84,7 @@ define('_US_SIGNATURE', 'Signature');
 define('_US_EXTRAINFO', 'Extra Info');
 define('_US_EDITPROFILE', 'Edit Profile');
 define('_US_LOGOUT', 'Logout');
+define('_US_SURETOLOGOUT', 'Are you sure you want to log out?');
 define('_US_INBOX', 'Inbox');
 define('_US_MEMBERSINCE', 'Member Since');
 define('_US_RANK', 'Rank');
