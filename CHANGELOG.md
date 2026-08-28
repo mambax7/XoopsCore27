@@ -5,6 +5,64 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.3] - 2026-08-24
+
+### Bug Fixes
+- **xswatch5**: Align the inner pagination guards with the outer one
+- **xswatch5**: Guard the optional search values in the theme override
+- **search**: Cast the required row fields to string in the normaliser
+- **search**: Write the row uid back to the row in the show-all loop
+- **browse**: Send a valid max-age cache directive
+- **system**: Restore the show-all guard in system_search.tpl
+
+### Compatibility
+- **php86**: Report the strict-mode refusal once, fix docs and changelog
+- **php86**: Warn on every strict-mode refusal path
+- **php86**: Complete the session save-handler contract
+- **php86**: Record the constructor-return fix in the changelog
+- **php86**: Use bare returns in the four early-exit constructors
+
+### Miscellaneous
+- **github**: Add a pull request template with the review checklist (#175)
+
+### Other
+- Fix/273 hardening (#179)
+- Adding 2.7.x versions to issue template
+- Deprecate XOBJ_DTYPE_UNICODE_* datatypes (2.7.3)- #164
+- Drop stray @deprecated tag from DEPRECATED_UNICODE_DATATYPES docblock
+- Address review: dedupe deprecated-type list, shorten notice, suppress internal usages
+- Deprecate XOBJ_DTYPE_UNICODE_* datatypes (2.7.3)
+
+### Refactor
+- **system**: Extract the tplsets path contract into PathGuard (#178)
+- **search**: Normalise the row uid once, in the row normaliser
+- **search**: Validate the show-all request before rendering the header
+
+### Security
+- **session**: Keep the no-resurrect gate across the validateId/read race
+- **session**: Gate the timestamp upsert on a read miss
+
+### Testing
+- **quality**: Widen the constructor-return pin repository-wide (#177)
+- **php86**: Cover exec() failure on the timestamp-only UPDATE branch
+- **php86**: Pin the race gate and harden three tests' isolation
+- **php86**: Pin the no-resurrect gate on updateTimestamp()
+- **php86**: Exercise the constructor's strict-mode wiring
+- **php86**: Filter for the helper's warning in the headers-sent branch
+- **php86**: Assert the warnings, restore REMOTE_ADDR, cover mid-session
+- **php86**: Cover create_sid, the strict-mode pin, and the timestamp upsert
+- **php86**: Harden the constructor pin per review
+- **php86**: Pin that the early-exit constructor yields no value
+- **php86**: Drop setAccessible() ahead of its PHP 8.5 deprecation
+- **php86**: Pin the parse_url shield on pre-8.6 runtimes too
+- **php86**: Pin NUL-byte behavior at the parse_str and stat boundaries
+- **php86**: Record the is_long()->is_int() sweep in the changelog
+- **php86**: Replace deprecated is_long() with is_int()
+- **search**: Read the guard contracts through named helpers
+- **search**: Cover the uid write and the strict results-branch check
+- **search**: Match the guard conditions loosely
+- **browse**: Bind the cache-lifetime assertion to browse.php
+
 ## [v2.7.3-RC1] - 2026-08-11
 
 ### Bug Fixes

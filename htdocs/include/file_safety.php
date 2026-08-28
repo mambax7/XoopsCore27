@@ -10,6 +10,7 @@
  *  - xoops_chmod_quietly()     — scoped-suppressed chmod() with single warning
  *  - xoops_remove_file_quietly() — scoped-suppressed unlink() with single warning
  *  - xoops_isLocalUrl()        — strict same-origin check (scheme/host/port) for redirects
+ *  - xoops_rebuildQueryString() — parse-and-re-emit a query string for safe reflection
  *
  * They originally lived in include/cp_functions.php, but that file
  * unconditionally `define()`s XOOPS_CPFUNC_LOADED, which include/
@@ -307,5 +308,35 @@ if (!function_exists('xoops_isLocalUrl')) {
         $samePort   = $targetPort === $basePort;
 
         return $sameHost && $sameScheme && $samePort;
+    }
+}
+
+if (!function_exists('xoops_rebuildQueryString')) {
+    /**
+     * Rebuild a query string so it is safe to reflect into a redirect
+     * Location header, '?' included — or return '' when there is nothing
+     * usable. The raw QUERY_STRING is attacker-controlled: appended verbatim
+     * it invites cache-poisoning and phishing parameter injection (CRLF
+     * itself is already blocked by PHP's header()). Instead of gating on a
+     * character allowlist — which reflects malformed percent-escapes
+     * verbatim and costs a long urlencoded xoops_redirect its whole query —
+     * the string is parsed with parse_str(), which mirrors how the redirect
+     * target itself will read it, and re-emitted with http_build_query(), so
+     * every reflected byte is RFC 3986-safe or a valid escape by
+     * construction. The length cap is header-size sanity only.
+     *
+     * @param string $queryString raw query string (e.g. $_SERVER['QUERY_STRING'])
+     * @return string '?' plus the rebuilt query string, or '' when empty, oversized or unparseable
+     */
+    function xoops_rebuildQueryString($queryString)
+    {
+        $queryString = (string) $queryString;
+        if ('' === $queryString || strlen($queryString) > 2000) {
+            return '';
+        }
+        parse_str($queryString, $params);
+        $rebuilt = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+
+        return ('' === $rebuilt) ? '' : ('?' . $rebuilt);
     }
 }

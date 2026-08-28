@@ -32,6 +32,21 @@ use Xmf\Request;
 class ProfileCorePreload extends XoopsPreloadItem
 {
     /**
+     * The current request's query string, rebuilt for safe reflection into a
+     * redirect Location target, '?' included — or '' when there is nothing
+     * usable. One shared implementation: see xoops_rebuildQueryString() in
+     * include/file_safety.php for the threat model.
+     *
+     * @return string
+     */
+    private static function filteredQueryString()
+    {
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+
+        return xoops_rebuildQueryString($_SERVER['QUERY_STRING'] ?? '');
+    }
+
+    /**
      * @param $args
      */
     public static function eventCoreUserStart($args)
@@ -44,7 +59,7 @@ class ProfileCorePreload extends XoopsPreloadItem
         }
         $from = Request::getString('from', '', 'GET');
         if ($op !== 'login' && $from !== 'profile') {
-            header('location: ./modules/profile/user.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+            header('location: ./modules/profile/user.php' . self::filteredQueryString());
             exit();
         }
     }
@@ -54,7 +69,7 @@ class ProfileCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreEdituserStart($args)
     {
-        header('location: ./modules/profile/edituser.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/profile/edituser.php' . self::filteredQueryString());
         exit();
     }
 
@@ -74,7 +89,7 @@ class ProfileCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreRegisterStart($args)
     {
-        header('location: ./modules/profile/register.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/profile/register.php' . self::filteredQueryString());
         exit();
     }
 
@@ -83,7 +98,7 @@ class ProfileCorePreload extends XoopsPreloadItem
      */
     public static function eventCoreUserinfoStart($args)
     {
-        header('location: ./modules/profile/userinfo.php' . (empty($_SERVER['QUERY_STRING']) ? '' : '?' . $_SERVER['QUERY_STRING']));
+        header('location: ./modules/profile/userinfo.php' . self::filteredQueryString());
         exit();
     }
 }

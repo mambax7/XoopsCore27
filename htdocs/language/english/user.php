@@ -134,3 +134,5 @@ define('_US_USERALREADYACTIVE', 'User already active');
 //XOOPS 2.5.11
 define('_US_DESCRIPTIONMIN', 'Minimum required length: %s');
 define('_US_DESCRIPTIONMAX', 'Maximum length: %s');
+// XOOPS 2.7.3
+define('_US_SURETOLOGOUT', 'Are you sure you want to log out?');
