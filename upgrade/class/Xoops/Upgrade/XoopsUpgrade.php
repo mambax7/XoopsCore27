@@ -111,7 +111,7 @@ abstract class XoopsUpgrade
             $tasks = $this->isApplied()->tasks;
         } catch (\Throwable $e) {
             // PatchStatus already names the check in the message.
-            $this->logError('%s', htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->logError('%s', htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8'));
             return false;
         }
         foreach ($tasks as $task) {
@@ -122,7 +122,7 @@ abstract class XoopsUpgrade
                     'Task %s threw %s: %s',
                     $task,
                     get_class($e),
-                    htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
+                    htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8')
                 );
                 return false;
             }
@@ -138,7 +138,7 @@ abstract class XoopsUpgrade
             $this->logError(
                 'Verification after apply threw %s: %s',
                 get_class($e),
-                htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
+                htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8')
             );
             return false;
         }
@@ -203,6 +203,56 @@ abstract class XoopsUpgrade
     protected function logSuccess(string $format, mixed ...$args): void
     {
         $this->logs[] = sprintf('<span class="text-success">' . $format . '</span>', ...$args);
+    }
+
+    /**
+     * Reduce every absolute path in a message to its basename, so exception
+     * text shown on the upgrade page does not reveal the server layout.
+     *
+     * @param  string $message raw message, typically Throwable::getMessage()
+     * @return string message with path-like tokens replaced by basenames
+     */
+    public static function sanitizeLogMessage(string $message): string
+    {
+        return (string) preg_replace_callback(
+            '/([A-Za-z]:)?[\\\\\\/][^\\s]*/',
+            static function (array $matches): string {
+                return basename(str_replace('\\', '/', $matches[0]));
+            },
+            $message
+        );
+    }
+
+    /**
+     * Express a path relative to the XOOPS install for display, so an
+     * administrator can locate the file without the page revealing the
+     * absolute server layout. Paths outside every known base fall back to
+     * their basename.
+     *
+     * @param  string $path absolute filesystem path
+     * @return string path relative to XOOPS_ROOT_PATH, or prefixed with
+     *                xoops_trust_path/ or xoops_data/, or a basename
+     */
+    protected function relativePath(string $path): string
+    {
+        $bases = [];
+        if (defined('XOOPS_ROOT_PATH')) {
+            $bases[XOOPS_ROOT_PATH] = '';
+        }
+        if (defined('XOOPS_TRUST_PATH')) {
+            $bases[XOOPS_TRUST_PATH] = 'xoops_trust_path/';
+        }
+        if (defined('XOOPS_VAR_PATH')) {
+            $bases[XOOPS_VAR_PATH] = 'xoops_data/';
+        }
+        foreach ($bases as $base => $label) {
+            $prefix = rtrim((string) $base, '\\/') . DIRECTORY_SEPARATOR;
+            if (str_starts_with($path, $prefix)) {
+                return $label . str_replace('\\', '/', substr($path, strlen($prefix)));
+            }
+        }
+
+        return basename($path);
     }
 
     /**

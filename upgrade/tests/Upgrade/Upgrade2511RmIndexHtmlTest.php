@@ -104,11 +104,29 @@ final class Upgrade2511RmIndexHtmlTest extends TestCase
         $patch = new Upgrade2511Stub($this->root);
 
         self::assertFalse($patch->check_rmindexhtml());
-        self::assertFalse($patch->apply_rmindexhtml(), 'an undeletable file must fail the task');
+
+        // unlink() emits E_WARNING on failure; the wizard runs with error_reporting(0)
+        // and the failure is reported through the patch log, so capture it here rather
+        // than let PHPUnit's failOnWarning turn it into a suite failure.
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = $errstr;
+            return true;
+        }, E_WARNING);
+        try {
+            $result = $patch->apply_rmindexhtml();
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertFalse($result, 'an undeletable file must fail the task');
+        self::assertCount(1, $warnings);
+        self::assertStringContainsString('unlink(', $warnings[0]);
         self::assertFileDoesNotExist("{$this->root}/a/index.html", 'deletable files are still removed');
         self::assertFileExists("{$this->root}/b/index.html");
         self::assertStringContainsString('Could not delete 1 obsolete index.html', $patch->message());
         self::assertStringContainsString('b/index.html', $patch->message());
+        self::assertStringNotContainsString(XOOPS_ROOT_PATH, $patch->message(), 'no absolute server path on the page');
         self::assertFalse($patch->check_rmindexhtml(), 'still pending, and now reported instead of looping');
     }
 }

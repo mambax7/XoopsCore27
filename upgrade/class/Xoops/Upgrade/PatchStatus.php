@@ -57,13 +57,14 @@ class PatchStatus
                 $applied = (bool) $patch->{"check_{$task}"}();
             } catch (\Throwable $e) {
                 // Name the check: the fatal handler and apply() only show the message.
+                // Paths are stripped here because the fatal handler prints it raw.
                 throw new \RuntimeException(
                     sprintf(
                         '%s::check_%s() threw %s: %s',
                         $this->patchClass,
                         $task,
                         get_class($e),
-                        $e->getMessage()
+                        XoopsUpgrade::sanitizeLogMessage($e->getMessage())
                     ),
                     0,
                     $e

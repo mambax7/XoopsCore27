@@ -91,6 +91,24 @@ final class XoopsUpgradeApplyTest extends TestCase
     }
 
     #[Test]
+    public function absolutePathsInExceptionMessagesAreReducedToBasenames(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public array $tasks = ['copy'];
+            public function __construct() {}
+            public function check_copy(): bool { return false; }
+            public function apply_copy(): bool
+            {
+                throw new RuntimeException('copy(/var/www/html/xoops_data/configs/captcha/config.php): failed');
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString('Task copy threw RuntimeException: copy(config.php): failed', $patch->message());
+        self::assertStringNotContainsString('/var/www', $patch->message());
+    }
+
+    #[Test]
     public function taskListedInNoRecheckIsTrusted(): void
     {
         $patch = new class () extends XoopsUpgrade {

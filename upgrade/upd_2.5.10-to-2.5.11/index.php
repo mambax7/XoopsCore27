@@ -598,7 +598,7 @@ class Upgrade_2511 extends XoopsUpgrade
             count($failed)
         ));
         foreach (array_slice($failed, 0, 20) as $name) {
-            $this->logEscaped('  ' . $name);
+            $this->logEscaped('  ' . $this->relativePath($name));
         }
         if (count($failed) > 20) {
             $this->logEscaped(sprintf('  ... and %d more', count($failed) - 20));
