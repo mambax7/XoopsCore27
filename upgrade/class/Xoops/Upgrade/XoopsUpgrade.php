@@ -254,14 +254,17 @@ abstract class XoopsUpgrade
         if (defined('XOOPS_VAR_PATH')) {
             $bases[XOOPS_VAR_PATH] = 'xoops_data/';
         }
+        // Compare with one separator style: on Windows the XOOPS constants and the
+        // directory walkers mix "/" and "\", and DIRECTORY_SEPARATOR matches neither reliably.
+        $normalized = str_replace('\\', '/', $path);
         foreach ($bases as $base => $label) {
-            $prefix = rtrim((string) $base, '\\/') . DIRECTORY_SEPARATOR;
-            if (str_starts_with($path, $prefix)) {
-                return $label . str_replace('\\', '/', substr($path, strlen($prefix)));
+            $prefix = rtrim(str_replace('\\', '/', (string) $base), '/') . '/';
+            if (str_starts_with($normalized, $prefix)) {
+                return $label . substr($normalized, strlen($prefix));
             }
         }
 
-        return basename($path);
+        return basename($normalized);
     }
 
     /**
