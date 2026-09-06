@@ -105,9 +105,9 @@ final class Upgrade2511RmIndexHtmlTest extends TestCase
 
         self::assertFalse($patch->check_rmindexhtml());
 
-        // unlink() emits E_WARNING on failure; the wizard runs with error_reporting(0)
-        // and the failure is reported through the patch log, so capture it here rather
-        // than let PHPUnit's failOnWarning turn it into a suite failure.
+        // A non-writable parent directory is detected before unlink() is attempted, so
+        // this case must emit no PHP warning at all. Capture any that slips through so
+        // the assertion below explains the failure instead of PHPUnit's failOnWarning.
         $warnings = [];
         set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
             $warnings[] = $errstr;
@@ -120,8 +120,7 @@ final class Upgrade2511RmIndexHtmlTest extends TestCase
         }
 
         self::assertFalse($result, 'an undeletable file must fail the task');
-        self::assertCount(1, $warnings);
-        self::assertStringContainsString('unlink(', $warnings[0]);
+        self::assertSame([], $warnings, 'no native unlink() warning for a non-writable directory');
         self::assertFileDoesNotExist("{$this->root}/a/index.html", 'deletable files are still removed');
         self::assertFileExists("{$this->root}/b/index.html");
         self::assertStringContainsString('Could not delete 1 obsolete index.html', $patch->message());

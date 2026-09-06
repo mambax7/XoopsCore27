@@ -572,14 +572,17 @@ class Upgrade_2511 extends XoopsUpgrade
          * undeletable file is reported in one pass.
          *
          * A writable file can still be undeletable: on POSIX systems unlink()
-         * needs write permission on the parent directory, not on the file.
+         * needs write permission on the parent directory, not on the file. That
+         * case is detected up front so the common failure emits no PHP warning
+         * (whose text would carry the absolute path); unlink() is only attempted
+         * when the directory is writable too.
          *
          * @param string $name file name to unlink
          *
          * @return true continue the walk
          */
         $unlinkByName = function ($name) use (&$failed) {
-            if (is_writable($name) && !unlink($name)) {
+            if (is_writable($name) && (!is_writable(dirname($name)) || !unlink($name))) {
                 $failed[] = $name;
             }
             return true;

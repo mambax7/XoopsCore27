@@ -57,7 +57,8 @@ class PatchStatus
                 $applied = (bool) $patch->{"check_{$task}"}();
             } catch (\Throwable $e) {
                 // Name the check: the fatal handler and apply() only show the message.
-                // Paths are stripped here because the fatal handler prints it raw.
+                // The fatal handler HTML-escapes it but does not strip filesystem
+                // paths, so they are removed here before the message leaves.
                 throw new \RuntimeException(
                     sprintf(
                         '%s::check_%s() threw %s: %s',
