@@ -141,8 +141,36 @@ final class XoopsUpgradeApplyTest extends TestCase
         };
 
         self::assertFalse($patch->apply());
-        self::assertStringContainsString('Verification after apply threw RuntimeException', $patch->message());
-        self::assertStringContainsString('check_x() threw LogicException: recheck exploded', $patch->message());
+        self::assertStringContainsString(
+            'Verification of task x threw LogicException: recheck exploded',
+            $patch->message()
+        );
+    }
+
+    #[Test]
+    public function noRecheckTaskIsNotInvokedAgainDuringVerification(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public array $tasks = ['legacy', 'normal'];
+            protected array $noRecheck = ['legacy'];
+            public int $legacyChecks = 0;
+            private bool $normalDone = false;
+            public function __construct() {}
+            public function check_legacy(): bool
+            {
+                if (++$this->legacyChecks > 1) {
+                    throw new LogicException('must not be called twice');
+                }
+                return false;
+            }
+            public function apply_legacy(): bool { return true; }
+            public function check_normal(): bool { return $this->normalDone; }
+            public function apply_normal(): bool { $this->normalDone = true; return true; }
+        };
+
+        self::assertTrue($patch->apply());
+        self::assertSame(1, $patch->legacyChecks, 'excluded check runs only for the initial status');
+        self::assertSame('', $patch->message());
     }
 
     #[Test]

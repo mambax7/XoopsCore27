@@ -132,15 +132,24 @@ abstract class XoopsUpgrade
             }
         }
 
-        try {
-            $pending = array_diff($this->isApplied()->tasks, $this->noRecheck);
-        } catch (\Throwable $e) {
-            $this->logError(
-                'Verification after apply threw %s: %s',
-                get_class($e),
-                htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8')
-            );
-            return false;
+        // Verify by calling only the checks that can observe their own apply_;
+        // a task in $noRecheck is not invoked again at all.
+        $pending = [];
+        foreach (array_diff($this->tasks, $this->noRecheck) as $task) {
+            try {
+                $applied = (bool) $this->{"check_{$task}"}();
+            } catch (\Throwable $e) {
+                $this->logError(
+                    'Verification of task %s threw %s: %s',
+                    $task,
+                    get_class($e),
+                    htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8')
+                );
+                return false;
+            }
+            if (!$applied) {
+                $pending[] = $task;
+            }
         }
         if ([] !== $pending) {
             $this->logError('Task(s) still pending after apply: %s', implode(', ', $pending));
