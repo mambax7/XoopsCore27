@@ -21,6 +21,13 @@ use Xoops\Upgrade\XoopsUpgrade;
  * patch lists in $noRecheck (checks that read state fixed at request start).
  *
  * The test doubles skip the parent constructor: no database is needed.
+ *
+ * @category  Xoops\Upgrade\Tests
+ * @package   Xoops
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 final class XoopsUpgradeApplyTest extends TestCase
 {

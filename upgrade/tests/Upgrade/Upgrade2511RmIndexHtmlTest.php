@@ -18,6 +18,13 @@ if (!defined('_UPGRADE_CHARSET')) {
 /**
  * Test double for {@see Upgrade_2511}: skips the DB-bound constructor and points
  * the index.html scan at a temp tree instead of XOOPS_ROOT_PATH.
+ *
+ * @category  Xoops\Upgrade\Tests
+ * @package   Xoops
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 final class Upgrade2511Stub extends Upgrade_2511
 {
@@ -33,6 +40,13 @@ final class Upgrade2511Stub extends Upgrade_2511
  * apply_rmindexhtml() used to report success even when unlink() failed, so
  * check_rmindexhtml() kept re-queuing the patch on every request with no
  * message (issue #183). It must now report the files it could not delete.
+ *
+ * @category  Xoops\Upgrade\Tests
+ * @package   Xoops
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 final class Upgrade2511RmIndexHtmlTest extends TestCase
 {

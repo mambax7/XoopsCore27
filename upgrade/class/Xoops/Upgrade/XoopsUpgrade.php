@@ -111,19 +111,14 @@ abstract class XoopsUpgrade
             $tasks = $this->isApplied()->tasks;
         } catch (\Throwable $e) {
             // PatchStatus already names the check in the message.
-            $this->logError('%s', htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8'));
+            $this->logError('%s', $this->escapeForLog($e->getMessage()));
             return false;
         }
         foreach ($tasks as $task) {
             try {
                 $res = $this->{"apply_{$task}"}();
             } catch (\Throwable $e) {
-                $this->logError(
-                    'Task %s threw %s: %s',
-                    $task,
-                    get_class($e),
-                    htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8')
-                );
+                $this->logError('Task %s threw %s: %s', $task, get_class($e), $this->escapeForLog($e->getMessage()));
                 return false;
             }
             if (!$res) {
@@ -143,7 +138,7 @@ abstract class XoopsUpgrade
                     'Verification of task %s threw %s: %s',
                     $task,
                     get_class($e),
-                    htmlspecialchars(self::sanitizeLogMessage($e->getMessage()), ENT_QUOTES, 'UTF-8')
+                    $this->escapeForLog($e->getMessage())
                 );
                 return false;
             }
@@ -212,6 +207,23 @@ abstract class XoopsUpgrade
     protected function logSuccess(string $format, mixed ...$args): void
     {
         $this->logs[] = sprintf('<span class="text-success">' . $format . '</span>', ...$args);
+    }
+
+    /**
+     * Make exception text safe for the upgrade page: strip filesystem paths,
+     * then HTML-escape in the wizard's charset (_UPGRADE_CHARSET, UTF-8 when
+     * the language file is not loaded, as in tests).
+     *
+     * @param  string $message raw message, typically Throwable::getMessage()
+     * @return string sanitized, HTML-escaped message
+     */
+    protected function escapeForLog(string $message): string
+    {
+        return htmlspecialchars(
+            self::sanitizeLogMessage($message),
+            ENT_QUOTES,
+            defined('_UPGRADE_CHARSET') ? _UPGRADE_CHARSET : 'UTF-8'
+        );
     }
 
     /**
