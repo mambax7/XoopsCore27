@@ -28,6 +28,9 @@ class Upgrade_259 extends XoopsUpgrade
     {
         parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['sess_id', 'mainfile', 'zaplegacy'];
+        // check_mainfile() reads UpgradeControl::$needMainfileRewrite, computed from
+        // the mainfile.php loaded at request start.
+        $this->noRecheck = ['mainfile'];
         $this->usedFiles = [
             'mainfile.php',
             XOOPS_VAR_PATH . '/data/secure.php',

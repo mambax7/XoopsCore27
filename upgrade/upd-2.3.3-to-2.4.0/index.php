@@ -279,6 +279,9 @@ class Upgrade_240 extends XoopsUpgrade
     {
         parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['keys', 'version'];
+        // check_version() reads XOOPS_LICENSE_KEY, defined from include/license.php
+        // at request start; the rewritten file is only read on the next request.
+        $this->noRecheck = ['version'];
     }
 }
 

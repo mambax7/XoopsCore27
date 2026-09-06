@@ -53,7 +53,23 @@ class PatchStatus
         $this->patchClass = get_class($patch);
         $this->patch = $patch;
         foreach ($patch->tasks as $task) {
-            if (!$patch->{"check_{$task}"}()) {
+            try {
+                $applied = (bool) $patch->{"check_{$task}"}();
+            } catch (\Throwable $e) {
+                // Name the check: the fatal handler and apply() only show the message.
+                throw new \RuntimeException(
+                    sprintf(
+                        '%s::check_%s() threw %s: %s',
+                        $this->patchClass,
+                        $task,
+                        get_class($e),
+                        $e->getMessage()
+                    ),
+                    0,
+                    $e
+                );
+            }
+            if (!$applied) {
                 $this->addTask($task);
             }
         }

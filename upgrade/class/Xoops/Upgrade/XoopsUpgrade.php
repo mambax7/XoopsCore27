@@ -44,6 +44,18 @@ abstract class XoopsUpgrade
     /** @var string[] $tasks task identifiers this patch provides check_/apply_ pairs for */
     public array $tasks = [];
 
+    /**
+     * Tasks excluded from the post-apply re-check in apply().
+     *
+     * List a task here only when its check_{task}() reads state fixed at request
+     * start (a constant from mainfile.php or include/license.php, an
+     * UpgradeControl flag) and so cannot observe its own apply_{task}() until
+     * the next request. Every other task is verified immediately.
+     *
+     * @var string[]
+     */
+    protected array $noRecheck = [];
+
     /** @var string[] $logs accumulated log messages */
     public array $logs = [];
 
@@ -83,19 +95,56 @@ abstract class XoopsUpgrade
      * Apply all pending tasks for this patch.
      *
      * Iterates over tasks returned by isApplied() and calls the corresponding
-     * apply_{task}() method. Returns false on the first failure.
+     * apply_{task}() method. Returns false on the first failure, naming the
+     * task in the log. A task that throws is reported the same way instead of
+     * taking the whole wizard down.
      *
-     * @return bool true if all tasks applied successfully, false on first failure
+     * After the loop the checks are run once more. An apply_{task}() that
+     * returns true without satisfying its own check_{task}() would otherwise
+     * re-queue this patch on every request with no visible error (issue #183).
+     *
+     * @return bool true if all tasks applied and every check now passes
      */
     public function apply(): bool
     {
-        $patchStatus = $this->isApplied();
-        $tasks = $patchStatus->tasks;
+        try {
+            $tasks = $this->isApplied()->tasks;
+        } catch (\Throwable $e) {
+            // PatchStatus already names the check in the message.
+            $this->logError('%s', htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            return false;
+        }
         foreach ($tasks as $task) {
-            $res = $this->{"apply_{$task}"}();
-            if (!$res) {
+            try {
+                $res = $this->{"apply_{$task}"}();
+            } catch (\Throwable $e) {
+                $this->logError(
+                    'Task %s threw %s: %s',
+                    $task,
+                    get_class($e),
+                    htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
+                );
                 return false;
             }
+            if (!$res) {
+                $this->logError('Task %s failed', $task);
+                return false;
+            }
+        }
+
+        try {
+            $pending = array_diff($this->isApplied()->tasks, $this->noRecheck);
+        } catch (\Throwable $e) {
+            $this->logError(
+                'Verification after apply threw %s: %s',
+                get_class($e),
+                htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
+            );
+            return false;
+        }
+        if ([] !== $pending) {
+            $this->logError('Task(s) still pending after apply: %s', implode(', ', $pending));
+            return false;
         }
         return true;
     }

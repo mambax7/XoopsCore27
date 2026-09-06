@@ -120,10 +120,12 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
             echo '</ul></div></div>';
         } else {
             $next = $upgradeControl->getNextPatch();
-            printf('<h2>' . _PERFORMING_UPGRADE . '</h2>', $next);
             /** @var XoopsUpgrade $upgrader */
             $upgrader = $upgradeControl->upgradeQueue[$next]->getPatch();
             $res = $upgrader->apply();
+            // Report the outcome, not the intent: the heading used to be printed
+            // before apply() ran, so a patch that never took still read "Applied".
+            printf('<h2>' . ($res ? _PERFORMING_UPGRADE : _FAILED_PATCH) . '</h2>', $next);
             if ($message = $upgrader->message()) {
                 echo '<div class="well">' . $message . '</div>';
             }
