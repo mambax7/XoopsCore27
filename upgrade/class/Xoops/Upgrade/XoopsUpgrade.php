@@ -44,6 +44,18 @@ abstract class XoopsUpgrade
     /** @var string[] $tasks task identifiers this patch provides check_/apply_ pairs for */
     public array $tasks = [];
 
+    /**
+     * Tasks excluded from the post-apply re-check in apply().
+     *
+     * List a task here only when its check_{task}() reads state fixed at request
+     * start (a constant from mainfile.php or include/license.php, an
+     * UpgradeControl flag) and so cannot observe its own apply_{task}() until
+     * the next request. Every other task is verified immediately.
+     *
+     * @var string[]
+     */
+    protected array $noRecheck = [];
+
     /** @var string[] $logs accumulated log messages */
     public array $logs = [];
 
@@ -83,19 +95,60 @@ abstract class XoopsUpgrade
      * Apply all pending tasks for this patch.
      *
      * Iterates over tasks returned by isApplied() and calls the corresponding
-     * apply_{task}() method. Returns false on the first failure.
+     * apply_{task}() method. Returns false on the first failure, naming the
+     * task in the log. A task that throws is reported the same way instead of
+     * taking the whole wizard down.
      *
-     * @return bool true if all tasks applied successfully, false on first failure
+     * After the loop the checks are run once more. An apply_{task}() that
+     * returns true without satisfying its own check_{task}() would otherwise
+     * re-queue this patch on every request with no visible error (issue #183).
+     *
+     * @return bool true if all tasks applied and every check now passes
      */
     public function apply(): bool
     {
-        $patchStatus = $this->isApplied();
-        $tasks = $patchStatus->tasks;
+        try {
+            $tasks = $this->isApplied()->tasks;
+        } catch (\Throwable $e) {
+            // PatchStatus already names the check in the message.
+            $this->logError('%s', $this->escapeForLog($e->getMessage()));
+            return false;
+        }
         foreach ($tasks as $task) {
-            $res = $this->{"apply_{$task}"}();
-            if (!$res) {
+            try {
+                $res = $this->{"apply_{$task}"}();
+            } catch (\Throwable $e) {
+                $this->logError('Task %s threw %s: %s', $task, get_class($e), $this->escapeForLog($e->getMessage()));
                 return false;
             }
+            if (!$res) {
+                $this->logError('Task %s failed', $task);
+                return false;
+            }
+        }
+
+        // Verify by calling only the checks that can observe their own apply_;
+        // a task in $noRecheck is not invoked again at all.
+        $pending = [];
+        foreach (array_diff($this->tasks, $this->noRecheck) as $task) {
+            try {
+                $applied = (bool) $this->{"check_{$task}"}();
+            } catch (\Throwable $e) {
+                $this->logError(
+                    'Verification of task %s threw %s: %s',
+                    $task,
+                    get_class($e),
+                    $this->escapeForLog($e->getMessage())
+                );
+                return false;
+            }
+            if (!$applied) {
+                $pending[] = $task;
+            }
+        }
+        if ([] !== $pending) {
+            $this->logError('Task(s) still pending after apply: %s', implode(', ', $pending));
+            return false;
         }
         return true;
     }
@@ -154,6 +207,81 @@ abstract class XoopsUpgrade
     protected function logSuccess(string $format, mixed ...$args): void
     {
         $this->logs[] = sprintf('<span class="text-success">' . $format . '</span>', ...$args);
+    }
+
+    /**
+     * Make exception text safe for the upgrade page: strip filesystem paths,
+     * then HTML-escape in the wizard's charset (_UPGRADE_CHARSET, UTF-8 when
+     * the language file is not loaded, as in tests).
+     *
+     * @param  string $message raw message, typically Throwable::getMessage()
+     * @return string sanitized, HTML-escaped message
+     */
+    protected function escapeForLog(string $message): string
+    {
+        return htmlspecialchars(
+            self::sanitizeLogMessage($message),
+            ENT_QUOTES,
+            defined('_UPGRADE_CHARSET') ? _UPGRADE_CHARSET : 'UTF-8'
+        );
+    }
+
+    /**
+     * Reduce every absolute path in a message to its basename, so exception
+     * text shown on the upgrade page does not reveal the server layout.
+     *
+     * A path starts at a token boundary with a separator or a drive letter, so
+     * a namespaced class name is left alone. Spaces inside a path are consumed
+     * as long as another separator follows before the operand ends, which
+     * covers "C:\Program Files\..." and "/var/www/my site/...".
+     *
+     * @param  string $message raw message, typically Throwable::getMessage()
+     * @return string message with path-like tokens replaced by basenames
+     */
+    public static function sanitizeLogMessage(string $message): string
+    {
+        return (string) preg_replace_callback(
+            '/(?<![^\\s("\'=,:\\[])(?:[A-Za-z]:)?[\\\\\\/](?:[^\\s]|\\s(?=[^\\\\\\/,;:"\']*[\\\\\\/]))*/',
+            static function (array $matches): string {
+                return basename(str_replace('\\', '/', $matches[0]));
+            },
+            $message
+        );
+    }
+
+    /**
+     * Express a path relative to the XOOPS install for display, so an
+     * administrator can locate the file without the page revealing the
+     * absolute server layout. Paths outside every known base fall back to
+     * their basename.
+     *
+     * @param  string $path absolute filesystem path
+     * @return string path relative to XOOPS_ROOT_PATH, or prefixed with
+     *                xoops_trust_path/ or xoops_data/, or a basename
+     */
+    protected function relativePath(string $path): string
+    {
+        $bases = [];
+        if (defined('XOOPS_ROOT_PATH')) {
+            $bases[XOOPS_ROOT_PATH] = '';
+        }
+        if (defined('XOOPS_TRUST_PATH')) {
+            $bases[XOOPS_TRUST_PATH] = 'xoops_trust_path/';
+        }
+        if (defined('XOOPS_VAR_PATH')) {
+            $bases[XOOPS_VAR_PATH] = 'xoops_data/';
+        }
+        // Compare with one separator style: on Windows the XOOPS constants and the
+        // directory walkers mix "/" and "\", and DIRECTORY_SEPARATOR matches neither reliably.
+        $normalized = str_replace('\\', '/', $path);
+        foreach ($bases as $base => $label) {
+            $prefix = rtrim(str_replace('\\', '/', (string) $base), '/') . '/';
+            if (str_starts_with($normalized, $prefix)) {
+                return $label . substr($normalized, strlen($prefix));
+            }
+        }
+
+        return basename($normalized);
     }
 
     /**

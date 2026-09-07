@@ -38,6 +38,10 @@ class Upgrade_230 extends XoopsUpgrade
         parent::__construct($db, $control, basename(__DIR__));
         $this->usedFiles          = ['mainfile.php'];
         $this->tasks              = ['config', 'cache', 'path', 'db', 'bmlink'];
+        // check_db() tests defined('XOOPS_DB_CHARSET') and check_path() tests
+        // defined('XOOPS_PATH' / 'XOOPS_VAR_PATH' / 'XOOPS_TRUST_PATH'); the
+        // rewritten mainfile.php is only read on the next request.
+        $this->noRecheck          = ['db', 'path'];
         $this->pathControllerFile = __DIR__ . '/pathcontroller.php';
     }
 

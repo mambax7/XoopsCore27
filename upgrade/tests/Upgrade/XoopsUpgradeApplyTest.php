@@ -1,0 +1,395 @@
+<?php
+/*
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ */
+
+declare(strict_types=1);
+
+namespace Xoops\Upgrade\Tests\Upgrade;
+
+use DomainException;
+use LogicException;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Xoops\Upgrade\XoopsUpgrade;
+
+/**
+ * Contract of {@see XoopsUpgrade::apply()} (issue #183).
+ *
+ * The wizard rebuilds its queue from the check_ methods on every request, so a
+ * patch whose apply_ reports success without satisfying its check_ used to be
+ * re-selected forever with no message. apply() now re-runs the checks, names
+ * the task that failed, threw, or is still pending, and trusts only the tasks a
+ * patch lists in $noRecheck (checks that read state fixed at request start).
+ *
+ * The test doubles skip the parent constructor: no database is needed.
+ *
+ * @category  Xoops\Upgrade\Tests
+ * @package   Xoops
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
+final class XoopsUpgradeApplyTest extends TestCase
+{
+    #[Test]
+    public function happyPathAppliesAndPassesRecheck(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            private bool $done = false;
+
+            public function __construct()
+            {
+                $this->tasks = ['a'];
+            }
+
+            public function check_a(): bool
+            {
+                return $this->done;
+            }
+
+            public function apply_a(): bool
+            {
+                $this->done = true;
+
+                return true;
+            }
+        };
+
+        self::assertTrue($patch->apply());
+        self::assertSame('', $patch->message());
+    }
+
+    #[Test]
+    public function applyThatDoesNotSatisfyItsCheckIsReportedAsPending(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            private bool $goodDone = false;
+
+            public function __construct()
+            {
+                $this->tasks = ['good', 'stuck'];
+            }
+
+            public function check_good(): bool
+            {
+                return $this->goodDone;
+            }
+
+            public function apply_good(): bool
+            {
+                $this->goodDone = true;
+
+                return true;
+            }
+
+            public function check_stuck(): bool
+            {
+                return false;
+            }
+
+            /** The issue #183 shape: reports success, changes nothing. */
+            public function apply_stuck(): bool
+            {
+                return true;
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString('still pending after apply: stuck', $patch->message());
+        self::assertStringNotContainsString('good', $patch->message());
+    }
+
+    #[Test]
+    public function failingTaskIsNamedAndStopsTheRun(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public bool $laterRan = false;
+
+            public function __construct()
+            {
+                $this->tasks = ['broken', 'later'];
+            }
+
+            public function check_broken(): bool
+            {
+                return false;
+            }
+
+            public function apply_broken(): bool
+            {
+                return false;
+            }
+
+            public function check_later(): bool
+            {
+                return false;
+            }
+
+            public function apply_later(): bool
+            {
+                $this->laterRan = true;
+
+                return true;
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString('Task broken failed', $patch->message());
+        self::assertFalse($patch->laterRan, 'tasks are ordered; a failure must stop the run');
+    }
+
+    #[Test]
+    public function throwingTaskIsCaughtNamedAndEscaped(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public function __construct()
+            {
+                $this->tasks = ['boom'];
+            }
+
+            public function check_boom(): bool
+            {
+                return false;
+            }
+
+            public function apply_boom(): bool
+            {
+                throw new RuntimeException('<disk on fire>');
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString(
+            'Task boom threw RuntimeException: &lt;disk on fire&gt;',
+            $patch->message()
+        );
+    }
+
+    #[Test]
+    public function absolutePathsInExceptionMessagesAreReducedToBasenames(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public function __construct()
+            {
+                $this->tasks = ['copy'];
+            }
+
+            public function check_copy(): bool
+            {
+                return false;
+            }
+
+            public function apply_copy(): bool
+            {
+                throw new RuntimeException('copy(/var/www/html/xoops_data/configs/captcha/config.php): failed');
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString('Task copy threw RuntimeException: copy(config.php): failed', $patch->message());
+        self::assertStringNotContainsString('/var/www', $patch->message());
+    }
+
+    #[Test]
+    public function sanitizeLogMessageHandlesSpacesDrivesAndNamespaces(): void
+    {
+        $cases = [
+            // ordinary POSIX path
+            'rmdir(/var/www/html/xoops_data/caches/smarty_cache): Directory not empty'
+                => 'rmdir(smarty_cache): Directory not empty',
+            // POSIX path with a space in a directory name
+            'copy(/var/www/my site/xoops_data/configs/config.php): Permission denied'
+                => 'copy(config.php): Permission denied',
+            // Windows path with spaces, drive letter and backslashes
+            'rename(C:\\Program Files (x86)\\My Sites\\xoops\\mainfile.php): Access is denied'
+                => 'rename(mainfile.php): Access is denied',
+            // Windows path with forward slashes, as XOOPS constants usually hold them
+            'Failed to open C:/wamp64/www/my xoops/xoops_data/data/secure.php for writing'
+                => 'Failed to open secure.php for writing',
+            // a namespaced class name is not a path
+            'Class Xmf\\Database\\Tables not found in /srv/app/upgrade/index.php'
+                => 'Class Xmf\\Database\\Tables not found in index.php',
+            // no path at all
+            '<disk on fire>' => '<disk on fire>',
+        ];
+        foreach ($cases as $input => $expected) {
+            self::assertSame($expected, XoopsUpgrade::sanitizeLogMessage($input), $input);
+        }
+    }
+
+    #[Test]
+    public function relativePathIsSeparatorAgnosticAndFallsBackToBasename(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public function __construct()
+            {
+            }
+
+            public function rel(string $path): string
+            {
+                return $this->relativePath($path);
+            }
+        };
+
+        self::assertSame('a/index.html', $patch->rel(XOOPS_ROOT_PATH . '/a/index.html'));
+        self::assertSame('a/index.html', $patch->rel(XOOPS_ROOT_PATH . '\\a\\index.html'));
+        self::assertSame('secret.php', $patch->rel('/srv/elsewhere/secret.php'));
+        self::assertSame('secret.php', $patch->rel('D:\\elsewhere\\secret.php'));
+    }
+
+    #[Test]
+    public function taskListedInNoRecheckIsTrusted(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public function __construct()
+            {
+                $this->tasks = ['mainfile'];
+                $this->noRecheck = ['mainfile'];
+            }
+
+            /** Stands in for a check that reads a constant which cannot refresh. */
+            public function check_mainfile(): bool
+            {
+                return false;
+            }
+
+            public function apply_mainfile(): bool
+            {
+                return true;
+            }
+        };
+
+        self::assertTrue($patch->apply());
+        self::assertSame('', $patch->message());
+    }
+
+    #[Test]
+    public function checkThrowingDuringVerificationIsCaughtAndNamed(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            private int $calls = 0;
+
+            public function __construct()
+            {
+                $this->tasks = ['x'];
+            }
+
+            public function check_x(): bool
+            {
+                if (++$this->calls > 1) {
+                    throw new LogicException('recheck exploded');
+                }
+
+                return false;
+            }
+
+            public function apply_x(): bool
+            {
+                return true;
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString(
+            'Verification of task x threw LogicException: recheck exploded',
+            $patch->message()
+        );
+    }
+
+    #[Test]
+    public function noRecheckTaskIsNotInvokedAgainDuringVerification(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public int $legacyChecks = 0;
+            private bool $normalDone = false;
+
+            public function __construct()
+            {
+                $this->tasks = ['legacy', 'normal'];
+                $this->noRecheck = ['legacy'];
+            }
+
+            public function check_legacy(): bool
+            {
+                if (++$this->legacyChecks > 1) {
+                    throw new LogicException('must not be called twice');
+                }
+
+                return false;
+            }
+
+            public function apply_legacy(): bool
+            {
+                return true;
+            }
+
+            public function check_normal(): bool
+            {
+                return $this->normalDone;
+            }
+
+            public function apply_normal(): bool
+            {
+                $this->normalDone = true;
+
+                return true;
+            }
+        };
+
+        self::assertTrue($patch->apply());
+        self::assertSame(1, $patch->legacyChecks, 'excluded check runs only for the initial status');
+        self::assertSame('', $patch->message());
+    }
+
+    #[Test]
+    public function checkThrowingOnInitialStatusIsCaughtAndNamed(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            public function __construct()
+            {
+                $this->tasks = ['ok', 'bad'];
+            }
+
+            public function check_ok(): bool
+            {
+                return true;
+            }
+
+            public function apply_ok(): bool
+            {
+                return true;
+            }
+
+            public function check_bad(): bool
+            {
+                throw new DomainException('cannot decide');
+            }
+
+            public function apply_bad(): bool
+            {
+                return true;
+            }
+        };
+
+        self::assertFalse($patch->apply());
+        self::assertStringContainsString('check_bad() threw DomainException: cannot decide', $patch->message());
+
+        // The same wrapped exception is what buildUpgradeQueue() lets reach the fatal handler.
+        try {
+            $patch->isApplied();
+            self::fail('isApplied() must rethrow');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString('::check_bad() threw DomainException', $e->getMessage());
+            self::assertInstanceOf(DomainException::class, $e->getPrevious());
+        }
+    }
+}

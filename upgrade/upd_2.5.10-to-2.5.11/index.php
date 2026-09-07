@@ -45,13 +45,15 @@ class Upgrade_2511 extends XoopsUpgrade
             'configkey',
             'modulesvarchar',
             'qmail',
-            'rmindexhtml',
             'textsanitizer',
             'xoopsconfig',
             'templates',
             'templatesadmin',
             'zapsmarty',
             'notificationmethod',
+            // Last: it can fail on files the web server cannot delete, and nothing
+            // above depends on it, so every other task completes first.
+            'rmindexhtml',
         ];
         $this->usedFiles = [];
         $this->pathsToCheck = [
@@ -563,23 +565,54 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_rmindexhtml(): bool
     {
+        $failed = [];
         /**
-         * Do unlink() on file
-         * Always return true so we process each writable index.html
+         * unlink() each file check_rmindexhtml() counts (writable ones), recording
+         * any failure. Always returns true so the walk continues and every
+         * undeletable file is reported in one pass.
+         *
+         * A writable file can still be undeletable: on POSIX systems unlink()
+         * needs write permission on the parent directory, not on the file.
          *
          * @param string $name file name to unlink
          *
-         * @return true always report true, even if we can't delete -- best effort only
+         * @return true continue the walk
          */
-        $unlinkByName = function ($name) {
-            if (is_writable($name)) {
-                $result = unlink($name);
+        $unlinkByName = function ($name) use (&$failed) {
+            if (is_writable($name) && !unlink($name)) {
+                $failed[] = $name;
             }
             return true;
         };
 
+        // unlink() reports failure by return value, which is collected above and
+        // shown with relative paths. Its native E_WARNING carries the absolute
+        // path, so it is consumed for the duration of the walk.
+        set_error_handler(static fn (): bool => true, E_WARNING);
+        try {
+            $this->dirWalker($unlinkByName);
+        } finally {
+            restore_error_handler();
+        }
 
-        return $this->dirWalker($unlinkByName);
+        if ([] === $failed) {
+            return true;
+        }
+        // Returning true here would re-queue this patch on every click with no
+        // message, because check_rmindexhtml() keeps finding the same files.
+        $this->logEscaped(sprintf(
+            'Could not delete %d obsolete index.html file(s). Delete them manually, '
+            . 'or make their directories writable by the web server, then click Continue:',
+            count($failed)
+        ));
+        foreach (array_slice($failed, 0, 20) as $name) {
+            $this->logEscaped('  ' . $this->relativePath($name));
+        }
+        if (count($failed) > 20) {
+            $this->logEscaped(sprintf('  ... and %d more', count($failed) - 20));
+        }
+
+        return false;
     }
 
     /**

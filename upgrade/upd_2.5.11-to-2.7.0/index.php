@@ -1138,33 +1138,6 @@ class Upgrade_270 extends XoopsUpgrade
         return false;
     }
 
-    private function relativePath(string $path): string
-    {
-        $rootWithSeparator = rtrim(XOOPS_ROOT_PATH, '\\/') . DIRECTORY_SEPARATOR;
-        $trustWithSeparator = rtrim(XOOPS_TRUST_PATH, '\\/') . DIRECTORY_SEPARATOR;
-
-        if (str_starts_with($path, $rootWithSeparator)) {
-            return str_replace('\\', '/', substr($path, strlen($rootWithSeparator)));
-        }
-
-        if (str_starts_with($path, $trustWithSeparator)) {
-            return 'xoops_trust_path/' . str_replace('\\', '/', substr($path, strlen($trustWithSeparator)));
-        }
-
-        return basename($path);
-    }
-
-    private function sanitizeLogMessage(string $message): string
-    {
-        return (string) preg_replace_callback(
-            '/([A-Za-z]:)?[\\\\\\/][^\\s]*/',
-            static function (array $matches): string {
-                return basename(str_replace('\\', '/', $matches[0]));
-            },
-            $message
-        );
-    }
-
     private function execOrFail(string $sql): bool
     {
         if ($this->db->exec($sql)) {
