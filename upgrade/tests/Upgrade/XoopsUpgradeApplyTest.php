@@ -1,4 +1,13 @@
 <?php
+/*
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ */
 
 declare(strict_types=1);
 
@@ -188,6 +197,33 @@ final class XoopsUpgradeApplyTest extends TestCase
         self::assertFalse($patch->apply());
         self::assertStringContainsString('Task copy threw RuntimeException: copy(config.php): failed', $patch->message());
         self::assertStringNotContainsString('/var/www', $patch->message());
+    }
+
+    #[Test]
+    public function sanitizeLogMessageHandlesSpacesDrivesAndNamespaces(): void
+    {
+        $cases = [
+            // ordinary POSIX path
+            'rmdir(/var/www/html/xoops_data/caches/smarty_cache): Directory not empty'
+                => 'rmdir(smarty_cache): Directory not empty',
+            // POSIX path with a space in a directory name
+            'copy(/var/www/my site/xoops_data/configs/config.php): Permission denied'
+                => 'copy(config.php): Permission denied',
+            // Windows path with spaces, drive letter and backslashes
+            'rename(C:\\Program Files (x86)\\My Sites\\xoops\\mainfile.php): Access is denied'
+                => 'rename(mainfile.php): Access is denied',
+            // Windows path with forward slashes, as XOOPS constants usually hold them
+            'Failed to open C:/wamp64/www/my xoops/xoops_data/data/secure.php for writing'
+                => 'Failed to open secure.php for writing',
+            // a namespaced class name is not a path
+            'Class Xmf\\Database\\Tables not found in /srv/app/upgrade/index.php'
+                => 'Class Xmf\\Database\\Tables not found in index.php',
+            // no path at all
+            '<disk on fire>' => '<disk on fire>',
+        ];
+        foreach ($cases as $input => $expected) {
+            self::assertSame($expected, XoopsUpgrade::sanitizeLogMessage($input), $input);
+        }
     }
 
     #[Test]

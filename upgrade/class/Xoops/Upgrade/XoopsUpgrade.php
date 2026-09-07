@@ -230,13 +230,18 @@ abstract class XoopsUpgrade
      * Reduce every absolute path in a message to its basename, so exception
      * text shown on the upgrade page does not reveal the server layout.
      *
+     * A path starts at a token boundary with a separator or a drive letter, so
+     * a namespaced class name is left alone. Spaces inside a path are consumed
+     * as long as another separator follows before the operand ends, which
+     * covers "C:\Program Files\..." and "/var/www/my site/...".
+     *
      * @param  string $message raw message, typically Throwable::getMessage()
      * @return string message with path-like tokens replaced by basenames
      */
     public static function sanitizeLogMessage(string $message): string
     {
         return (string) preg_replace_callback(
-            '/([A-Za-z]:)?[\\\\\\/][^\\s]*/',
+            '/(?<![^\\s("\'=,:\\[])(?:[A-Za-z]:)?[\\\\\\/](?:[^\\s]|\\s(?=[^\\\\\\/,;:"\']*[\\\\\\/]))*/',
             static function (array $matches): string {
                 return basename(str_replace('\\', '/', $matches[0]));
             },
