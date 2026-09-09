@@ -20,6 +20,14 @@
             window.close();
 //    return;
         }
+        // The code to insert travels in a data attribute and is read back as
+        // data; it is never evaluated as script.
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest ? event.target.closest('[data-xo-code]') : null;
+            if (button) {
+                appendCode(button.getAttribute('data-xo-code'));
+            }
+        });
         //-->
     </script>
     <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'xoops.css'}>">
@@ -69,9 +77,9 @@
                 <td><input type="hidden" name="image_id[]" value="<{$images[i].id}>"/><{$images[i].nicename}></td>
                 <td><img style="max-width:200px;" src="<{$images[i].src}>" alt=""/></td>
                 <td><{$images[i].mimetype}></td>
-                <td><button type="button" class="btn btn-default" onclick="appendCode('<{$images[i].lxcode}>');" title="<{$smarty.const._LEFT}>" aria-label="Left Align"><span class="fa-solid fa-align-left" aria-hidden="true"></span></button>
-                    <button type="button" class="btn btn-default" onclick="appendCode('<{$images[i].xcode}>');" title="<{$smarty.const._CENTER}>" aria-label="Center Align"><span class="fa-solid fa-align-center" aria-hidden="true"></span></button>
-                    <button type="button" class="btn btn-default" onclick="appendCode('<{$images[i].rxcode}>');" title="<{$smarty.const._RIGHT}>" aria-label="Right Align"><span class="fa-solid fa-align-right" aria-hidden="true"></span></button>
+                <td><button type="button" class="btn btn-default" data-xo-code="<{$images[i].lxcode}>" title="<{$smarty.const._LEFT}>" aria-label="Left Align"><span class="fa-solid fa-align-left" aria-hidden="true"></span></button>
+                    <button type="button" class="btn btn-default" data-xo-code="<{$images[i].xcode}>" title="<{$smarty.const._CENTER}>" aria-label="Center Align"><span class="fa-solid fa-align-center" aria-hidden="true"></span></button>
+                    <button type="button" class="btn btn-default" data-xo-code="<{$images[i].rxcode}>" title="<{$smarty.const._RIGHT}>" aria-label="Right Align"><span class="fa-solid fa-align-right" aria-hidden="true"></span></button>
             </tr>
         <{/section}>
     </table>

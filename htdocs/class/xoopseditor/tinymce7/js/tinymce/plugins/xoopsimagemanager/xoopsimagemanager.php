@@ -104,6 +104,11 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         if (!is_object($imgcat)) {
             redirect_header($current_file . '?target=' . $target, 3);
         }
+        // The token proves the request came from this form, not that the
+        // caller may write to the selected category.
+        if (!$isadmin && !$gperm_handler->checkRight('imgcat_write', $imgcat_id, $groups)) {
+            redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+        }
 
         include_once XOOPS_ROOT_PATH . '/class/uploader.php';
 
@@ -376,6 +381,11 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         if (!is_object($image)) {
             redirect_header($current_file . '?target=' . $target, 3);
         }
+        // Authorise against the category the image belongs to, not the one
+        // the request names.
+        if (!$isadmin && !$gperm_handler->checkRight('imgcat_write', (int) $image->getVar('imgcat_id'), $groups)) {
+            redirect_header($current_file . '?target=' . $target, 3, _NOPERM);
+        }
         if (!$image_handler->delete($image)) {
             redirect_header($current_file . '?target=' . $target, 3, sprintf(_MD_FAILDEL, $image->getVar('image_id')));
         }
@@ -472,6 +482,9 @@ if ($op === 'listimg') {
     $imagecategory  = $imgcat_handler->get($imgcat_id);
     if (!is_object($imagecategory)) {
         redirect_header($current_file . '?target=' . $target, 1);
+    }
+    if (!$isadmin && !$gperm_handler->checkRight('imgcat_read', $imgcat_id, $groups)) {
+        redirect_header($current_file . '?target=' . $target, 1, _NOPERM);
     }
     $image_handler = xoops_getHandler('image');
 
