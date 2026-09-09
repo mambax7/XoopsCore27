@@ -85,7 +85,7 @@ $upgradeControl->buildUpgradeQueue();
 
 ob_start();
 global $xoopsUser;
-if (!$xoopsUser || !$xoopsUser->isAdmin()) {
+if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
     include_once __DIR__ . '/login.php';
 } else {
     // Self-contained CSRF token for the schema-mutating apply() path, mirroring

@@ -81,6 +81,26 @@ if (!defined('XOOPS_PROT')) {
     unset($parts, $http);
 }
 
+/**
+ * True when $user is an active member of the webmaster group.
+ *
+ * The wizard is an administrative tool that rewrites templates and the
+ * schema. Module-level admin rights (XoopsUser::isAdmin()) can be delegated
+ * per category and are not enough; every entry point applies this one check.
+ *
+ * @param mixed $user the current user object, or '' / null when anonymous
+ * @return bool
+ */
+function xoops_upgrade_user_is_webmaster($user): bool
+{
+    if (!is_object($user) || (int) $user->getVar('level') <= 0) {
+        return false;
+    }
+    $groups = $user->getGroups();
+
+    return is_array($groups) && in_array((int) XOOPS_GROUP_ADMIN, array_map('intval', $groups), true);
+}
+
 // we have what we need so continue
 if ($loadCommon) {
     unset($xoopsOption['nocommon']);

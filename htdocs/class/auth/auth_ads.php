@@ -73,6 +73,8 @@ class XoopsAuthAds extends XoopsAuthLdap
             if ($this->ldap_use_TLS) { // We use TLS secure connection
                 if (!ldap_start_tls($this->_ds)) {
                     $this->setErrors(0, _AUTH_LDAP_START_TLS_FAILED);
+                    // TLS was required: never look up or bind over the plain connection.
+                    return false;
                 }
             }
             // If the uid is not in the DN we proceed to a search

@@ -79,15 +79,8 @@ if ('' === $uname || '' === $pass) {
     // The upgrade wizard is an administrative tool: it must never establish a
     // session for a non-admin, regardless of closesite. Require webmaster-group
     // (XOOPS_GROUP_ADMIN) membership and do NOT honour closesite_okgrp here.
-    // Group ids are normalised to int so the strict compare holds whether
-    // getGroups() yields string or int ids (XOOPS_GROUP_ADMIN is the string '1').
-    $isAllowed = false;
-    if (is_object($user) && (int) $user->getVar('level') > 0) {
-        $groups = $user->getGroups();
-        if (is_array($groups) && in_array((int) XOOPS_GROUP_ADMIN, array_map('intval', $groups), true)) {
-            $isAllowed = true;
-        }
-    }
+    // The same check gates index.php and preflight.php (see checkmainfile.php).
+    $isAllowed = xoops_upgrade_user_is_webmaster($user);
     if ($isAllowed) {
         $user->setVar('last_login', time());
         if (!$member_handler->insertUser($user)) {

@@ -429,7 +429,7 @@ function smartyBlockerPanel(array $scan, string $scan_mode, string $errorMessage
 ob_start();
 
 global $xoopsUser;
-if (!$xoopsUser || !$xoopsUser->isAdmin()) {
+if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
     include_once __DIR__ . '/login.php';
 } else {
     // All form inputs are read from POST only: the forms submit via POST, and
