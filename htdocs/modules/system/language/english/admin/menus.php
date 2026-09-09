@@ -87,15 +87,4 @@ define('_AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE', 'Cannot activate: the parent ite
 define('_AM_SYSTEM_MENUS_ERROR_NOITEMS', 'There are no submenu items in this category.');
 define('_AM_SYSTEM_MENUS_ERROR_ITEMEDIT', 'Enable this item before editing it');
 define('_AM_SYSTEM_MENUS_ERROR_ITEMDISABLE', 'Enable this item before deleting it');
-
-// Menu content constants (used in seeded data)
-define('MENUS_HOME', 'Home');
-define('MENUS_ADMIN', 'Administration');
-define('MENUS_ACCOUNT', 'Account');
-define('MENUS_ACCOUNT_EDIT', 'Edit Account');
-define('MENUS_ACCOUNT_LOGIN', 'Login');
-define('MENUS_ACCOUNT_LOGOUT', 'Logout');
-define('MENUS_ACCOUNT_REGISTER', 'Sign Up');
-define('MENUS_ACCOUNT_MESSAGES', 'Messages');
-define('MENUS_ACCOUNT_NOTIFICATIONS', 'Notifications');
-define('MENUS_ACCOUNT_TOOLBAR', 'Toolbar');
+// The front-end MENUS_* labels live in language/<lang>/menus/menus.php.

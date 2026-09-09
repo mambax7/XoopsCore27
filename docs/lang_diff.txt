@@ -4,6 +4,24 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
+2026/09: Version 2.7.4-Beta1
+================================
+/htdocs/modules/system/language/english/menus/menus.php (new file — front-end labels of the default system menu)
+- moved from /htdocs/modules/system/language/english/admin/menus.php, values unchanged:
+  define('MENUS_HOME', 'Home');
+  define('MENUS_ADMIN', 'Administration');
+  define('MENUS_ACCOUNT', 'Account');
+  define('MENUS_ACCOUNT_EDIT', 'Edit Account');
+  define('MENUS_ACCOUNT_LOGIN', 'Login');
+  define('MENUS_ACCOUNT_LOGOUT', 'Logout');
+  define('MENUS_ACCOUNT_REGISTER', 'Sign Up');
+  define('MENUS_ACCOUNT_MESSAGES', 'Messages');
+  define('MENUS_ACCOUNT_NOTIFICATIONS', 'Notifications');
+  define('MENUS_ACCOUNT_TOOLBAR', 'Toolbar');
+  (resolved at render time from titles seeded by include/menu_seed.php; translations go in
+  language/<lang>/menus/menus.php, see menus.dist.php)
+
+================================
 2026/08: Version 2.7.3-Final
 ================================
 /htdocs/language/english/user.php
