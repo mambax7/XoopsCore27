@@ -21,6 +21,11 @@ Below are language differences from a version to next version.
   (resolved at render time from titles seeded by include/menu_seed.php; translations go in
   language/<lang>/menus/menus.php, see menus.dist.php)
 
+/htdocs/modules/system/language/english/admin/users.php
+- added define('_AM_SYSTEM_USERS_NO_SUCH_USER', 'No such user');
+  (used by admin/users/main.php since 2.5 but never defined; PHP 8 raised an
+  undefined-constant error instead of redirecting)
+
 ================================
 2026/08: Version 2.7.3-Final
 ================================

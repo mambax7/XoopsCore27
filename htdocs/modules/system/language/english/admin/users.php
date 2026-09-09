@@ -146,3 +146,5 @@ define('_AM_SYSTEM_USERS_MAIL_ERROR', 'User email %s already exists');
 define('_AM_SYSTEM_USERS_ACCEPT_EMAIL', 'Accept email from Admin');
 //2.7.0
 define('_AM_SYSTEM_USERS_UNKNOWN_GROUP', 'Unknown group');
+//2.7.4
+define('_AM_SYSTEM_USERS_NO_SUCH_USER', 'No such user');
