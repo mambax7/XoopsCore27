@@ -15,7 +15,7 @@ Security:
 Bug fixes:
 - report a stalled upgrade patch task instead of re-queuing it silently: a task whose apply returned true without satisfying its own check was selected again on every click with no message, and every patch after it was never reached; XoopsUpgrade::apply() now names the task that fails or throws and re-checks after the loop, exception text and undeletable-file lists are shown without absolute server paths, and apply_rmindexhtml() in the 2.5.11 patch reports the files it could not delete instead of claiming success (#184, closes #183)
 - define _AM_SYSTEM_USERS_NO_SUCH_USER, used by the users admin page since 2.5 but never defined; on PHP 8 an unknown user id produced a fatal page instead of a redirect with a message (#190)
-- clear the remember-me cookie on logout, on session restore and in the users admin only when a cookie name is configured; the name is empty when the feature is disabled and setcookie() rejects an empty name on PHP 8, so a logout or a deactivated account on such a site produced an error (#188, #195, closes #191)
+- clear the remember-me cookie only when a cookie name is configured, on logout from both user.php and the profile module's own user.php and on session restore; the name is empty when the feature is disabled and setcookie() rejects an empty name on PHP 8, so a logout or a deactivated account on such a site produced an error (#188, #195, #198, closes #191)
 - tolerate a finished registration flow's session copy in the later-step merge, which is set to null when a flow finishes and failed in array_merge() on a further request (#187)
 
 Editors:
