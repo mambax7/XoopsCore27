@@ -251,6 +251,12 @@ switch ($op) {
         if (!empty($com_id)) {
             $comment     = $comment_handler->get($com_id);
             $accesserror = false;
+            // The comment must belong to the module whose endpoint received the
+            // request: the id alone selects any module's comment, and the
+            // rights below are checked against this module.
+            if (!is_object($comment) || (int) $comment->getVar('com_modid') !== (int) $com_modid) {
+                redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
+            }
 
             if (is_object($xoopsUser)) {
                 include_once $GLOBALS['xoops']->path('modules/system/constants.php');

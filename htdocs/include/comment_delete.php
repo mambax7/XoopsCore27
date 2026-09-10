@@ -106,6 +106,20 @@ if (false !== $accesserror) {
     exit();
 }
 
+// The comment must belong to the module whose endpoint received the request:
+// the id alone selects any module's comment, and the rights above were checked
+// against this module. Every operation below acts on that id, so an unknown
+// id, including the default 0 (for which the handler returns a fresh object
+// with module id 0), is refused here as well.
+/** @var XoopsCommentHandler $comment_handler */
+$comment_handler = xoops_getHandler('comment');
+$comment         = $comment_handler->get($com_id);
+if (!is_object($comment) || (int) $comment->getVar('com_modid') !== (int) $com_modid) {
+    redirect_header($redirect_page . '=' . (int) $com_itemid, 2, _NOPERM);
+    exit();
+}
+unset($comment);
+
 xoops_loadLanguage('comment');
 switch ($op) {
     case 'delete_one':
