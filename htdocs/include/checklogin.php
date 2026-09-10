@@ -29,118 +29,12 @@ if ($uname == '' || $pass == '') {
     redirect_header(XOOPS_URL . '/user.php', 1, _US_INCORRECTLOGIN);
 }
 
-/** @var XoopsMemberHandler $member_handler */
-$member_handler = xoops_getHandler('member');
-$myts           = \MyTextSanitizer::getInstance();
+require_once $GLOBALS['xoops']->path('include/loginsession.php');
 
-include_once $GLOBALS['xoops']->path('class/auth/authfactory.php');
-
-xoops_loadLanguage('auth');
-/** @var XoopsMySQLDatabase $xoopsDB */
-$xoopsDB = XoopsDatabaseFactory::getDatabaseConnection();
-$xoopsAuth = XoopsAuthFactory::getAuthConnection($xoopsDB->escape($uname));
-$user      = $xoopsAuth->authenticate($uname, $pass);
+$user = xoops_login_authenticate($uname, $pass);
 
 if (false !== $user) {
-    if (0 == $user->getVar('level')) {
-        redirect_header(XOOPS_URL . '/index.php', 5, _US_NOACTTPADM);
-    }
-    if ($xoopsConfig['closesite'] == 1) {
-        $allowed = false;
-        foreach ($user->getGroups() as $group) {
-            if (in_array($group, $xoopsConfig['closesite_okgrp']) || XOOPS_GROUP_ADMIN == $group) {
-                $allowed = true;
-                break;
-            }
-        }
-        if (!$allowed) {
-            redirect_header(XOOPS_URL . '/index.php', 1, _NOPERM);
-        }
-    }
-    $user->setVar('last_login', time());
-    if (!$member_handler->insertUser($user)) {
-    }
-    // Regenerate a new session id and destroy old session
-    $GLOBALS['sess_handler']->regenerate_id(true);
-    $_SESSION                    = [];
-    $_SESSION['xoopsUserId']     = $user->getVar('uid');
-    $_SESSION['xoopsUserGroups'] = $user->getGroups();
-    // Read raw via 'n' format — getVar()'s default 's' escapes '&' to
-    // '&amp;', which the validator's HTML guard would reject.
-    $user_theme                  = xoops_validateThemeName((string) $user->getVar('theme', 'n'));
-    if ($user_theme !== '' && in_array($user_theme, $xoopsConfig['theme_set_allowed'], true)) {
-        $_SESSION['xoopsUserTheme'] = $user_theme;
-    }
-    $xoopsPreload = XoopsPreload::getInstance();
-    $xoopsPreload->triggerEvent('core.behavior.user.login', $user);
-    // Set cookie for rememberme
-    if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
-        // The fingerprint of the stored hash lets a later password change
-        // revoke this token; $user already carries a rehashed password when
-        // loginUser() rehashed it. One snapshot of the key serves both the
-        // fingerprint and the signature, and without a key nothing is issued.
-        // The key is read only on request: reading it creates the key file.
-        // rememberKey() explains a null result itself with a warning.
-        $rememberKey = null;
-        if (!empty($rememberme)) {
-            xoops_load('XoopsUserUtility');
-            $rememberKey = XoopsUserUtility::rememberKey();
-        }
-        if (null !== $rememberKey) {
-            $claims = [
-                'uid' => $_SESSION['xoopsUserId'],
-                'pfp' => XoopsUserUtility::rememberFingerprint($user, $rememberKey->getSigning()),
-            ];
-            $rememberTime = 60 * 60 * 24 * 30;
-            $token = \Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime);
-            xoops_setcookie(
-                $GLOBALS['xoopsConfig']['usercookie'],
-                $token,
-                time() + $rememberTime,
-                '/',
-                XOOPS_COOKIE_DOMAIN,
-                XOOPS_PROT === 'https://',
-                true,
-            );
-        } else {
-            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
-            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
-        }
-    }
-
-    if (!empty($redirect) && !strpos($redirect, 'register')) {
-        $xoops_redirect = rawurldecode($redirect);
-        $parsed         = parse_url(XOOPS_URL);
-        $url            = isset($parsed['scheme']) ? $parsed['scheme'] . '://' : 'http://';
-        if (isset($parsed['host'])) {
-            $url .= $parsed['host'];
-            if (isset($parsed['port'])) {
-                $url .= ':' . $parsed['port'];
-            }
-        } else {
-            $host = parse_url(XOOPS_URL, PHP_URL_HOST);
-            if (!is_string($host)) {
-                $host = ''; // Or a safe default/fallback
-            }
-            $url .= $host;
-        }
-        if (isset($parsed['path']) && $parsed['path']) {
-            if (strncmp($parsed['path'], $xoops_redirect, strlen($parsed['path']))) {
-                $url .= $parsed['path'];
-            }
-        }
-        $url .= $xoops_redirect;
-    } else {
-        $url = XOOPS_URL . '/index.php';
-    }
-
-    // RMV-NOTIFY
-    // Perform some maintenance of notification records
-    /** @var \XoopsNotificationHandler $notification_handler */
-    $notification_handler = xoops_getHandler('notification');
-    $notification_handler->doLoginMaintenance($user->getVar('uid'));
-
-    redirect_header($url, 1, sprintf(_US_LOGGINGU, $user->getVar('uname')), false);
+    xoops_login_establish_session($user, '' !== $rememberme, $redirect);
 } elseif (empty($redirect)) {
     // Generic message for every credential failure — do not reveal whether the
     // account exists or which factor failed (user enumeration, SECURITY.md L-3).
@@ -148,4 +42,3 @@ if (false !== $user) {
 } else {
     redirect_header(XOOPS_URL . '/user.php?xoops_redirect=' . urlencode($redirect), 5, _US_INCORRECTLOGIN, false);
 }
-exit();

@@ -88,7 +88,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
 
         // Initial issue at login uses the authenticated object, which already
         // carries a rehashed password when loginUser() rehashed it.
-        $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
+        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
         self::assertNotFalse($login);
         self::assertStringContainsString($claim . '$user, ', $login);
     }
@@ -138,7 +138,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $this->sourceContent);
         self::assertStringContainsString('$rememberSigningKey = $rememberKey->getSigning();', $this->sourceContent);
 
-        $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
+        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
         self::assertNotFalse($login);
         self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $login);
         self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $login);
@@ -156,9 +156,9 @@ final class SessionRestoreActiveCheckTest extends TestCase
         // without "remember me" must not touch it. A request that cannot be
         // honoured is explained by the warning rememberKey() itself raises for
         // every null result, so the login handler adds no second one.
-        $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
+        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
         self::assertNotFalse($login);
-        $request = strpos($login, 'if (!empty($rememberme)) {');
+        $request = strpos($login, 'if ($remember) {');
         $read    = strpos($login, '$rememberKey = XoopsUserUtility::rememberKey();');
         $issue   = strpos($login, 'if (null !== $rememberKey) {');
         self::assertNotFalse($request);
