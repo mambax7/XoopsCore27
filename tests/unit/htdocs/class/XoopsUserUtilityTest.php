@@ -507,4 +507,192 @@ class XoopsUserUtilityTest extends TestCase
         // Xmf\IPAddress::fromRequest() uses '0.0.0.0' when REMOTE_ADDR is absent
         $this->assertSame('0.0.0.0', $result);
     }
+
+    // ------------------------------------------------------------------
+    // rememberFingerprint(): the claim a remember-me token carries so that a
+    // change to the stored password hash revokes every earlier token.
+    // ------------------------------------------------------------------
+
+    private const FIXTURE_HASH = '$2y$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345678';
+    private const FIXTURE_KEY  = 'unit-test-signing-key';
+
+    private static function userWithHash(?string $hash): \XoopsUser
+    {
+        require_once XOOPS_ROOT_PATH . '/kernel/user.php';
+        $user = new \XoopsUser();
+        $user->setVar('pass', $hash);
+
+        return $user;
+    }
+
+    public function testRememberFingerprintIsAKeyedDigestOfTheStoredHash(): void
+    {
+        // hash_hmac('sha256', 'xoops-remember-pfp:' . FIXTURE_HASH, FIXTURE_KEY)
+        $this->assertSame(
+            'd61603731b34683b6c7f41f8bb89e1c2de86e9b852bfd29fbe9c1c766c50e9e3',
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY)
+        );
+    }
+
+    public function testRememberFingerprintIsStableForTheSameHash(): void
+    {
+        $this->assertSame(
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY),
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY)
+        );
+    }
+
+    public function testRememberFingerprintChangesWhenTheSamePasswordIsRehashed(): void
+    {
+        $first  = password_hash('secret', PASSWORD_DEFAULT);
+        $second = password_hash('secret', PASSWORD_DEFAULT);
+        $this->assertNotSame($first, $second, 'password_hash() salts every call');
+
+        $this->assertNotSame(
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash($first), self::FIXTURE_KEY),
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash($second), self::FIXTURE_KEY)
+        );
+    }
+
+    public function testRememberFingerprintChangesWithTheSigningKey(): void
+    {
+        $this->assertNotSame(
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY),
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), 'another-key')
+        );
+    }
+
+    // rememberKey(): one snapshot of the signing bytes shared by the
+    // fingerprint and the token signature, so the two can never disagree.
+
+    private static function storedKey(?string $bytes): \Xmf\Key\Basic
+    {
+        $storage = new \Xmf\Key\ArrayStorage();
+        if (null !== $bytes) {
+            $storage->save('rememberme', $bytes);
+        }
+
+        return new \Xmf\Key\Basic($storage, 'rememberme');
+    }
+
+    public function testRememberKeySnapshotsTheSigningBytesOfTheStoredKey(): void
+    {
+        $snapshot = \XoopsUserUtility::rememberKey(self::storedKey('stored-signing-bytes'));
+
+        $this->assertInstanceOf(\Xmf\Key\KeyAbstract::class, $snapshot);
+        $this->assertSame('stored-signing-bytes', $snapshot->getSigning());
+    }
+
+    public function testRememberKeySnapshotIsNotAffectedByALaterChangeOfTheStoredKey(): void
+    {
+        $source   = self::storedKey('first');
+        $snapshot = \XoopsUserUtility::rememberKey($source);
+        $source->kill();
+        $source->create(); // storage now holds different random bytes
+
+        $this->assertSame('first', $snapshot->getSigning());
+    }
+
+    /**
+     * A key object whose storage throws on every read.
+     */
+    private static function throwingKey(): \Xmf\Key\Basic
+    {
+        $storage = new class extends \Xmf\Key\ArrayStorage {
+            public function fetch($name)
+            {
+                throw new \RuntimeException('storage unavailable');
+            }
+        };
+        $storage->save('rememberme', 'bytes');
+
+        return new \Xmf\Key\Basic($storage, 'rememberme');
+    }
+
+    /**
+     * Runs $fn with an error handler that records warnings instead of reporting
+     * them; the handler is restored before anything is asserted.
+     *
+     * @return array{0: mixed, 1: list<array{int, string}>} [return value, warnings]
+     */
+    private static function withRecordedWarnings(callable $fn): array
+    {
+        $warnings = [];
+        set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
+            $warnings[] = [$no, $msg];
+
+            return true;
+        });
+        try {
+            $result = $fn();
+        } finally {
+            restore_error_handler();
+        }
+
+        return [$result, $warnings];
+    }
+
+    public function testRememberKeyIsNullAndWarnsWhenNoSigningBytesCanBeRead(): void
+    {
+        // A key that could not be created or read yields '' from getSigning();
+        // nothing may be fingerprinted or signed with that, and the caller's
+        // silence must be explained by a warning.
+        foreach ([self::storedKey(null), self::storedKey('')] as $key) {
+            [$result, $warnings] = self::withRecordedWarnings(static fn () => \XoopsUserUtility::rememberKey($key));
+
+            $this->assertNull($result);
+            $this->assertCount(1, $warnings);
+            $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        }
+    }
+
+    public function testRememberKeyIsNullAndWarnsWhenKeyStorageThrows(): void
+    {
+        // FileStorage reads the key file with include, so a corrupted file is a
+        // ParseError, and key generation can throw on an entropy failure. Either
+        // must fail closed as a warning, never abort login or restore.
+        [$result, $warnings] = self::withRecordedWarnings(static fn () => \XoopsUserUtility::rememberKey(self::throwingKey()));
+
+        $this->assertNull($result);
+        $this->assertCount(1, $warnings);
+        $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        $this->assertStringContainsString('RuntimeException', $warnings[0][1]);
+        $this->assertStringNotContainsString('storage unavailable', $warnings[0][1], 'the diagnostic must not echo the exception message');
+    }
+
+    public function testRememberKeyStaysNullWhenTheErrorHandlerTurnsWarningsIntoExceptions(): void
+    {
+        // An error-screen provider or a module may install a handler that
+        // converts E_USER_WARNING into an ErrorException. Reporting the failure
+        // must not then become the failure: the helper runs during login and
+        // session restore, where an escaping exception ends the request.
+        set_error_handler(static function (int $no, string $msg, string $file, int $line): bool {
+            throw new \ErrorException($msg, 0, $no, $file, $line);
+        });
+        try {
+            $fromThrowingStorage = \XoopsUserUtility::rememberKey(self::throwingKey());
+            $fromEmptyBytes      = \XoopsUserUtility::rememberKey(self::storedKey(''));
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertNull($fromThrowingStorage);
+        $this->assertNull($fromEmptyBytes);
+    }
+
+    public function testRememberFingerprintOfAnUnsetHashIsStillSixtyFourHexCharacters(): void
+    {
+        // External-auth accounts may carry no local hash; the claim must still
+        // be well formed so the restore comparison has something to compare.
+        // setVar() discards null, so the user is left at its initialised default
+        // and the precondition is asserted rather than assumed.
+        require_once XOOPS_ROOT_PATH . '/kernel/user.php';
+        $user = new \XoopsUser();
+        $this->assertNull($user->getVar('pass', 'n'));
+
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{64}$/',
+            \XoopsUserUtility::rememberFingerprint($user, self::FIXTURE_KEY)
+        );
+    }
 }
