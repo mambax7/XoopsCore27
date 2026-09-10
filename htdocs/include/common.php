@@ -331,9 +331,14 @@ if ($xoopsConfig['use_mysession']
  * The token carries a fingerprint of the stored password hash
  * (XoopsUserUtility::rememberFingerprint), keyed with the token's signing key.
  * One guarded snapshot of that key, taken only when a cookie is present, serves
- * the token's validation here, the fingerprint check below and the renewal's
- * signature; without a snapshot the cookie is rejected and nothing else reads
- * the key.
+ * the token's validation, the fingerprint check and the renewal's signature;
+ * without a snapshot the cookie is rejected and nothing else reads the key.
+ *
+ * The account is loaded and checked here, before the session is seeded: a
+ * token for a missing or inactive account, one issued before a password
+ * change, or one issued before the fingerprint claim existed never becomes a
+ * session. A signed token can still carry a malformed claim, so the value is
+ * type-checked rather than cast.
  */
 $rememberClaims = false;
 $rememberKey = null;
@@ -344,16 +349,27 @@ if (empty($_SESSION['xoopsUserId'])
 ) {
     xoops_load('XoopsUserUtility');
     $rememberKey = XoopsUserUtility::rememberKey();
+    $rememberUser = null;
     if (null !== $rememberKey) {
         $rememberSigningKey = $rememberKey->getSigning();
         $rememberClaims = \Xmf\Jwt\TokenReader::fromCookie($rememberKey, $GLOBALS['xoopsConfig']['usercookie']);
+        if (is_object($rememberClaims) && !empty($rememberClaims->uid)) {
+            $candidate = $member_handler->getUser((int) $rememberClaims->uid);
+            $rememberUser = (is_object($candidate) && $candidate->isActive()
+                && is_string($rememberClaims->pfp ?? null)
+                && hash_equals(XoopsUserUtility::rememberFingerprint($candidate, $rememberSigningKey), $rememberClaims->pfp))
+                ? $candidate : null;
+        }
     }
-    if (false !== $rememberClaims && !empty($rememberClaims->uid)) {
-        $_SESSION['xoopsUserId'] = $rememberClaims->uid;
+    if (null !== $rememberUser) {
+        $_SESSION['xoopsUserId'] = $rememberUser->getVar('uid');
     } else {
+        // Not a cookie login: the restore block must not renew a refused token.
+        $rememberClaims = false;
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
     }
+    unset($candidate, $rememberUser);
 }
 
 /**
@@ -362,18 +378,9 @@ if (empty($_SESSION['xoopsUserId'])
 if (!empty($_SESSION['xoopsUserId'])) {
     $xoopsUser = $member_handler->getUser($_SESSION['xoopsUserId']);
     // A missing or deactivated account ends the session here, whether it was
-    // restored from the session store or from the remember-me cookie. On the
-    // cookie path the token must also carry the fingerprint of the current
-    // password hash: a token issued before a password change, or before this
-    // claim existed, is rejected. A signed token can still carry a malformed
-    // claim, so the value is type-checked rather than cast, and with no
-    // readable signing key the cookie path fails closed.
-    if (!is_object($xoopsUser) || !$xoopsUser->isActive()
-        || (is_object($rememberClaims)
-            && ('' === $rememberSigningKey
-                || !is_string($rememberClaims->pfp ?? null)
-                || !hash_equals(XoopsUserUtility::rememberFingerprint($xoopsUser, $rememberSigningKey), $rememberClaims->pfp)))
-    ) {
+    // restored from the session store or from the remember-me cookie (whose
+    // own checks ran above, before the session was seeded).
+    if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {
         $xoopsUser = '';
         $_SESSION  = [];
         session_destroy();

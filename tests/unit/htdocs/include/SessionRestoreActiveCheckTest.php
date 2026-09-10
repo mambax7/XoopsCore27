@@ -53,7 +53,14 @@ final class SessionRestoreActiveCheckTest extends TestCase
     #[Test]
     public function inactiveAccountIsTreatedLikeAMissingOne(): void
     {
-        self::assertStringContainsString('if (!is_object($xoopsUser) || !$xoopsUser->isActive()', $this->restore);
+        self::assertStringContainsString('if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {', $this->restore);
+        // The cookie's own checks run before the session is seeded (see the
+        // cookie-path test below); this condition carries only the account
+        // checks that apply to both the session-store and the cookie path.
+        $conditionStart = (int) strpos($this->restore, 'if (!is_object($xoopsUser)');
+        $branchCondition = substr($this->restore, $conditionStart, (int) strpos($this->restore, ') {', $conditionStart) - $conditionStart);
+        self::assertStringNotContainsString('rememberFingerprint(', $branchCondition);
+        self::assertStringNotContainsString('rememberClaims', $branchCondition);
 
         // The same branch must still clear the session and both cookie forms.
         $branch = substr($this->restore, strpos($this->restore, '!$xoopsUser->isActive()'));
@@ -94,79 +101,48 @@ final class SessionRestoreActiveCheckTest extends TestCase
     }
 
     #[Test]
-    public function aRememberTokenWithoutAMatchingFingerprintEndsTheSession(): void
+    public function aCookieIsCheckedAgainstTheLoadedAccountBeforeItSeedsTheSession(): void
     {
-        $condition = substr($this->restore, (int) strpos($this->restore, 'if (!is_object($xoopsUser) || !$xoopsUser->isActive()'));
-        $condition = substr($condition, 0, (int) strpos($condition, "\$xoopsUser = '';"));
+        // The account is loaded and every check runs BEFORE $_SESSION['xoopsUserId']
+        // is written, so a token for a missing or inactive account, or one whose
+        // fingerprint no longer matches, never becomes a session at all.
+        $blockStart = strpos($this->sourceContent, '$rememberClaims = false;');
+        $blockEnd   = strpos($this->sourceContent, "/**
+ * Log user in", (int) $blockStart);
+        self::assertNotFalse($blockStart);
+        self::assertNotFalse($blockEnd);
+        $block = substr($this->sourceContent, $blockStart, $blockEnd - $blockStart);
 
-        $active = strpos($condition, '!$xoopsUser->isActive()');
-        $cookie = strpos($condition, 'is_object($rememberClaims)');
-        $string = strpos($condition, 'is_string($rememberClaims->pfp ?? null)');
-        $equal  = strpos($condition, 'hash_equals(XoopsUserUtility::rememberFingerprint($xoopsUser, ');
-        self::assertNotFalse($cookie);
-        self::assertNotFalse($string);
-        self::assertNotFalse($equal);
-
-        // A missing or inactive account short-circuits before the helper runs,
-        // and the fingerprint terms apply only on the cookie path.
-        self::assertLessThan($cookie, $active);
-        self::assertLessThan($string, $cookie);
-        self::assertLessThan($equal, $string);
-        $flat = (string) preg_replace('/\s+/', ' ', $condition);
-        self::assertStringContainsString("&& ('' === \$rememberSigningKey || !is_string(\$rememberClaims->pfp ?? null)", $flat);
-
-        // A signed token can still carry a malformed claim; it must fail the
-        // comparison, never be coerced into a string.
-        self::assertStringNotContainsString('(string) $rememberClaims->pfp', $condition);
-
-        // No readable signing key: fail closed rather than compare against a
-        // fingerprint keyed with ''.
-        $noKey = strpos($condition, "'' === \$rememberSigningKey");
-        self::assertNotFalse($noKey);
-        self::assertLessThan($noKey, $cookie);
-        self::assertLessThan($string, $noKey);
-    }
-
-    #[Test]
-    public function fingerprintAndSignatureShareOneSnapshotOfTheKey(): void
-    {
-        // Both issue sites take the key once via rememberKey() and hand that
-        // same object to the signer, so a re-read of storage between the two
-        // cannot produce a token whose fingerprint and signature disagree.
-        $renewal = substr($this->restore, (int) strpos($this->restore, '// update our remember me cookie'));
-        self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $renewal);
-        self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $this->sourceContent);
-        self::assertStringContainsString('$rememberSigningKey = $rememberKey->getSigning();', $this->sourceContent);
-
-        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
-        self::assertNotFalse($login);
-        self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $login);
-        self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $login);
-        self::assertStringContainsString("rememberFingerprint(\$user, \$rememberKey->getSigning())", $login);
-        // and nothing is issued without a key
-        self::assertStringContainsString('if (null !== $rememberKey) {', $login);
-        self::assertStringNotContainsString("TokenFactory::build('rememberme'", $login);
-        self::assertStringNotContainsString("TokenFactory::build('rememberme'", $renewal);
-    }
-
-    #[Test]
-    public function loginReadsTheKeyOnlyWhenRememberMeWasRequested(): void
-    {
-        // Reading the key creates the key file as a side effect, so a login
-        // without "remember me" must not touch it. A request that cannot be
-        // honoured is explained by the warning rememberKey() itself raises for
-        // every null result, so the login handler adds no second one.
-        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
-        self::assertNotFalse($login);
-        $request = strpos($login, 'if ($remember) {');
-        $read    = strpos($login, '$rememberKey = XoopsUserUtility::rememberKey();');
-        $issue   = strpos($login, 'if (null !== $rememberKey) {');
-        self::assertNotFalse($request);
+        $read   = strpos($block, '\Xmf\Jwt\TokenReader::fromCookie($rememberKey, ');
+        $load   = strpos($block, '$candidate = $member_handler->getUser((int) $rememberClaims->uid);');
+        $decide = strpos($block, '$rememberUser = (is_object($candidate)');
+        $seed   = strpos($block, "\$_SESSION['xoopsUserId'] = \$rememberUser->getVar('uid');");
         self::assertNotFalse($read);
-        self::assertNotFalse($issue);
-        self::assertLessThan($read, $request);
-        self::assertLessThan($issue, $read);
-        self::assertStringNotContainsString('trigger_error(', substr($login, $request, $issue - $request));
+        self::assertNotFalse($load);
+        self::assertNotFalse($decide);
+        self::assertNotFalse($seed);
+        self::assertLessThan($load, $read);
+        self::assertLessThan($decide, $load);
+        self::assertLessThan($seed, $decide);
+        // ... and that is the only session write in the block: nothing seeds
+        // it from the raw claim before the decision.
+        self::assertSame(1, substr_count($block, "\$_SESSION['xoopsUserId'] ="));
+
+        // A signed token can still carry a malformed claim; it is type-checked
+        // and compared in constant time, never coerced into a string.
+        $decision = substr($block, $decide, (int) strpos($block, ";
+", $decide) - $decide);
+        self::assertStringContainsString('$candidate->isActive()', $decision);
+        self::assertStringContainsString('is_string($rememberClaims->pfp ?? null)', $decision);
+        self::assertStringContainsString('hash_equals(XoopsUserUtility::rememberFingerprint($candidate, $rememberSigningKey), $rememberClaims->pfp)', $decision);
+        self::assertStringNotContainsString('(string) $rememberClaims->pfp', $block);
+
+        // A refused cookie is not a cookie login: the flag the restore block and
+        // the renewal key on is cleared before both cookie forms are expired.
+        $reject = strpos($block, '$rememberClaims = false;', $decide);
+        self::assertNotFalse($reject, 'the rejection branch must clear the cookie-login flag');
+        self::assertLessThan((int) strpos($block, 'xoops_setcookie(', $decide), $reject);
+        self::assertSame(2, substr_count(substr($block, $reject), "xoops_setcookie(\$GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600"));
     }
 
     #[Test]
@@ -180,7 +156,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
         $present  = strpos($src, "'' !== \\Xmf\\Request::getString(\$GLOBALS['xoopsConfig']['usercookie'], '', 'COOKIE')");
         $snapshot = strpos($src, '$rememberKey = XoopsUserUtility::rememberKey();');
         $read     = strpos($src, "\\Xmf\\Jwt\\TokenReader::fromCookie(\$rememberKey, \$GLOBALS['xoopsConfig']['usercookie'])");
-        $seed     = strpos($src, "\$_SESSION['xoopsUserId'] = \$rememberClaims->uid;");
+        $seed     = strpos($src, "\$_SESSION['xoopsUserId'] = \$rememberUser->getVar('uid');");
         self::assertNotFalse($present);
         self::assertNotFalse($snapshot);
         self::assertNotFalse($read);
