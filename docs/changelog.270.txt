@@ -1,6 +1,34 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.4 Beta 1                  2026-09
+===================================
+Security:
+- revoke remember-me tokens when the stored password hash changes: the token now carries an HMAC-SHA256 fingerprint of the hash, keyed with the token's own signing key, and the cookie-path restore rejects a token whose fingerprint does not match. Every password write, including a lost-password reset and the rehash on login, invalidates every earlier token without those paths knowing about the claim; sessions restored from the session store are unaffected; tokens issued before this release carry no fingerprint and are rejected once, so each remembered device logs in again one time (include/checklogin.php, include/common.php, class/userutility.php). One snapshot of the signing key serves the token's validation, fingerprint and renewal, the key is read only when remember-me is requested, a key that cannot be read fails closed with a contained E_USER_WARNING, and the key bytes are dropped once the renewal has run (#194)
+- end a restored session for a deactivated account, whether it came from the session store or the remember-me cookie, and resolve group membership from the database on every request so an account removed from a group loses that group's rights on its next request; the session copy of the group list is still written for code that reads it (#188)
+- validate a new account at the registration save step, not only at step 1: the step number is client-supplied, so a request claiming a later step could insert an account without the uniqueness, password, agreement and captcha checks. Step 1 records that its checks passed, the save branch requires that record, re-runs the identity validation on the values it is about to insert, and consumes the record on insert; the password fields pass through the session as typed rather than tag-stripped and trimmed (#187)
+- require a comment to belong to the requesting module on the edit form, the save path and the delete path: the module id came from the page that received the request while the handler loads any comment by id, so an administrator of one module could open, save or delete another module's comment; the edit form also accepts the system comment moderator right the save path already honoured (#189, #196)
+- check category permissions in the TinyMCE image-manager plugin (tinymce7 and tinymce5): upload requires write access to the selected category, delete requires write access to the image's own category, and listing requires read access, mirroring the core image manager; the core image-manager template passes insert codes as data attributes through one delegated listener instead of inline onclick handlers (#186)
+- gate every upgrade-wizard entry point on active webmaster-group membership through one shared check; index.php and preflight.php admitted an existing session on a module-level admin right that can be delegated per category (#189)
+- fail closed in the LDAP and Active Directory adapters when StartTLS was requested and failed: both went on to look up and bind with credentials over the plain connection (#189)
+
+Bug fixes:
+- report a stalled upgrade patch task instead of re-queuing it silently: a task whose apply returned true without satisfying its own check was selected again on every click with no message, and every patch after it was never reached; XoopsUpgrade::apply() now names the task that fails or throws and re-checks after the loop, exception text and undeletable-file lists are shown without absolute server paths, and apply_rmindexhtml() in the 2.5.11 patch reports the files it could not delete instead of claiming success (#184, closes #183)
+- define _AM_SYSTEM_USERS_NO_SUCH_USER, used by the users admin page since 2.5 but never defined; on PHP 8 an unknown user id produced a fatal page instead of a redirect with a message (#190)
+- clear the remember-me cookie on logout, on session restore and in the users admin only when a cookie name is configured; the name is empty when the feature is disabled and setcookie() rejects an empty name on PHP 8, so a logout or a deactivated account on such a site produced an error (#188, #195, closes #191)
+- tolerate a finished registration flow's session copy in the later-step merge, which is set to null when a flow finishes and failed in array_merge() on a further request (#187)
+
+Editors:
+- update the bundled TinyMCE 7 from 7.9.2 to 7.9.3, the current 7.x release, which carries three content sanitisation fixes, one of them in the media plugin the XOOPS settings enable; community build from the npm package, minified files only, xoops* plugins and langs untouched. The bundled TinyMCE 5 stays at 5.10.9: the corresponding 5.11.1 fix is not publicly distributed, so TinyMCE 5 should be treated as unpatched (#193)
+
+Language:
+- move the ten front-end MENUS_* labels of the default system menu from language/english/admin/menus.php to a new language/english/menus/menus.php, the file the kernel resolver tries first; names and values are unchanged, so seeded rows and custom language overrides keep working (#185)
+- see docs/lang_diff.txt for the added constant and the moved file
+
+Tests:
+- guard tests execute the guarded blocks rather than only matching source text: the comment edit-form guard, the registration save branch, the upgrade wizard's webmaster check, the remember-me restore condition and the comment module-ownership check are each sliced from the page and run in an isolated namespace with stubbed handlers, alongside the source-shape assertions (#187, #189, #194, #196)
+
+===================================
 2.7.3 Final                   2026-08
 ===================================
 Compatibility:
