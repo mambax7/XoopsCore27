@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Htdocs;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tests\Unit\System\SourceFileTestTrait;
@@ -38,10 +39,25 @@ final class LogoutCookieNameGuardTest extends TestCase
 {
     use SourceFileTestTrait;
 
-    #[Test]
-    public function logoutClearsTheRememberMeCookieOnlyWhenANameIsConfigured(): void
+    /**
+     * Both logout entry points: the core one and the profile module's own,
+     * which is reached directly at modules/profile/user.php?op=logout.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function logoutPages(): array
     {
-        $this->loadSourceFile('htdocs/user.php');
+        return [
+            'core user.php'           => ['htdocs/user.php'],
+            'profile module user.php' => ['htdocs/modules/profile/user.php'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('logoutPages')]
+    public function logoutClearsTheRememberMeCookieOnlyWhenANameIsConfigured(string $file): void
+    {
+        $this->loadSourceFile($file);
         $start = strpos($this->sourceContent, "if (\$op === 'logout') {");
         self::assertNotFalse($start);
         $end = strpos($this->sourceContent, '// clear entry from online users table', $start);
