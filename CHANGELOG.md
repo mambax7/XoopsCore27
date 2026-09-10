@@ -5,6 +5,29 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.4-Beta1] - 2026-09-10
+
+### Bug Fixes
+- **profile**: Guard the logout cookie name in the profile module's own logout too
+- **user**: Clear the remember-me cookie on logout only when a cookie name is configured
+- **system**: Define _AM_SYSTEM_USERS_NO_SUCH_USER for the users admin page (#190)
+- **upgrade**: Report stalled patch tasks instead of re-queuing silently (#184)
+
+### Miscellaneous
+- **tinymce**: Update TinyMCE 7 from 7.9.2 to 7.9.3 (#193)
+- **tinymce**: Update TinyMCE 7 from 7.9.2 to 7.9.3
+
+### Refactor
+- **system**: Move front-end MENUS_* labels out of the admin language file (#185)
+
+### Security
+- **comment**: Require a posted or deleted comment to belong to the requesting module (#196)
+- **session**: Revoke remember-me tokens when the stored password hash changes (#194)
+- Tighten the upgrade gate, directory TLS and the comment edit form (#189)
+- **session**: End restored sessions for inactive accounts and refresh groups per request (#188)
+- **profile**: Validate a new account at the save step, not only at step 1 (#187)
+- **imagemanager**: Check category permissions in the editor plugin and pass insert codes as data (#186)
+
 ## [v2.7.3] - 2026-08-24
 
 ### Bug Fixes
@@ -27,6 +50,7 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 
 ### Other
 - Fix/273 hardening (#179)
+- Version correction
 - Adding 2.7.x versions to issue template
 - Deprecate XOBJ_DTYPE_UNICODE_* datatypes (2.7.3)- #164
 - Drop stray @deprecated tag from DEPRECATED_UNICODE_DATATYPES docblock
