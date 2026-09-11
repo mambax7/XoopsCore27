@@ -45,6 +45,7 @@ final class XoopsTotp
      * A fresh 160-bit secret as 32 base32 characters.
      *
      * @return string
+     * @throws \Random\RandomException when the secure random source fails
      */
     public static function newSecret(): string
     {

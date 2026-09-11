@@ -72,11 +72,14 @@ final class XoopsTwoFactorCrypto
     }
 
     /**
-     * @return bool whether the sodium extension is loaded
+     * @return bool whether the sodium functions required by this feature are callable
      */
     public function isAvailable(): bool
     {
-        return extension_loaded('sodium');
+        return extension_loaded('sodium')
+            && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_keygen')
+            && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
+            && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_decrypt');
     }
 
     /**

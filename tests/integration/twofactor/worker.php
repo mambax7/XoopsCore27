@@ -16,6 +16,14 @@ try {
         require __DIR__ . '/request.php';
         exit;
     }
+    if ($job['action'] === 'migrate_mode') {
+        $upgradeRoot = dirname(XOOPS_ROOT_PATH) . '/upgrade';
+        require $upgradeRoot . '/class/autoload.php';
+        require $upgradeRoot . '/upd_2.7.3-to-2.7.4/index.php';
+        $upgrade = new Upgrade_274($db, new Xoops\Upgrade\UpgradeControl($db));
+        echo json_encode(['connection' => $db->conn->thread_id, 'result' => $upgrade->apply_twofactormode()], JSON_THROW_ON_ERROR) . "\n";
+        exit;
+    }
     if ($job['action'] === 'enrol') {
         $enrolCrypto = testCrypto('first-enrolment');
         $enrolHandler = new XoopsUser2faHandler($db, crypto: $enrolCrypto, installed: true);

@@ -459,15 +459,17 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         }
 
         $this->sql = [];
+        $thrown = false;
         try {
             $handler->withTransaction(static function (): void {
                 throw new \RuntimeException('boom');
             });
-            $this->fail('the exception was swallowed');
         } catch (\RuntimeException $e) {
+            $thrown = true;
             $this->assertSame('boom', $e->getMessage());
             $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql);
         }
+        $this->assertTrue($thrown, 'the exception was swallowed');
 
         $this->sql = [];
         $this->assertFalse($handler->withTransaction(static fn (): bool => false));
@@ -507,12 +509,14 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             static fn () => $poisoned->acceptTotp(10, 101, self::GEN, self::NOW),
             static fn () => $poisoned->deleteByUid(10),
         ] as $call) {
+            $thrown = false;
             try {
                 $call();
-                $this->fail('the handler used a connection whose ROLLBACK was refused');
             } catch (\RuntimeException) {
+                $thrown = true;
                 $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql, 'no statement reached the connection');
             }
+            $this->assertTrue($thrown, 'the handler used a connection whose ROLLBACK was refused');
         }
         $this->execResult = true;
 
@@ -564,24 +568,28 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             return true;
         };
 
+        $thrown = false;
         try {
             $handler->withTransaction(static function (): void {
                 throw new \RuntimeException('boom');
             });
-            $this->fail('nothing propagated');
         } catch (\RuntimeException $e) {
+            $thrown = true;
             $this->assertSame('rollback failed', $e->getMessage());
         }
+        $this->assertTrue($thrown, 'nothing propagated');
 
         // The connection may still hold the transaction: closed to a new one.
         $this->execResult = true;
         $this->sql        = [];
+        $thrown = false;
         try {
             $handler->withTransaction(static fn (): bool => true);
-            $this->fail('a transaction started on a connection whose ROLLBACK threw');
         } catch (\RuntimeException) {
+            $thrown = true;
             $this->assertSame([], $this->sql, 'no START TRANSACTION reached the connection');
         }
+        $this->assertTrue($thrown, 'a transaction started on a connection whose ROLLBACK threw');
     }
 
     /* ---------------------------------------------------------------- */

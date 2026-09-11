@@ -53,6 +53,8 @@ final class Upgrade274Test extends TestCase
     private string $queryFailsFor = '';
 
     private bool $execFails = false;
+    private bool $lockGranted = true;
+    private array $queries = [];
 
     protected function setUp(): void
     {
@@ -85,12 +87,19 @@ final class Upgrade274Test extends TestCase
             return !$this->execFails;
         });
         $db->method('query')->willReturnCallback(function (string $sql): mixed {
+            $this->queries[] = $sql;
             $fails = '*' === $this->queryFailsFor || ('' !== $this->queryFailsFor && str_contains($sql, $this->queryFailsFor));
 
             return $fails ? false : (new ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor();
         });
         $db->method('isResultSet')->willReturnCallback(static fn ($result): bool => $result instanceof \mysqli_result);
         $db->method('fetchRow')->willReturnCallback(function () {
+            if (str_contains((string) end($this->queries), 'GET_LOCK(')) {
+                return [$this->lockGranted ? 1 : 0];
+            }
+            if (str_contains((string) end($this->queries), 'RELEASE_LOCK(')) {
+                return [1];
+            }
             $row = array_shift($this->rows);
 
             return null === $row ? false : $row;
@@ -102,6 +111,28 @@ final class Upgrade274Test extends TestCase
         });
 
         return new Upgrade_274($db, $this->createMock(UpgradeControl::class));
+    }
+
+    #[Test]
+    public function modeMigrationRefusesAnUnacquiredLockWithoutWriting(): void
+    {
+        $this->lockGranted = false;
+        $this->rows = [false, [140], [0], [0]];
+        self::assertFalse($this->patch()->apply_twofactormode());
+        self::assertSame([], $this->exec);
+        self::assertCount(1, $this->queries);
+        self::assertStringContainsString('GET_LOCK(', $this->queries[0]);
+    }
+
+    #[Test]
+    public function modeMigrationReleasesItsLockEvenWhenALookupFails(): void
+    {
+        $this->queryFailsFor = '`xoops_config`';
+        $patch = $this->patch();
+        self::assertFalse($patch->apply_twofactormode());
+        self::assertStringContainsString('GET_LOCK(', $this->queries[0]);
+        self::assertStringContainsString('RELEASE_LOCK(', end($this->queries));
+        self::assertSame([], $this->exec);
     }
 
     #[Test]

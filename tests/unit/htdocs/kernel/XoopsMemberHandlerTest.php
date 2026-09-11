@@ -415,7 +415,7 @@ class XoopsMemberHandlerTest extends TestCase
         $this->assertSame(['DELETE FROM `xoops_tokens` WHERE `uid` = 10'], $sql);
     }
 
-    public function testDeleteUserRemovesTheFactorRowAfterTheTokensAndBeforeTheMemberships(): void
+    public function testDeleteUserRemovesTheFactorRowOnlyAfterTheUser(): void
     {
         require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
         require_once XOOPS_ROOT_PATH . '/kernel/user2fa.php';
@@ -459,14 +459,55 @@ class XoopsMemberHandlerTest extends TestCase
                           });
 
         $this->assertTrue($this->handler->deleteUser($user));
-        $this->assertSame(['tokens', 'user_2fa', 'memberships', 'user'], $order);
+        $this->assertSame(['tokens', 'memberships', 'user', 'user_2fa'], $order);
         $this->assertSame(
             ['DELETE FROM `xoops_tokens` WHERE `uid` = 10', 'DELETE FROM `xoops_user_2fa` WHERE `uid` = 10'],
             $sql
         );
     }
 
-    public function testDeleteUserStopsWhenTheFactorRowDeleteFails(): void
+    public function testDeleteUserKeepsTheFactorWhenAccountDeletionFails(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/kernel/user2fa.php';
+        $factorDb = $this->createMock(XoopsMySQLDatabase::class);
+        $factor = $this->retainedFactor($factorDb);
+        $this->setProtectedProperty($this->handler, 'user2faHandler', $factor);
+        $this->membershipHandler->method('deleteAll')->willReturn(true);
+        $this->userHandler->method('delete')->willReturn(false);
+        self::assertFalse($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
+        self::assertSame('enrolled', $factor->getRow(10)['state']);
+        self::assertTrue(\XoopsUser2faHandler::mustChallenge('optional', $factor->stateFor(10)));
+    }
+
+    public function testDeleteUserKeepsTheFactorWhenMembershipDeletionFails(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/kernel/user2fa.php';
+        $factorDb = $this->createMock(XoopsMySQLDatabase::class);
+        $factor = $this->retainedFactor($factorDb);
+        $this->setProtectedProperty($this->handler, 'user2faHandler', $factor);
+        $this->membershipHandler->method('deleteAll')->willReturn(false);
+        $this->userHandler->expects($this->never())->method('delete');
+        self::assertFalse($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
+        self::assertSame('enrolled', $factor->getRow(10)['state']);
+        self::assertTrue(\XoopsUser2faHandler::mustChallenge('optional', $factor->stateFor(10)));
+    }
+
+    private function retainedFactor(XoopsMySQLDatabase $db): \XoopsUser2faHandler
+    {
+        $present = true;
+        $db->method('exec')->willReturnCallback(static function () use (&$present): bool { $present = false; return true; });
+        $db->method('prefix')->willReturn('xoops_user_2fa');
+        $db->method('query')->willReturn((new \ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor());
+        $db->method('isResultSet')->willReturn(true);
+        $db->method('fetchArray')->willReturnCallback(static function () use (&$present) { return $present ? [
+            'uid' => 10, 'state' => 'enrolled', 'method' => 'totp', 'secret' => null, 'generation' => 'generation',
+            'confirmed_at' => 1, 'last_counter' => 0, 'failed_attempts' => 0, 'locked_until' => 0,
+        ] : false; });
+
+        return new \XoopsUser2faHandler($db, null, null, true);
+    }
+
+    public function testDeleteUserSucceedsWhenOnlyFinalFactorCleanupFails(): void
     {
         require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
         require_once XOOPS_ROOT_PATH . '/kernel/user2fa.php';
@@ -481,10 +522,10 @@ class XoopsMemberHandlerTest extends TestCase
         $this->setProtectedProperty($this->handler, 'tokenHandler', new \XoopsTokenHandler($okDb));
         $this->setProtectedProperty($this->handler, 'user2faHandler', new \XoopsUser2faHandler($badDb, new \XoopsTokenHandler($okDb), null, true));
 
-        $this->membershipHandler->expects($this->never())->method('deleteAll');
-        $this->userHandler->expects($this->never())->method('delete');
+        $this->membershipHandler->expects($this->once())->method('deleteAll')->willReturn(true);
+        $this->userHandler->expects($this->once())->method('delete')->willReturn(true);
 
-        $this->assertFalse($this->handler->deleteUser($user));
+        $this->assertTrue(@$this->handler->deleteUser($user));
     }
 
     public function testDeleteUserSkipsTheFactorRowWhenTheFeatureIsNotInstalled(): void
@@ -516,19 +557,19 @@ class XoopsMemberHandlerTest extends TestCase
         $factorDb->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
         $factorDb->method('exec')->willThrowException(new \RuntimeException('private SQL and secret'));
         $this->setProtectedProperty($this->handler, 'user2faHandler', new \XoopsUser2faHandler($factorDb, new \XoopsTokenHandler($factorDb), null, true));
-        $this->membershipHandler->expects($this->never())->method('deleteAll');
-        $this->userHandler->expects($this->never())->method('delete');
+        $this->membershipHandler->expects($this->once())->method('deleteAll')->willReturn(true);
+        $this->userHandler->expects($this->once())->method('delete')->willReturn(true);
         $warnings = [];
         set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
             $warnings[] = [$level, $message];
             return true;
         });
         try {
-            self::assertFalse($this->handler->deleteUser($user));
+            self::assertTrue($this->handler->deleteUser($user));
         } finally {
             restore_error_handler();
         }
-        self::assertSame([[E_USER_WARNING, 'User deletion refused for uid 10: second-factor cleanup unavailable']], $warnings);
+        self::assertSame([[E_USER_WARNING, 'User 10 deleted; second-factor cleanup unavailable']], $warnings);
     }
 
     public function testDeleteUserStopsWhenTheTokenDeleteFails(): void

@@ -159,14 +159,16 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
     public function testMissingKeyIsInfrastructureFailureRatherThanBadCode(): void
     {
         $missingKey = new XoopsTwoFactorCrypto(new FileStorage($this->dir, 'missing'), $this->dir . '/missing.lock');
+        $thrown = false;
         try {
             $this->handler($missingKey)->manage(10, self::GEN, $this->code(), '', 'disable', self::NOW);
-            self::fail('Missing key must throw');
         } catch (\RuntimeException $e) {
+            $thrown = true;
             self::assertSame('Two-factor verification unavailable', $e->getMessage());
             self::assertCount(3, $this->sql);
             self::assertSame('ROLLBACK', end($this->sql));
         }
+        self::assertTrue($thrown, 'Missing key must throw');
     }
 
     public function testDisableMutationAndRevocationFailuresRollBackAcceptedTotp(): void
@@ -174,14 +176,16 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
         foreach (["UPDATE `xoops_user_2fa` SET `state`", 'revoke'] as $failure) {
             $this->fail = $failure;
             $this->sql = [];
+            $thrown = false;
             try {
                 $this->handler()->manage(10, self::GEN, $this->code(), '', 'disable', self::NOW);
-                self::fail('Mutation failure must throw');
             } catch (\RuntimeException $e) {
+                $thrown = true;
                 self::assertStringContainsString('SET `last_counter`', $this->sql[2]);
                 self::assertSame('ROLLBACK', end($this->sql));
                 self::assertNotContains('COMMIT', $this->sql);
             }
+            self::assertTrue($thrown, 'Mutation failure must throw');
         }
     }
 
@@ -190,13 +194,15 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
         foreach (['START TRANSACTION', 'UPDATE `xoops_tokens`', 'UPDATE `xoops_user_2fa`', 'revoke', 'INSERT INTO `xoops_tokens`', 'COMMIT'] as $failure) {
             $this->fail = $failure;
             $this->sql = [];
+            $thrown = false;
             try {
                 $this->handler()->manage(10, self::GEN, '', 'GOOD', 'regenerate', self::NOW);
-                self::fail('Storage failure was not thrown: ' . $failure);
             } catch (\RuntimeException $e) {
+                $thrown = true;
                 self::assertSame($failure === 'START TRANSACTION' ? $failure : 'ROLLBACK', end($this->sql));
                 self::assertNotContains('COMMIT', array_slice($this->sql, 0, -2));
             }
+            self::assertTrue($thrown, 'Storage failure was not thrown: ' . $failure);
         }
     }
 }

@@ -6,6 +6,8 @@ use Xmf\Request;
 // path to your xoops main directory
 $path = '/path/to/xoops/directory';
 
+// Keep headers writable until authentication has rotated the session cookie.
+ob_start();
 include $path . '/mainfile.php';
 if (!defined('XOOPS_ROOT_PATH')) {
     exit();
@@ -77,7 +79,18 @@ if ($op === 'dologin') {
             $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
         }
         if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
+            // The SSL bridge can use a different host; never invent an HTTPS core URL.
+            if ('https' !== strtolower((string) parse_url(XOOPS_URL, PHP_URL_SCHEME))) {
+                xoops_error(htmlspecialchars(_US_2FA_HTTP_LOGIN, ENT_QUOTES, 'UTF-8'));
+                echo '<p><a href="' . htmlspecialchars(XOOPS_URL . '/user.php', ENT_QUOTES, 'UTF-8') . '">'
+                    . htmlspecialchars(_US_2FA_REQUIRED, ENT_QUOTES, 'UTF-8') . '</a></p>';
+                exit();
+            }
             redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);
+            exit();
+        }
+        if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+            xoops_error(_US_2FA_STARTAGAIN);
             exit();
         }
         $user->setVar('last_login', time());

@@ -33,6 +33,7 @@ define('_US_2FA_BADCODE', 'That code was not accepted.');
 define('_US_2FA_LOCKED', 'Too many attempts. The second step is locked for fifteen minutes; a recovery code still works.');
 define('_US_2FA_UNAVAILABLE', 'The authenticator step is not available right now. A recovery code still works, or contact the site administrator.');
 define('_US_2FA_REQUIRED', 'This account has two-factor authentication enabled. Please sign in through the site\'s login page.');
+define('_US_2FA_HTTP_LOGIN', 'The site login uses HTTP and will send your password without encryption. Continue only if you accept this risk, or ask the administrator to enable HTTPS for the site.');
 define('_US_2FA_LOCKED_MAIL_SUBJECT', '%s: second step locked');
 define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong authenticator codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
 define('_US_2FA_RECOVERY_MAIL_SUBJECT', '%s: a recovery code was used');

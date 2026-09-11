@@ -202,26 +202,23 @@ class XoopsMemberHandler
         if (null !== $this->tokenHandler && !$this->tokenHandler->deleteByUid((int) $user->getVar('uid'))) {
             return false;
         }
-        // The factor row goes with the tokens: a dead account must not keep
-        // a factor row any more than live recovery codes. Skipped, not
-        // failed, while the 2.7.4 patch has not created the table.
+        $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
+        if (!$this->membershipHandler->deleteAll($criteria) || !$this->userHandler->delete($user)) {
+            return false;
+        }
+        // Users and memberships can be MyISAM. Keep the factor until the
+        // account is gone: deleting it first would disable 2FA on a failed
+        // account deletion, and a transaction cannot restore a MyISAM user.
         try {
             if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
-                return false;
+                throw new \RuntimeException('Second-factor cleanup failed');
             }
         } catch (\Throwable $e) {
-            // A connection poisoned by an earlier failed rollback throws.
-            trigger_error(sprintf('User deletion refused for uid %d: second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
-            return false;
-        }
-        $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
-        if (!$this->membershipHandler->deleteAll($criteria)) {
-            // Same rule: a step that did not run keeps the account, so a
-            // false return always means the row is still there.
-            return false;
+            // The account is already gone; an orphaned factor grants no login.
+            trigger_error(sprintf('User %d deleted; second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
         }
 
-        return (bool) $this->userHandler->delete($user);
+        return true;
     }
 
     /**

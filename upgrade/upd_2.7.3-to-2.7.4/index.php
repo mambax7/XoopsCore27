@@ -156,6 +156,34 @@ class Upgrade_274 extends XoopsUpgrade
      */
     public function apply_twofactormode(): bool
     {
+        // Config has no unique key for a preference or its options. Serialize
+        // this patch across connections; DDL in other tasks must not release it.
+        // Hash database + table + purpose to stay within MySQL's 64-byte limit.
+        $lock = 'SHA2(CONCAT(DATABASE(), ' . $this->db->quote(':' . $this->db->prefix('config') . ':twofactor_mode') . '), 256)';
+        $result = $this->db->query('SELECT GET_LOCK(' . $lock . ', 10)');
+        $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
+        if (!is_array($row) || 1 !== (int) $row[0]) {
+            $this->logs[] = 'Could not acquire the twofactor_mode migration lock; retry the upgrade';
+            return false;
+        }
+        $success = false;
+        try {
+            $success = $this->applyModeRows();
+        } finally {
+            $result = $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
+            $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
+            if (!is_array($row) || 1 !== (int) $row[0]) {
+                $this->logs[] = 'Could not release the twofactor_mode migration lock';
+                $success = false;
+            }
+        }
+
+        return $success;
+    }
+
+    /** Insert missing rows while apply_twofactormode() holds the site lock. */
+    private function applyModeRows(): bool
+    {
         $confId = $this->modeConfId();
         if (null === $confId) {
             $this->logs[] = 'Could not read the config table; the twofactor_mode preference was not inserted';

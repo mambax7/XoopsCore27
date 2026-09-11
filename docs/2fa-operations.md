@@ -9,6 +9,8 @@ Enable PHP sodium in the web server's PHP configuration. The installer and
 upgrade preflight report whether it is available. A CLI PHP installation
 may load different extensions from the web server, so check the web page.
 You can finish installation or upgrade with 2FA off while fixing sodium.
+Composer lists sodium as a feature suggestion, so dependency installation
+also remains available on these PHP builds.
 
 Complete the upgrade wizard **including its final System-module update**.
 That step registers the challenge and management templates. Then select
@@ -49,6 +51,8 @@ In Users Admin, edit the user and follow “Reset this user’s two-factor
 authentication.” Confirm with **your own administrator password**. The
 action is logged and the affected user receives a best-effort email. Mail
 failure does not undo the reset.
+Resetting an account with no active factor simply reports that 2FA is
+disabled; it does not create a row or send a reset notification.
 
 ## Back up the site key
 
@@ -90,7 +94,10 @@ returning `true`, described in an earlier proposal, is not recognised.
 Replace or remove any older copy of the repository-root `extras/login.php`
 that an operator previously installed in a separate SSL directory. Updating
 the core does not update that copy; it remains a password-only bypass.
-The current popup directs factor-protected users to core login. XML-RPC
+The current popup rotates the session ID on successful password login and
+directs factor-protected users to core login. If the configured core URL is
+HTTP, it shows a transport warning and a link instead of redirecting silently;
+the separate SSL popup URL does not prove the core site supports HTTPS. XML-RPC
 refuses accounts that must present a factor under the current policy.
 
 ## Verification

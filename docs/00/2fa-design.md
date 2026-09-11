@@ -1,6 +1,6 @@
 # Two-factor authentication for XOOPS 2.7 — design proposal
 
-Date: 2026-09-11. Revision 8, self-contained: every retained requirement is
+Date: 2026-09-11. Revision 9, self-contained: every retained requirement is
 written out here and nothing refers to an earlier revision.
 Status: implementation and local verification complete; CI and integration
 of the remaining PR stack are release gates. PRs #201 and #204
@@ -57,10 +57,11 @@ against credential stuffing and reuse; the warning names the risk.
   Ending other sessions on a password change stays out of scope, as
   decided for #194. Session IP binding is not part of this design; the
   session handler's own IP rules apply unchanged.
-- **Sodium is a hard dependency of the feature**, declared as `ext-sodium`
-  in `xoops_lib/composer.dist.json` beside `ext-iconv`; enrolment and the
-  TOTP challenge fail closed without it (recovery codes still work) and the install and upgrade preflight
-  report it.
+- **Sodium is required by enrolment and TOTP verification**, listed in
+  Composer's `suggest` rather than the site's hard requirements. Runtime,
+  installer and upgrade checks require the extension and the keygen, encrypt
+  and decrypt functions. Setup and TOTP fail closed when unavailable;
+  recovery codes and sites with 2FA off remain usable.
 - **The 2FA preference rows live in `XOOPS_CONF`**, the category
   `common.php` loads on every request, so their presence doubles as the
   "installed" signal at no extra query. No other setting moves.
@@ -135,10 +136,14 @@ against credential stuffing and reuse; the warning names the risk.
 2. **PR B — token handler and deletion.** Caller-supplied raw token;
    `$ttl = null` writes `4294967295`; `revokeByScope()` returns its outcome;
    regression coverage for `revokePrevious = false`; the purge test.
-   `deleteUser()` deletes the uid's tokens for all scopes and its `user_2fa`
-   row **before** the membership and user deletes, so a failed user delete
-   cannot leave a dead account with live recovery codes. Canonicalisation
-   stays out of the handler.
+   `deleteUser()` removes tokens for all scopes first, then memberships and
+   the user; it removes the factor row only after the user delete succeeds.
+   A failed membership/user delete can revoke tokens but must retain the
+   enrolled factor, so the surviving account cannot become password-only.
+   Legacy MyISAM tables prevent promising an atomic rollback. Failed factor
+   cleanup after successful user deletion is logged; the deletion still
+   returns success because the account is gone. Canonicalisation stays out
+   of the token handler.
 3. **PR C — the feature**, split into C1 storage (#205), C2 login gate
    (#206), and C3 enrolment, management, admin reset and preflight. Extra
    pins: a password accepted with a challenge pending does not move
@@ -439,6 +444,11 @@ the row.
 | `ajaxfineupload.php` | unchanged, session-bound JWT, issued only to a fully established session |
 | `install/include/functions.php` | out of scope: installer token session before a site exists |
 
+The SSL popup buffers output until session rotation can send its cookie and
+refuses authentication if rotation fails. Its factor refusal redirects only
+to an HTTPS core URL; an HTTP core URL gets an explicit transport warning and
+link, since the separate SSL bridge does not prove HTTPS exists for the core.
+
 ## 11. Enrolment and management, in core
 
 `user.php?op=2fa_setup` and `op=2fa_manage`, templates in the system module,
@@ -466,7 +476,8 @@ checks the XoopsSecurity token first.
   disable.
 - **Admin reset**: users admin, acting administrator's current password in
   the form, same transaction as disable, event logged, user mailed; mail
-  failure does not roll back.
+  failure does not roll back. An absent/disabled factor is an authenticated
+  no-op without a generation change, reset event or reset email.
 - **Policy `off`**: challenges paused, rows kept, no remember-me for
   enrolled accounts.
 
@@ -477,7 +488,8 @@ checks the XoopsSecurity token first.
   success clears the lock.
 - Token handler: raw token; `4294967295` survives purge while used tokens
   are purged; `revokePrevious = false` batch; `revokeByScope()` outcome;
-  `deleteUser()` removes tokens and the row before the user delete.
+  `deleteUser()` removes tokens first but retains factor protection on a
+  failed membership/user delete; factor cleanup follows successful deletion.
 - Throttle: failures one to five individually; four do not lock; concurrent
   failures all count; a wrong code after expiry lands on 1; mail on the
   transition only.
@@ -527,6 +539,9 @@ checks the XoopsSecurity token first.
   require sodium; recovery-code verification remains independent of the key.
 - The final System-module update step imports both 2FA templates on an
   existing site. A manifest version bump is not required for that update.
+- The 2.7.4 preference migration holds a database advisory lock while
+  checking and inserting the preference/options, preventing concurrent
+  authorized upgrade requests from creating duplicate configuration rows.
 - `docs/2fa-operations.md` is the operator guide, including key backups,
   text reset sentinels, `.used` cleanup and replacing old SSL popup scripts.
 - `tests/integration/twofactor/README.md` describes the opt-in MySQL suite,

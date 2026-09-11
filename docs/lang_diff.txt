@@ -16,6 +16,7 @@ Below are language differences from a version to next version.
 - added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
 
 /htdocs/language/english/user2fa.php (new file)
+- added define('_US_2FA_HTTP_LOGIN', 'The site login uses HTTP and will send your password without encryption. Continue only if you accept this risk, or ask the administrator to enable HTTPS for the site.');
 - added define('_US_2FA_TITLE', 'Second step');
 - added define('_US_2FA_PROMPT', 'Enter the code from your authenticator app');
 - added define('_US_2FA_CODE', 'Authenticator code');

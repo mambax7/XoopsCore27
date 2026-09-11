@@ -94,6 +94,9 @@ try {
                 $authenticated = xoops_2fa_reauthenticate($actor, \Xmf\Request::getString('password', '', 'POST'));
                 if (false === $authenticated) {
                     $error = _US_2FAM_BADPASSWORD;
+                } elseif ($adminReset && !$enrolled) {
+                    // Nothing to reset: keep absent/disabled rows and generations unchanged.
+                    $message = _US_2FAM_DISABLED;
                 } elseif ($adminReset) {
                     if (false === $handler->disable($uid)) {
                         throw new \RuntimeException('Reset refused');

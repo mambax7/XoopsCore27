@@ -76,6 +76,30 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
     }
 
     #[Test]
+    public function disabledSodiumFunctionsMakeTheFeatureUnavailableWithoutThrowing(): void
+    {
+        $script = $this->dir . '/capability.php';
+        file_put_contents($script, '<?php define("XOOPS_ROOT_PATH", ' . var_export(XOOPS_ROOT_PATH, true) . ');'
+            . 'require XOOPS_ROOT_PATH . "/xoops_lib/vendor/autoload.php";'
+            . 'require XOOPS_ROOT_PATH . "/class/XoopsTwoFactorCrypto.php";'
+            . '$dir = ' . var_export($this->dir, true) . ';'
+            . '$crypto = new XoopsTwoFactorCrypto(new Xmf\\Key\\FileStorage($dir, "test"), $dir . "/twofactor.lock");'
+            . 'echo json_encode([$crypto->isAvailable(), $crypto->provisionKey(false), $crypto->seal("secret", "aad"), $crypto->open("v1:invalid", "aad")]);');
+        foreach (['keygen', 'encrypt', 'decrypt'] as $suffix) {
+            $function = 'sodium_crypto_aead_xchacha20poly1305_ietf_' . $suffix;
+            $process = proc_open([PHP_BINARY, '-d', 'disable_functions=' . $function, $script], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+            self::assertIsResource($process);
+            fclose($pipes[0]);
+            $output = stream_get_contents($pipes[1]);
+            $errors = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            self::assertSame(0, proc_close($process), $function . ': ' . $errors);
+            self::assertSame([false, false, null, null], json_decode($output, true), $function);
+        }
+    }
+
+    #[Test]
     public function provisionWritesOneKeyAndKeepsItOnASecondCall(): void
     {
         $crypto = $this->crypto();

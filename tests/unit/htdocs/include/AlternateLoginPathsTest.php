@@ -65,6 +65,43 @@ final class AlternateLoginPathsTest extends TestCase
     }
 
     #[Test]
+    public function popupDoesNotAutomaticallyDowngradeToAnHttpCore(): void
+    {
+        $this->loadSourceFile('extras/login.php');
+        $start = strpos($this->sourceContent, "            // The SSL bridge");
+        self::assertNotFalse($start);
+        $end = strpos($this->sourceContent, "        if (!\$GLOBALS['sess_handler']->regenerate_id", $start);
+        self::assertNotFalse($end);
+        $body = substr($this->sourceContent, $start, $end - $start);
+        // Exclude the enclosing mustChallenge brace; exit becomes an observable boundary.
+        $body = preg_replace('/\s*}\s*$/', '', $body);
+        $body = str_replace('exit();', 'return;', $body);
+        foreach (['http', 'https'] as $scheme) {
+            $ns = __NAMESPACE__ . '\\Popup' . ucfirst($scheme);
+            $GLOBALS['popupRedirect'] = null;
+            ob_start();
+            try {
+                eval('namespace ' . $ns . '; const XOOPS_URL = "' . $scheme . '://example.test";'
+                    . 'const _US_2FA_HTTP_LOGIN = "HTTP transport warning"; const _US_2FA_REQUIRED = "Core login";'
+                    . 'function xoops_error($message) { echo $message; }'
+                    . 'function redirect_header($url, ...$args) { $GLOBALS["popupRedirect"] = $url; }'
+                    . $body);
+                $html = ob_get_contents();
+            } finally {
+                ob_end_clean();
+            }
+            if ('http' === $scheme) {
+                self::assertNull($GLOBALS['popupRedirect']);
+                self::assertStringContainsString('HTTP transport warning', $html);
+                self::assertStringContainsString('href="http://example.test/user.php"', $html);
+            } else {
+                self::assertSame('https://example.test/user.php', $GLOBALS['popupRedirect']);
+                self::assertSame('', $html);
+            }
+        }
+    }
+
+    #[Test]
     public function xmlRpcAndTheSslPopupRefuseAnAccountThatMustBeChallenged(): void
     {
         foreach (['htdocs/class/xml/rpc/xmlrpcapi.php', 'extras/login.php'] as $file) {
@@ -77,6 +114,7 @@ final class AlternateLoginPathsTest extends TestCase
             self::assertStringContainsString('XoopsUser2faHandler::STATE_UNAVAILABLE', $this->sourceContent, $file);
         }
         $this->loadSourceFile('extras/login.php');
+        self::assertStringContainsString("if (!\$GLOBALS['sess_handler']->regenerate_id(true))", $this->sourceContent);
         self::assertStringContainsString("redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);", $this->sourceContent);
         self::assertStringContainsString("xoops_loadLanguage('user2fa');", $this->sourceContent);
         $this->assertBindsTheSession('extras/login.php');

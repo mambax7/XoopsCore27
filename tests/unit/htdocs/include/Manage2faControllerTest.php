@@ -177,6 +177,22 @@ final class Manage2faControllerTest extends TestCase
         self::assertContains('disable:12', $GLOBALS['manageLog']);
     }
 
+    #[Test]
+    public function adminResetWithoutAnActiveFactorIsAnAuthenticatedNoOp(): void
+    {
+        foreach ([null, ['state' => 'disabled', 'generation' => 'oldgen']] as $row) {
+            $GLOBALS['manageRow'] = $row;
+            $GLOBALS['manageLog'] = [];
+            $vars = @$this->execute(['action' => 'reset', 'password' => 'correct', 'uid' => 12], true);
+            self::assertSame('', $vars['error']);
+            self::assertSame(_US_2FAM_DISABLED, $vars['message']);
+            self::assertContains('reauth:9', $GLOBALS['manageLog']);
+            self::assertNotContains('disable:12', $GLOBALS['manageLog']);
+            self::assertNotContains('notice', $GLOBALS['manageLog']);
+            self::assertSame($row, $GLOBALS['manageRow']);
+        }
+    }
+
     private function sandbox(): void
     {
         if (class_exists(self::NS . '\\Rendered', false)) { return; }

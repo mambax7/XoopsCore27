@@ -162,6 +162,7 @@ try {
         check(is_string($results[1]), 'Reset succeeds during recovery race');
         check($handler->getRow($uid)['state'] === 'disabled', 'Reset wins final state');
         check(!$handler->acceptRecovery($uid, $account['codes'][0], $account['generation']), 'No recovery grant after reset');
+        check(!(new XoopsTokenHandler($db))->verify($uid, XoopsUser2faHandler::RECOVERY_SCOPE, $account['codes'][1]), 'Reset revokes unused recovery token at storage boundary');
     }
     echo "PASS: recovery racing reset (10 independent pairs)\n";
     $results = race(array_fill(0, 5, ['action' => 'key']));
@@ -172,9 +173,10 @@ try {
     // code unchanged. The enclosing site bootstrap is outside this fixture.
     $common = file_get_contents(XOOPS_ROOT_PATH . '/include/common.php');
     $start = strpos($common, '$rememberClaims = false;');
+    check($start !== false, 'Common auth block start changed');
     $endMarker = 'unset($factorRow, $endSession);';
     $end = strpos($common, $endMarker, $start);
-    check($start !== false && $end !== false, 'Common auth block boundaries changed');
+    check($end !== false, 'Common auth block end changed');
     file_put_contents($directory . '/common-auth.php', "<?php\n" . substr($common, $start, $end + strlen($endMarker) - $start));
     $manage = file_get_contents(XOOPS_ROOT_PATH . '/include/manage2fa.php');
     $end = strpos($manage, "require_once XOOPS_ROOT_PATH . '/class/template.php';");
@@ -270,6 +272,7 @@ try {
     $disabled = $request(['request' => 'manage', 'uid' => 30, 'method' => 'POST', 'post' => ['action' => 'disable', 'recovery' => $replacement['manage']['codes'][0]] + $managePost]);
     check(!$disabled['manage']['enrolled'] && $handler->getRow(30)['state'] === 'disabled', 'Authenticated factor disables account');
     check(!$handler->acceptRecovery(30, $replacement['manage']['codes'][1], $generation), 'Disable revokes replacement recovery set');
+    check(!(new XoopsTokenHandler($db))->verify(30, XoopsUser2faHandler::RECOVERY_SCOPE, $replacement['manage']['codes'][1]), 'Disable revokes unused recovery token at storage boundary');
     echo "PASS: transactional management recovery regeneration and disable\n";
 
     $account = $enrol(40);
@@ -309,12 +312,17 @@ try {
     $upgrade = new Upgrade_274($db, new Xoops\Upgrade\UpgradeControl($db));
     check(!$upgrade->check_user2fatable() && !$upgrade->check_twofactormode(), 'Old schema needs both upgrade tasks');
     check($upgrade->apply_user2fatable() && $upgrade->check_user2fatable(), 'Actual upgrade creates factor table');
-    check($upgrade->apply_twofactormode() && $upgrade->check_twofactormode(), 'Actual upgrade creates preference and options');
+    check(race(array_fill(0, 2, ['action' => 'migrate_mode'])) === [true, true], 'Concurrent upgrade preference creation succeeds');
+    check($upgrade->check_twofactormode(), 'Actual upgrade creates preference and options');
     check($upgrade->apply_user2fatable() && $upgrade->apply_twofactormode(), 'Upgrade tasks rerun safely');
     $result = $db->query('SELECT COUNT(*) AS n FROM `' . $db->prefix('config') . '` WHERE conf_name = \'twofactor_mode\'');
     check((int) $db->fetchArray($result)['n'] === 1, 'Rerun does not duplicate preference');
     $result = $db->query('SELECT COUNT(*) AS n FROM `' . $db->prefix('configoption') . '`');
     check((int) $db->fetchArray($result)['n'] === 2, 'Rerun does not duplicate options');
+    check($db->exec('DELETE FROM `' . $db->prefix('configoption') . '` ORDER BY confop_id LIMIT 1'), 'Simulate partially installed preference options');
+    check(race(array_fill(0, 2, ['action' => 'migrate_mode'])) === [true, true], 'Concurrent option repair succeeds');
+    $result = $db->query('SELECT COUNT(*) AS n FROM `' . $db->prefix('configoption') . '`');
+    check((int) $db->fetchArray($result)['n'] === 2 && $upgrade->check_twofactormode(), 'Concurrent repair restores exactly two distinct options');
     $enrol(50);
     echo "PASS: absent-table file-first session, real 2.7.4 upgrade tasks, idempotency and upgraded enrolment\n";
 } catch (Throwable $e) {

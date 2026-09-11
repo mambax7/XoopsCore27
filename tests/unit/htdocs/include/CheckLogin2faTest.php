@@ -224,12 +224,13 @@ final class CheckLogin2faTest extends TestCase
     public function aValidCodeCompletesTheLoginWithTheVerifiedGeneration(): void
     {
         $this->pending(['remember' => true, 'redirect' => '/x']);
-        $this->post(['code' => $this->code()]);
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step)]);
         [$what, $args] = $this->execute();
         self::assertSame('established', $what);
         self::assertSame([9, true, '/x', 'gen-1'], $args);
         self::assertArrayNotHasKey('xoops2faPending', $_SESSION);
-        self::assertContains('acceptTotp:9:' . \XoopsTotp::stepAt(time()) . ':gen-1', $GLOBALS['sandboxLog']);
+        self::assertContains('acceptTotp:9:' . $step . ':gen-1', $GLOBALS['sandboxLog']);
         self::assertNotContains('mail', $GLOBALS['sandboxLog']);
     }
 
@@ -339,11 +340,12 @@ final class CheckLogin2faTest extends TestCase
     {
         $this->pending();
         $GLOBALS['sandboxAccept'] = new \RuntimeException('down');
-        $this->post(['code' => $this->code()]);
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step)]);
         [$what, $vars] = @$this->execute();
         self::assertSame('rendered', $what);
         self::assertSame(_US_2FA_UNAVAILABLE, $vars['error']);
-        self::assertContains('acceptTotp:9:' . \XoopsTotp::stepAt(time()) . ':gen-1', $GLOBALS['sandboxLog']);
+        self::assertContains('acceptTotp:9:' . $step . ':gen-1', $GLOBALS['sandboxLog']);
         self::assertNotContains('recordFailure:9', $GLOBALS['sandboxLog']);
         self::assertArrayHasKey('xoops2faPending', $_SESSION);
     }

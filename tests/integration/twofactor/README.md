@@ -63,6 +63,8 @@ when PHP's `assert()` has been compiled out.
 - A genuinely absent factor table preserves an existing session with the
   feature not installed. The actual 2.7.4 upgrade tasks create the table,
   preference and options, rerun without duplicates, and support enrolment.
+  Separate connections race both initial preference creation and repair of
+  a missing option; each leaves one preference and exactly two options.
 
 ## Boundaries
 
