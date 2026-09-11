@@ -24,7 +24,11 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  * Check the credentials and the account's right to log in.
  *
  * Redirects and exits when the account is inactive or the site is closed to
- * its groups, as the inline code did. Writes nothing.
+ * its groups, as the inline code did. Writes no session or login state:
+ * last_login, the session and the remember-me cookie belong to
+ * xoops_login_establish_session(). The adapter itself may still write, as it
+ * always has: the native adapter persists a rehashed password on a
+ * successful check, and LDAP provisioning may create or update the account.
  *
  * @param string $uname posted user name
  * @param string $pass  posted password
