@@ -89,15 +89,25 @@ if ('' === $uname || '' === $pass) {
         // queried, so this never locks a webmaster out of the patch itself.
         /** @var XoopsUser2faHandler $factorHandler */
         $factorHandler = xoops_getHandler('user2fa');
+        $refusal       = null;
         try {
-            $factorState = $factorHandler->stateFor((int) $user->getVar('uid'));
+            $factorRow   = $factorHandler->getRow((int) $user->getVar('uid'));
+            $factorState = $factorHandler->stateOfRow($factorRow);
+            if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
+                if ($factorHandler->resetByEscapeHatch((int) $user->getVar('uid'))) {
+                    // The hatch disabled the row, which changed its
+                    // generation: read it again for the session stamp below.
+                    $factorRow = $factorHandler->getRow((int) $user->getVar('uid'));
+                } else {
+                    $refusal = 'second factor required; drop the 2fa-reset file to proceed';
+                }
+            }
         } catch (\Throwable $e) {
-            $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
+            // A lookup or reset failure refuses; it never leaves this page.
+            $refusal = $e->getMessage();
         }
-        if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)
-            && !$factorHandler->resetByEscapeHatch((int) $user->getVar('uid'))
-        ) {
-            trigger_error(sprintf('Upgrade login refused for uid %d: second factor required; drop the 2fa-reset file to proceed', (int) $user->getVar('uid')), E_USER_WARNING);
+        if (null !== $refusal) {
+            trigger_error(sprintf('Upgrade login refused for uid %d: %s', (int) $user->getVar('uid'), $refusal), E_USER_WARNING);
             header('location: ' . XOOPS_URL . '/upgrade/index.php');
             exit();
         }
@@ -119,6 +129,11 @@ if ('' === $uname || '' === $pass) {
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();
+        // The stamp include/common.php checks on every request: without it an
+        // enrolled webmaster signed in while the policy is off loses this
+        // session on the redirect.
+        $_SESSION['xoops2faGeneration'] = is_array($factorRow) ? (string) $factorRow['generation'] : '';
+        $_SESSION['xoops2faVerified']   = false;
         $user_theme                  = $user->getVar('theme');
         if (in_array($user_theme, $xoopsConfig['theme_set_allowed'], true)) {
             $_SESSION['xoopsUserTheme'] = $user_theme;

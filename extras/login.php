@@ -11,6 +11,7 @@ if (!defined('XOOPS_ROOT_PATH')) {
     exit();
 }
 include_once XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/user.php';
+xoops_loadLanguage('user2fa');
 $op = Request::getString('op', 'login', 'POST') === 'dologin' ? 'dologin' : 'login';
 
 $username = trim(Request::getString('username', '', 'POST'));
@@ -69,8 +70,10 @@ if ($op === 'dologin') {
         /** @var XoopsUser2faHandler $factorHandler */
         $factorHandler = xoops_getHandler('user2fa');
         try {
-            $factorState = $factorHandler->stateFor((int) $user->getVar('uid'));
+            $factorRow   = $factorHandler->getRow((int) $user->getVar('uid'));
+            $factorState = $factorHandler->stateOfRow($factorRow);
         } catch (\Throwable $e) {
+            $factorRow   = false;
             $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
         }
         if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
@@ -84,6 +87,11 @@ if ($op === 'dologin') {
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();
+        // The stamp include/common.php checks on every request: without it an
+        // enrolled account signed in while the policy is off loses this
+        // session on its next request.
+        $_SESSION['xoops2faGeneration'] = is_array($factorRow) ? (string) $factorRow['generation'] : '';
+        $_SESSION['xoops2faVerified']   = false;
         if (!empty($xoopsConfig['use_ssl'])) {
             xoops_confirm([$xoopsConfig['sslpost_name'] => session_id()], XOOPS_URL . '/misc.php?action=showpopups&amp;type=ssllogin', _US_PRESSLOGIN, _LOGIN);
         } else {

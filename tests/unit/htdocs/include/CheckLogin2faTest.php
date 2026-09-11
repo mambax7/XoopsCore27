@@ -321,6 +321,33 @@ final class CheckLogin2faTest extends TestCase
     }
 
     #[Test]
+    public function aFactorStoreFailureDuringVerificationIsUnavailableAndNotCounted(): void
+    {
+        $this->pending();
+        $GLOBALS['sandboxAccept'] = new \RuntimeException('down');
+        $this->post(['code' => $this->code()]);
+        [$what, $vars] = @$this->execute();
+        self::assertSame('rendered', $what);
+        self::assertSame(_US_2FA_UNAVAILABLE, $vars['error']);
+        self::assertContains('acceptTotp:9:' . \XoopsTotp::stepAt(time()) . ':gen-1', $GLOBALS['sandboxLog']);
+        self::assertNotContains('recordFailure:9', $GLOBALS['sandboxLog']);
+        self::assertArrayHasKey('xoops2faPending', $_SESSION);
+    }
+
+    #[Test]
+    public function anUnreadableSecretIsUnavailableAndNotCounted(): void
+    {
+        $this->pending();
+        $GLOBALS['sandboxSecret'] = null;
+        $this->post(['code' => '123456']);
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertSame(_US_2FA_UNAVAILABLE, $vars['error']);
+        self::assertNotContains('recordFailure:9', $GLOBALS['sandboxLog']);
+        self::assertArrayHasKey('xoops2faPending', $_SESSION);
+    }
+
+    #[Test]
     public function aRecoveryCodeIsAcceptedDuringALockAndAWrongOneIsCounted(): void
     {
         $this->pending();
@@ -391,7 +418,7 @@ final class CheckLogin2faTest extends TestCase
                     public function getRow(int $uid): ?array { if ($GLOBALS['sandboxRow'] instanceof \Throwable) { throw $GLOBALS['sandboxRow']; } return $GLOBALS['sandboxRow']; }
                     public function stateOfRow(?array $row): string { return $GLOBALS['sandboxState']; }
                     public function secretFor(int $uid): ?string { return $GLOBALS['sandboxSecret']; }
-                    public function acceptTotp(int $uid, int $step, string $gen, int $now): bool { $GLOBALS['sandboxLog'][] = "acceptTotp:$uid:$step:$gen"; return $GLOBALS['sandboxAccept']; }
+                    public function acceptTotp(int $uid, int $step, string $gen, int $now): bool { $GLOBALS['sandboxLog'][] = "acceptTotp:$uid:$step:$gen"; if ($GLOBALS['sandboxAccept'] instanceof \Throwable) { throw $GLOBALS['sandboxAccept']; } return $GLOBALS['sandboxAccept']; }
                     public function recordFailure(int $uid, int $now): array|false { $GLOBALS['sandboxLog'][] = "recordFailure:$uid"; return $GLOBALS['sandboxFailure']; }
                     public function acceptRecovery(int $uid, string $code, string $gen): bool { $GLOBALS['sandboxLog'][] = "acceptRecovery:$uid:$code:$gen"; return $GLOBALS['sandboxRecovery']; }
                     public function resetByEscapeHatch(int $uid): bool { $GLOBALS['sandboxLog'][] = "hatch:$uid"; return $GLOBALS['sandboxHatch']; }

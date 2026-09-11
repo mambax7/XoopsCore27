@@ -136,20 +136,3 @@ define('_US_DESCRIPTIONMIN', 'Minimum required length: %s');
 define('_US_DESCRIPTIONMAX', 'Maximum length: %s');
 // XOOPS 2.7.3
 define('_US_SURETOLOGOUT', 'Are you sure you want to log out?');
-// XOOPS 2.7.4: two-factor challenge
-define('_US_2FA_TITLE', 'Second step');
-define('_US_2FA_PROMPT', 'Enter the code from your authenticator app');
-define('_US_2FA_CODE', 'Authenticator code');
-define('_US_2FA_RECOVERY', 'Use a recovery code instead');
-define('_US_2FA_RECOVERY_HINT', 'Each recovery code works once. Using one sends you an e-mail.');
-define('_US_2FA_SUBMIT', 'Continue');
-define('_US_2FA_STARTAGAIN', 'This sign-in has expired or was interrupted. Please start again.');
-define('_US_2FA_BACKTOLOGIN', 'Back to the login form');
-define('_US_2FA_BADCODE', 'That code was not accepted.');
-define('_US_2FA_LOCKED', 'Too many attempts. The second step is locked for fifteen minutes; a recovery code still works.');
-define('_US_2FA_UNAVAILABLE', 'The authenticator step is not available right now. A recovery code still works, or contact the site administrator.');
-define('_US_2FA_REQUIRED', 'This account has two-factor authentication enabled. Please sign in through the site\'s login page.');
-define('_US_2FA_LOCKED_MAIL_SUBJECT', '%s: second step locked');
-define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong authenticator codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
-define('_US_2FA_RECOVERY_MAIL_SUBJECT', '%s: a recovery code was used');
-define('_US_2FA_RECOVERY_MAIL_BODY', 'A recovery code was used to sign in to your account at %s from %s. That code no longer works. If this was not you, change your password and reset your recovery codes.');

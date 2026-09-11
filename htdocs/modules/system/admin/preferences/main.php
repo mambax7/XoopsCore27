@@ -73,8 +73,10 @@ switch ($op) {
         $config    = $config_handler->getConfigs($criteria);
         $confcount = count($config);
         for ($i = 0; $i < $confcount; ++$i) {
-            $title = constant($config[$i]->getVar('conf_title'));
-            $desc  = ($config[$i]->getVar('conf_desc') != '') ? constant($config[$i]->getVar('conf_desc')) : '';
+            // A language pack that predates a preference shows the constant
+            // name rather than throwing on the whole page.
+            $title = defined($config[$i]->getVar('conf_title')) ? constant($config[$i]->getVar('conf_title')) : $config[$i]->getVar('conf_title');
+            $desc  = defined($config[$i]->getVar('conf_desc')) ? constant($config[$i]->getVar('conf_desc')) : '';
 
             switch ($config[$i]->getVar('conf_formtype')) {
 
@@ -302,7 +304,7 @@ switch ($op) {
             $form->addElement(new XoopsFormHidden('redirect', XOOPS_URL . '/modules/' . $module->getVar('dirname') . '/' . $module->getInfo('adminindex')));
         }
         for ($i = 0; $i < $count; ++$i) {
-            $title       = constant($config[$i]->getVar('conf_title'));
+            $title       = defined($config[$i]->getVar('conf_title')) ? constant($config[$i]->getVar('conf_title')) : $config[$i]->getVar('conf_title');
             $description = defined($config[$i]->getVar('conf_desc')) ? constant($config[$i]->getVar('conf_desc')) : '';
             switch ($config[$i]->getVar('conf_formtype')) {
 

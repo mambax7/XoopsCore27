@@ -130,7 +130,9 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
         exit();
     }
     $factorGeneration = is_array($factorRow) ? (string) $factorRow['generation'] : '';
-    $factorEnrolled   = is_array($factorRow) && XoopsUser2faHandler::ROW_ENROLLED === $factorRow['state'];
+    // "Enrolled" here is any present row that is not disabled: a row this
+    // code cannot check is a factor too, and refuses a cookie just the same.
+    $factorEnrolled   = is_array($factorRow) && XoopsUser2faHandler::ROW_DISABLED !== $factorRow['state'];
     if (null !== $verifiedGeneration && (!$factorEnrolled || !hash_equals($factorGeneration, $verifiedGeneration))) {
         redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_STARTAGAIN);
         exit();

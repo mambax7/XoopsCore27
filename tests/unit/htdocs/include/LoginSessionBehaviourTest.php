@@ -426,6 +426,7 @@ final class LoginSessionBehaviourTest extends TestCase
         }
         class XoopsUser2faHandler {
             public const ROW_ENROLLED = 'enrolled';
+            public const ROW_DISABLED = 'disabled';
             public function getRow(int $uid): ?array {
                 $GLOBALS['sandboxLog'][] = 'getRow:' . $uid;
                 if ($GLOBALS['sandboxRow'] instanceof \Throwable) { throw $GLOBALS['sandboxRow']; }

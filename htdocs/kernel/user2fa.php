@@ -410,26 +410,35 @@ final class XoopsUser2faHandler
                 // report success; refuse here so nothing is "counted".
                 return false;
             }
+            // Computed here, under the FOR UPDATE lock, and written as
+            // literals: an UPDATE that derives one column from another reads
+            // the old or the new value depending on the server's assignment
+            // mode (MariaDB SIMULTANEOUS_ASSIGNMENT), which would move the
+            // lock from the fifth wrong code to the sixth.
+            $before['locked_until']    = (int) $before['locked_until'];
+            $before['failed_attempts'] = (int) $before['failed_attempts'];
+            $expired  = $before['locked_until'] > 0 && $before['locked_until'] <= $now;
+            $attempts = $expired ? 1 : min($before['failed_attempts'] + 1, 65535);
+            if ($expired) {
+                $lockedUntil = 0;
+            } elseif (0 === $before['locked_until'] && $attempts >= self::LOCK_THRESHOLD) {
+                $lockedUntil = $now + self::LOCK_SECONDS;
+            } else {
+                $lockedUntil = $before['locked_until'];
+            }
             $sql = sprintf(
-                'UPDATE `%1$s` SET `failed_attempts` = IF(`locked_until` > 0 AND `locked_until` <= %2$d, 1, LEAST(`failed_attempts` + 1, 65535)),'
-                . ' `locked_until` = IF(`locked_until` > 0 AND `locked_until` <= %2$d, 0, IF(`locked_until` = 0 AND `failed_attempts` >= %3$d, %4$d, `locked_until`))'
-                . ' WHERE `uid` = %5$d AND `state` = %6$s',
+                'UPDATE `%s` SET `failed_attempts` = %d, `locked_until` = %d WHERE `uid` = %d AND `state` = %s',
                 $this->table(),
-                $now,
-                self::LOCK_THRESHOLD,
-                $now + self::LOCK_SECONDS,
+                $attempts,
+                $lockedUntil,
                 $uid,
                 $this->db->quote(self::ROW_ENROLLED)
             );
             if (!$this->db->exec($sql)) {
                 return false;
             }
-            $after = $this->selectRow($uid, false);
-            if (null === $after) {
-                return false;
-            }
             $wasLocked = $before['locked_until'] > $now;
-            $isLocked  = $after['locked_until'] > $now;
+            $isLocked  = $lockedUntil > $now;
 
             return ['locked' => $isLocked, 'transitioned' => $isLocked && !$wasLocked];
         });
@@ -596,12 +605,13 @@ final class XoopsUser2faHandler
     }
 
     /**
-     * Operator escape hatch: xoops_data/data/2fa-reset-<uid>.php returning
-     * true disables the factor once. The file is renamed to .used before the
-     * reset runs; a refused rename, or a .used twin already present, refuses
-     * the reset, because a rename would replace the earlier marker. The uid
-     * comes from the pending or wizard-authenticated login, never from the
-     * request.
+     * Operator escape hatch: xoops_data/data/2fa-reset-<uid>.txt containing
+     * the word "reset" disables the factor once. The file is read, never
+     * included: a write into the data directory must not become code. It is
+     * renamed to .used before the reset runs; a refused rename, or a .used
+     * twin already present, refuses the reset, because a rename would
+     * replace the earlier marker. The uid comes from the pending or
+     * wizard-authenticated login, never from the request.
      *
      * @param int         $uid     account
      * @param string|null $dataDir directory holding the file (default XOOPS_VAR_PATH/data)
@@ -615,7 +625,7 @@ final class XoopsUser2faHandler
             return false;
         }
         $name = $root . DIRECTORY_SEPARATOR . '2fa-reset-' . $uid;
-        $file = $name . '.php';
+        $file = $name . '.txt';
         $used = $name . '.used';
         if (file_exists($used) || is_link($file) || !is_file($file)) {
             return false;
@@ -624,10 +634,8 @@ final class XoopsUser2faHandler
         if (false === $real || !str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
             return false;
         }
-        $granted = (static function (string $path): mixed {
-            return include $path;
-        })($real);
-        if (true !== $granted) {
+        $content = file_get_contents($real);
+        if (!is_string($content) || 'reset' !== trim($content)) {
             return false;
         }
         if (!rename($real, $used)) {

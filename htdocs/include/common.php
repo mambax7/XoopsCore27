@@ -367,10 +367,11 @@ if (empty($_SESSION['xoopsUserId'])
                 && is_string($rememberClaims->pfp ?? null)
                 && hash_equals(XoopsUserUtility::rememberFingerprint($rememberCandidate, $rememberSigningKey), $rememberClaims->pfp))
                 ? $rememberCandidate : null;
-            // The factor: an enrolled account never restores from a cookie in
-            // this phase, and a cookie issued before the last factor change
-            // (its fgen differs from the row's generation) is refused. An
-            // absent fgen reads as '' so cookies issued before this claim
+            // The factor: only an absent or disabled row restores from a
+            // cookie in this phase (an enrolled row, or one this code cannot
+            // check, refuses), and a cookie issued before the last factor
+            // change (its fgen differs from the row's generation) is refused.
+            // An absent fgen reads as '' so cookies issued before this claim
             // existed keep working for accounts with no row; a lookup failure
             // refuses, because this is a login.
             if (null !== $rememberUser) {
@@ -381,7 +382,7 @@ if (empty($_SESSION['xoopsUserId'])
                     $rememberRow = false;
                 }
                 if (false === $rememberRow || !is_string($rememberFgen)
-                    || (is_array($rememberRow) && XoopsUser2faHandler::ROW_ENROLLED === $rememberRow['state'])
+                    || (is_array($rememberRow) && XoopsUser2faHandler::ROW_DISABLED !== $rememberRow['state'])
                     || !hash_equals(is_array($rememberRow) ? (string) $rememberRow['generation'] : '', $rememberFgen)
                 ) {
                     $rememberUser = null;
@@ -424,10 +425,11 @@ if (!empty($_SESSION['xoopsUserId'])) {
             $factorRow = false;
         }
         $factorState = XoopsUser2faHandler::STATE_NONE;
-        if (is_array($factorRow) && XoopsUser2faHandler::ROW_ENROLLED === $factorRow['state']) {
-            // Only a completed challenge or enrolment may put the generation
-            // in a session: none stored ends it, whatever the policy.
-            $factorState = XoopsUser2faHandler::STATE_ENROLLED;
+        if (is_array($factorRow) && XoopsUser2faHandler::ROW_DISABLED !== $factorRow['state']) {
+            // Enrolled, or a row this code cannot check (never "none"): only
+            // a completed challenge or enrolment may put the generation in a
+            // session, so none stored ends it, whatever the policy.
+            $factorState = xoops_getHandler('user2fa')->stateOfRow($factorRow);
             $stored      = $_SESSION['xoops2faGeneration'] ?? null;
             $endSession  = !is_string($stored) || !hash_equals((string) $factorRow['generation'], $stored);
             unset($stored);
@@ -472,7 +474,10 @@ if (!empty($_SESSION['xoopsUserId'])) {
         // change made by an administrator applies on the next request; the
         // session copy stays populated for code that reads it directly.
         $_SESSION['xoopsUserGroups'] = $xoopsUser->getGroups();
-        if (is_object($rememberClaims)) {   // only do during a 'remember me' login
+        // Only during a 'remember me' login, and never after a failed row
+        // lookup: an empty fgen would refuse this cookie for good on an
+        // account that has a row.
+        if (is_object($rememberClaims) && false !== $factorRow) {
             // Read raw via 'n' format — getVar()'s default 's' escapes '&'
             // to '&amp;', which the validator's HTML guard would reject.
             $user_theme = xoops_validateThemeName((string) $xoopsUser->getVar('theme', 'n'));

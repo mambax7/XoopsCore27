@@ -317,27 +317,27 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertSame([
             'START TRANSACTION',
             'SELECT `uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation` FROM `xoops_user_2fa` WHERE `uid` = 10 FOR UPDATE',
-            'UPDATE `xoops_user_2fa` SET `failed_attempts` = IF(`locked_until` > 0 AND `locked_until` <= 1700000000, 1, LEAST(`failed_attempts` + 1, 65535)),'
-            . ' `locked_until` = IF(`locked_until` > 0 AND `locked_until` <= 1700000000, 0, IF(`locked_until` = 0 AND `failed_attempts` >= 5, 1700000900, `locked_until`))'
-            . " WHERE `uid` = 10 AND `state` = 'enrolled'",
-            'SELECT `uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation` FROM `xoops_user_2fa` WHERE `uid` = 10',
+            "UPDATE `xoops_user_2fa` SET `failed_attempts` = 5, `locked_until` = 1700000900 WHERE `uid` = 10 AND `state` = 'enrolled'",
             'COMMIT',
         ], $this->sql);
 
-        // Already locked before: counted, no transition.
+        // Already locked before: counted, no transition, the lock kept.
         $this->sql  = [];
-        $this->rows = [
-            $this->row(['failed_attempts' => 6, 'locked_until' => self::NOW + 100]),
-            $this->row(['failed_attempts' => 7, 'locked_until' => self::NOW + 100]),
-        ];
+        $this->rows = [$this->row(['failed_attempts' => 6, 'locked_until' => self::NOW + 100])];
         $this->assertSame(['locked' => true, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
+        $this->assertSame(["UPDATE `xoops_user_2fa` SET `failed_attempts` = 7, `locked_until` = 1700000100 WHERE `uid` = 10 AND `state` = 'enrolled'"], $this->statements('UPDATE'));
 
         // Fewer than five: not locked.
-        $this->rows = [
-            $this->row(['failed_attempts' => 1, 'locked_until' => 0]),
-            $this->row(['failed_attempts' => 2, 'locked_until' => 0]),
-        ];
+        $this->sql  = [];
+        $this->rows = [$this->row(['failed_attempts' => 1, 'locked_until' => 0])];
         $this->assertSame(['locked' => false, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
+        $this->assertSame(["UPDATE `xoops_user_2fa` SET `failed_attempts` = 2, `locked_until` = 0 WHERE `uid` = 10 AND `state` = 'enrolled'"], $this->statements('UPDATE'));
+
+        // An expired lock: the count restarts at one and the lock clears.
+        $this->sql  = [];
+        $this->rows = [$this->row(['failed_attempts' => 5, 'locked_until' => self::NOW - 1])];
+        $this->assertSame(['locked' => false, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
+        $this->assertSame(["UPDATE `xoops_user_2fa` SET `failed_attempts` = 1, `locked_until` = 0 WHERE `uid` = 10 AND `state` = 'enrolled'"], $this->statements('UPDATE'));
 
         // Disabled row: the UPDATE would match nothing, so it is not issued.
         $this->sql  = [];
@@ -754,34 +754,34 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     public function theEscapeHatchIsConsumedOnceAndDisablesTheRow(): void
     {
         $dir = $this->hatchDir();
-        file_put_contents($dir . '/2fa-reset-7.php', "<?php\nreturn true;\n");
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
         $handler    = $this->handler();
         $this->rows = [$this->row(['uid' => 7])];
 
         $this->assertTrue(@$handler->resetByEscapeHatch(7, $dir));
-        $this->assertFileDoesNotExist($dir . '/2fa-reset-7.php');
+        $this->assertFileDoesNotExist($dir . '/2fa-reset-7.txt');
         $this->assertFileExists($dir . '/2fa-reset-7.used');
         $this->assertCount(1, $this->statements('UPDATE `xoops_user_2fa`'));
         $this->assertStringContainsString('`uid` = 7', $this->statements('UPDATE `xoops_user_2fa`')[0]);
 
         // second use: the .used twin refuses even after the operator drops a fresh file
         $this->sql = [];
-        file_put_contents($dir . '/2fa-reset-7.php', "<?php\nreturn true;\n");
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
-        $this->assertFileExists($dir . '/2fa-reset-7.php');
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
         $this->assertSame([], $this->sql);
     }
 
     #[Test]
-    public function theEscapeHatchRefusesAMissingFileAFalseFileAndAnotherUidsFile(): void
+    public function theEscapeHatchRefusesAMissingFileAFileWithoutTheSentinelAndAnotherUidsFile(): void
     {
         $dir     = $this->hatchDir();
         $handler = $this->handler();
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
-        file_put_contents($dir . '/2fa-reset-7.php', "<?php\nreturn false;\n");
+        file_put_contents($dir . '/2fa-reset-7.txt', "<?php\nreturn true;\n");
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
-        $this->assertFileExists($dir . '/2fa-reset-7.php');
-        file_put_contents($dir . '/2fa-reset-8.php', "<?php\nreturn true;\n");
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        file_put_contents($dir . '/2fa-reset-8.txt', "reset\n");
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir . '/does-not-exist'));
         $this->assertSame([], $this->sql);
@@ -791,11 +791,11 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     public function theEscapeHatchRefusesASymlink(): void
     {
         $dir = $this->hatchDir();
-        file_put_contents($dir . '/real.php', "<?php\nreturn true;\n");
-        if (!@symlink($dir . '/real.php', $dir . '/2fa-reset-7.php')) {
+        file_put_contents($dir . '/real.txt', "reset\n");
+        if (!@symlink($dir . '/real.txt', $dir . '/2fa-reset-7.txt')) {
             $this->markTestSkipped('symlink() not permitted here');
         }
         $this->assertFalse($this->handler()->resetByEscapeHatch(7, $dir));
-        $this->assertFileExists($dir . '/2fa-reset-7.php');
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
     }
 }

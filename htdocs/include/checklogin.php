@@ -17,6 +17,7 @@
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 xoops_loadLanguage('user');
+xoops_loadLanguage('user2fa');
 
 // from $_POST we use keys: uname, pass, rememberme, xoops_redirect
 XoopsLoad::load('XoopsRequest');

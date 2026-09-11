@@ -55,10 +55,10 @@ final class SessionFactorBindingTest extends TestCase
         self::assertNotFalse($row);
         self::assertNotFalse($seed);
         self::assertTrue($pfp < $row && $row < $seed);
-        // absent fgen reads as ''; present but not a string refuses; enrolled refuses; a failed lookup refuses
+        // absent fgen reads as ''; present but not a string refuses; any row but a disabled one refuses; a failed lookup refuses
         self::assertStringContainsString("\$rememberFgen = \$rememberClaims->fgen ?? '';", $this->restore);
         self::assertStringContainsString('!is_string($rememberFgen)', $this->restore);
-        self::assertStringContainsString("XoopsUser2faHandler::ROW_ENROLLED === \$rememberRow['state']", $this->restore);
+        self::assertStringContainsString("XoopsUser2faHandler::ROW_DISABLED !== \$rememberRow['state']", $this->restore);
         self::assertStringContainsString('catch (\Throwable $e) {', $this->restore);
         self::assertStringContainsString('$rememberRow = false;', $this->restore);
         self::assertStringContainsString('false === $rememberRow ||', $this->restore);
@@ -69,6 +69,9 @@ final class SessionFactorBindingTest extends TestCase
     public function anEstablishedSessionIsEndedOnAGenerationMismatchOrAnUnverifiedRequiredFactor(): void
     {
         self::assertStringContainsString("\$factorRow = xoops_getHandler('user2fa')->getRow((int) \$_SESSION['xoopsUserId']);", $this->session);
+        // any present row but a disabled one is checked, with the handler's own state (never "none")
+        self::assertStringContainsString("if (is_array(\$factorRow) && XoopsUser2faHandler::ROW_DISABLED !== \$factorRow['state']) {", $this->session);
+        self::assertStringContainsString("\$factorState = xoops_getHandler('user2fa')->stateOfRow(\$factorRow);", $this->session);
         self::assertStringContainsString("!is_string(\$stored) || !hash_equals((string) \$factorRow['generation'], \$stored)", $this->session);
         self::assertStringContainsString("\$_SESSION['xoops2faGeneration'] = is_array(\$factorRow) ? (string) \$factorRow['generation'] : '';", $this->session);
         self::assertStringContainsString("XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy(\$xoopsConfig), \$factorState) && true !== (\$_SESSION['xoops2faVerified'] ?? false)", $this->session);
@@ -77,8 +80,9 @@ final class SessionFactorBindingTest extends TestCase
         self::assertStringContainsString('$factorRow = false;', $this->session);
         self::assertStringContainsString('} elseif (false !== $factorRow) {', $this->session);
         self::assertStringContainsString('if (!$endSession && false !== $factorRow', $this->session);
-        // the renewal carries the generation
+        // the renewal carries the generation, and is skipped after a failed lookup
         self::assertStringContainsString("'fgen' => is_array(\$factorRow) ? (string) \$factorRow['generation'] : '',", $this->session);
+        self::assertStringContainsString('if (is_object($rememberClaims) && false !== $factorRow) {', $this->session);
         // one cleanup path serves the inactive account and the factor mismatch
         self::assertSame(1, substr_count($this->session, 'session_destroy();'));
         self::assertStringContainsString('if ($endSession) {', $this->session);

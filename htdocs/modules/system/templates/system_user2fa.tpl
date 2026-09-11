@@ -25,6 +25,7 @@
             <details>
                 <summary><{$lang_recovery}></summary>
                 <p>
+                    <label for="xo-2fa-recovery"><{$lang_recovery}></label><br>
                     <input type="text" id="xo-2fa-recovery" name="recovery" inputmode="text" autocomplete="off" maxlength="40" dir="ltr"/><br>
                     <small><{$lang_recovery_hint}></small>
                 </p>

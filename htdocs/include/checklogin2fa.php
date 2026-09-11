@@ -25,8 +25,12 @@
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
-// user.php loads this itself; the closed-site page does not.
+// user.php loads the first itself; the closed-site page does not. The
+// challenge strings have a file of their own so a language pack that
+// predates them falls back to English as a whole, as xoops_loadLanguage()
+// does for a missing file (it never fills gaps in a present one).
 xoops_loadLanguage('user');
+xoops_loadLanguage('user2fa');
 
 if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
     /**
@@ -55,7 +59,7 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
         $tpl->assign([
             'xoops_theme'    => $themeConfig['theme_set'],
             'xoops_themecss' => xoops_getcss($themeConfig['theme_set']),
-            'xoops_sitename' => htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5),
+            'xoops_sitename' => htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
             'xoops_charset'  => _CHARSET,
             'xoops_langcode' => _LANGCODE,
         ]);
@@ -171,61 +175,79 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xo
         $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
         xoops_2fa_render($xo2faVars);
     }
-    // Operator escape hatch, bound to the pending uid: consuming it disables
-    // the factor, so the login completes as a password-only one.
-    if ($xo2faHandler->resetByEscapeHatch($xo2faUid)) {
-        unset($_SESSION['xoops2faPending']);
-        xoops_login_establish_session($xo2faUser, (bool) $xo2faPending['remember'], (string) $xo2faPending['redirect']);
-    }
     $xo2faRecovery = \Xmf\Request::getString('recovery', '', 'POST');
     $xo2faCode     = \Xmf\Request::getString('code', '', 'POST');
     $xo2faError    = _US_2FA_BADCODE;
     $xo2faCount    = true;
-    if ('' !== $xo2faRecovery) {
-        // Accepted during a TOTP lock as well: single-use 128-bit codes
-        // cannot be guessed, and this is the legitimate user's way past an
-        // attacker who knows the password and burned the throttle.
-        if ($xo2faHandler->acceptRecovery($xo2faUid, $xo2faRecovery, $xo2faGeneration)) {
-            unset($_SESSION['xoops2faPending']);
-            $xo2faMail($xo2faUser, _US_2FA_RECOVERY_MAIL_SUBJECT, _US_2FA_RECOVERY_MAIL_BODY);
-            xoops_login_establish_session($xo2faUser, (bool) $xo2faPending['remember'], (string) $xo2faPending['redirect'], $xo2faGeneration);
-        }
-    } elseif ($xo2faRow['locked_until'] > $xo2faNow) {
-        $xo2faError = _US_2FA_LOCKED;
-        $xo2faCount = false;
-    } elseif (XoopsUser2faHandler::STATE_ENROLLED !== $xo2faState) {
-        $xo2faError = _US_2FA_UNAVAILABLE;
-        $xo2faCount = false;
-    } else {
-        $xo2faSecret = (string) $xo2faHandler->secretFor($xo2faUid);
-        $xo2faStep   = XoopsTotp::matchStep($xo2faSecret, $xo2faCode, $xo2faNow, (int) $xo2faRow['last_counter']);
-        if (false !== $xo2faStep && $xo2faHandler->acceptTotp($xo2faUid, $xo2faStep, $xo2faGeneration, $xo2faNow)) {
-            unset($_SESSION['xoops2faPending']);
-            xoops_login_establish_session($xo2faUser, (bool) $xo2faPending['remember'], (string) $xo2faPending['redirect'], $xo2faGeneration);
-        }
-        if (false === $xo2faStep && preg_match('/^[0-9]{6}$/', $xo2faCode)) {
-            // A code two or three steps out is more likely a clock than a guess.
-            $xo2faStepNow = XoopsTotp::stepAt($xo2faNow);
-            foreach ([-3, -2, 2, 3] as $xo2faOffset) {
-                $xo2faExpected = XoopsTotp::codeAt($xo2faSecret, $xo2faStepNow + $xo2faOffset);
-                if (false !== $xo2faExpected && hash_equals($xo2faExpected, $xo2faCode)) {
-                    trigger_error(sprintf('Two-factor code for uid %d matched %d steps from now; probable clock skew', $xo2faUid, $xo2faOffset), E_USER_NOTICE);
-                    break;
+    $xo2faAccepted = false;  // false, or the generation the login completes with (null for password-only)
+    $xo2faFailure  = false;
+    // Everything in here reads or writes the factor row; a database failure
+    // is "unavailable", not a 500 and not a counted failure. Nothing in here
+    // exits: the completion and the renders follow the boundary.
+    try {
+        // Operator escape hatch, bound to the pending uid: consuming it
+        // disables the factor, so the login completes as a password-only one.
+        if ($xo2faHandler->resetByEscapeHatch($xo2faUid)) {
+            $xo2faAccepted = null;
+            $xo2faCount    = false;
+        } elseif ('' !== $xo2faRecovery) {
+            // Accepted during a TOTP lock as well: single-use 128-bit codes
+            // cannot be guessed, and this is the legitimate user's way past
+            // an attacker who knows the password and burned the throttle.
+            if ($xo2faHandler->acceptRecovery($xo2faUid, $xo2faRecovery, $xo2faGeneration)) {
+                $xo2faAccepted = $xo2faGeneration;
+                $xo2faCount    = false;
+                $xo2faMail($xo2faUser, _US_2FA_RECOVERY_MAIL_SUBJECT, _US_2FA_RECOVERY_MAIL_BODY);
+            }
+        } elseif ($xo2faRow['locked_until'] > $xo2faNow) {
+            $xo2faError = _US_2FA_LOCKED;
+            $xo2faCount = false;
+        } elseif (XoopsUser2faHandler::STATE_ENROLLED !== $xo2faState) {
+            $xo2faError = _US_2FA_UNAVAILABLE;
+            $xo2faCount = false;
+        } elseif (null === ($xo2faSecret = $xo2faHandler->secretFor($xo2faUid))) {
+            // The row changed under us, or its secret cannot be read.
+            $xo2faError = _US_2FA_UNAVAILABLE;
+            $xo2faCount = false;
+        } else {
+            $xo2faStep = XoopsTotp::matchStep($xo2faSecret, $xo2faCode, $xo2faNow, (int) $xo2faRow['last_counter']);
+            if (false !== $xo2faStep && $xo2faHandler->acceptTotp($xo2faUid, $xo2faStep, $xo2faGeneration, $xo2faNow)) {
+                $xo2faAccepted = $xo2faGeneration;
+                $xo2faCount    = false;
+            }
+            if (false === $xo2faStep && preg_match('/^[0-9]{6}$/', $xo2faCode)) {
+                // A code two or three steps out is more likely a clock than a guess.
+                $xo2faStepNow = XoopsTotp::stepAt($xo2faNow);
+                foreach ([-3, -2, 2, 3] as $xo2faOffset) {
+                    $xo2faExpected = XoopsTotp::codeAt($xo2faSecret, $xo2faStepNow + $xo2faOffset);
+                    if (false !== $xo2faExpected && hash_equals($xo2faExpected, $xo2faCode)) {
+                        trigger_error(sprintf('Two-factor code for uid %d matched %d steps from now; probable clock skew', $xo2faUid, $xo2faOffset), E_USER_NOTICE);
+                        break;
+                    }
                 }
             }
         }
-    }
-    if ($xo2faCount) {
-        $xo2faFailure = $xo2faHandler->recordFailure($xo2faUid, $xo2faNow);
-        if (is_array($xo2faFailure) && $xo2faFailure['locked']) {
-            unset($_SESSION['xoops2faPending']);
-            if ($xo2faFailure['transitioned']) {
-                $xo2faMail($xo2faUser, _US_2FA_LOCKED_MAIL_SUBJECT, _US_2FA_LOCKED_MAIL_BODY);
-            }
-            $xo2faVars['start_again'] = true;
-            $xo2faVars['message']     = _US_2FA_LOCKED;
-            xoops_2fa_render($xo2faVars);
+        if ($xo2faCount) {
+            $xo2faFailure = $xo2faHandler->recordFailure($xo2faUid, $xo2faNow);
         }
+    } catch (\Throwable $e) {
+        trigger_error('Two-factor challenge failed for uid ' . $xo2faUid . ': ' . $e->getMessage(), E_USER_WARNING);
+        $xo2faError    = _US_2FA_UNAVAILABLE;
+        $xo2faAccepted = false;
+        $xo2faFailure  = false;
+    }
+    if (false !== $xo2faAccepted) {
+        unset($_SESSION['xoops2faPending']);
+        xoops_login_establish_session($xo2faUser, (bool) $xo2faPending['remember'], (string) $xo2faPending['redirect'], $xo2faAccepted);
+    }
+    if (is_array($xo2faFailure) && $xo2faFailure['locked']) {
+        unset($_SESSION['xoops2faPending']);
+        if ($xo2faFailure['transitioned']) {
+            $xo2faMail($xo2faUser, _US_2FA_LOCKED_MAIL_SUBJECT, _US_2FA_LOCKED_MAIL_BODY);
+        }
+        $xo2faVars['start_again'] = true;
+        $xo2faVars['message']     = _US_2FA_LOCKED;
+        xoops_2fa_render($xo2faVars);
     }
     $xo2faVars['error'] = $xo2faError;
 }
