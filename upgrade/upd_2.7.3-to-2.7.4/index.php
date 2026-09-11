@@ -22,12 +22,14 @@ use Xoops\Upgrade\XoopsUpgrade;
  * Tasks, in this order:
  *  1. user2fatable   — create the user_2fa table (InnoDB, utf8mb4, no foreign key).
  *  2. twofactormode  — insert the twofactor_mode core preference, default 'off', with
- *                      its two options.
+ *                      its two options; each row is checked and inserted on its own so
+ *                      an interrupted run resumes where it stopped.
  *
  * The order is deliberate and must stay: common.php treats the presence of the
  * twofactor_mode row in the database-loaded configuration as the "installed" signal,
  * so the row must never exist without the table. Both tasks are idempotent; both
- * report an information_schema failure instead of treating it as "absent".
+ * report a failed lookup instead of treating it as "absent", and neither issues DDL
+ * or an INSERT it could not first verify the need for.
  *
  * UpgradeControl scans every "*-to-*" directory and asks each patch's check_ methods
  * whether it applies — applicability is not decided by comparing version numbers.
@@ -42,6 +44,12 @@ use Xoops\Upgrade\XoopsUpgrade;
  */
 class Upgrade_274 extends XoopsUpgrade
 {
+    /** The select options of twofactor_mode: language constant and stored value. */
+    private const MODE_OPTIONS = [
+        ['_MD_AM_TWOFACTORMODE_OFF', 'off'],
+        ['_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional'],
+    ];
+
     /**
      * @param XoopsMySQLDatabase $db      database connection
      * @param UpgradeControl     $control upgrade control instance
@@ -77,12 +85,25 @@ class Upgrade_274 extends XoopsUpgrade
     /**
      * Create the user_2fa table with the fresh-install shape.
      *
+     * Asks information_schema again first: when that cannot be read, no DDL is
+     * issued and the check's message stands.
+     *
      * @return bool true on success
      */
     public function apply_user2fatable(): bool
     {
-        $table = $this->db->prefix('user_2fa');
-        $sql   = "CREATE TABLE IF NOT EXISTS `{$table}` (
+        $table  = $this->db->prefix('user_2fa');
+        $exists = $this->tableExists($table);
+        if (true === $exists) {
+            return true;
+        }
+        if (null === $exists) {
+            $this->logs[] = 'Could not read information_schema; the user_2fa table was not created';
+
+            return false;
+        }
+
+        $sql = "CREATE TABLE IF NOT EXISTS `{$table}` (
             `uid`             mediumint unsigned NOT NULL,
             `state`           varchar(10)        NOT NULL,
             `method`          varchar(16)        NOT NULL DEFAULT 'totp',
@@ -103,44 +124,53 @@ class Upgrade_274 extends XoopsUpgrade
     // =========================================================================
 
     /**
-     * Does the core twofactor_mode preference exist?
+     * Do the core twofactor_mode preference and both of its options exist?
      *
      * @return bool
      */
     public function check_twofactormode(): bool
     {
-        return $this->configExists('twofactor_mode');
+        $confId = $this->modeConfId();
+        if ($confId <= 0) {
+            return false;
+        }
+
+        return [] === $this->missingModeOptions($confId);
     }
 
     /**
-     * Insert the preference, paused ('off'), and its two options.
+     * Insert whichever of the preference row and its options is missing.
      *
-     * @return bool true when the row exists afterwards
+     * @return bool true when every row exists afterwards
      */
     public function apply_twofactormode(): bool
     {
-        if ($this->configExists('twofactor_mode')) {
-            return true;
-        }
-
-        $sql = 'INSERT INTO `' . $this->db->prefix('config') . '`'
-             . ' (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc,'
-             . ' conf_formtype, conf_valuetype, conf_order)'
-             . " VALUES (0, 1, 'twofactor_mode', '_MD_AM_TWOFACTORMODE', 'off',"
-             . " '_MD_AM_TWOFACTORMODEDSC', 'select', 'text', 46)";
-        if (!$this->execOrFail($sql)) {
-            return false;
-        }
-
-        $confId = (int) $this->getDbValue('config', 'conf_id', "conf_modid = 0 AND conf_name = 'twofactor_mode'");
+        $confId = $this->modeConfId();
         if ($confId <= 0) {
-            $this->logs[] = 'The twofactor_mode preference row was not found after it was inserted';
+            $sql = 'INSERT INTO `' . $this->db->prefix('config') . '`'
+                 . ' (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc,'
+                 . ' conf_formtype, conf_valuetype, conf_order)'
+                 . " VALUES (0, 1, 'twofactor_mode', '_MD_AM_TWOFACTORMODE', 'off',"
+                 . " '_MD_AM_TWOFACTORMODEDSC', 'select', 'text', 46)";
+            if (!$this->execOrFail($sql)) {
+                return false;
+            }
+            $confId = $this->modeConfId();
+            if ($confId <= 0) {
+                $this->logs[] = 'The twofactor_mode preference row was not found after it was inserted';
+
+                return false;
+            }
+        }
+
+        $missing = $this->missingModeOptions($confId);
+        if (null === $missing) {
+            $this->logs[] = 'Could not read the configoption table; the twofactor_mode options were not inserted';
 
             return false;
         }
-
         $options = $this->db->prefix('configoption');
-        foreach ([['_MD_AM_TWOFACTORMODE_OFF', 'off'], ['_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional']] as [$name, $value]) {
+        foreach ($missing as [$name, $value]) {
             $sql = 'INSERT INTO `' . $options . '` (confop_name, confop_value, conf_id)'
                  . " VALUES ('{$name}', '{$value}', {$confId})";
             if (!$this->execOrFail($sql)) {
@@ -148,12 +178,53 @@ class Upgrade_274 extends XoopsUpgrade
             }
         }
 
-        return $this->configExists('twofactor_mode');
+        return true;
     }
 
     // =========================================================================
     // helpers
     // =========================================================================
+
+    /**
+     * conf_id of the CORE twofactor_mode row, or 0 when absent or unreadable.
+     *
+     * Scoped to conf_modid = 0: matching on conf_name alone would let a module
+     * preference of the same name satisfy the check and the core row would never
+     * be created.
+     *
+     * @return int
+     */
+    private function modeConfId(): int
+    {
+        return (int) $this->getDbValue('config', 'conf_id', "conf_modid = 0 AND conf_name = 'twofactor_mode'");
+    }
+
+    /**
+     * Which of the twofactor_mode options are missing for this conf_id?
+     *
+     * @param int $confId conf_id of the preference row
+     * @return array<int, array{string, string}>|null the missing options, or null when the table could not be read
+     */
+    private function missingModeOptions(int $confId): ?array
+    {
+        $table   = $this->db->prefix('configoption');
+        $missing = [];
+        foreach (self::MODE_OPTIONS as $option) {
+            $sql    = 'SELECT COUNT(*) FROM `' . $table . '`'
+                    . ' WHERE conf_id = ' . $confId
+                    . ' AND confop_value = ' . $this->db->quote($option[1]);
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                return null;
+            }
+            $row = $this->db->fetchRow($result);
+            if (!is_array($row) || (int) $row[0] === 0) {
+                $missing[] = $option;
+            }
+        }
+
+        return $missing;
+    }
 
     /**
      * Does a table exist?
@@ -178,31 +249,6 @@ class Upgrade_274 extends XoopsUpgrade
         }
 
         return (bool) $this->db->fetchArray($result);
-    }
-
-    /**
-     * Does a CORE config row with this name exist?
-     *
-     * Scoped to conf_modid = 0: matching on conf_name alone would let a module
-     * preference of the same name satisfy the check and the core row would never
-     * be created.
-     *
-     * @param  string $name conf_name
-     * @return bool true when the core row exists
-     */
-    private function configExists(string $name): bool
-    {
-        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . '`'
-             . ' WHERE conf_modid = 0'
-             . " AND conf_name = '" . $this->db->escape($name) . "'";
-
-        $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return false;
-        }
-        $row = $this->db->fetchRow($result);
-
-        return is_array($row) && (int) $row[0] > 0;
     }
 
     /**

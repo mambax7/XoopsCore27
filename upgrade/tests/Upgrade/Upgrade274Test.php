@@ -22,8 +22,8 @@ use XoopsMySQLDatabase;
 
 /**
  * The 2.7.3 to 2.7.4 patch: the user_2fa table first, the twofactor_mode
- * preference last, both idempotent, both honest about information_schema
- * failures.
+ * preference last, both idempotent and resumable, both honest about a lookup
+ * that could not be answered.
  *
  * @category  Xoops\Upgrade\Tests
  * @package   Xoops
@@ -34,6 +34,12 @@ use XoopsMySQLDatabase;
  */
 final class Upgrade274Test extends TestCase
 {
+    private const CONFIG_INSERT = 'INSERT INTO `xoops_config` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc,'
+        . " conf_formtype, conf_valuetype, conf_order) VALUES (0, 1, 'twofactor_mode', '_MD_AM_TWOFACTORMODE', 'off',"
+        . " '_MD_AM_TWOFACTORMODEDSC', 'select', 'text', 46)";
+    private const OFF_INSERT      = "INSERT INTO `xoops_configoption` (confop_name, confop_value, conf_id) VALUES ('_MD_AM_TWOFACTORMODE_OFF', 'off', 140)";
+    private const OPTIONAL_INSERT = "INSERT INTO `xoops_configoption` (confop_name, confop_value, conf_id) VALUES ('_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional', 140)";
+
     /** @var list<string> statements handed to exec(), in order */
     private array $exec = [];
 
@@ -43,7 +49,8 @@ final class Upgrade274Test extends TestCase
     /** @var list<array|false> fetchArray() answers, consumed in order */
     private array $arrays = [];
 
-    private bool $queryFails = false;
+    /** Substring of the statements whose query() must fail; '' fails none, '*' fails all. */
+    private string $queryFailsFor = '';
 
     private bool $execFails = false;
 
@@ -58,7 +65,7 @@ final class Upgrade274Test extends TestCase
         $this->exec       = [];
         $this->rows       = [];
         $this->arrays     = [];
-        $this->queryFails = false;
+        $this->queryFailsFor = '';
         $this->execFails  = false;
     }
 
@@ -74,8 +81,10 @@ final class Upgrade274Test extends TestCase
 
             return !$this->execFails;
         });
-        $db->method('query')->willReturnCallback(function (): mixed {
-            return $this->queryFails ? false : (new ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor();
+        $db->method('query')->willReturnCallback(function (string $sql): mixed {
+            $fails = '*' === $this->queryFailsFor || ('' !== $this->queryFailsFor && str_contains($sql, $this->queryFailsFor));
+
+            return $fails ? false : (new ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor();
         });
         $db->method('isResultSet')->willReturnCallback(static fn ($result): bool => $result instanceof \mysqli_result);
         $db->method('fetchRow')->willReturnCallback(function () {
@@ -109,7 +118,7 @@ final class Upgrade274Test extends TestCase
         $this->arrays = [['1' => '1']];
         self::assertTrue($patch->check_user2fatable());
 
-        $this->queryFails = true;
+        $this->queryFailsFor = '*';
         self::assertFalse($patch->check_user2fatable(), 'an unanswerable question is not "absent"');
         self::assertNotSame([], $patch->logs, 'and it is reported');
     }
@@ -117,7 +126,8 @@ final class Upgrade274Test extends TestCase
     #[Test]
     public function applyUser2faTableEmitsTheInstallShapeWithThePrefix(): void
     {
-        $patch = $this->patch();
+        $patch        = $this->patch();
+        $this->arrays = [false];
         self::assertTrue($patch->apply_user2fatable());
         self::assertCount(1, $this->exec);
         $sql = $this->exec[0];
@@ -139,36 +149,86 @@ final class Upgrade274Test extends TestCase
         }
         self::assertStringNotContainsString('FOREIGN KEY', $sql);
 
+        $this->exec      = [];
+        $this->arrays    = [false];
         $this->execFails = true;
         self::assertFalse($patch->apply_user2fatable());
         self::assertNotSame([], $patch->logs);
     }
 
     #[Test]
+    public function applyUser2faTableIssuesNoDdlWhenTheTableExistsOrCannotBeLookedUp(): void
+    {
+        $patch        = $this->patch();
+        $this->arrays = [['1' => '1']];
+        self::assertTrue($patch->apply_user2fatable());
+        self::assertSame([], $this->exec, 'an existing table is left alone');
+
+        $this->queryFailsFor = '*';
+        self::assertFalse($patch->apply_user2fatable());
+        self::assertSame([], $this->exec, 'no DDL on an unreadable information_schema');
+        self::assertNotSame([], $patch->logs);
+    }
+
+    #[Test]
+    public function checkTwofactorModeNeedsTheRowAndBothOptions(): void
+    {
+        $patch      = $this->patch();
+        $this->rows = [false];
+        self::assertFalse($patch->check_twofactormode(), 'no preference row');
+
+        $this->rows = [[140], [1], [1]];
+        self::assertTrue($patch->check_twofactormode());
+
+        $this->rows = [[140], [1], [0]];
+        self::assertFalse($patch->check_twofactormode(), 'the optional option is missing');
+
+        $this->rows          = [[140]];
+        $this->queryFailsFor = 'configoption';
+        self::assertFalse($patch->check_twofactormode(), 'an unreadable option table is not "complete"');
+    }
+
+    #[Test]
     public function applyTwofactorModeInsertsTheCoreRowAndBothOptions(): void
     {
         $patch      = $this->patch();
-        $this->rows = [[0], [140], [1]];   // configExists: absent; conf_id lookup; configExists: present
+        $this->rows = [false, [140], [0], [0]];   // conf_id lookup: absent; after insert: 140; both options absent
 
         self::assertTrue($patch->apply_twofactormode());
-        self::assertSame([
-            'INSERT INTO `xoops_config` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc,'
-            . " conf_formtype, conf_valuetype, conf_order) VALUES (0, 1, 'twofactor_mode', '_MD_AM_TWOFACTORMODE', 'off',"
-            . " '_MD_AM_TWOFACTORMODEDSC', 'select', 'text', 46)",
-            "INSERT INTO `xoops_configoption` (confop_name, confop_value, conf_id) VALUES ('_MD_AM_TWOFACTORMODE_OFF', 'off', 140)",
-            "INSERT INTO `xoops_configoption` (confop_name, confop_value, conf_id) VALUES ('_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional', 140)",
-        ], $this->exec);
+        self::assertSame([self::CONFIG_INSERT, self::OFF_INSERT, self::OPTIONAL_INSERT], $this->exec);
         self::assertSame([], $this->rows, 'every answer was consumed');
+    }
+
+    #[Test]
+    public function applyTwofactorModeResumesWithOnlyTheMissingOption(): void
+    {
+        $patch      = $this->patch();
+        $this->rows = [[140], [1], [0]];   // row present, 'off' present, 'optional' missing
+
+        self::assertTrue($patch->apply_twofactormode());
+        self::assertSame([self::OPTIONAL_INSERT], $this->exec);
     }
 
     #[Test]
     public function applyTwofactorModeStopsWhenTheRowCannotBeFoundAfterTheInsert(): void
     {
         $patch      = $this->patch();
-        $this->rows = [[0], false];
+        $this->rows = [false, false];
 
         self::assertFalse($patch->apply_twofactormode());
-        self::assertCount(1, $this->exec, 'no option rows without a conf_id');
+        self::assertSame([self::CONFIG_INSERT], $this->exec, 'no option rows without a conf_id');
+        self::assertNotSame([], $patch->logs);
+    }
+
+    #[Test]
+    public function applyTwofactorModeInsertsNoOptionWhenTheOptionTableCannotBeRead(): void
+    {
+        $patch               = $this->patch();
+        $this->rows          = [[140]];
+        $this->queryFailsFor = 'configoption';
+
+        self::assertFalse($patch->apply_twofactormode());
+        self::assertSame([], $this->exec);
         self::assertNotSame([], $patch->logs);
     }
 
@@ -176,10 +236,9 @@ final class Upgrade274Test extends TestCase
     public function applyTwofactorModeIsIdempotent(): void
     {
         $patch      = $this->patch();
-        $this->rows = [[1]];
+        $this->rows = [[140], [1], [1]];
 
         self::assertTrue($patch->apply_twofactormode());
         self::assertSame([], $this->exec);
-        self::assertTrue($patch->check_twofactormode() === false, 'the next check consumes a fresh answer');
     }
 }
