@@ -81,10 +81,13 @@ class XoopsUser2faHandlerTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        foreach ((array) glob($this->dir . '/*') as $file) {
-            unlink($file);
+        // tearDown runs after a skipped setUp too: only touch our own directory.
+        if ('' !== $this->dir && is_dir($this->dir)) {
+            foreach ((array) glob($this->dir . '/*') as $file) {
+                unlink($file);
+            }
+            rmdir($this->dir);
         }
-        rmdir($this->dir);
         parent::tearDown();
     }
 

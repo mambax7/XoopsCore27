@@ -40,7 +40,7 @@ use XoopsTwoFactorCrypto;
 #[CoversClass(XoopsTwoFactorCrypto::class)]
 class XoopsTwoFactorCryptoTest extends KernelTestCase
 {
-    private string $dir;
+    private string $dir = '';
 
     protected function setUp(): void
     {
@@ -55,10 +55,13 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        foreach ((array) glob($this->dir . '/*') as $file) {
-            unlink($file);
+        // tearDown runs after a skipped setUp too: only touch our own directory.
+        if ('' !== $this->dir && is_dir($this->dir)) {
+            foreach ((array) glob($this->dir . '/*') as $file) {
+                unlink($file);
+            }
+            rmdir($this->dir);
         }
-        rmdir($this->dir);
         parent::tearDown();
     }
 
