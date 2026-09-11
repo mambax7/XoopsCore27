@@ -114,8 +114,8 @@ final class SessionRestoreActiveCheckTest extends TestCase
         $block = substr($this->sourceContent, $blockStart, $blockEnd - $blockStart);
 
         $read   = strpos($block, '\Xmf\Jwt\TokenReader::fromCookie($rememberKey, ');
-        $load   = strpos($block, '$candidate = $member_handler->getUser((int) $rememberClaims->uid);');
-        $decide = strpos($block, '$rememberUser = (is_object($candidate)');
+        $load   = strpos($block, '$rememberCandidate = $member_handler->getUser((int) $rememberClaims->uid);');
+        $decide = strpos($block, '$rememberUser = (is_object($rememberCandidate)');
         $seed   = strpos($block, "\$_SESSION['xoopsUserId'] = \$rememberUser->getVar('uid');");
         self::assertNotFalse($read);
         self::assertNotFalse($load);
@@ -132,9 +132,9 @@ final class SessionRestoreActiveCheckTest extends TestCase
         // and compared in constant time, never coerced into a string.
         $decision = substr($block, $decide, (int) strpos($block, ";
 ", $decide) - $decide);
-        self::assertStringContainsString('$candidate->isActive()', $decision);
+        self::assertStringContainsString('$rememberCandidate->isActive()', $decision);
         self::assertStringContainsString('is_string($rememberClaims->pfp ?? null)', $decision);
-        self::assertStringContainsString('hash_equals(XoopsUserUtility::rememberFingerprint($candidate, $rememberSigningKey), $rememberClaims->pfp)', $decision);
+        self::assertStringContainsString('hash_equals(XoopsUserUtility::rememberFingerprint($rememberCandidate, $rememberSigningKey), $rememberClaims->pfp)', $decision);
         self::assertStringNotContainsString('(string) $rememberClaims->pfp', $block);
 
         // A refused cookie is not a cookie login: the flag the restore block and

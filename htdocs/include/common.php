@@ -354,11 +354,11 @@ if (empty($_SESSION['xoopsUserId'])
         $rememberSigningKey = $rememberKey->getSigning();
         $rememberClaims = \Xmf\Jwt\TokenReader::fromCookie($rememberKey, $GLOBALS['xoopsConfig']['usercookie']);
         if (is_object($rememberClaims) && !empty($rememberClaims->uid)) {
-            $candidate = $member_handler->getUser((int) $rememberClaims->uid);
-            $rememberUser = (is_object($candidate) && $candidate->isActive()
+            $rememberCandidate = $member_handler->getUser((int) $rememberClaims->uid);
+            $rememberUser = (is_object($rememberCandidate) && $rememberCandidate->isActive()
                 && is_string($rememberClaims->pfp ?? null)
-                && hash_equals(XoopsUserUtility::rememberFingerprint($candidate, $rememberSigningKey), $rememberClaims->pfp))
-                ? $candidate : null;
+                && hash_equals(XoopsUserUtility::rememberFingerprint($rememberCandidate, $rememberSigningKey), $rememberClaims->pfp))
+                ? $rememberCandidate : null;
         }
     }
     if (null !== $rememberUser) {
@@ -369,7 +369,7 @@ if (empty($_SESSION['xoopsUserId'])
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
     }
-    unset($candidate, $rememberUser);
+    unset($rememberCandidate, $rememberUser);
 }
 
 /**

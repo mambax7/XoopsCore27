@@ -34,7 +34,7 @@ require_once $GLOBALS['xoops']->path('include/loginsession.php');
 $user = xoops_login_authenticate($uname, $pass);
 
 if (false !== $user) {
-    xoops_login_establish_session($user, '' !== $rememberme, $redirect);
+    xoops_login_establish_session($user, !empty($rememberme), $redirect);
 } elseif (empty($redirect)) {
     // Generic message for every credential failure — do not reveal whether the
     // account exists or which factor failed (user enumeration, SECURITY.md L-3).

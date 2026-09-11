@@ -72,12 +72,12 @@ final class RememberFingerprintMatrixTest extends TestCase
 
     #[Test]
     #[DataProvider('cases')]
-    public function aCookieSeedsTheSessionOnlyForAnAccountThatPassesEveryCheck(mixed $candidate, object $rememberClaims, bool $accepted): void
+    public function aCookieSeedsTheSessionOnlyForAnAccountThatPassesEveryCheck(mixed $rememberCandidate, object $rememberClaims, bool $accepted): void
     {
         $this->loadSourceFile('htdocs/include/common.php');
         // The acceptance decision is the one assignment between loading the
         // candidate and seeding the session.
-        $start = strpos($this->sourceContent, '$rememberUser = (is_object($candidate)');
+        $start = strpos($this->sourceContent, '$rememberUser = (is_object($rememberCandidate)');
         self::assertNotFalse($start, 'the cookie path must decide acceptance in one expression');
         $end = strpos($this->sourceContent, ";\n", $start);
         self::assertNotFalse($end);
@@ -102,8 +102,8 @@ final class RememberFingerprintMatrixTest extends TestCase
         // the variables it reads.
         eval('namespace ' . $namespace . ";\n" . $expression);
 
-        self::assertSame($accepted, null !== $rememberUser && $rememberUser === $candidate);
-        if (!is_object($candidate) || !$candidate->isActive()) {
+        self::assertSame($accepted, null !== $rememberUser && $rememberUser === $rememberCandidate);
+        if (!is_object($rememberCandidate) || !$rememberCandidate->isActive()) {
             self::assertSame(0, $GLOBALS['rememberMatrixHelperCalls'], 'the helper must not run for a missing or inactive account');
         }
     }

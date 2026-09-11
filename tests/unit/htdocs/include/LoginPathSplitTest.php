@@ -108,7 +108,8 @@ final class LoginPathSplitTest extends TestCase
         $src = $this->sourceContent;
         self::assertStringContainsString("require_once \$GLOBALS['xoops']->path('include/loginsession.php');", $src);
         $auth = strpos($src, '$user = xoops_login_authenticate($uname, $pass);');
-        $done = strpos($src, "xoops_login_establish_session(\$user, '' !== \$rememberme, \$redirect);");
+        // the remember flag keeps master's !empty() reading: a posted "0" is not a request
+        $done = strpos($src, 'xoops_login_establish_session($user, !empty($rememberme), $redirect);');
         self::assertNotFalse($auth);
         self::assertNotFalse($done);
         self::assertLessThan($done, $auth);
