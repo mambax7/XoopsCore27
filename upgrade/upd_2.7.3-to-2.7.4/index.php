@@ -131,7 +131,12 @@ class Upgrade_274 extends XoopsUpgrade
     public function check_twofactormode(): bool
     {
         $confId = $this->modeConfId();
-        if ($confId <= 0) {
+        if (null === $confId) {
+            $this->logs[] = 'Could not read the config table to check for the twofactor_mode preference';
+
+            return false;
+        }
+        if (0 === $confId) {
             return false;
         }
 
@@ -146,7 +151,12 @@ class Upgrade_274 extends XoopsUpgrade
     public function apply_twofactormode(): bool
     {
         $confId = $this->modeConfId();
-        if ($confId <= 0) {
+        if (null === $confId) {
+            $this->logs[] = 'Could not read the config table; the twofactor_mode preference was not inserted';
+
+            return false;
+        }
+        if (0 === $confId) {
             $sql = 'INSERT INTO `' . $this->db->prefix('config') . '`'
                  . ' (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc,'
                  . ' conf_formtype, conf_valuetype, conf_order)'
@@ -156,7 +166,7 @@ class Upgrade_274 extends XoopsUpgrade
                 return false;
             }
             $confId = $this->modeConfId();
-            if ($confId <= 0) {
+            if (null === $confId || 0 === $confId) {
                 $this->logs[] = 'The twofactor_mode preference row was not found after it was inserted';
 
                 return false;
@@ -186,17 +196,31 @@ class Upgrade_274 extends XoopsUpgrade
     // =========================================================================
 
     /**
-     * conf_id of the CORE twofactor_mode row, or 0 when absent or unreadable.
+     * conf_id of the CORE twofactor_mode row.
+     *
+     * Tri-state, like tableExists(): the row's conf_id, 0 when the row is absent,
+     * null when the config table could not be read. The base class's getDbValue()
+     * folds "absent" and "unreadable" into one false, and the config table has no
+     * unique key on (conf_modid, conf_name), so a read failure taken as "absent"
+     * would insert a duplicate core preference.
      *
      * Scoped to conf_modid = 0: matching on conf_name alone would let a module
      * preference of the same name satisfy the check and the core row would never
      * be created.
      *
-     * @return int
+     * @return int|null
      */
-    private function modeConfId(): int
+    private function modeConfId(): ?int
     {
-        return (int) $this->getDbValue('config', 'conf_id', "conf_modid = 0 AND conf_name = 'twofactor_mode'");
+        $sql    = 'SELECT `conf_id` FROM `' . $this->db->prefix('config') . '`'
+                . " WHERE conf_modid = 0 AND conf_name = 'twofactor_mode'";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+        $row = $this->db->fetchRow($result);
+
+        return is_array($row) ? (int) $row[0] : 0;
     }
 
     /**
@@ -218,7 +242,11 @@ class Upgrade_274 extends XoopsUpgrade
                 return null;
             }
             $row = $this->db->fetchRow($result);
-            if (!is_array($row) || (int) $row[0] === 0) {
+            if (!is_array($row)) {
+                // COUNT(*) always yields one row; none means the read failed.
+                return null;
+            }
+            if ((int) $row[0] === 0) {
                 $missing[] = $option;
             }
         }

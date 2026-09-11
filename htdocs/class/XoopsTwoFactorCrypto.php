@@ -197,7 +197,7 @@ final class XoopsTwoFactorCrypto
         }
         $raw         = base64_decode(substr($blob, strlen(self::PREFIX)), true);
         $nonceLength = SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES;
-        if (!is_string($raw) || strlen($raw) <= $nonceLength + SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES) {
+        if (!is_string($raw) || strlen($raw) < $nonceLength + SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES) {
             return null;
         }
         try {

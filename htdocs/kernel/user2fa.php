@@ -241,7 +241,7 @@ final class XoopsUser2faHandler
      * @param callable $fn the work; return false to roll back
      *
      * @return mixed $fn's return value; false when the transaction could not start,
-     *               when $fn returned false (rolled back), or when COMMIT failed
+     *               when $fn returned false (rolled back), or when COMMIT failed (rolled back)
      * @throws \LogicException on nesting
      * @throws \Throwable      whatever $fn throws, after ROLLBACK
      */
@@ -258,17 +258,19 @@ final class XoopsUser2faHandler
         try {
             try {
                 $value = $fn();
+                if (false !== $value && $this->db->exec('COMMIT')) {
+                    return $value;
+                }
             } catch (\Throwable $e) {
                 $this->db->exec('ROLLBACK');
                 throw $e;
             }
-            if (false === $value) {
-                $this->db->exec('ROLLBACK');
+            // $fn declined, or COMMIT was refused: either way the transaction
+            // is still open on the connection and the next statement would
+            // join it. Close it before letting go.
+            $this->db->exec('ROLLBACK');
 
-                return false;
-            }
-
-            return $this->db->exec('COMMIT') ? $value : false;
+            return false;
         } finally {
             // Whatever happened, including a ROLLBACK that itself threw, the
             // connection is no longer ours to guard.

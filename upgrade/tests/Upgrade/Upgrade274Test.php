@@ -233,6 +233,29 @@ final class Upgrade274Test extends TestCase
     }
 
     #[Test]
+    public function twofactorModeInsertsNothingWhenTheConfigTableCannotBeRead(): void
+    {
+        $patch               = $this->patch();
+        $this->queryFailsFor = '`xoops_config`';
+
+        self::assertFalse($patch->check_twofactormode());
+        self::assertFalse($patch->apply_twofactormode());
+        self::assertSame([], $this->exec, 'an unreadable config table is not "absent": no duplicate preference row');
+        self::assertNotSame([], $patch->logs);
+    }
+
+    #[Test]
+    public function applyTwofactorModeInsertsNoOptionWhenTheCountCannotBeFetched(): void
+    {
+        $patch      = $this->patch();
+        $this->rows = [[140], false];   // row present; the first COUNT(*) yields no row
+
+        self::assertFalse($patch->apply_twofactormode());
+        self::assertSame([], $this->exec);
+        self::assertNotSame([], $patch->logs);
+    }
+
+    #[Test]
     public function applyTwofactorModeIsIdempotent(): void
     {
         $patch      = $this->patch();

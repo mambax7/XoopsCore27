@@ -69,6 +69,9 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         if (!extension_loaded('sodium')) {
             $this->markTestSkipped('ext-sodium is required');
         }
+        if (!extension_loaded('mysqli')) {
+            $this->markTestSkipped('ext-mysqli is required for the mysqli_result stub');
+        }
         require_once XOOPS_ROOT_PATH . '/kernel/user2fa.php';
         $this->sql        = [];
         $this->rows       = [];
@@ -325,7 +328,11 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->sql  = [];
         $this->rows = [false];
         $this->assertFalse($handler->recordFailure(10, self::NOW));
-        $this->assertSame(['START TRANSACTION', $this->sql[1], 'ROLLBACK'], $this->sql);
+        $this->assertSame([
+            'START TRANSACTION',
+            'SELECT `uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation` FROM `xoops_user_2fa` WHERE `uid` = 10 FOR UPDATE',
+            'ROLLBACK',
+        ], $this->sql);
     }
 
     /* ---------------------------------------------------------------- */
@@ -433,7 +440,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->sql        = [];
         $this->execResult = static fn (string $s): bool => 'COMMIT' !== $s;
         $this->assertFalse($handler->withTransaction(static fn (): string => 'value'));
-        $this->assertSame(['START TRANSACTION', 'COMMIT'], $this->sql);
+        $this->assertSame(['START TRANSACTION', 'COMMIT', 'ROLLBACK'], $this->sql, 'a refused COMMIT is rolled back so the connection is not left in a transaction');
 
         // lockRow() outside a transaction is a programming error.
         $this->expectException(\LogicException::class);
