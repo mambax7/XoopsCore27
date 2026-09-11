@@ -4,6 +4,7 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 2.7.4 Beta 2                  2026-09
 ===================================
 Security:
+- complete a second-factor challenge on a fresh request by loading the session helper; report storage failures as unavailable instead of counting a wrong code; bind failure counts to the pending factor generation; prevent remember-me restoration while a challenge is pending; validate pending redirect and remember fields, sanitise failure diagnostics, and avoid returning a successful core login to the SSL popup (#206)
 - delete an account's tokens, in every scope, before its memberships and user row when the account is deleted; XoopsMemberHandler::deleteUser() removed only memberships and the user row, so unused tokens outlived the account, and a token delete that does not run now stops the account delete so neither order of failure leaves a dead account with live tokens; a membership delete that does not run stops it as well, so a false return from deleteUser() always means the account is still there (kernel/member.php) (#204)
 
 Bug fixes:

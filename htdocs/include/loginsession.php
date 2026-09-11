@@ -84,6 +84,10 @@ function xoops_login_authenticate(string $uname, string $pass)
  */
 function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect): never
 {
+    if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
+        xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
+        xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
+    }
     $GLOBALS['sess_handler']->regenerate_id(true);
     $_SESSION                    = [];
     $_SESSION['xoops2faPending'] = [

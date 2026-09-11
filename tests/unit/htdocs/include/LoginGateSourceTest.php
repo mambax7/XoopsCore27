@@ -28,6 +28,13 @@ final class LoginGateSourceTest extends TestCase
     use SourceFileTestTrait;
 
     #[Test]
+    public function pendingChallengeBlocksRememberCookieRestoration(): void
+    {
+        $this->loadSourceFile('htdocs/include/common.php');
+        self::assertStringContainsString("if (empty(\$_SESSION['xoopsUserId'])\n    && !isset(\$_SESSION['xoops2faPending'])", $this->sourceContent);
+    }
+
+    #[Test]
     public function checkloginGatesBetweenAuthenticationAndTheSession(): void
     {
         $this->loadSourceFile('htdocs/include/checklogin.php');

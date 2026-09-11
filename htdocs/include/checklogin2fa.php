@@ -25,6 +25,8 @@
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
+
 // user.php loads the first itself; the closed-site page does not. The
 // challenge strings have a file of their own so a language pack that
 // predates them falls back to English as a whole, as xoops_loadLanguage()
@@ -100,7 +102,8 @@ $xo2faPending = $_SESSION['xoops2faPending'] ?? null;
 $xo2faValid   = is_array($xo2faPending)
     && isset($xo2faPending['uid'], $xo2faPending['state'], $xo2faPending['generation'], $xo2faPending['passdigest'], $xo2faPending['expires'])
     && is_int($xo2faPending['uid']) && is_string($xo2faPending['state']) && is_string($xo2faPending['generation'])
-    && is_string($xo2faPending['passdigest']) && is_int($xo2faPending['expires']) && $xo2faPending['expires'] > $xo2faNow;
+    && is_string($xo2faPending['passdigest']) && is_int($xo2faPending['expires']) && $xo2faPending['expires'] > $xo2faNow
+    && is_bool($xo2faPending['remember'] ?? null) && is_string($xo2faPending['redirect'] ?? null);
 
 $xo2faUser = null;
 $xo2faRow  = null;
@@ -165,7 +168,7 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
         $mailer->setBody(sprintf($body, $GLOBALS['xoopsConfig']['sitename'], \Xmf\IPAddress::fromRequest()->asReadable()));
         $mailer->send();
     } catch (\Throwable $e) {
-        trigger_error('Two-factor notice mail failed: ' . $e->getMessage(), E_USER_WARNING);
+        trigger_error('Two-factor notice mail failed', E_USER_WARNING);
     }
 };
 
@@ -228,10 +231,10 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xo
             }
         }
         if ($xo2faCount) {
-            $xo2faFailure = $xo2faHandler->recordFailure($xo2faUid, $xo2faNow);
+            $xo2faFailure = $xo2faHandler->recordFailure($xo2faUid, $xo2faNow, $xo2faGeneration);
         }
     } catch (\Throwable $e) {
-        trigger_error('Two-factor challenge failed for uid ' . $xo2faUid . ': ' . $e->getMessage(), E_USER_WARNING);
+        trigger_error('Two-factor challenge failed for uid ' . $xo2faUid, E_USER_WARNING);
         $xo2faError    = _US_2FA_UNAVAILABLE;
         $xo2faAccepted = false;
         $xo2faFailure  = false;

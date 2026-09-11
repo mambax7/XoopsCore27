@@ -312,19 +312,23 @@ final class XoopsUser2faHandler
      * Run $fn inside one transaction on the request's connection.
      *
      * @param callable $fn the work; return false to roll back
+     * @param bool $strict throw when START or COMMIT reports failure
      *
      * @return mixed $fn's return value; false when the transaction could not start,
      *               when $fn returned false (rolled back), or when COMMIT failed (rolled back)
      * @throws \LogicException on nesting
      * @throws \Throwable      whatever $fn throws, after ROLLBACK
      */
-    public function withTransaction(callable $fn): mixed
+    public function withTransaction(callable $fn, bool $strict = false): mixed
     {
         $this->assertConnectionUsable();
         if ($this->inTransaction()) {
             throw new \LogicException('withTransaction() does not nest');
         }
         if (!$this->db->exec('START TRANSACTION')) {
+            if ($strict) {
+                throw new \RuntimeException('Two-factor transaction could not start');
+            }
             return false;
         }
         self::$open ??= new \WeakMap();
@@ -339,6 +343,9 @@ final class XoopsUser2faHandler
                     $closed = true;
 
                     return $value;
+                }
+                if (false !== $value && $strict) {
+                    throw new \RuntimeException('Two-factor transaction could not commit');
                 }
             } catch (\Throwable $e) {
                 $closed = $this->db->exec('ROLLBACK');
@@ -390,7 +397,11 @@ final class XoopsUser2faHandler
             $step
         );
 
-        return $this->db->exec($sql) && $this->db->getAffectedRows() === 1;
+        if (!$this->db->exec($sql)) {
+            throw new \RuntimeException('Two-factor counter write failed');
+        }
+
+        return $this->db->getAffectedRows() === 1;
     }
 
     /**
@@ -398,14 +409,16 @@ final class XoopsUser2faHandler
      *
      * @param int $uid account
      * @param int $now unix time
+     * @param string|null $expectedGeneration generation of the rejected challenge; null for legacy callers
      *
      * @return array{locked: bool, transitioned: bool}|false
      */
-    public function recordFailure(int $uid, int $now): array|false
+    public function recordFailure(int $uid, int $now, ?string $expectedGeneration = null): array|false
     {
-        return $this->withTransaction(function () use ($uid, $now): array|false {
+        return $this->withTransaction(function () use ($uid, $now, $expectedGeneration): array|false {
             $before = $this->lockRow($uid);
-            if (null === $before || self::ROW_ENROLLED !== $before['state']) {
+            if (null === $before || self::ROW_ENROLLED !== $before['state']
+                || (null !== $expectedGeneration && !hash_equals((string) $before['generation'], $expectedGeneration))) {
                 // The UPDATE below would match nothing and exec() would still
                 // report success; refuse here so nothing is "counted".
                 return false;
@@ -435,13 +448,13 @@ final class XoopsUser2faHandler
                 $this->db->quote(self::ROW_ENROLLED)
             );
             if (!$this->db->exec($sql)) {
-                return false;
+                throw new \RuntimeException('Two-factor throttle write failed');
             }
             $wasLocked = $before['locked_until'] > $now;
             $isLocked  = $lockedUntil > $now;
 
             return ['locked' => $isLocked, 'transitioned' => $isLocked && !$wasLocked];
-        });
+        }, true);
     }
 
     /**
@@ -465,16 +478,20 @@ final class XoopsUser2faHandler
             if (null === $row || self::ROW_ENROLLED !== $row['state'] || !hash_equals((string) $row['generation'], $pendingGeneration)) {
                 return false;
             }
-            if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical)) {
+            if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical, true)) {
                 return false;
             }
 
-            return $this->db->exec(sprintf(
+            if (!$this->db->exec(sprintf(
                 'UPDATE `%s` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = %d',
                 $this->table(),
                 $uid
-            ));
-        });
+            ))) {
+                throw new \RuntimeException('Two-factor throttle reset failed');
+            }
+
+            return true;
+        }, true);
     }
 
     /**

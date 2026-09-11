@@ -104,7 +104,7 @@ if ('' === $uname || '' === $pass) {
             }
         } catch (\Throwable $e) {
             // A lookup or reset failure refuses; it never leaves this page.
-            $refusal = $e->getMessage();
+            $refusal = 'second-factor verification unavailable';
         }
         if (null !== $refusal) {
             trigger_error(sprintf('Upgrade login refused for uid %d: %s', (int) $user->getVar('uid'), $refusal), E_USER_WARNING);

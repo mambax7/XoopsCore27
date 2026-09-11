@@ -211,6 +211,7 @@ class XoopsMemberHandler
             }
         } catch (\Throwable $e) {
             // A connection poisoned by an earlier failed rollback throws.
+            trigger_error(sprintf('User deletion refused for uid %d: second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
             return false;
         }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));

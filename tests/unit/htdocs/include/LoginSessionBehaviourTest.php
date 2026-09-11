@@ -242,7 +242,7 @@ final class LoginSessionBehaviourTest extends TestCase
         self::assertTrue($pending['remember']);
         self::assertSame('/modules/news/', $pending['redirect']);
         self::assertEqualsWithDelta(time() + 300, $pending['expires'], 5);
-        self::assertSame(['regenerate_id:uid=stale'], $GLOBALS['sandboxLog'], 'no account write, no event, no cookie');
+        self::assertSame(['setcookie:xoops_user:expire', 'setcookie:xoops_user:expire', 'regenerate_id:uid=stale'], $GLOBALS['sandboxLog'], 'expires both cookie forms without account writes or events');
         self::assertSame([], $user->writes);
     }
 

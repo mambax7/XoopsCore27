@@ -77,7 +77,7 @@ if ($op === 'dologin') {
             $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
         }
         if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
-            redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED);
+            redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);
             exit();
         }
         $user->setVar('last_login', time());

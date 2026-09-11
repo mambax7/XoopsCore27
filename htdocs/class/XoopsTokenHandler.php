@@ -153,10 +153,12 @@ final class XoopsTokenHandler
      * @param int    $uid      User ID
      * @param string $scope    Token scope
      * @param string $rawToken Raw token from the URL/form
+     * @param bool   $strict   Throw on a failed storage write instead of returning false
      *
      * @return bool true if the token was valid and has now been consumed
+     * @throws \RuntimeException when strict verification cannot write
      */
-    public function verify(int $uid, string $scope, string $rawToken): bool
+    public function verify(int $uid, string $scope, string $rawToken, bool $strict = false): bool
     {
         $hash  = hash('sha256', $rawToken);
         $table = $this->db->prefix('tokens');
@@ -173,6 +175,10 @@ final class XoopsTokenHandler
             $this->db->quote($hash),
             $now
         ));
+
+        if (!$result && $strict) {
+            throw new \RuntimeException('Token consumption failed');
+        }
 
         return $result && $this->db->getAffectedRows() === 1;
     }

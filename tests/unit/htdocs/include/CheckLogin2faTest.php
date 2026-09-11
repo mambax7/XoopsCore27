@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Include;
 
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\TestCase;
 use RedirectHeaderException;
 use Tests\Unit\Include\CheckLogin2faSandbox\EstablishedException;
@@ -33,6 +35,18 @@ final class CheckLogin2faTest extends TestCase
     private const SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
     private static string $body = '';
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aFreshChallengeRequestLoadsTheRealCompletionHelper(): void
+    {
+        self::assertFalse(function_exists('xoops_login_establish_session'));
+        $this->execute();
+        self::assertTrue(function_exists('xoops_login_establish_session'));
+        self::assertSame(realpath(XOOPS_ROOT_PATH . '/include/loginsession.php'),
+            realpath((new \ReflectionFunction('xoops_login_establish_session'))->getFileName()));
+    }
 
     protected function setUp(): void
     {
@@ -141,7 +155,7 @@ final class CheckLogin2faTest extends TestCase
     #[Test]
     public function anExpiredOrMalformedRecordIsDroppedAndSaysStartAgain(): void
     {
-        foreach ([['expires' => time() - 1], ['uid' => '9'], ['generation' => null]] as $bad) {
+        foreach ([['expires' => time() - 1], ['uid' => '9'], ['generation' => null], ['remember' => []], ['redirect' => []]] as $bad) {
             $this->pending($bad);
             [$what, $vars] = $this->execute();
             self::assertSame('rendered', $what);
@@ -419,7 +433,7 @@ final class CheckLogin2faTest extends TestCase
                     public function stateOfRow(?array $row): string { return $GLOBALS['sandboxState']; }
                     public function secretFor(int $uid): ?string { return $GLOBALS['sandboxSecret']; }
                     public function acceptTotp(int $uid, int $step, string $gen, int $now): bool { $GLOBALS['sandboxLog'][] = "acceptTotp:$uid:$step:$gen"; if ($GLOBALS['sandboxAccept'] instanceof \Throwable) { throw $GLOBALS['sandboxAccept']; } return $GLOBALS['sandboxAccept']; }
-                    public function recordFailure(int $uid, int $now): array|false { $GLOBALS['sandboxLog'][] = "recordFailure:$uid"; return $GLOBALS['sandboxFailure']; }
+                    public function recordFailure(int $uid, int $now, string $generation): array|false { if ($generation !== 'gen-1') { throw new \LogicException('Wrong failure generation'); } $GLOBALS['sandboxLog'][] = "recordFailure:$uid"; return $GLOBALS['sandboxFailure']; }
                     public function acceptRecovery(int $uid, string $code, string $gen): bool { $GLOBALS['sandboxLog'][] = "acceptRecovery:$uid:$code:$gen"; return $GLOBALS['sandboxRecovery']; }
                     public function resetByEscapeHatch(int $uid): bool { $GLOBALS['sandboxLog'][] = "hatch:$uid"; return $GLOBALS['sandboxHatch']; }
                 },

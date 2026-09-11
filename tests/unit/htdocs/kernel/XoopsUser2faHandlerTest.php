@@ -48,6 +48,35 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     private const GEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     private const NOW = 1700000000;
 
+    #[Test]
+    public function storageFailuresDoNotMasqueradeAsRejectedCodes(): void
+    {
+        foreach (['START TRANSACTION', 'UPDATE `xoops_tokens`', 'UPDATE `xoops_user_2fa`', 'COMMIT'] as $failed) {
+            $this->rows = [$this->row()];
+            $this->sql = [];
+            $this->execResult = static fn (string $sql): bool => !str_starts_with($sql, $failed);
+            $thrown = false;
+            try {
+                $this->handler()->acceptRecovery(10, 'ABCDEFGH', self::GEN);
+            } catch (\RuntimeException $e) {
+                $thrown = true;
+                self::assertNotSame('', $e->getMessage());
+            }
+            self::assertTrue($thrown, 'Storage failure was treated as a rejected code: ' . $failed);
+        }
+        $this->execResult = false;
+        $this->expectException(\RuntimeException::class);
+        $this->handler()->acceptTotp(10, 101, self::GEN, self::NOW);
+    }
+
+    #[Test]
+    public function oldPendingGenerationCannotThrottleANewFactor(): void
+    {
+        $this->rows = [$this->row(['generation' => str_repeat('b', 32)])];
+        self::assertFalse($this->handler()->recordFailure(10, self::NOW, self::GEN));
+        self::assertSame([], $this->statements('UPDATE'));
+    }
+
     /** @var list<string> every statement, exec() and query() alike, in order */
     private array $sql = [];
 
@@ -261,7 +290,8 @@ class XoopsUser2faHandlerTest extends KernelTestCase
 
         $this->affected   = 1;
         $this->execResult = false;
-        $this->assertFalse($handler->acceptTotp(10, 101, self::GEN, self::NOW));
+        $this->expectException(\RuntimeException::class);
+        $handler->acceptTotp(10, 101, self::GEN, self::NOW);
     }
 
     #[Test]

@@ -42,7 +42,8 @@ final class AlternateLoginPathsTest extends TestCase
         self::assertStringContainsString('XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)', $this->sourceContent);
         // a lookup or reset failure is a refusal, not an uncaught exception
         self::assertStringContainsString('} catch (\\Throwable $e) {', $this->sourceContent);
-        self::assertStringContainsString('$refusal = $e->getMessage();', $this->sourceContent);
+        self::assertStringNotContainsString('$refusal = $e->getMessage();', $this->sourceContent);
+        self::assertStringContainsString("\$refusal = 'second-factor verification unavailable';", $this->sourceContent);
         self::assertStringContainsString('if (null !== $refusal) {', $this->sourceContent);
         $this->assertBindsTheSession('upgrade/login.php');
     }
@@ -76,7 +77,7 @@ final class AlternateLoginPathsTest extends TestCase
             self::assertStringContainsString('XoopsUser2faHandler::STATE_UNAVAILABLE', $this->sourceContent, $file);
         }
         $this->loadSourceFile('extras/login.php');
-        self::assertStringContainsString("redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED);", $this->sourceContent);
+        self::assertStringContainsString("redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);", $this->sourceContent);
         self::assertStringContainsString("xoops_loadLanguage('user2fa');", $this->sourceContent);
         $this->assertBindsTheSession('extras/login.php');
         $this->loadSourceFile('htdocs/class/xml/rpc/xmlrpcapi.php');

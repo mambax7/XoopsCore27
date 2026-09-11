@@ -352,6 +352,7 @@ $rememberClaims = false;
 $rememberKey = null;
 $rememberSigningKey = '';
 if (empty($_SESSION['xoopsUserId'])
+    && !isset($_SESSION['xoops2faPending'])
     && !empty($GLOBALS['xoopsConfig']['usercookie'])
     && '' !== \Xmf\Request::getString($GLOBALS['xoopsConfig']['usercookie'], '', 'COOKIE')
 ) {
