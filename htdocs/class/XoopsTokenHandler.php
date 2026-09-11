@@ -125,7 +125,9 @@ final class XoopsTokenHandler
         }
         $hash      = hash('sha256', $rawToken);
         $now       = time();
-        $expiresAt = null === $ttl ? self::NO_EXPIRY : $now + max(self::MIN_TTL, $ttl);
+        // A ttl past the column's range means "never" as well; without the
+        // clamp strict MySQL would refuse the row after the revoke ran.
+        $expiresAt = null === $ttl ? self::NO_EXPIRY : (int) min(self::NO_EXPIRY, $now + max(self::MIN_TTL, $ttl));
 
         $table = $this->db->prefix('tokens');
         $sql   = sprintf(

@@ -629,6 +629,25 @@ class XoopsTokenHandlerTest extends KernelTestCase
     }
 
     #[Test]
+    public function createClampsATtlPastTheColumnRangeToTheSentinel(): void
+    {
+        $captured = [];
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$captured) {
+            $captured[] = $sql;
+            return true;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        // 3000000000 overflows the unsigned int column; PHP_INT_MAX overflows the PHP int
+        $this->assertNotFalse($handler->create(7, 'lostpass', 3000000000, false));
+        $this->assertNotFalse($handler->create(7, 'lostpass', PHP_INT_MAX, false));
+        foreach ($captured as $sql) {
+            $this->assertMatchesRegularExpression('/, \d+, 4294967295, 0\)$/', $sql);
+        }
+    }
+
+    #[Test]
     public function noExpiryTokensSurvivePurgeWhileUsedAndExpiredOnesAreDeleted(): void
     {
         // The handler's own SQL runs against an in-memory SQLite table with
