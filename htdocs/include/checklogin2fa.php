@@ -25,6 +25,9 @@
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+// user.php loads this itself; the closed-site page does not.
+xoops_loadLanguage('user');
+
 if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
     /**
      * Render the challenge page and stop.

@@ -75,5 +75,7 @@ final class LoginGateSourceTest extends TestCase
         self::assertStringContainsString("header('Referrer-Policy: no-referrer');", $this->sourceContent);
         self::assertStringContainsString("header('X-Frame-Options: DENY');", $this->sourceContent);
         self::assertStringContainsString('$tpl->caching = 0;', $this->sourceContent);
+        // the closed-site page includes this without loading the user language first
+        self::assertStringContainsString("xoops_loadLanguage('user');", $this->sourceContent);
     }
 }
