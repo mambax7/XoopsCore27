@@ -468,4 +468,212 @@ class XoopsTokenHandlerTest extends KernelTestCase
         $this->assertNotEmpty($verifiedHash);
         $this->assertSame($insertedHash, $verifiedHash, 'create() and verify() must use the same hash');
     }
+
+    /* ========================================================
+     * Recovery-code support: caller token, no-expiry ttl,
+     * revoke outcome, delete by uid, purge semantics
+     * ====================================================== */
+
+    #[Test]
+    public function createAcceptsACallerSuppliedTokenAndHashesItAsGiven(): void
+    {
+        $capturedSql = '';
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$capturedSql) {
+            $capturedSql = $sql;
+            return true;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        // lower-case with a space: the handler must not canonicalise
+        $raw = 'abcd efgh';
+        $this->assertSame($raw, $handler->create(7, '2fa_recovery', null, false, $raw));
+        $this->assertStringContainsString("'" . hash('sha256', $raw) . "'", $capturedSql);
+        $this->assertStringNotContainsString(hash('sha256', 'ABCDEFGH'), $capturedSql);
+    }
+
+    #[Test]
+    public function createRefusesAnEmptyCallerToken(): void
+    {
+        $db = $this->createMockDatabase();
+        $db->expects($this->never())->method('exec');
+        $handler  = new XoopsTokenHandler($db);
+        $warnings = [];
+        set_error_handler(function (int $errno, string $errstr) use (&$warnings) {
+            $warnings[] = $errstr;
+            return true;
+        }, E_USER_WARNING);
+        try {
+            $result = $handler->create(7, '2fa_recovery', null, false, '');
+        } finally {
+            restore_error_handler();
+        }
+        $this->assertFalse($result);
+        $this->assertCount(1, $warnings);
+    }
+
+    #[Test]
+    public function createWithNullTtlWritesTheNoExpirySentinel(): void
+    {
+        $capturedSql = '';
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$capturedSql) {
+            $capturedSql = $sql;
+            return true;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        $this->assertNotFalse($handler->create(7, '2fa_recovery', null, false));
+        $this->assertMatchesRegularExpression('/VALUES \(7, \'2fa_recovery\', \'[0-9a-f]{64}\', \d+, 4294967295, 0\)/', $capturedSql);
+    }
+
+    #[Test]
+    public function createWithZeroTtlStillAppliesTheMinimum(): void
+    {
+        $capturedSql = '';
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$capturedSql) {
+            $capturedSql = $sql;
+            return true;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        $before = time();
+        $this->assertNotFalse($handler->create(7, 'lostpass', 0, false));
+        $this->assertSame(1, preg_match('/, (\d+), (\d+), 0\)$/', $capturedSql, $m));
+        $this->assertGreaterThanOrEqual($before + 60, (int) $m[2]);
+        $this->assertLessThanOrEqual(time() + 60, (int) $m[2]);
+    }
+
+    #[Test]
+    public function createFailsWhenTheRevokeFails(): void
+    {
+        $queries = [];
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$queries) {
+            $queries[] = $sql;
+            return !str_starts_with($sql, 'UPDATE');
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        $this->assertFalse($handler->create(7, 'lostpass'));
+        $this->assertCount(1, $queries);
+        $this->assertStringStartsWith('UPDATE', $queries[0]);
+    }
+
+    #[Test]
+    public function revokeByScopeReturnsTheOutcome(): void
+    {
+        $ok = $this->createMockDatabase();
+        $ok->method('exec')->willReturn(true);
+        $this->assertTrue((new XoopsTokenHandler($ok))->revokeByScope(7, 'lostpass'));
+
+        $failed = $this->createMockDatabase();
+        $failed->method('exec')->willReturn(false);
+        $this->assertFalse((new XoopsTokenHandler($failed))->revokeByScope(7, 'lostpass'));
+    }
+
+    #[Test]
+    public function aBatchWithRevokePreviousFalseInsertsEveryTokenAndRevokesNothing(): void
+    {
+        $queries = [];
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$queries) {
+            $queries[] = $sql;
+            return true;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        $hashes = [];
+        for ($i = 0; $i < 10; $i++) {
+            $this->assertSame("code$i", $handler->create(7, '2fa_recovery', null, false, "code$i"));
+            $hashes[] = hash('sha256', "code$i");
+        }
+        $this->assertCount(10, $queries);
+        $this->assertCount(10, array_filter($queries, static fn (string $q): bool => str_starts_with($q, 'INSERT')));
+        $this->assertCount(10, array_unique($hashes));
+    }
+
+    #[Test]
+    public function deleteByUidRemovesEveryScopeAndRefusesAnInvalidUid(): void
+    {
+        $capturedSql = '';
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use (&$capturedSql) {
+            $capturedSql = $sql;
+            return true;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        $this->assertTrue($handler->deleteByUid(7));
+        $this->assertSame('DELETE FROM `xoops_tokens` WHERE `uid` = 7', $capturedSql);
+
+        $failed = $this->createMockDatabase();
+        $failed->method('exec')->willReturn(false);
+        $this->assertFalse((new XoopsTokenHandler($failed))->deleteByUid(7));
+
+        $untouched = $this->createMockDatabase();
+        $untouched->expects($this->never())->method('exec');
+        $warnings = [];
+        set_error_handler(function (int $errno, string $errstr) use (&$warnings) {
+            $warnings[] = $errstr;
+            return true;
+        }, E_USER_WARNING);
+        try {
+            $result = (new XoopsTokenHandler($untouched))->deleteByUid(0);
+        } finally {
+            restore_error_handler();
+        }
+        $this->assertFalse($result);
+        $this->assertCount(1, $warnings);
+    }
+
+    #[Test]
+    public function noExpiryTokensSurvivePurgeWhileUsedAndExpiredOnesAreDeleted(): void
+    {
+        // The handler's own SQL runs against an in-memory SQLite table with
+        // the install DDL's columns, so the predicate is executed, not matched.
+        if (!extension_loaded('pdo_sqlite')) {
+            $this->markTestSkipped('pdo_sqlite is required to execute the handler SQL');
+        }
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $pdo->exec('CREATE TABLE xoops_tokens ('
+            . 'token_id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER NOT NULL DEFAULT 0,'
+            . " scope TEXT NOT NULL DEFAULT '', hash TEXT NOT NULL DEFAULT '',"
+            . ' issued_at INTEGER NOT NULL DEFAULT 0, expires_at INTEGER NOT NULL DEFAULT 0,'
+            . ' used_at INTEGER NOT NULL DEFAULT 0, UNIQUE (uid, scope, hash))');
+        $now      = time();
+        $eightDay = $now - 8 * 86400;
+        $insert   = $pdo->prepare('INSERT INTO xoops_tokens (uid, scope, hash, issued_at, expires_at, used_at) VALUES (?, ?, ?, ?, ?, ?)');
+        $insert->execute([7, '2fa_recovery', hash('sha256', 'CODE-A'), $eightDay, 4294967295, 0]);
+        $insert->execute([7, '2fa_recovery', hash('sha256', 'CODE-B'), $eightDay, 4294967295, $now - 1000]);
+        $insert->execute([7, 'lostpass', hash('sha256', 'old-link'), $eightDay, $eightDay + 3600, 0]);
+        // issued now, expiring this very second: too young to purge, too old to verify
+        $insert->execute([7, 'lostpass', hash('sha256', 'edge'), $now, $now, 0]);
+
+        $affected = 0;
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturnCallback(function ($sql) use ($pdo, &$affected) {
+            $affected = (int) $pdo->exec($sql);
+            return true; // mysqli reports success for a statement that matched no row
+        });
+        $db->method('getAffectedRows')->willReturnCallback(function () use (&$affected) {
+            return $affected;
+        });
+        $handler = new XoopsTokenHandler($db);
+
+        $handler->purgeExpired(604800);
+        $left = $pdo->query('SELECT hash, used_at FROM xoops_tokens ORDER BY token_id')->fetchAll(\PDO::FETCH_ASSOC);
+        $this->assertSame([
+            ['hash' => hash('sha256', 'CODE-A'), 'used_at' => 0],
+            ['hash' => hash('sha256', 'edge'), 'used_at' => 0],
+        ], $left, 'only the unused no-expiry code and the young row survive');
+
+        // ... and it is still acceptable years later, exactly once.
+        $this->assertTrue($handler->verify(7, '2fa_recovery', 'CODE-A'));
+        $this->assertFalse($handler->verify(7, '2fa_recovery', 'CODE-A'));
+        $this->assertFalse($handler->verify(7, '2fa_recovery', 'code-a'), 'the handler compares the token as given');
+        $this->assertFalse($handler->verify(7, 'lostpass', 'edge'), 'expires_at must be strictly in the future');
+    }
 }

@@ -38,6 +38,19 @@ final class XoopsTokenHandler
     /** @var int Minimum TTL floor in seconds */
     private const MIN_TTL = 60;
 
+    /**
+     * expires_at written for a token that never expires (a null ttl).
+     *
+     * The largest value the unsigned int column holds, so verify()'s
+     * `expires_at > now` test passes for the life of the site and
+     * purgeExpired() never sees it as expired. A ttl of 0 is not "never":
+     * it is floored to MIN_TTL like any other short ttl, so the default-0
+     * rows of older tables keep failing verification.
+     *
+     * @var int
+     */
+    private const NO_EXPIRY = 4294967295;
+
     private readonly \XoopsMySQLDatabase $db;
 
     /**
@@ -56,18 +69,25 @@ final class XoopsTokenHandler
      * By default, revokes any previous unused tokens for the same user+scope
      * before inserting, so only the latest link is valid (OWASP recommendation).
      *
-     * @param int    $uid            User ID
-     * @param string $scope          Token scope (e.g. 'lostpass', 'activation')
-     * @param int    $ttl            Time-to-live in seconds (minimum 60)
-     * @param bool   $revokePrevious Revoke unused tokens for same scope first
+     * A caller may supply the raw token instead of having one generated, for
+     * tokens the caller shows or formats itself (recovery codes). It is hashed
+     * exactly as given: any canonicalisation belongs to the caller, because
+     * the generated tokens of other scopes are case-sensitive.
      *
-     * @return string|false Raw token string, or false on DB failure
+     * @param int         $uid            User ID
+     * @param string      $scope          Token scope (e.g. 'lostpass', 'activation')
+     * @param int|null    $ttl            Time-to-live in seconds (minimum 60), or null for a token that never expires
+     * @param bool        $revokePrevious Revoke unused tokens for same scope first
+     * @param string|null $rawToken       Caller-supplied raw token, or null to generate one
+     *
+     * @return string|false Raw token string, or false on DB failure, an empty caller token, or a failed revoke
      */
     public function create(
         int $uid,
         string $scope,
-        int $ttl = 3600,
-        bool $revokePrevious = true
+        ?int $ttl = 3600,
+        bool $revokePrevious = true,
+        ?string $rawToken = null
     ): string|false
     {
         if ($uid <= 0 || trim($scope) === '') {
@@ -77,24 +97,35 @@ final class XoopsTokenHandler
             );
             return false;
         }
-
-        if ($revokePrevious) {
-            $this->revokeByScope($uid, $scope);
-        }
-
-        try {
-            $bytes = random_bytes(32);
-        } catch (\Throwable $e) {
+        if ('' === $rawToken) {
             trigger_error(
-                sprintf('%s::create() failed to generate secure random token: %s', __CLASS__, $e->getMessage()),
+                basename(__FILE__) . ': create() refuses an empty caller-supplied token',
                 E_USER_WARNING
             );
             return false;
         }
-        $rawToken  = rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
+
+        // A revoke that did not run leaves the previous token valid beside
+        // the new one, so the new one is not issued.
+        if ($revokePrevious && !$this->revokeByScope($uid, $scope)) {
+            return false;
+        }
+
+        if (null === $rawToken) {
+            try {
+                $bytes = random_bytes(32);
+            } catch (\Throwable $e) {
+                trigger_error(
+                    sprintf('%s::create() failed to generate secure random token: %s', __CLASS__, $e->getMessage()),
+                    E_USER_WARNING
+                );
+                return false;
+            }
+            $rawToken = rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
+        }
         $hash      = hash('sha256', $rawToken);
         $now       = time();
-        $expiresAt = $now + max(self::MIN_TTL, $ttl);
+        $expiresAt = null === $ttl ? self::NO_EXPIRY : $now + max(self::MIN_TTL, $ttl);
 
         $table = $this->db->prefix('tokens');
         $sql   = sprintf(
@@ -150,14 +181,14 @@ final class XoopsTokenHandler
      * @param int    $uid   User ID
      * @param string $scope Token scope
      *
-     * @return void
+     * @return bool true when the statement ran (whether or not a row matched), false on DB failure
      */
-    public function revokeByScope(int $uid, string $scope): void
+    public function revokeByScope(int $uid, string $scope): bool
     {
         $table = $this->db->prefix('tokens');
         $now   = time();
 
-        $this->db->exec(sprintf(
+        return (bool) $this->db->exec(sprintf(
             "UPDATE `%s` SET `used_at` = %d"
             . " WHERE `uid` = %d AND `scope` = %s AND `used_at` = 0",
             $table,
@@ -165,6 +196,30 @@ final class XoopsTokenHandler
             $uid,
             $this->db->quote($scope)
         ));
+    }
+
+    /**
+     * Delete every token of a user, in every scope.
+     *
+     * For account deletion: an account that is gone must not leave usable
+     * tokens behind.
+     *
+     * @param int $uid User ID
+     *
+     * @return bool true when the statement ran, false on DB failure or an invalid uid
+     */
+    public function deleteByUid(int $uid): bool
+    {
+        if ($uid <= 0) {
+            trigger_error(
+                basename(__FILE__) . ': deleteByUid() requires uid > 0',
+                E_USER_WARNING
+            );
+            return false;
+        }
+        $table = $this->db->prefix('tokens');
+
+        return (bool) $this->db->exec(sprintf('DELETE FROM `%s` WHERE `uid` = %d', $table, $uid));
     }
 
     /**
