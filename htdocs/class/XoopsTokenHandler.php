@@ -209,6 +209,7 @@ final class XoopsTokenHandler
      * @param int $uid User ID
      *
      * @return bool true when the statement ran, false on DB failure or an invalid uid
+     * @throws \mysqli_sql_exception If a MySQLi error occurs and MySQLi is configured to throw exceptions.
      */
     public function deleteByUid(int $uid): bool
     {
