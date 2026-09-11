@@ -4,7 +4,7 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 2.7.4 Beta 2                  2026-09
 ===================================
 Security:
-- delete an account's tokens, in every scope, before its memberships and user row when the account is deleted; XoopsMemberHandler::deleteUser() removed only memberships and the user row, so unused tokens outlived the account, and a token delete that does not run now stops the account delete so neither order of failure leaves a dead account with live tokens (kernel/member.php) (#204)
+- delete an account's tokens, in every scope, before its memberships and user row when the account is deleted; XoopsMemberHandler::deleteUser() removed only memberships and the user row, so unused tokens outlived the account, and a token delete that does not run now stops the account delete so neither order of failure leaves a dead account with live tokens; a membership delete that does not run stops it as well, so a false return from deleteUser() always means the account is still there (kernel/member.php) (#204)
 
 Bug fixes:
 - delete the account before its profile row in the profile module's users admin: the page removed the profile row first, so an account delete that did not go through left an account without its profile; the account now goes first, a refused delete leaves the profile untouched and is reported with a message where the object carries no error (modules/profile/admin/user.php, new _PROFILE_AM_DELETEFAILED, see docs/lang_diff.txt) (#204)
