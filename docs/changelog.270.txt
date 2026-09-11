@@ -4,12 +4,20 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 2.7.4 Beta 2                  2026-09
 ===================================
 Security:
+- delete an account's tokens, in every scope, before its memberships and user row when the account is deleted; XoopsMemberHandler::deleteUser() removed only memberships and the user row, so unused tokens outlived the account, and a token delete that does not run now stops the account delete so neither order of failure leaves a dead account with live tokens; a membership delete that does not run stops it as well, so a false return from deleteUser() always means the account is still there (kernel/member.php) (#204)
+
+Bug fixes:
+- delete the account before its profile row in the profile module's users admin: the page removed the profile row first, so an account delete that did not go through left an account without its profile; the account now goes first, a refused delete leaves the profile untouched and is reported with a message where the object carries no error (modules/profile/admin/user.php, new _PROFILE_AM_DELETEFAILED, see docs/lang_diff.txt) (#204)
 - load and check the account before a remember-me cookie seeds the session: the cookie path used to write the uid claim into the session and leave the existence, active-state and fingerprint checks to the restore block that runs next; the checks now run first inside the cookie block, only an account that passes all of them seeds the session, a refused token is not treated as a cookie login so the restore block cannot renew it, and the restore condition is back to the two account checks shared with the session-store path (include/common.php) (#201)
+
+Core:
+- extend XoopsTokenHandler for caller-managed tokens: create() accepts an optional raw token, hashed exactly as given so any canonicalisation stays with the caller, and a null ttl that writes the largest expires_at the column holds for a token that never expires, while a ttl of 0 is still floored to sixty seconds; a revoke that does not run now stops the new token from being issued and revokeByScope() reports its outcome; deleteByUid() removes a user's tokens in every scope; a ttl past the column's range is written as that largest value instead of being refused by a strict server after the previous token was already revoked. lostpass.php's calls are unchanged (class/XoopsTokenHandler.php) (#204)
 
 Refactoring:
 - split the password login in include/checklogin.php into two functions in a new include/loginsession.php: xoops_login_authenticate() checks the credentials, the account level and the closed-site groups and returns the account or false without writing anything; xoops_login_establish_session() writes last_login, regenerates the session, fires the login event, issues the remember-me cookie on request and redirects. checklogin.php, included by user.php, the profile module's user.php and site-closed.php, orchestrates the two; behaviour is unchanged and the seam lets a second authentication factor run between them (#201)
 
 Tests:
+- execute the token handler's purge and verify statements against an in-memory SQLite table with the install columns: an unused no-expiry token survives the purge and verifies exactly once, a used one and an expired one are removed, and a token expiring this second is refused; deleteUser() is pinned to remove tokens before memberships and the user row and to stop when that removal fails (#204)
 - pin the login split (helpers file declares functions only, authenticate writes nothing, establish-session keeps the previous order, checklogin owns no session or cookie code) and evaluate the cookie path's acceptance expression, sliced from common.php, across every claim shape and account state (#201)
 
 ===================================

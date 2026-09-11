@@ -4,6 +4,12 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
+2026/09: Version 2.7.4-Beta2
+================================
+/htdocs/modules/profile/language/english/admin.php
+- added define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed; the account was not removed');
+
+================================
 2026/09: Version 2.7.4-Beta1
 ================================
 /htdocs/modules/system/language/english/menus/menus.php (new file — front-end labels of the default system menu)

@@ -9,6 +9,7 @@ define('_PROFILE_AM_CATEGORY', 'Category');
 define('_PROFILE_AM_STEP', 'Step');
 define('_PROFILE_AM_SAVEDSUCCESS', '%s saved successfully');
 define('_PROFILE_AM_DELETEDSUCCESS', '%s deleted successfully');
+define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed; the account was not removed');
 define('_PROFILE_AM_RUSUREDEL', 'Are you sure you want to delete %s');
 define('_PROFILE_AM_FIELDNOTCONFIGURABLE', 'The field is not configurable.');
 define('_PROFILE_AM_ADD', 'Add %s');

@@ -221,14 +221,19 @@ switch ($op) {
             }
             $profile_handler = xoops_getModuleHandler('profile');
             $profile         = $profile_handler->get($obj->getVar('uid'));
-            if (!$profile || $profile->isNew() || $profile_handler->delete($profile)) {
-                if ($handler->deleteUser($obj)) {
-                    redirect_header('user.php', 3, sprintf(_PROFILE_AM_DELETEDSUCCESS, $obj->getVar('uname') . ' (' . $obj->getVar('email') . ')'), false);
-                } else {
-                    echo $obj->getHtmlErrors();
-                }
-            } else {
+            // The account goes first: deleteUser() can refuse, and a refused
+            // account keeps its profile row.
+            if (!$handler->deleteUser($obj)) {
+                // A refused delete (tokens, memberships or the row) does not
+                // always leave an error on the object; say what failed.
+                $errors = $obj->getErrors();
+                // A translated pack that predates this constant leaves it undefined.
+                $failed = defined('_PROFILE_AM_DELETEFAILED') ? _PROFILE_AM_DELETEFAILED : 'Deleting %s failed; the account was not removed';
+                xoops_error([] === $errors ? sprintf($failed, (string) $obj->getVar('uname')) : $errors);
+            } elseif ($profile && !$profile->isNew() && !$profile_handler->delete($profile)) {
                 echo $profile->getHtmlErrors();
+            } else {
+                redirect_header('user.php', 3, sprintf(_PROFILE_AM_DELETEDSUCCESS, $obj->getVar('uname') . ' (' . $obj->getVar('email') . ')'), false);
             }
         } else {
             xoops_confirm(

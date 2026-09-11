@@ -20,6 +20,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 require_once __DIR__ . '/user.php';
 require_once __DIR__ . '/group.php';
+require_once __DIR__ . '/../class/XoopsTokenHandler.php';
 
 /**
  * XOOPS member handler class.
@@ -56,6 +57,14 @@ class XoopsMemberHandler
     protected $membershipHandler;
 
     /**
+     * Token handler used to drop an account's tokens when the account is deleted.
+     * Null only when the connection is not the MySQL one every supported site uses.
+     *
+     * @var XoopsTokenHandler|null
+     */
+    protected ?XoopsTokenHandler $tokenHandler = null;
+
+    /**
      * @var array<int,XoopsUser> Temporary user objects cache
      */
     protected $membersWorkingList = [];
@@ -84,6 +93,21 @@ class XoopsMemberHandler
         $this->groupHandler = new XoopsGroupHandler($db);
         $this->userHandler = new XoopsUserHandler($db);
         $this->membershipHandler = new XoopsMembershipHandler($db);
+        $this->tokenHandler = self::tokenHandlerFor($db);
+    }
+
+    /**
+     * The token handler for a connection.
+     *
+     * Tokens need the concrete MySQL connection; every supported connection
+     * is one, and without it there are no tokens to delete.
+     *
+     * @param XoopsDatabase $db Database connection object
+     * @return XoopsTokenHandler|null
+     */
+    protected static function tokenHandlerFor(XoopsDatabase $db): ?XoopsTokenHandler
+    {
+        return $db instanceof XoopsMySQLDatabase ? new XoopsTokenHandler($db) : null;
     }
 
     /**
@@ -151,10 +175,20 @@ class XoopsMemberHandler
      */
     public function deleteUser(XoopsUser $user)
     {
+        // Tokens go first: a user delete that fails afterwards must not leave
+        // a dead account with live tokens, and a token delete that fails
+        // stops the account delete for the same reason.
+        if (null !== $this->tokenHandler && !$this->tokenHandler->deleteByUid((int) $user->getVar('uid'))) {
+            return false;
+        }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
-        $s1 = $this->membershipHandler->deleteAll($criteria);
-        $s2 = $this->userHandler->delete($user);
-        return ($s1 && $s2);
+        if (!$this->membershipHandler->deleteAll($criteria)) {
+            // Same rule: a step that did not run keeps the account, so a
+            // false return always means the row is still there.
+            return false;
+        }
+
+        return (bool) $this->userHandler->delete($user);
     }
 
     /**
