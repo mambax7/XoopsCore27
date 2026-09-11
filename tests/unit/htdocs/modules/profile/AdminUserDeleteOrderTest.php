@@ -41,7 +41,11 @@ final class AdminUserDeleteOrderTest extends TestCase
     protected function setUp(): void
     {
         defined('_PROFILE_AM_DELETEDSUCCESS') || define('_PROFILE_AM_DELETEDSUCCESS', 'Deleted %s');
-        defined('_PROFILE_AM_DELETEFAILED') || define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed');
+        // One case runs without the constant, as a translated pack that
+        // predates it would; each test is its own process, so this holds.
+        if ('theFailureMessageFallsBackWhenTheConstantIsUndefined' !== $this->name()) {
+            defined('_PROFILE_AM_DELETEFAILED') || define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed');
+        }
         $GLOBALS['userErrors'] = [];
         $GLOBALS['deleteOrderLog']       = [];
         $GLOBALS['deleteUserResult']     = true;
@@ -73,6 +77,18 @@ final class AdminUserDeleteOrderTest extends TestCase
         self::assertSame(['deleteUser:10'], $GLOBALS['deleteOrderLog'], 'the profile row must not be touched');
         // deleteUser() leaves no error on the object when its token step fails
         self::assertSame('error:Deleting alice failed', $out['echo']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function theFailureMessageFallsBackWhenTheConstantIsUndefined(): void
+    {
+        self::assertFalse(defined('_PROFILE_AM_DELETEFAILED'));
+        $GLOBALS['deleteUserResult'] = false;
+        $out = $this->runBranch();
+        self::assertNull($out['redirect']);
+        self::assertSame('error:Deleting alice failed; the account was not removed', $out['echo']);
     }
 
     #[Test]
