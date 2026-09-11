@@ -1,6 +1,18 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.4 Beta 2                  2026-09
+===================================
+Security:
+- load and check the account before a remember-me cookie seeds the session: the cookie path used to write the uid claim into the session and leave the existence, active-state and fingerprint checks to the restore block that runs next; the checks now run first inside the cookie block, only an account that passes all of them seeds the session, a refused token is not treated as a cookie login so the restore block cannot renew it, and the restore condition is back to the two account checks shared with the session-store path (include/common.php) (#201)
+
+Refactoring:
+- split the password login in include/checklogin.php into two functions in a new include/loginsession.php: xoops_login_authenticate() checks the credentials, the account level and the closed-site groups and returns the account or false without writing anything; xoops_login_establish_session() writes last_login, regenerates the session, fires the login event, issues the remember-me cookie on request and redirects. checklogin.php, included by user.php, the profile module's user.php and site-closed.php, orchestrates the two; behaviour is unchanged and the seam lets a second authentication factor run between them (#201)
+
+Tests:
+- pin the login split (helpers file declares functions only, authenticate writes nothing, establish-session keeps the previous order, checklogin owns no session or cookie code) and evaluate the cookie path's acceptance expression, sliced from common.php, across every claim shape and account state (#201)
+
+===================================
 2.7.4 Beta 1                  2026-09
 ===================================
 Security:
