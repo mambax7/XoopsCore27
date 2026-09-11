@@ -461,11 +461,18 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $poisoned         = $this->handler($this->crypto(), true, $this->db());
         $this->assertFalse($poisoned->withTransaction(static fn (): bool => false));
         $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql);
-        try {
-            $poisoned->withTransaction(static fn (): bool => true);
-            $this->fail('a transaction started on a connection whose ROLLBACK was refused');
-        } catch (\LogicException) {
-            $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql, 'no second START TRANSACTION reached the connection');
+        foreach ([
+            static fn () => $poisoned->withTransaction(static fn (): bool => true),
+            static fn () => $poisoned->getRow(10),
+            static fn () => $poisoned->acceptTotp(10, 101, self::GEN, self::NOW),
+            static fn () => $poisoned->deleteByUid(10),
+        ] as $call) {
+            try {
+                $call();
+                $this->fail('the handler used a connection whose ROLLBACK was refused');
+            } catch (\RuntimeException) {
+                $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql, 'no statement reached the connection');
+            }
         }
         $this->execResult = true;
 
@@ -532,7 +539,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         try {
             $handler->withTransaction(static fn (): bool => true);
             $this->fail('a transaction started on a connection whose ROLLBACK threw');
-        } catch (\LogicException) {
+        } catch (\RuntimeException) {
             $this->assertSame([], $this->sql, 'no START TRANSACTION reached the connection');
         }
     }
@@ -587,7 +594,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $updates = $this->statements('UPDATE `xoops_user_2fa`');
         $this->assertCount(1, $updates);
         $this->assertMatchesRegularExpression(
-            "/^UPDATE `xoops_user_2fa` SET `state` = 'enrolled', `secret` = 'v1:[A-Za-z0-9+\\/=]+', `confirmed_at` = 1700000000, `last_counter` = 101,"
+            "/^UPDATE `xoops_user_2fa` SET `state` = 'enrolled', `method` = 'totp', `secret` = 'v1:[A-Za-z0-9+\\/=]+', `confirmed_at` = 1700000000, `last_counter` = 101,"
             . " `failed_attempts` = 0, `locked_until` = 0, `generation` = '" . $result['generation'] . "' WHERE `uid` = 10$/",
             $updates[0]
         );

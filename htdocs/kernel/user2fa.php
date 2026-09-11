@@ -75,6 +75,16 @@ final class XoopsUser2faHandler
     private static ?\WeakMap $open = null;
 
     /**
+     * Connections whose ROLLBACK was refused or threw: the abandoned
+     * transaction may still be open, so nothing this handler does on them can
+     * be trusted to persist. Every entry point refuses them for the rest of
+     * the request.
+     *
+     * @var \WeakMap<\XoopsMySQLDatabase, true>|null
+     */
+    private static ?\WeakMap $poisoned = null;
+
+    /**
      * @param \XoopsMySQLDatabase       $db        connection
      * @param XoopsTokenHandler|null    $tokens    recovery-code store (default: a handler on $db)
      * @param XoopsTwoFactorCrypto|null $crypto    key and cipher (default: built lazily on XOOPS_VAR_PATH/data)
@@ -146,6 +156,8 @@ final class XoopsUser2faHandler
      */
     public function getRow(int $uid): ?array
     {
+        $this->assertConnectionUsable();
+
         return $this->installed ? $this->selectRow($uid, false) : null;
     }
 
@@ -170,6 +182,16 @@ final class XoopsUser2faHandler
     private function inTransaction(): bool
     {
         return null !== self::$open && isset(self::$open[$this->db]);
+    }
+
+    /**
+     * @throws \RuntimeException when this connection's last ROLLBACK did not go through
+     */
+    private function assertConnectionUsable(): void
+    {
+        if (null !== self::$poisoned && isset(self::$poisoned[$this->db])) {
+            throw new \RuntimeException('user_2fa: the connection may still hold an abandoned transaction');
+        }
     }
 
     /**
@@ -256,8 +278,9 @@ final class XoopsUser2faHandler
      */
     public function withTransaction(callable $fn): mixed
     {
+        $this->assertConnectionUsable();
         if ($this->inTransaction()) {
-            throw new \LogicException('withTransaction() does not nest, and a connection whose ROLLBACK was refused stays closed to it');
+            throw new \LogicException('withTransaction() does not nest');
         }
         if (!$this->db->exec('START TRANSACTION')) {
             return false;
@@ -287,12 +310,15 @@ final class XoopsUser2faHandler
             return false;
         } finally {
             // A ROLLBACK that was refused or threw leaves the connection in a
-            // state this code cannot see; the guard stays so no later
-            // withTransaction() can START (and so implicitly commit) on it for
-            // the rest of the request.
-            if ($closed) {
-                unset(self::$open[$this->db]);
+            // state this code cannot see: a later START TRANSACTION would
+            // implicitly commit the abandoned work, and a plain statement would
+            // join it and could be rolled back later. Poison the connection so
+            // every entry point refuses it for the rest of the request.
+            if (!$closed) {
+                self::$poisoned ??= new \WeakMap();
+                self::$poisoned[$this->db] = true;
             }
+            unset(self::$open[$this->db]);
         }
     }
 
@@ -308,6 +334,7 @@ final class XoopsUser2faHandler
      */
     public function acceptTotp(int $uid, int $step, string $verifiedGeneration, int $now): bool
     {
+        $this->assertConnectionUsable();
         $sql = sprintf(
             'UPDATE `%s` SET `last_counter` = %d, `failed_attempts` = 0, `locked_until` = 0'
             . ' WHERE `uid` = %d AND `state` = %s AND `method` = %s AND `generation` = %s AND `locked_until` <= %d AND `last_counter` < %d',
@@ -438,10 +465,11 @@ final class XoopsUser2faHandler
                     $this->db->quote($generation)
                 )
                 : sprintf(
-                    'UPDATE `%s` SET `state` = %s, `secret` = %s, `confirmed_at` = %d, `last_counter` = %d,'
+                    'UPDATE `%s` SET `state` = %s, `method` = %s, `secret` = %s, `confirmed_at` = %d, `last_counter` = %d,'
                     . ' `failed_attempts` = 0, `locked_until` = 0, `generation` = %s WHERE `uid` = %d',
                     $table,
                     $this->db->quote(self::ROW_ENROLLED),
+                    $this->db->quote(self::METHOD_TOTP),
                     $this->db->quote($blob),
                     $now,
                     $acceptedStep,
@@ -535,6 +563,7 @@ final class XoopsUser2faHandler
      */
     public function deleteByUid(int $uid): bool
     {
+        $this->assertConnectionUsable();
         if (!$this->installed) {
             return true;
         }
