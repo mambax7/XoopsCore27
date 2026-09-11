@@ -47,6 +47,9 @@ final class LoginSessionBehaviourTest extends TestCase
         defined('XOOPS_COOKIE_DOMAIN') || define('XOOPS_COOKIE_DOMAIN', 'localhost');
         defined('_US_NOACTTPADM') || define('_US_NOACTTPADM', 'Not activated');
         defined('_US_LOGGINGU') || define('_US_LOGGINGU', 'Logging in as %s');
+        defined('_US_2FA_PROMPT') || define('_US_2FA_PROMPT', 'Second step');
+        defined('_US_2FA_STARTAGAIN') || define('_US_2FA_STARTAGAIN', 'Start again');
+        defined('_US_2FA_UNAVAILABLE') || define('_US_2FA_UNAVAILABLE', 'Unavailable');
 
         $this->emptyInclude = (string) tempnam(sys_get_temp_dir(), 'xoops-auth-');
         file_put_contents($this->emptyInclude, '<?php');
@@ -64,6 +67,7 @@ final class LoginSessionBehaviourTest extends TestCase
         $GLOBALS['sandboxAuthResult']   = false;
         $GLOBALS['sandboxInsertResult'] = true;
         $GLOBALS['sandboxKey']          = null;
+        $GLOBALS['sandboxRow']          = null;
         $GLOBALS['sess_handler']        = new class {
             public function regenerate_id(bool $delete): void
             {
@@ -174,6 +178,7 @@ final class LoginSessionBehaviourTest extends TestCase
             self::assertSame(sprintf(_US_LOGGINGU, 'alice'), $e->getMessage());
         }
         self::assertSame([
+            'getRow:5',
             'setVar:last_login',
             'insertUser:5',
             'regenerate_id:uid=stale',              // the old session is still there when it is regenerated
@@ -182,7 +187,7 @@ final class LoginSessionBehaviourTest extends TestCase
             'setcookie:xoops_user:expire',
             'doLoginMaintenance:5',
         ], $GLOBALS['sandboxLog']);
-        self::assertSame(['xoopsUserId' => 5, 'xoopsUserGroups' => [2], 'xoopsUserTheme' => 'default'], $_SESSION);
+        self::assertSame(['xoopsUserId' => 5, 'xoopsUserGroups' => [2], 'xoops2faGeneration' => '', 'xoops2faVerified' => false, 'xoopsUserTheme' => 'default'], $_SESSION);
         self::assertGreaterThan(0, $user->vars['last_login']);
     }
 
@@ -212,6 +217,123 @@ final class LoginSessionBehaviourTest extends TestCase
         self::assertIsObject($claims);
         self::assertSame(5, $claims->uid);
         self::assertSame('fp-of-' . $user->vars['pass'], $claims->pfp);
+        self::assertSame('', $claims->fgen);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function beginChallengeWritesOnlyThePendingRecordAndRedirects(): void
+    {
+        $user = $this->user();
+        $fn   = self::NS . '\\xoops_login_begin_challenge';
+        try {
+            $fn($user, 'enrolled', 'gen-1', true, '/modules/news/');
+            self::fail('expected a redirect');
+        } catch (RedirectHeaderException $e) {
+            self::assertSame(XOOPS_URL . '/user.php?op=2fa', $e->url);
+        }
+        self::assertSame(['xoops2faPending'], array_keys($_SESSION));
+        $pending = $_SESSION['xoops2faPending'];
+        self::assertSame(5, $pending['uid']);
+        self::assertSame('enrolled', $pending['state']);
+        self::assertSame('gen-1', $pending['generation']);
+        self::assertSame(hash('sha256', $user->vars['pass']), $pending['passdigest']);
+        self::assertTrue($pending['remember']);
+        self::assertSame('/modules/news/', $pending['redirect']);
+        self::assertEqualsWithDelta(time() + 300, $pending['expires'], 5);
+        self::assertSame(['regenerate_id:uid=stale'], $GLOBALS['sandboxLog'], 'no account write, no event, no cookie');
+        self::assertSame([], $user->writes);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function anEnrolledAccountSigningInWithItsPasswordIsStampedNotVerifiedAndGetsNoCookie(): void
+    {
+        $GLOBALS['sandboxRow'] = ['state' => 'enrolled', 'generation' => 'gen-1'];
+        $storage = new \Xmf\Key\ArrayStorage();
+        $storage->save('rememberme', str_repeat('k', 32));
+        $GLOBALS['sandboxKey'] = new \Xmf\Key\Basic($storage, 'rememberme');
+        $this->establish($this->user(), true);
+        self::assertSame(5, $_SESSION['xoopsUserId']);
+        self::assertSame('gen-1', $_SESSION['xoops2faGeneration']);
+        self::assertFalse($_SESSION['xoops2faVerified']);
+        self::assertNotContains('rememberKey', $GLOBALS['sandboxLog']);
+        self::assertContains('setcookie:xoops_user:expire', $GLOBALS['sandboxLog']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aVerifiedCompletionRequiresTheGenerationItVerified(): void
+    {
+        $GLOBALS['sandboxRow'] = ['state' => 'enrolled', 'generation' => 'gen-2'];   // a reset landed after the code was consumed
+        $e = $this->establish($this->user(), false, 'gen-1');
+        self::assertSame(_US_2FA_STARTAGAIN, $e->getMessage());
+        self::assertSame(XOOPS_URL . '/user.php', $e->url);
+        self::assertSame(['xoopsUserId' => 'stale', 'other' => 'stale'], $_SESSION);
+        self::assertSame(['getRow:5'], $GLOBALS['sandboxLog']);
+
+        $GLOBALS['sandboxLog'] = [];
+        $GLOBALS['sandboxRow'] = ['state' => 'disabled', 'generation' => 'gen-1'];   // same generation, but no factor any more
+        $e = $this->establish($this->user(), false, 'gen-1');
+        self::assertSame(_US_2FA_STARTAGAIN, $e->getMessage());
+        self::assertSame(['getRow:5'], $GLOBALS['sandboxLog']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aVerifiedCompletionIsMarkedVerified(): void
+    {
+        $GLOBALS['sandboxRow'] = ['state' => 'enrolled', 'generation' => 'gen-1'];
+        $e = $this->establish($this->user(), true, 'gen-1');
+        self::assertSame(XOOPS_URL . '/index.php', $e->url);
+        self::assertTrue($_SESSION['xoops2faVerified']);
+        self::assertSame('gen-1', $_SESSION['xoops2faGeneration']);
+        self::assertSame(5, $_SESSION['xoopsUserId']);
+        self::assertNotContains('rememberKey', $GLOBALS['sandboxLog']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function theCookieCarriesADisabledRowsGeneration(): void
+    {
+        $GLOBALS['sandboxRow'] = ['state' => 'disabled', 'generation' => 'gen-d'];
+        $storage = new \Xmf\Key\ArrayStorage();
+        $storage->save('rememberme', str_repeat('k', 32));
+        $GLOBALS['sandboxKey'] = new \Xmf\Key\Basic($storage, 'rememberme');
+        $this->establish($this->user(), true);
+        self::assertSame('gen-d', $_SESSION['xoops2faGeneration']);
+        $issued = array_values(array_filter($GLOBALS['sandboxLog'], static fn (string $l): bool => str_starts_with($l, 'setcookie:xoops_user:issue:')));
+        self::assertCount(1, $issued);
+        $claims = \Xmf\Jwt\TokenReader::fromString($GLOBALS['sandboxKey'], substr($issued[0], strlen('setcookie:xoops_user:issue:')));
+        self::assertSame('gen-d', $claims->fgen);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aLookupFailureEstablishesNothing(): void
+    {
+        $GLOBALS['sandboxRow'] = new \RuntimeException('user_2fa lookup failed');
+        $e = $this->establish($this->user(), false);
+        self::assertSame(_US_2FA_UNAVAILABLE, $e->getMessage());
+        self::assertSame(['xoopsUserId' => 'stale', 'other' => 'stale'], $_SESSION);
+        self::assertSame(['getRow:5'], $GLOBALS['sandboxLog']);
+    }
+
+    private function establish(object $user, bool $remember, ?string $verified = null): RedirectHeaderException
+    {
+        $fn = self::NS . '\\xoops_login_establish_session';
+        try {
+            $fn($user, $remember, '', $verified);
+        } catch (RedirectHeaderException $e) {
+            return $e;
+        }
+        self::fail('expected a redirect');
     }
 
     #[Test]
@@ -302,6 +424,14 @@ final class LoginSessionBehaviourTest extends TestCase
             public static function getInstance(): self { return new self(); }
             public function triggerEvent(string $name, mixed $arg): void { $GLOBALS['sandboxLog'][] = 'event:' . $name . ':uid=' . ($_SESSION['xoopsUserId'] ?? 'none'); }
         }
+        class XoopsUser2faHandler {
+            public const ROW_ENROLLED = 'enrolled';
+            public function getRow(int $uid): ?array {
+                $GLOBALS['sandboxLog'][] = 'getRow:' . $uid;
+                if ($GLOBALS['sandboxRow'] instanceof \Throwable) { throw $GLOBALS['sandboxRow']; }
+                return $GLOBALS['sandboxRow'];
+            }
+        }
         class XoopsUserUtility {
             public static function rememberKey(): ?\Xmf\Key\KeyAbstract { $GLOBALS['sandboxLog'][] = 'rememberKey'; return $GLOBALS['sandboxKey']; }
             public static function rememberFingerprint(object $user, string $signing): string { return 'fp-of-' . $user->getVar('pass'); }
@@ -313,6 +443,7 @@ final class LoginSessionBehaviourTest extends TestCase
             return match ($name) {
                 'member' => new class { public function insertUser(object $u): bool { $GLOBALS['sandboxLog'][] = 'insertUser:' . $u->getVar('uid'); return $GLOBALS['sandboxInsertResult']; } },
                 'notification' => new class { public function doLoginMaintenance(int $uid): void { $GLOBALS['sandboxLog'][] = 'doLoginMaintenance:' . $uid; } },
+                'user2fa' => new XoopsUser2faHandler(),
             };
         }
         function xoops_setcookie(string $name, ?string $value, int $expire, string $path = '/', string $domain = '', $secure = false, bool $httponly = false): void {
