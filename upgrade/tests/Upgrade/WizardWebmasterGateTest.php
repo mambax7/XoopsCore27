@@ -40,6 +40,11 @@ final class WizardWebmasterGateTest extends TestCase
         return $content;
     }
 
+    /**
+     * A refused session rotation must stop the wizard login before any state is written.
+     *
+     * @return void
+     */
     #[Test]
     public function sessionRotationMustSucceedBeforeTheWizardWritesLoginState(): void
     {

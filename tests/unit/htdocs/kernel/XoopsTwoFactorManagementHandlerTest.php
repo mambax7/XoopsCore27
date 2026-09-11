@@ -200,7 +200,12 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
             } catch (\RuntimeException $e) {
                 $thrown = true;
                 self::assertSame($failure === 'START TRANSACTION' ? $failure : 'ROLLBACK', end($this->sql));
-                self::assertNotContains('COMMIT', array_slice($this->sql, 0, -2));
+                $beforeRollback = array_slice($this->sql, 0, -1);
+                if ('COMMIT' === $failure) {
+                    self::assertSame('COMMIT', end($beforeRollback), 'the refused COMMIT is the last statement before the rollback');
+                } else {
+                    self::assertNotContains('COMMIT', $beforeRollback);
+                }
             }
             self::assertTrue($thrown, 'Storage failure was not thrown: ' . $failure);
         }

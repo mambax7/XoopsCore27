@@ -295,7 +295,8 @@ final class CheckLogin2faTest extends TestCase
     public function aCodeFromANearbyStepIsRefusedAndLoggedAsSkew(): void
     {
         $this->pending();
-        $this->post(['code' => $this->code(3)]);
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step + 3)]);
         $notices = [];
         set_error_handler(static function (int $no, string $msg) use (&$notices): bool {
             $notices[] = $msg;
@@ -307,11 +308,14 @@ final class CheckLogin2faTest extends TestCase
         } finally {
             restore_error_handler();
         }
+        if (\XoopsTotp::stepAt(time()) !== $step) {
+            self::markTestSkipped('the 30-second step boundary passed during the test');
+        }
         self::assertSame(_US_2FA_BADCODE, $vars['error']);
         self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
         self::assertCount(1, $notices);
         self::assertStringContainsString('3 steps from now', $notices[0]);
-        self::assertStringNotContainsString($this->code(3), $notices[0]);
+        self::assertStringNotContainsString((string) \XoopsTotp::codeAt(self::SECRET, $step + 3), $notices[0]);
     }
 
     #[Test]

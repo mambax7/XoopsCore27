@@ -100,7 +100,13 @@ final class LoginSessionBehaviourTest extends TestCase
     {
         $GLOBALS['sandboxRotate'] = false;
         $user = $this->user();
-        foreach (['xoops_login_begin_challenge', 'xoops_login_establish_session', 'xoops_login_set_session'] as $name) {
+        // the two redirecting entry points redirect; the callable one throws
+        $contracts = [
+            'xoops_login_begin_challenge'    => [RedirectHeaderException::class, _US_2FA_UNAVAILABLE],
+            'xoops_login_establish_session'  => [RedirectHeaderException::class, _US_2FA_UNAVAILABLE],
+            'xoops_login_set_session'        => [\RuntimeException::class, 'Session rotation failed'],
+        ];
+        foreach ($contracts as $name => [$exception, $message]) {
             $_SESSION = ['xoopsUserId' => 'stale'];
             $fn = self::NS . '\\' . $name;
             try {
@@ -111,13 +117,12 @@ final class LoginSessionBehaviourTest extends TestCase
                 } else {
                     $fn($user, false, '');
                 }
-                self::fail('Rotation failure was accepted');
-            } catch (RedirectHeaderException $e) {
-                self::assertSame(_US_2FA_UNAVAILABLE, $e->getMessage());
-            } catch (\RuntimeException $e) {
-                self::assertSame('Session rotation failed', $e->getMessage());
+                self::fail($name . ': rotation failure was accepted');
+            } catch (RedirectHeaderException | \RuntimeException $e) {
+                self::assertInstanceOf($exception, $e, $name);
+                self::assertSame($message, $e->getMessage(), $name);
             }
-            self::assertSame([], $_SESSION);
+            self::assertSame([], $_SESSION, $name);
         }
         self::assertNotContains('insertUser:5', $GLOBALS['sandboxLog']);
         self::assertNotContains('event:core.behavior.user.login:uid=5', $GLOBALS['sandboxLog']);

@@ -5,6 +5,7 @@
  * @license GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  */
 declare(strict_types=1);
+
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 /** Validate the password-authorised setup session before using its encrypted secret. */
@@ -44,7 +45,11 @@ function xoops_2fa_notice(XoopsUser $user, string $subject, string $body): void
         $mailer->setFromEmail($GLOBALS['xoopsConfig']['adminmail']);
         $mailer->setFromName($GLOBALS['xoopsConfig']['sitename']);
         $mailer->setSubject(sprintf($subject, $GLOBALS['xoopsConfig']['sitename']));
-        $mailer->setBody(sprintf($body, $GLOBALS['xoopsConfig']['sitename'], \Xmf\IPAddress::fromRequest()->asReadable()));
+        $mailer->setBody(sprintf(
+            $body,
+            $GLOBALS['xoopsConfig']['sitename'],
+            \Xmf\IPAddress::fromRequest()->asReadable()
+        ));
         $sent = $mailer->send();
     } catch (\Throwable) {
         // Report transport exceptions without exposing their credentials or message.

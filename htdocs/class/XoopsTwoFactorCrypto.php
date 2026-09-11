@@ -138,7 +138,7 @@ final class XoopsTwoFactorCrypto
      * replaced the same way as a missing one, but only while no user_2fa row
      * holds a secret: a lost key is never replaced while one does.
      *
-     * ponytail: FileStorage::save() writes the final file in place, so a reader
+     * Known gap: FileStorage::save() writes the final file in place, so a reader
      * can see the file between creation and completion during the site's one
      * first provisioning and report the factor unavailable for that request.
      * Publish atomically (temp file + rename) once FileStorage supports it.

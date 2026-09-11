@@ -15,7 +15,16 @@ declare(strict_types=1);
 // real patch constructor need the connection type it is hinted on, with the
 // surface the patches call, so PHPUnit can build a mock of it.
 if (!class_exists('XoopsMySQLDatabase', false)) {
-    /** Connection surface the upgrade patches touch. */
+    /**
+     * Connection surface the upgrade patches touch.
+     *
+     * @category  Xoops\Upgrade\Tests
+     * @package   Xoops
+     * @author    XOOPS Development Team
+     * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+     * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+     * @link      https://xoops.org
+     */
     class XoopsMySQLDatabase
     {
         public function prefix($table = ''): string

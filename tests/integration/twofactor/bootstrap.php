@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 // Intentionally independent of mainfile.php: never read a site's credentials.
 define('XOOPS_ROOT_PATH', dirname(__DIR__, 3) . '/htdocs');
-define('XOOPS_VAR_PATH', (string) getenv('XOOPS_2FA_TEST_DIR'));
+$testDir = (string) getenv('XOOPS_2FA_TEST_DIR');
+if ('' === $testDir || !is_dir($testDir)) {
+    throw new RuntimeException('XOOPS_2FA_TEST_DIR must point at the disposable test directory');
+}
+define('XOOPS_VAR_PATH', $testDir);
 define('XOOPS_URL', 'http://localhost');
 require_once XOOPS_ROOT_PATH . '/xoops_lib/vendor/autoload.php';
 require_once XOOPS_ROOT_PATH . '/class/database/mysqldatabase.php';

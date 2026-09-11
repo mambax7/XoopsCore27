@@ -169,7 +169,11 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
         $mailer->setBody(sprintf($body, $GLOBALS['xoopsConfig']['sitename'], \Xmf\IPAddress::fromRequest()->asReadable()));
         $mailer->send();
     } catch (\Throwable $e) {
-        trigger_error('Two-factor notice mail failed', E_USER_WARNING);
+        try {
+            trigger_error('Two-factor notice mail failed', E_USER_WARNING);
+        } catch (\Throwable) {
+            // A custom diagnostic handler must not fail an already committed step.
+        }
     }
 };
 
@@ -235,7 +239,11 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xo
             $xo2faFailure = $xo2faHandler->recordFailure($xo2faUid, $xo2faNow, $xo2faGeneration);
         }
     } catch (\Throwable $e) {
-        trigger_error('Two-factor challenge failed for uid ' . $xo2faUid, E_USER_WARNING);
+        try {
+            trigger_error('Two-factor challenge failed for uid ' . $xo2faUid, E_USER_WARNING);
+        } catch (\Throwable) {
+            // The visitor gets "unavailable" whatever a diagnostic handler does.
+        }
         $xo2faError    = _US_2FA_UNAVAILABLE;
         $xo2faAccepted = false;
         $xo2faFailure  = false;

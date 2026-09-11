@@ -475,7 +475,7 @@ class XoopsMemberHandlerTest extends TestCase
         $this->membershipHandler->method('deleteAll')->willReturn(true);
         $this->userHandler->method('delete')->willReturn(false);
         self::assertFalse($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
-        self::assertSame('enrolled', $factor->getRow(10)['state']);
+        self::assertSame(\XoopsUser2faHandler::STATE_ENROLLED, $factor->stateFor(10));
         self::assertTrue(\XoopsUser2faHandler::mustChallenge('optional', $factor->stateFor(10)));
     }
 
@@ -488,23 +488,50 @@ class XoopsMemberHandlerTest extends TestCase
         $this->membershipHandler->method('deleteAll')->willReturn(false);
         $this->userHandler->expects($this->never())->method('delete');
         self::assertFalse($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
-        self::assertSame('enrolled', $factor->getRow(10)['state']);
+        self::assertSame(\XoopsUser2faHandler::STATE_ENROLLED, $factor->stateFor(10));
         self::assertTrue(\XoopsUser2faHandler::mustChallenge('optional', $factor->stateFor(10)));
     }
 
+    /** @var list<string> temporary key directories to remove */
+    private array $factorDirs = [];
+
+    protected function tearDown(): void
+    {
+        foreach ($this->factorDirs as $dir) {
+            foreach ((array) glob($dir . '/*') as $file) {
+                unlink($file);
+            }
+            rmdir($dir);
+        }
+        $this->factorDirs = [];
+        parent::tearDown();
+    }
+
+    /**
+     * An enrolled row whose secret really opens, so stateFor() reports
+     * "enrolled" (not "unavailable") and a regression that nulled the secret
+     * during a failed deletion would be caught.
+     */
     private function retainedFactor(XoopsMySQLDatabase $db): \XoopsUser2faHandler
     {
+        require_once XOOPS_ROOT_PATH . '/class/XoopsTwoFactorCrypto.php';
+        $dir = sys_get_temp_dir() . '/xoops2fa-member-' . bin2hex(random_bytes(4));
+        mkdir($dir, 0700);
+        $this->factorDirs[] = $dir;
+        $crypto = new \XoopsTwoFactorCrypto(new \Xmf\Key\FileStorage($dir, 'test'), $dir . '/key.lock');
+        self::assertTrue($crypto->provisionKey(false));
+        $sealed  = $crypto->seal('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', \XoopsTwoFactorCrypto::rowAad(10, 'totp'));
         $present = true;
         $db->method('exec')->willReturnCallback(static function () use (&$present): bool { $present = false; return true; });
         $db->method('prefix')->willReturn('xoops_user_2fa');
         $db->method('query')->willReturn((new \ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor());
         $db->method('isResultSet')->willReturn(true);
-        $db->method('fetchArray')->willReturnCallback(static function () use (&$present) { return $present ? [
-            'uid' => 10, 'state' => 'enrolled', 'method' => 'totp', 'secret' => null, 'generation' => 'generation',
+        $db->method('fetchArray')->willReturnCallback(static function () use (&$present, $sealed) { return $present ? [
+            'uid' => 10, 'state' => 'enrolled', 'method' => 'totp', 'secret' => $sealed, 'generation' => 'generation',
             'confirmed_at' => 1, 'last_counter' => 0, 'failed_attempts' => 0, 'locked_until' => 0,
         ] : false; });
 
-        return new \XoopsUser2faHandler($db, null, null, true);
+        return new \XoopsUser2faHandler($db, null, $crypto, true);
     }
 
     public function testDeleteUserSucceedsWhenOnlyFinalFactorCleanupFails(): void

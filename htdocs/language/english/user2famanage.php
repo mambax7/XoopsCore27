@@ -1,5 +1,20 @@
 <?php
-/** Two-factor management. @license GNU GPL 2 or later */
+/**
+ * Two-factor management strings.
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @copyright       (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @package             core
+ * @since               2.7.4
+ */
+
 define('_US_2FAM_TITLE', 'Two-factor authentication');
 define('_US_2FAM_PASSWORD', 'Your current password');
 define('_US_2FAM_ENABLE', 'Set up an authenticator');

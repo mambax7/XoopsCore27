@@ -123,7 +123,8 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     /** The escape-hatch tests use a subdirectory; symlinks are unlinked, not followed. */
     private function removeTree(string $dir): void
     {
-        foreach ((array) glob($dir . '/{,.}[!.,!..]*', GLOB_BRACE) as $path) {
+        foreach (array_diff((array) scandir($dir), ['.', '..']) as $entry) {
+            $path = $dir . DIRECTORY_SEPARATOR . $entry;
             if (is_dir($path) && !is_link($path)) {
                 $this->removeTree($path);
             } else {

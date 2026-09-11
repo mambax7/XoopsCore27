@@ -35,6 +35,9 @@ if ($dbm->f_tables !== []) {
 if (!$dbm->db->exec('UPDATE ' . $dbm->prefix('config') . " SET conf_value='optional' WHERE conf_name='twofactor_mode'")) {
     throw new RuntimeException('Could not enable fixture two-factor policy');
 }
+if (1 !== $dbm->db->getAffectedRows()) {
+    throw new RuntimeException('Fixture two-factor policy row is missing from the shipped config data');
+}
 if (!$dbm->db->exec('UPDATE ' . $dbm->prefix('config') . " SET conf_value='0' WHERE conf_name IN ('debug_mode','use_mysession','enable_online_tracking')")) {
     throw new RuntimeException('Could not configure fixture sessions and logging');
 }

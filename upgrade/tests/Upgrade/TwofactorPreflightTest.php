@@ -10,8 +10,24 @@ namespace Xoops\Upgrade\Tests\Upgrade;
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * The installer and the upgrade preflight report a missing sodium extension
+ * without blocking, and the installer's labels for it fall back to English.
+ *
+ * @category  Xoops\Upgrade\Tests
+ * @package   Xoops
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
 final class TwofactorPreflightTest extends TestCase
 {
+    /**
+     * A language pack without install/language/<lang>/twofactor.php gets the English labels.
+     *
+     * @return void
+     */
     #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
     #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testInstallerLoadsSodiumLabelsForAnOlderLanguagePack(): void
@@ -28,6 +44,11 @@ final class TwofactorPreflightTest extends TestCase
         self::assertStringContainsString('Installation can continue', constant('TWOFACTOR_SODIUM_MSG'));
     }
 
+    /**
+     * The capability expression is false when the extension or any one AEAD function is missing.
+     *
+     * @return void
+     */
     public function testInstallerAndUpgradeProbeEveryRequiredSodiumFunction(): void
     {
         $root = dirname(__DIR__, 3);

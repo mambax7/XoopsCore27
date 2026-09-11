@@ -34,11 +34,18 @@ function race(array $jobs): array
             $process = proc_open([PHP_BINARY, __DIR__ . '/worker.php'], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
             check(is_resource($process), 'Cannot start worker');
             $workers[] = [$process, $pipes];
-            stream_set_timeout($pipes[1], 20);
+            stream_set_blocking($pipes[1], false);
             fwrite($pipes[0], json_encode($job, JSON_THROW_ON_ERROR) . "\n");
         }
+        // stream_set_timeout() does not bound fgets() on a proc_open() pipe.
+        $readLine = static function ($pipe): string|false {
+            $read   = [$pipe];
+            $write  = $except = [];
+
+            return stream_select($read, $write, $except, 20) > 0 ? fgets($pipe) : false;
+        };
         foreach ($workers as [$process, $pipes]) {
-            check(trim((string) fgets($pipes[1])) === 'ready', 'Worker failed before start barrier');
+            check(trim((string) $readLine($pipes[1])) === 'ready', 'Worker failed before start barrier');
         }
         foreach ($workers as [$process, $pipes]) {
             fwrite($pipes[0], "go\n");
@@ -47,7 +54,7 @@ function race(array $jobs): array
         $results = [];
         $connections = [];
         foreach ($workers as [$process, $pipes]) {
-            $line = fgets($pipes[1]);
+            $line = $readLine($pipes[1]);
             if (!is_string($line)) {
                 stream_set_blocking($pipes[2], false);
                 throw new RuntimeException('Worker timed out or failed: ' . stream_get_contents($pipes[2]));

@@ -43,3 +43,5 @@ patches.lock.json
 CLAUDE.md
 .claude/
 docs/tasks.md
+# private planning scratch, never committed
+/docs/00/

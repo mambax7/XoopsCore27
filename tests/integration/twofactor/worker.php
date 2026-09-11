@@ -46,7 +46,12 @@ try {
         'recovery' => $handler->acceptRecovery($job['uid'], $job['code'], $job['generation']),
         'failure' => $handler->recordFailure($job['uid'], $job['now'], $job['generation']),
         'reset' => $handler->disable($job['uid']),
-        'key' => testCrypto('concurrent')->provisionKey(false) ? hash('sha256', testCrypto('concurrent')->loadKey()) : false,
+        'key' => (static function (): string|false {
+            $crypto = testCrypto('concurrent');
+            $key    = $crypto->provisionKey(false) ? $crypto->loadKey() : null;
+
+            return null === $key ? false : hash('sha256', $key);
+        })(),
         default => throw new RuntimeException('Unknown worker action'),
     };
     echo json_encode(['connection' => $db->conn->thread_id, 'result' => $result], JSON_THROW_ON_ERROR) . "\n";

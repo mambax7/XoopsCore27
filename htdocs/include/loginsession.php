@@ -237,6 +237,12 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
 
 /**
  * Establish fresh session state after login or committed enrolment, without redirecting.
+ *
+ * @param XoopsUser $user             the authenticated account
+ * @param string    $factorGeneration the factor row's generation ('' when none)
+ * @param bool      $verified         whether a completed challenge or enrolment verified the factor
+ *
+ * @return void
  * @throws \RuntimeException when the session identifier cannot be replaced
  */
 function xoops_login_set_session(XoopsUser $user, string $factorGeneration, bool $verified): void
