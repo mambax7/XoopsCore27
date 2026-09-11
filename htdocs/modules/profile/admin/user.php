@@ -221,14 +221,14 @@ switch ($op) {
             }
             $profile_handler = xoops_getModuleHandler('profile');
             $profile         = $profile_handler->get($obj->getVar('uid'));
-            if (!$profile || $profile->isNew() || $profile_handler->delete($profile)) {
-                if ($handler->deleteUser($obj)) {
-                    redirect_header('user.php', 3, sprintf(_PROFILE_AM_DELETEDSUCCESS, $obj->getVar('uname') . ' (' . $obj->getVar('email') . ')'), false);
-                } else {
-                    echo $obj->getHtmlErrors();
-                }
-            } else {
+            // The account goes first: deleteUser() can refuse, and a refused
+            // account keeps its profile row.
+            if (!$handler->deleteUser($obj)) {
+                echo $obj->getHtmlErrors();
+            } elseif ($profile && !$profile->isNew() && !$profile_handler->delete($profile)) {
                 echo $profile->getHtmlErrors();
+            } else {
+                redirect_header('user.php', 3, sprintf(_PROFILE_AM_DELETEDSUCCESS, $obj->getVar('uname') . ' (' . $obj->getVar('email') . ')'), false);
             }
         } else {
             xoops_confirm(
