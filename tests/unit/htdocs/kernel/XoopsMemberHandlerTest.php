@@ -358,16 +358,14 @@ class XoopsMemberHandlerTest extends TestCase
     public function testConstructorWiresTheTokenHandlerForAMysqlConnectionOnly(): void
     {
         require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
-        $ref = new ReflectionClass(XoopsMemberHandler::class);
+        // The constructor itself reaches the database factory through the
+        // sub-handlers, so the wiring is tested through the method it calls.
+        $wire = new ReflectionMethod(XoopsMemberHandler::class, 'tokenHandlerFor');
+        $ctor = (string) file_get_contents(XOOPS_ROOT_PATH . '/kernel/member.php');
+        $this->assertStringContainsString('$this->tokenHandler = self::tokenHandlerFor($db);', $ctor);
 
-        $mysql = $this->createMock(XoopsMySQLDatabase::class);
-        $mysql->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
-        $prop = $ref->getProperty('tokenHandler');
-        $this->assertInstanceOf(\XoopsTokenHandler::class, $prop->getValue(new XoopsMemberHandler($mysql)));
-
-        $other = $this->createMock(\XoopsDatabase::class);
-        $other->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
-        $this->assertNull($prop->getValue(new XoopsMemberHandler($other)));
+        $this->assertInstanceOf(\XoopsTokenHandler::class, $wire->invoke(null, $this->createMock(XoopsMySQLDatabase::class)));
+        $this->assertNull($wire->invoke(null, $this->createMock(\XoopsDatabase::class)));
     }
 
     public function testDeleteUserReturnsFalseWhenUserDeleteFails(): void

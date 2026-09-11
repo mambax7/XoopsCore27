@@ -93,9 +93,21 @@ class XoopsMemberHandler
         $this->groupHandler = new XoopsGroupHandler($db);
         $this->userHandler = new XoopsUserHandler($db);
         $this->membershipHandler = new XoopsMembershipHandler($db);
-        // The token handler needs the concrete MySQL connection; every
-        // supported connection is one, and without it there are no tokens.
-        $this->tokenHandler = $db instanceof XoopsMySQLDatabase ? new XoopsTokenHandler($db) : null;
+        $this->tokenHandler = self::tokenHandlerFor($db);
+    }
+
+    /**
+     * The token handler for a connection.
+     *
+     * Tokens need the concrete MySQL connection; every supported connection
+     * is one, and without it there are no tokens to delete.
+     *
+     * @param XoopsDatabase $db Database connection object
+     * @return XoopsTokenHandler|null
+     */
+    protected static function tokenHandlerFor(XoopsDatabase $db): ?XoopsTokenHandler
+    {
+        return $db instanceof XoopsMySQLDatabase ? new XoopsTokenHandler($db) : null;
     }
 
     /**
