@@ -21,6 +21,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 require_once __DIR__ . '/user.php';
 require_once __DIR__ . '/group.php';
 require_once __DIR__ . '/../class/XoopsTokenHandler.php';
+require_once __DIR__ . '/user2fa.php';
 
 /**
  * XOOPS member handler class.
@@ -65,6 +66,11 @@ class XoopsMemberHandler
     protected ?XoopsTokenHandler $tokenHandler = null;
 
     /**
+     * @var XoopsUser2faHandler|null
+     */
+    protected ?XoopsUser2faHandler $user2faHandler = null;
+
+    /**
      * @var array<int,XoopsUser> Temporary user objects cache
      */
     protected $membersWorkingList = [];
@@ -94,6 +100,7 @@ class XoopsMemberHandler
         $this->userHandler = new XoopsUserHandler($db);
         $this->membershipHandler = new XoopsMembershipHandler($db);
         $this->tokenHandler = self::tokenHandlerFor($db);
+        $this->user2faHandler = self::user2faHandlerFor($db);
     }
 
     /**
@@ -108,6 +115,20 @@ class XoopsMemberHandler
     protected static function tokenHandlerFor(XoopsDatabase $db): ?XoopsTokenHandler
     {
         return $db instanceof XoopsMySQLDatabase ? new XoopsTokenHandler($db) : null;
+    }
+
+    /**
+     * The second-factor handler for a connection.
+     *
+     * Same rule as the tokens: without the concrete MySQL connection there
+     * is no factor row to delete.
+     *
+     * @param XoopsDatabase $db Database connection object
+     * @return XoopsUser2faHandler|null
+     */
+    protected static function user2faHandlerFor(XoopsDatabase $db): ?XoopsUser2faHandler
+    {
+        return $db instanceof XoopsMySQLDatabase ? new XoopsUser2faHandler($db) : null;
     }
 
     /**
@@ -179,6 +200,12 @@ class XoopsMemberHandler
         // a dead account with live tokens, and a token delete that fails
         // stops the account delete for the same reason.
         if (null !== $this->tokenHandler && !$this->tokenHandler->deleteByUid((int) $user->getVar('uid'))) {
+            return false;
+        }
+        // The factor row goes with the tokens: a dead account must not keep
+        // a factor row any more than live recovery codes. Skipped, not
+        // failed, while the 2.7.4 patch has not created the table.
+        if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
             return false;
         }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));

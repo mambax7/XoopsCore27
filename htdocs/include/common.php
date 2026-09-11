@@ -173,6 +173,11 @@ $xoopsDB = XoopsDatabaseFactory::getDatabaseConnection();
 $config_handler = xoops_getHandler('config');
 $xoopsConfig    = $config_handler->getConfigsByCat(XOOPS_CONF);
 
+// The two-factor feature is installed when its preference row came from the
+// database. Captured before the file configs merge so a file override cannot
+// fake installation. Read by XoopsUser2faHandler.
+defined('XOOPS_2FA_INSTALLED') || define('XOOPS_2FA_INSTALLED', array_key_exists('twofactor_mode', $xoopsConfig));
+
 /**
  * Merge file and db configs.
  */
