@@ -241,7 +241,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertTrue($handler->acceptTotp(10, 101, self::GEN, self::NOW));
         $this->assertSame(
             'UPDATE `xoops_user_2fa` SET `last_counter` = 101, `failed_attempts` = 0, `locked_until` = 0'
-            . " WHERE `uid` = 10 AND `state` = 'enrolled' AND `generation` = '" . self::GEN . "'"
+            . " WHERE `uid` = 10 AND `state` = 'enrolled' AND `method` = 'totp' AND `generation` = '" . self::GEN . "'"
             . ' AND `locked_until` <= 1700000000 AND `last_counter` < 101',
             $this->sql[0]
         );
@@ -506,7 +506,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     }
 
     #[Test]
-    public function aRollbackThatThrowsStillReleasesTheGuard(): void
+    public function aRollbackThatThrowsKeepsTheGuard(): void
     {
         $handler          = $this->handler();
         $this->execResult = static function (string $s): bool {
@@ -526,10 +526,15 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             $this->assertSame('rollback failed', $e->getMessage());
         }
 
+        // The connection may still hold the transaction: closed to a new one.
         $this->execResult = true;
         $this->sql        = [];
-        $this->assertTrue($handler->withTransaction(static fn (): bool => true));
-        $this->assertSame(['START TRANSACTION', 'COMMIT'], $this->sql);
+        try {
+            $handler->withTransaction(static fn (): bool => true);
+            $this->fail('a transaction started on a connection whose ROLLBACK threw');
+        } catch (\LogicException) {
+            $this->assertSame([], $this->sql, 'no START TRANSACTION reached the connection');
+        }
     }
 
     /* ---------------------------------------------------------------- */
@@ -590,6 +595,14 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         // Already enrolled (the second tab): refused, nothing written.
         $this->sql  = [];
         $this->rows = [$this->row()];
+        $this->assertFalse($handler->enrol(10, 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', 101, self::NOW));
+        $this->assertSame([], $this->statements('INSERT'));
+        $this->assertSame([], $this->statements('UPDATE'));
+        $this->assertSame('ROLLBACK', end($this->sql));
+
+        // A state this code does not know is never overwritten.
+        $this->sql  = [];
+        $this->rows = [$this->row(['state' => 'pending'])];
         $this->assertFalse($handler->enrol(10, 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', 101, self::NOW));
         $this->assertSame([], $this->statements('INSERT'));
         $this->assertSame([], $this->statements('UPDATE'));

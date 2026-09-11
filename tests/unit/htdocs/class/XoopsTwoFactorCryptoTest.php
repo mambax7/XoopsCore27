@@ -98,6 +98,19 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
     }
 
     #[Test]
+    public function provisionReplacesAMalformedKeyOnlyWhileNoEncryptedRowsExist(): void
+    {
+        $crypto = $this->crypto();
+        file_put_contents($this->keyFile(), "<?php\nreturn 'not base64!';\n");
+
+        $this->assertFalse($crypto->provisionKey(true), 'a malformed key is not replaced while secrets depend on it');
+        $this->assertStringContainsString('not base64!', (string) file_get_contents($this->keyFile()));
+
+        $this->assertTrue($crypto->provisionKey(false));
+        $this->assertSame(32, strlen((string) $crypto->loadKey()));
+    }
+
+    #[Test]
     public function provisionReportsFailureWhenTheLockCannotBeOpened(): void
     {
         $crypto = new XoopsTwoFactorCrypto(new FileStorage($this->dir, 'test'), $this->dir . '/missing/twofactor.lock');

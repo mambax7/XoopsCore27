@@ -243,6 +243,7 @@ class Upgrade_274 extends XoopsUpgrade
         foreach (self::MODE_OPTIONS as $option) {
             $sql    = 'SELECT COUNT(*) FROM `' . $table . '`'
                     . ' WHERE conf_id = ' . $confId
+                    . ' AND confop_name = ' . $this->db->quote($option[0])
                     . ' AND confop_value = ' . $this->db->quote($option[1]);
             $result = $this->db->query($sql);
             if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {

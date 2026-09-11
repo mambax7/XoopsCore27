@@ -100,6 +100,21 @@ final class XoopsTwoFactorCrypto
         if (!$this->isAvailable() || !$this->hasKey()) {
             return null;
         }
+        $key = $this->readKey();
+        if (null === $key) {
+            trigger_error('XoopsTwoFactorCrypto: key file unreadable or malformed', E_USER_WARNING);
+        }
+
+        return $key;
+    }
+
+    /**
+     * The key file's contents when they decode to a key, without reporting.
+     *
+     * @return string|null
+     */
+    private function readKey(): ?string
+    {
         set_error_handler(static fn (): bool => true);
         try {
             $stored = $this->storage->fetch(self::KEY_NAME);
@@ -109,19 +124,23 @@ final class XoopsTwoFactorCrypto
             restore_error_handler();
         }
         $key = is_string($stored) ? base64_decode($stored, true) : false;
-        if (!is_string($key) || strlen($key) !== self::KEY_BYTES) {
-            trigger_error('XoopsTwoFactorCrypto: key file unreadable or malformed', E_USER_WARNING);
 
-            return null;
-        }
-
-        return $key;
+        return (is_string($key) && strlen($key) === self::KEY_BYTES) ? $key : null;
     }
 
     /**
-     * Create the site key if none exists.
+     * Create the site key if no usable one exists.
      *
-     * @param bool $encryptedRowsExist whether any user_2fa row holds a secret; a lost key is never replaced while one does
+     * A key file that does not decode (a crash during the first write) is
+     * replaced the same way as a missing one, but only while no user_2fa row
+     * holds a secret: a lost key is never replaced while one does.
+     *
+     * ponytail: FileStorage::save() writes the final file in place, so a reader
+     * can see the file between creation and completion during the site's one
+     * first provisioning and report the factor unavailable for that request.
+     * Publish atomically (temp file + rename) once FileStorage supports it.
+     *
+     * @param bool $encryptedRowsExist whether any user_2fa row holds a secret
      *
      * @return bool true when a usable key exists afterwards
      */
@@ -130,8 +149,8 @@ final class XoopsTwoFactorCrypto
         if (!$this->isAvailable()) {
             return false;
         }
-        if ($this->hasKey()) {
-            return null !== $this->loadKey();
+        if ($this->hasKey() && null !== $this->readKey()) {
+            return true;
         }
         if ($encryptedRowsExist) {
             return false;
@@ -149,7 +168,7 @@ final class XoopsTwoFactorCrypto
             if (!flock($lock, LOCK_EX)) {
                 return false;
             }
-            if (!$this->hasKey()) {
+            if (!$this->hasKey() || null === $this->readKey()) {
                 $key = sodium_crypto_aead_xchacha20poly1305_ietf_keygen();
                 // Same rule as loadKey(): a write warning carries the key
                 // file's path, which must not reach a page.

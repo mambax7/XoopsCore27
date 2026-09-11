@@ -264,11 +264,15 @@ final class XoopsUser2faHandler
         }
         self::$open ??= new \WeakMap();
         self::$open[$this->db] = true;
-        $closed = true;
+        // True only once the connection accepted a COMMIT or a ROLLBACK; a
+        // ROLLBACK that is refused or throws leaves it false.
+        $closed = false;
         try {
             try {
                 $value = $fn();
                 if (false !== $value && $this->db->exec('COMMIT')) {
+                    $closed = true;
+
                     return $value;
                 }
             } catch (\Throwable $e) {
@@ -282,9 +286,10 @@ final class XoopsUser2faHandler
 
             return false;
         } finally {
-            // A refused ROLLBACK leaves the connection in a state this code
-            // cannot see; the guard stays so no later withTransaction() can
-            // START (and so implicitly commit) on it for the rest of the request.
+            // A ROLLBACK that was refused or threw leaves the connection in a
+            // state this code cannot see; the guard stays so no later
+            // withTransaction() can START (and so implicitly commit) on it for
+            // the rest of the request.
             if ($closed) {
                 unset(self::$open[$this->db]);
             }
@@ -305,11 +310,12 @@ final class XoopsUser2faHandler
     {
         $sql = sprintf(
             'UPDATE `%s` SET `last_counter` = %d, `failed_attempts` = 0, `locked_until` = 0'
-            . ' WHERE `uid` = %d AND `state` = %s AND `generation` = %s AND `locked_until` <= %d AND `last_counter` < %d',
+            . ' WHERE `uid` = %d AND `state` = %s AND `method` = %s AND `generation` = %s AND `locked_until` <= %d AND `last_counter` < %d',
             $this->table(),
             $step,
             $uid,
             $this->db->quote(self::ROW_ENROLLED),
+            $this->db->quote(self::METHOD_TOTP),
             $this->db->quote($verifiedGeneration),
             $now,
             $step
@@ -407,7 +413,9 @@ final class XoopsUser2faHandler
     {
         return $this->withTransaction(function () use ($uid, $secretBase32, $acceptedStep, $now): array|false {
             $row = $this->lockRow($uid);
-            if (null !== $row && self::ROW_ENROLLED === $row['state']) {
+            if (null !== $row && self::ROW_DISABLED !== $row['state']) {
+                // Enrolled: the second tab loses. Anything else is a row this
+                // code does not know and must not overwrite (see stateFor()).
                 return false;
             }
             $blob = $this->crypto()->seal($secretBase32, XoopsTwoFactorCrypto::rowAad($uid, self::METHOD_TOTP));
