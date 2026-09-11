@@ -139,8 +139,14 @@ class Upgrade_274 extends XoopsUpgrade
         if (0 === $confId) {
             return false;
         }
+        $missing = $this->missingModeOptions($confId);
+        if (null === $missing) {
+            $this->logs[] = 'Could not read the configoption table to check the twofactor_mode options';
 
-        return [] === $this->missingModeOptions($confId);
+            return false;
+        }
+
+        return [] === $missing;
     }
 
     /**
@@ -204,16 +210,17 @@ class Upgrade_274 extends XoopsUpgrade
      * unique key on (conf_modid, conf_name), so a read failure taken as "absent"
      * would insert a duplicate core preference.
      *
-     * Scoped to conf_modid = 0: matching on conf_name alone would let a module
-     * preference of the same name satisfy the check and the core row would never
-     * be created.
+     * Scoped to conf_modid = 0 and conf_catid = 1: matching on conf_name alone
+     * would let a module preference, or a core row in another category, satisfy
+     * the check while include/common.php, which loads only XOOPS_CONF, never sees
+     * the preference and the core row is never created.
      *
      * @return int|null
      */
     private function modeConfId(): ?int
     {
         $sql    = 'SELECT `conf_id` FROM `' . $this->db->prefix('config') . '`'
-                . " WHERE conf_modid = 0 AND conf_name = 'twofactor_mode'";
+                . " WHERE conf_modid = 0 AND conf_catid = 1 AND conf_name = 'twofactor_mode'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return null;

@@ -151,7 +151,17 @@ final class XoopsTwoFactorCrypto
             }
             if (!$this->hasKey()) {
                 $key = sodium_crypto_aead_xchacha20poly1305_ietf_keygen();
-                if (!$this->storage->save(self::KEY_NAME, base64_encode($key))) {
+                // Same rule as loadKey(): a write warning carries the key
+                // file's path, which must not reach a page.
+                set_error_handler(static fn (): bool => true);
+                try {
+                    $saved = $this->storage->save(self::KEY_NAME, base64_encode($key));
+                } finally {
+                    restore_error_handler();
+                }
+                if (!$saved) {
+                    trigger_error('XoopsTwoFactorCrypto: key file could not be written', E_USER_WARNING);
+
                     return false;
                 }
             }

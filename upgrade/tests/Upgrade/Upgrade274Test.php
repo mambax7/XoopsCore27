@@ -186,6 +186,7 @@ final class Upgrade274Test extends TestCase
         $this->rows          = [[140]];
         $this->queryFailsFor = 'configoption';
         self::assertFalse($patch->check_twofactormode(), 'an unreadable option table is not "complete"');
+        self::assertNotSame([], $patch->logs, 'and the check reports why');
     }
 
     #[Test]
