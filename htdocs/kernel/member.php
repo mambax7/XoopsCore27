@@ -170,9 +170,13 @@ class XoopsMemberHandler
             return false;
         }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
-        $s1 = $this->membershipHandler->deleteAll($criteria);
-        $s2 = $this->userHandler->delete($user);
-        return ($s1 && $s2);
+        if (!$this->membershipHandler->deleteAll($criteria)) {
+            // Same rule: a step that did not run keeps the account, so a
+            // false return always means the row is still there.
+            return false;
+        }
+
+        return (bool) $this->userHandler->delete($user);
     }
 
     /**

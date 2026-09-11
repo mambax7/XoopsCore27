@@ -348,10 +348,26 @@ class XoopsMemberHandlerTest extends TestCase
 
         $this->membershipHandler->method('deleteAll')
                                 ->willReturn(false);
-        $this->userHandler->method('delete')
-                          ->willReturn(true);
+        // a false return must mean the account is still there
+        $this->userHandler->expects($this->never())
+                          ->method('delete');
 
         $this->assertFalse($this->handler->deleteUser($user));
+    }
+
+    public function testConstructorWiresTheTokenHandlerForAMysqlConnectionOnly(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
+        $ref = new ReflectionClass(XoopsMemberHandler::class);
+
+        $mysql = $this->createMock(XoopsMySQLDatabase::class);
+        $mysql->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
+        $prop = $ref->getProperty('tokenHandler');
+        $this->assertInstanceOf(\XoopsTokenHandler::class, $prop->getValue(new XoopsMemberHandler($mysql)));
+
+        $other = $this->createMock(\XoopsDatabase::class);
+        $other->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
+        $this->assertNull($prop->getValue(new XoopsMemberHandler($other)));
     }
 
     public function testDeleteUserReturnsFalseWhenUserDeleteFails(): void
