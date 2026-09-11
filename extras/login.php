@@ -62,6 +62,21 @@ if ($op === 'dologin') {
                 exit();
             }
         }
+        // This popup has no challenge page: an account whose factor must be
+        // presented signs in through the site's own login form instead. A
+        // copy of an older version of this file on the host stays a bypass
+        // there; the release notes say so.
+        /** @var XoopsUser2faHandler $factorHandler */
+        $factorHandler = xoops_getHandler('user2fa');
+        try {
+            $factorState = $factorHandler->stateFor((int) $user->getVar('uid'));
+        } catch (\Throwable $e) {
+            $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
+        }
+        if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
+            redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED);
+            exit();
+        }
         $user->setVar('last_login', time());
         if (!$member_handler->insertUser($user)) {
             // Handle error

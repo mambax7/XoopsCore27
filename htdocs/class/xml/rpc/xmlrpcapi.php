@@ -83,6 +83,19 @@ class XoopsXmlRpcApi
 
             return false;
         }
+        // A factor that must be presented cannot be presented here.
+        /** @var XoopsUser2faHandler $factorHandler */
+        $factorHandler = xoops_getHandler('user2fa');
+        try {
+            $factorState = $factorHandler->stateFor((int) $this->user->getVar('uid'));
+        } catch (\Throwable $e) {
+            $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
+        }
+        if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($GLOBALS['xoopsConfig']), $factorState)) {
+            unset($this->user);
+
+            return false;
+        }
         /** @var  XoopsGroupPermHandler $moduleperm_handler */
         $moduleperm_handler = xoops_getHandler('groupperm');
         if (!$moduleperm_handler->checkRight('module_read', $this->module->getVar('mid'), $this->user->getGroups())) {
