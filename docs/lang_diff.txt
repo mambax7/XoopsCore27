@@ -15,6 +15,24 @@ Below are language differences from a version to next version.
 - added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
 - added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
 
+/htdocs/language/english/user.php
+- added define('_US_2FA_TITLE', 'Second step');
+- added define('_US_2FA_PROMPT', 'Enter the code from your authenticator app');
+- added define('_US_2FA_CODE', 'Authenticator code');
+- added define('_US_2FA_RECOVERY', 'Use a recovery code instead');
+- added define('_US_2FA_RECOVERY_HINT', 'Each recovery code works once. Using one sends you an e-mail.');
+- added define('_US_2FA_SUBMIT', 'Continue');
+- added define('_US_2FA_STARTAGAIN', 'This sign-in has expired or was interrupted. Please start again.');
+- added define('_US_2FA_BACKTOLOGIN', 'Back to the login form');
+- added define('_US_2FA_BADCODE', 'That code was not accepted.');
+- added define('_US_2FA_LOCKED', 'Too many attempts. The second step is locked for fifteen minutes; a recovery code still works.');
+- added define('_US_2FA_UNAVAILABLE', 'The authenticator step is not available right now. A recovery code still works, or contact the site administrator.');
+- added define('_US_2FA_REQUIRED', 'This account has two-factor authentication enabled. Please sign in through the site\'s login page.');
+- added define('_US_2FA_LOCKED_MAIL_SUBJECT', '%s: second step locked');
+- added define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong authenticator codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
+- added define('_US_2FA_RECOVERY_MAIL_SUBJECT', '%s: a recovery code was used');
+- added define('_US_2FA_RECOVERY_MAIL_BODY', 'A recovery code was used to sign in to your account at %s from %s. That code no longer works. If this was not you, change your password and reset your recovery codes.');
+
 ================================
 2026/09: Version 2.7.4-Beta1
 ================================
