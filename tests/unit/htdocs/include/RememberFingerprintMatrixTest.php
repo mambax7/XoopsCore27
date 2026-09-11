@@ -21,11 +21,12 @@ use Tests\Unit\System\SourceFileTestTrait;
 require_once dirname(__DIR__) . '/modules/system/SourceFileTestTrait.php';
 
 /**
- * Executes the restore condition of include/common.php against every claim
- * shape a signed remember-me token could carry. The condition is sliced from
- * the source by its markers and evaluated in an isolated namespace where the
- * fingerprint helper is a stub, so the test proves the expression as written,
- * not a copy of it.
+ * Executes the acceptance expression of include/common.php's remember-me
+ * cookie path against every claim shape a signed token could carry and every
+ * account state. The expression is sliced from the source by its marker and
+ * evaluated in an isolated namespace where the fingerprint helper is a stub,
+ * so the test proves the expression as written, not a copy of it. Only an
+ * accepted candidate may seed the session.
  *
  * @category  XoopsTest
  * @package   XoopsCore27
@@ -46,48 +47,42 @@ final class RememberFingerprintMatrixTest extends TestCase
     }
 
     /**
-     * Rows: [user, claims, session ends, signing key (defaults to a readable one)].
+     * Rows: [candidate account, claims, accepted].
      *
-     * @return array<string, array{mixed, mixed, bool, 3?: string}>
+     * @return array<string, array{mixed, object, bool}>
      */
     public static function cases(): array
     {
         $active = self::user(active: true);
 
         return [
-            'matching fingerprint on the cookie path'      => [$active, (object) ['uid' => 5, 'pfp' => self::FP], false],
-            'changed fingerprint'                          => [$active, (object) ['uid' => 5, 'pfp' => 'stale'], true],
-            'claim missing (token issued before upgrade)'  => [$active, (object) ['uid' => 5], true],
-            'null claim'                                   => [$active, (object) ['uid' => 5, 'pfp' => null], true],
-            'array claim'                                  => [$active, (object) ['uid' => 5, 'pfp' => [self::FP]], true],
-            'object claim'                                 => [$active, (object) ['uid' => 5, 'pfp' => (object) ['v' => self::FP]], true],
-            'boolean claim'                                => [$active, (object) ['uid' => 5, 'pfp' => true], true],
-            'integer claim'                                => [$active, (object) ['uid' => 5, 'pfp' => 1], true],
-            'float claim'                                  => [$active, (object) ['uid' => 5, 'pfp' => 1.0], true],
-            'session-store restore ignores the fingerprint' => [$active, false, false],
-            'inactive account'                             => [self::user(active: false), (object) ['uid' => 5, 'pfp' => self::FP], true],
-            'missing account'                              => ['', (object) ['uid' => 5, 'pfp' => self::FP], true],
-            'no signing key readable'                      => [$active, (object) ['uid' => 5, 'pfp' => self::FP], true, ''],
+            'matching fingerprint'                        => [$active, (object) ['uid' => 5, 'pfp' => self::FP], true],
+            'changed fingerprint'                         => [$active, (object) ['uid' => 5, 'pfp' => 'stale'], false],
+            'claim missing (token issued before upgrade)' => [$active, (object) ['uid' => 5], false],
+            'null claim'                                  => [$active, (object) ['uid' => 5, 'pfp' => null], false],
+            'array claim'                                 => [$active, (object) ['uid' => 5, 'pfp' => [self::FP]], false],
+            'object claim'                                => [$active, (object) ['uid' => 5, 'pfp' => (object) ['v' => self::FP]], false],
+            'boolean claim'                               => [$active, (object) ['uid' => 5, 'pfp' => true], false],
+            'integer claim'                               => [$active, (object) ['uid' => 5, 'pfp' => 1], false],
+            'float claim'                                 => [$active, (object) ['uid' => 5, 'pfp' => 1.0], false],
+            'inactive account'                            => [self::user(active: false), (object) ['uid' => 5, 'pfp' => self::FP], false],
+            'missing account'                             => [false, (object) ['uid' => 5, 'pfp' => self::FP], false],
         ];
     }
 
     #[Test]
     #[DataProvider('cases')]
-    public function restoreEndsTheSessionOnlyWhenItShould(mixed $xoopsUser, mixed $rememberClaims, bool $ends, string $rememberSigningKey = 'unit-test-signing-key'): void
+    public function aCookieSeedsTheSessionOnlyForAnAccountThatPassesEveryCheck(mixed $rememberCandidate, object $rememberClaims, bool $accepted): void
     {
         $this->loadSourceFile('htdocs/include/common.php');
-        $start = strpos($this->sourceContent, 'if (!is_object($xoopsUser) || !$xoopsUser->isActive()');
-        self::assertNotFalse($start);
-        $end = strpos($this->sourceContent, "{\n", $start);
+        // The acceptance decision is the one assignment between loading the
+        // candidate and seeding the session.
+        $start = strpos($this->sourceContent, '$rememberUser = (is_object($rememberCandidate)');
+        self::assertNotFalse($start, 'the cookie path must decide acceptance in one expression');
+        $end = strpos($this->sourceContent, ";\n", $start);
         self::assertNotFalse($end);
-        // "if (<condition>) {" -> "<condition>". The slice ends at the first
-        // "{\n" after the start, which is the if's opening brace as long as the
-        // condition itself contains no brace; the balance check below catches a
-        // truncated or over-long slice before eval() can run it.
-        $condition = trim(substr($this->sourceContent, $start + 3, $end - $start - 3));
-        self::assertSame(substr_count($condition, '('), substr_count($condition, ')'), 'condition slice is not balanced');
-        self::assertStringStartsWith('(', $condition);
-        self::assertStringEndsWith(')', $condition);
+        $expression = substr($this->sourceContent, $start, $end - $start + 1);
+        self::assertSame(substr_count($expression, '('), substr_count($expression, ')'), 'expression slice is not balanced');
 
         $namespace = __NAMESPACE__ . '\\RestoreCondition';
         if (!class_exists($namespace . '\\XoopsUserUtility', false)) {
@@ -100,12 +95,16 @@ final class RememberFingerprintMatrixTest extends TestCase
                 . ' }');
         }
         $GLOBALS['rememberMatrixHelperCalls'] = 0;
+        $rememberSigningKey = 'unit-test-signing-key';
+        $rememberUser       = null;
 
-        $result = eval('namespace ' . $namespace . "; return " . $condition . ';');
+        // Evaluates the assignment exactly as written; the locals above are
+        // the variables it reads.
+        eval('namespace ' . $namespace . ";\n" . $expression);
 
-        self::assertSame($ends, $result);
-        if (!is_object($xoopsUser) || !$xoopsUser->isActive() || !is_object($rememberClaims)) {
-            self::assertSame(0, $GLOBALS['rememberMatrixHelperCalls'], 'the helper must not run off the cookie path or for a missing/inactive account');
+        self::assertSame($accepted, null !== $rememberUser && $rememberUser === $rememberCandidate);
+        if (!is_object($rememberCandidate) || !$rememberCandidate->isActive()) {
+            self::assertSame(0, $GLOBALS['rememberMatrixHelperCalls'], 'the helper must not run for a missing or inactive account');
         }
     }
 
