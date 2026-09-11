@@ -34,6 +34,22 @@ require_once $GLOBALS['xoops']->path('include/loginsession.php');
 $user = xoops_login_authenticate($uname, $pass);
 
 if (false !== $user) {
+    // The gate: a failed factor lookup is "unavailable" and challenges, so a
+    // database blip never turns into a password-only login for an enrolled
+    // account. The row is read once; the challenge gets its generation.
+    /** @var XoopsUser2faHandler $factorHandler */
+    $factorHandler = xoops_getHandler('user2fa');
+    try {
+        $factorRow        = $factorHandler->getRow((int) $user->getVar('uid'));
+        $factorState      = $factorHandler->stateOfRow($factorRow);
+        $factorGeneration = is_array($factorRow) ? (string) $factorRow['generation'] : '';
+    } catch (\Throwable $e) {
+        $factorState      = XoopsUser2faHandler::STATE_UNAVAILABLE;
+        $factorGeneration = '';
+    }
+    if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($GLOBALS['xoopsConfig']), $factorState)) {
+        xoops_login_begin_challenge($user, $factorState, $factorGeneration, !empty($rememberme), $redirect);
+    }
     xoops_login_establish_session($user, !empty($rememberme), $redirect);
 } elseif (empty($redirect)) {
     // Generic message for every credential failure — do not reveal whether the

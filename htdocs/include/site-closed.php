@@ -32,6 +32,11 @@ if (is_object($xoopsUser)) {
 } elseif (\Xmf\Request::hasVar('xoops_login', 'POST')) {
     include_once $GLOBALS['xoops']->path('include/checklogin.php');
     exit();
+} elseif (\Xmf\Request::hasVar('xoops_2fa', 'POST') || ('2fa' === \Xmf\Request::getString('op', '', 'GET') && isset($_SESSION['xoops2faPending']))) {
+    // The challenge after a closed-site login: user.php is never reached on
+    // a closed site, so the page is served from here.
+    include_once $GLOBALS['xoops']->path('include/checklogin2fa.php');
+    exit();
 }
 
 if (!$allowed) {
