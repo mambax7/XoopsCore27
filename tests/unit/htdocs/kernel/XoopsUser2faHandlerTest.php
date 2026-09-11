@@ -86,12 +86,22 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     {
         // tearDown runs after a skipped setUp too: only touch our own directory.
         if ('' !== $this->dir && is_dir($this->dir)) {
-            foreach ((array) glob($this->dir . '/*') as $file) {
-                unlink($file);
-            }
-            rmdir($this->dir);
+            $this->removeTree($this->dir);
         }
         parent::tearDown();
+    }
+
+    /** The escape-hatch tests use a subdirectory; symlinks are unlinked, not followed. */
+    private function removeTree(string $dir): void
+    {
+        foreach ((array) glob($dir . '/{,.}[!.,!..]*', GLOB_BRACE) as $path) {
+            if (is_dir($path) && !is_link($path)) {
+                $this->removeTree($path);
+            } else {
+                unlink($path);
+            }
+        }
+        rmdir($dir);
     }
 
     /* ---------------------------------------------------------------- */
@@ -695,5 +705,97 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $handler->newGeneration());
         $this->assertNotSame($handler->newGeneration(), $handler->newGeneration());
         $this->assertSame('ABCDEFGH', $handler->canonicalRecoveryCode(" ab cd\nef\tgh "));
+    }
+
+    /* ---------------------------------------------------------------- */
+    /* policy, row state, escape hatch                                   */
+    /* ---------------------------------------------------------------- */
+
+    #[Test]
+    public function policyIsOffWhenAbsentAndFallsBackToOptionalForUnknownValues(): void
+    {
+        $this->assertSame('off', XoopsUser2faHandler::policy([]));
+        $this->assertSame('off', XoopsUser2faHandler::policy(['twofactor_mode' => 'off']));
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'optional']));
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'required']));
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'OFF']));
+    }
+
+    #[Test]
+    public function aChallengeIsRequiredOnlyWhenPolicyIsOnAndAFactorExists(): void
+    {
+        $this->assertFalse(XoopsUser2faHandler::mustChallenge('off', 'enrolled'));
+        $this->assertFalse(XoopsUser2faHandler::mustChallenge('off', 'unavailable'));
+        $this->assertFalse(XoopsUser2faHandler::mustChallenge('optional', 'none'));
+        $this->assertTrue(XoopsUser2faHandler::mustChallenge('optional', 'enrolled'));
+        $this->assertTrue(XoopsUser2faHandler::mustChallenge('optional', 'unavailable'));
+    }
+
+    #[Test]
+    public function stateOfRowMapsAbsentDisabledEnrolledAndBroken(): void
+    {
+        $handler = $this->handler();
+        $this->assertSame('none', $handler->stateOfRow(null));
+        $this->assertSame('none', $handler->stateOfRow($this->row(['state' => 'disabled', 'secret' => null])));
+        $this->assertSame('unavailable', $handler->stateOfRow($this->row(['secret' => 'v1:garbage'])));
+        $this->assertSame('unavailable', $handler->stateOfRow($this->row(['method' => 'sms'])));
+        $this->assertSame([], $this->sql);
+    }
+
+    private function hatchDir(): string
+    {
+        $dir = $this->dir . DIRECTORY_SEPARATOR . 'hatch-' . bin2hex(random_bytes(4));
+        mkdir($dir, 0700, true);
+
+        return $dir;
+    }
+
+    #[Test]
+    public function theEscapeHatchIsConsumedOnceAndDisablesTheRow(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/2fa-reset-7.php', "<?php\nreturn true;\n");
+        $handler    = $this->handler();
+        $this->rows = [$this->row(['uid' => 7])];
+
+        $this->assertTrue(@$handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileDoesNotExist($dir . '/2fa-reset-7.php');
+        $this->assertFileExists($dir . '/2fa-reset-7.used');
+        $this->assertCount(1, $this->statements('UPDATE `xoops_user_2fa`'));
+        $this->assertStringContainsString('`uid` = 7', $this->statements('UPDATE `xoops_user_2fa`')[0]);
+
+        // second use: the .used twin refuses even after the operator drops a fresh file
+        $this->sql = [];
+        file_put_contents($dir . '/2fa-reset-7.php', "<?php\nreturn true;\n");
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.php');
+        $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchRefusesAMissingFileAFalseFileAndAnotherUidsFile(): void
+    {
+        $dir     = $this->hatchDir();
+        $handler = $this->handler();
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        file_put_contents($dir . '/2fa-reset-7.php', "<?php\nreturn false;\n");
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.php');
+        file_put_contents($dir . '/2fa-reset-8.php', "<?php\nreturn true;\n");
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir . '/does-not-exist'));
+        $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchRefusesASymlink(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/real.php', "<?php\nreturn true;\n");
+        if (!@symlink($dir . '/real.php', $dir . '/2fa-reset-7.php')) {
+            $this->markTestSkipped('symlink() not permitted here');
+        }
+        $this->assertFalse($this->handler()->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.php');
     }
 }

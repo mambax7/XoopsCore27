@@ -60,6 +60,8 @@ final class XoopsUser2faHandler
     public const RECOVERY_CODES    = 10;
     public const LOCK_THRESHOLD    = 5;
     public const LOCK_SECONDS      = 900;
+    public const POLICY_OFF        = 'off';
+    public const POLICY_OPTIONAL   = 'optional';
 
     private readonly XoopsTokenHandler $tokens;
     private ?XoopsTwoFactorCrypto $crypto;
@@ -195,8 +197,36 @@ final class XoopsUser2faHandler
     }
 
     /**
-     * Factor state from the row and the key, never from the policy.
+     * The site policy, validated. A value this code does not know (including
+     * the deferred "required") falls back to optional; an absent preference
+     * means the 2.7.4 patch has not run and the feature is off.
      *
+     * @param array $config the XOOPS_CONF row set ($xoopsConfig)
+     *
+     * @return string POLICY_OFF or POLICY_OPTIONAL
+     */
+    public static function policy(array $config): string
+    {
+        if (!array_key_exists('twofactor_mode', $config)) {
+            return self::POLICY_OFF;
+        }
+        $mode = $config['twofactor_mode'];
+
+        return (self::POLICY_OFF === $mode || self::POLICY_OPTIONAL === $mode) ? $mode : self::POLICY_OPTIONAL;
+    }
+
+    /**
+     * @param string $policy from policy()
+     * @param string $state  from stateFor() / stateOfRow()
+     *
+     * @return bool whether a login must present the second factor
+     */
+    public static function mustChallenge(string $policy, string $state): bool
+    {
+        return self::POLICY_OFF !== $policy && self::STATE_NONE !== $state;
+    }
+
+    /**
      * @param int $uid account
      *
      * @return string one of the STATE_* constants
@@ -204,7 +234,19 @@ final class XoopsUser2faHandler
      */
     public function stateFor(int $uid): string
     {
-        $row = $this->getRow($uid);
+        return $this->stateOfRow($this->getRow($uid));
+    }
+
+    /**
+     * The state a row (or its absence) maps to. Pages that already hold the
+     * row from getRow() use this instead of a second lookup.
+     *
+     * @param array|null $row a getRow() result
+     *
+     * @return string one of the STATE_* constants
+     */
+    public function stateOfRow(?array $row): string
+    {
         if (null === $row || self::ROW_DISABLED === $row['state']) {
             return self::STATE_NONE;
         }
@@ -551,6 +593,49 @@ final class XoopsUser2faHandler
         }
 
         return $codes;
+    }
+
+    /**
+     * Operator escape hatch: xoops_data/data/2fa-reset-<uid>.php returning
+     * true disables the factor once. The file is renamed to .used before the
+     * reset runs; a refused rename, or a .used twin already present, refuses
+     * the reset, because a rename would replace the earlier marker. The uid
+     * comes from the pending or wizard-authenticated login, never from the
+     * request.
+     *
+     * @param int         $uid     account
+     * @param string|null $dataDir directory holding the file (default XOOPS_VAR_PATH/data)
+     *
+     * @return bool true only when the file was consumed and the row disabled
+     */
+    public function resetByEscapeHatch(int $uid, ?string $dataDir = null): bool
+    {
+        $root = realpath($dataDir ?? (XOOPS_VAR_PATH . '/data'));
+        if (false === $root) {
+            return false;
+        }
+        $name = $root . DIRECTORY_SEPARATOR . '2fa-reset-' . $uid;
+        $file = $name . '.php';
+        $used = $name . '.used';
+        if (file_exists($used) || is_link($file) || !is_file($file)) {
+            return false;
+        }
+        $real = realpath($file);
+        if (false === $real || !str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
+            return false;
+        }
+        $granted = (static function (string $path): mixed {
+            return include $path;
+        })($real);
+        if (true !== $granted) {
+            return false;
+        }
+        if (!rename($real, $used)) {
+            return false;
+        }
+        trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+
+        return false !== $this->disable($uid);
     }
 
     /**
