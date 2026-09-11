@@ -61,7 +61,15 @@ final class XoopsUser2faHandler
     private readonly XoopsTokenHandler $tokens;
     private ?XoopsTwoFactorCrypto $crypto;
     private readonly bool $installed;
-    private bool $inTransaction = false;
+
+    /**
+     * Connections with a withTransaction() in progress. Keyed by connection,
+     * not by handler: two handlers on one mysqli handle share one transaction,
+     * and a second START TRANSACTION would silently commit the first.
+     *
+     * @var \WeakMap<\XoopsMySQLDatabase, true>|null
+     */
+    private static ?\WeakMap $open = null;
 
     /**
      * @param \XoopsMySQLDatabase       $db        connection
@@ -149,11 +157,16 @@ final class XoopsUser2faHandler
      */
     public function lockRow(int $uid): ?array
     {
-        if (!$this->inTransaction) {
+        if (!$this->inTransaction()) {
             throw new \LogicException('lockRow() requires withTransaction()');
         }
 
         return $this->selectRow($uid, true);
+    }
+
+    private function inTransaction(): bool
+    {
+        return null !== self::$open && isset(self::$open[$this->db]);
     }
 
     /**
@@ -234,28 +247,33 @@ final class XoopsUser2faHandler
      */
     public function withTransaction(callable $fn): mixed
     {
-        if ($this->inTransaction) {
+        if ($this->inTransaction()) {
             throw new \LogicException('withTransaction() does not nest');
         }
         if (!$this->db->exec('START TRANSACTION')) {
             return false;
         }
-        $this->inTransaction = true;
+        self::$open ??= new \WeakMap();
+        self::$open[$this->db] = true;
         try {
-            $value = $fn();
-        } catch (\Throwable $e) {
-            $this->db->exec('ROLLBACK');
-            $this->inTransaction = false;
-            throw $e;
-        }
-        $this->inTransaction = false;
-        if (false === $value) {
-            $this->db->exec('ROLLBACK');
+            try {
+                $value = $fn();
+            } catch (\Throwable $e) {
+                $this->db->exec('ROLLBACK');
+                throw $e;
+            }
+            if (false === $value) {
+                $this->db->exec('ROLLBACK');
 
-            return false;
-        }
+                return false;
+            }
 
-        return $this->db->exec('COMMIT') ? $value : false;
+            return $this->db->exec('COMMIT') ? $value : false;
+        } finally {
+            // Whatever happened, including a ROLLBACK that itself threw, the
+            // connection is no longer ours to guard.
+            unset(self::$open[$this->db]);
+        }
     }
 
     /**

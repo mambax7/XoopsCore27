@@ -18,7 +18,7 @@ final class CommonInstalledSignalTest extends TestCase
     public function theInstalledSignalIsCapturedFromTheDatabaseConfigsBeforeTheFileMerge(): void
     {
         $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/include/common.php');
-        $define = strpos($source, "define('XOOPS_2FA_INSTALLED', array_key_exists('twofactor_mode', \$xoopsConfig))");
+        $define = strpos($source, "define('XOOPS_2FA_INSTALLED', [] === \$xoopsConfig || array_key_exists('twofactor_mode', \$xoopsConfig))");
         $load   = strpos($source, '$xoopsConfig    = $config_handler->getConfigsByCat(XOOPS_CONF);');
         $merge  = strpos($source, "path('var/configs/xoopsconfig.php')");
 

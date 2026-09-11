@@ -440,6 +440,64 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $handler->lockRow(10);
     }
 
+    #[Test]
+    public function theNestingGuardIsPerConnectionNotPerHandler(): void
+    {
+        $db     = $this->db();
+        $crypto = $this->crypto();
+        $a      = $this->handler($crypto, true, $db);
+        $b      = $this->handler($crypto, true, $db);
+
+        try {
+            $a->withTransaction(static fn () => $b->withTransaction(static fn (): bool => true));
+            $this->fail('a second handler opened a transaction on a connection that already had one');
+        } catch (\LogicException) {
+            $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql, 'no second START TRANSACTION reached the connection');
+        }
+
+        // Inside the connection's transaction, the other handler may lock rows.
+        $this->sql  = [];
+        $this->rows = [$this->row()];
+        $this->assertIsArray($a->withTransaction(static fn (): ?array => $b->lockRow(10)));
+        $this->assertStringEndsWith('FOR UPDATE', $this->sql[1]);
+
+        // Another connection is another transaction.
+        $other = $this->handler($crypto, true, $this->db());
+        $this->assertTrue($a->withTransaction(static fn (): bool => $other->withTransaction(static fn (): bool => true)));
+
+        // The guard clears with the transaction.
+        $this->sql = [];
+        $this->assertTrue($b->withTransaction(static fn (): bool => true));
+        $this->assertSame(['START TRANSACTION', 'COMMIT'], $this->sql);
+    }
+
+    #[Test]
+    public function aRollbackThatThrowsStillReleasesTheGuard(): void
+    {
+        $handler          = $this->handler();
+        $this->execResult = static function (string $s): bool {
+            if ('ROLLBACK' === $s) {
+                throw new \RuntimeException('rollback failed');
+            }
+
+            return true;
+        };
+
+        try {
+            $handler->withTransaction(static function (): void {
+                throw new \RuntimeException('boom');
+            });
+            $this->fail('nothing propagated');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('rollback failed', $e->getMessage());
+        }
+
+        $this->execResult = true;
+        $this->sql        = [];
+        $this->assertTrue($handler->withTransaction(static fn (): bool => true));
+        $this->assertSame(['START TRANSACTION', 'COMMIT'], $this->sql);
+    }
+
     /* ---------------------------------------------------------------- */
     /* enrol / disable / regenerate / delete                             */
     /* ---------------------------------------------------------------- */
