@@ -29,11 +29,14 @@ use Xmf\Key\FileStorage;
  * monotonic step counter, failure throttle and factor generation, plus the
  * recovery codes kept in the tokens table under scope '2fa_recovery'.
  *
- * Every write that can race another (acceptance, throttle, enrol, disable,
- * regenerate) runs in withTransaction() with the row locked FOR UPDATE, so a
- * reset either lands before a code is accepted or after it, never between
- * the check and the grant. Nothing inside a transaction touches `users`,
- * redirects, mails or fires events.
+ * Every write that can race another (throttle, enrol, disable, regenerate)
+ * runs in withTransaction() with the row locked FOR UPDATE, so a reset either
+ * lands before a code is accepted or after it, never between the check and
+ * the grant. Acceptance is the one exception: acceptTotp() is a single
+ * conditional UPDATE whose WHERE clause carries every precondition, and
+ * exactly one affected row grants, which gives the same guarantee without a
+ * lock. Nothing inside a transaction touches `users`, redirects, mails or
+ * fires events.
  *
  * Loaded by xoops_getHandler('user2fa'). Not a XoopsObjectHandler: there is
  * no XoopsObject for this row.
@@ -180,8 +183,14 @@ final class XoopsUser2faHandler
     public function stateFor(int $uid): string
     {
         $row = $this->getRow($uid);
-        if (null === $row || self::ROW_ENROLLED !== $row['state']) {
+        if (null === $row || self::ROW_DISABLED === $row['state']) {
             return self::STATE_NONE;
+        }
+        // "none" is reserved for an absent or disabled row: the login gate
+        // reads it as "no factor". A state or method this code does not know
+        // is a factor it cannot check, so it fails closed.
+        if (self::ROW_ENROLLED !== $row['state'] || self::METHOD_TOTP !== $row['method']) {
+            return self::STATE_UNAVAILABLE;
         }
 
         return null === $this->secretFromRow($row) ? self::STATE_UNAVAILABLE : self::STATE_ENROLLED;
@@ -248,13 +257,14 @@ final class XoopsUser2faHandler
     public function withTransaction(callable $fn): mixed
     {
         if ($this->inTransaction()) {
-            throw new \LogicException('withTransaction() does not nest');
+            throw new \LogicException('withTransaction() does not nest, and a connection whose ROLLBACK was refused stays closed to it');
         }
         if (!$this->db->exec('START TRANSACTION')) {
             return false;
         }
         self::$open ??= new \WeakMap();
         self::$open[$this->db] = true;
+        $closed = true;
         try {
             try {
                 $value = $fn();
@@ -262,19 +272,22 @@ final class XoopsUser2faHandler
                     return $value;
                 }
             } catch (\Throwable $e) {
-                $this->db->exec('ROLLBACK');
+                $closed = $this->db->exec('ROLLBACK');
                 throw $e;
             }
             // $fn declined, or COMMIT was refused: either way the transaction
             // is still open on the connection and the next statement would
             // join it. Close it before letting go.
-            $this->db->exec('ROLLBACK');
+            $closed = $this->db->exec('ROLLBACK');
 
             return false;
         } finally {
-            // Whatever happened, including a ROLLBACK that itself threw, the
-            // connection is no longer ours to guard.
-            unset(self::$open[$this->db]);
+            // A refused ROLLBACK leaves the connection in a state this code
+            // cannot see; the guard stays so no later withTransaction() can
+            // START (and so implicitly commit) on it for the rest of the request.
+            if ($closed) {
+                unset(self::$open[$this->db]);
+            }
         }
     }
 
@@ -317,7 +330,9 @@ final class XoopsUser2faHandler
     {
         return $this->withTransaction(function () use ($uid, $now): array|false {
             $before = $this->lockRow($uid);
-            if (null === $before) {
+            if (null === $before || self::ROW_ENROLLED !== $before['state']) {
+                // The UPDATE below would match nothing and exec() would still
+                // report success; refuse here so nothing is "counted".
                 return false;
             }
             $sql = sprintf(

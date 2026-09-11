@@ -188,6 +188,11 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->rows = [$this->row(['state' => 'disabled', 'secret' => null])];
         $this->assertSame('none', $handler->stateFor(10));
 
+        // A state or method this code does not know is never "no factor".
+        $this->rows = [$this->row(['state' => 'pending']), $this->row(['method' => 'webauthn'])];
+        $this->assertSame('unavailable', $handler->stateFor(10));
+        $this->assertSame('unavailable', $handler->stateFor(10));
+
         $sealed     = (string) $crypto->seal('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', XoopsTwoFactorCrypto::rowAad(10, 'totp'));
         $this->rows = [$this->row(['secret' => $sealed]), $this->row(['secret' => $sealed])];
         $this->assertSame('enrolled', $handler->stateFor(10));
@@ -324,6 +329,13 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         ];
         $this->assertSame(['locked' => false, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
 
+        // Disabled row: the UPDATE would match nothing, so it is not issued.
+        $this->sql  = [];
+        $this->rows = [$this->row(['state' => 'disabled'])];
+        $this->assertFalse($handler->recordFailure(10, self::NOW));
+        $this->assertSame([], $this->statements('UPDATE'));
+        $this->assertSame('ROLLBACK', end($this->sql));
+
         // No row: nothing to count, rolled back.
         $this->sql  = [];
         $this->rows = [false];
@@ -441,6 +453,21 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->execResult = static fn (string $s): bool => 'COMMIT' !== $s;
         $this->assertFalse($handler->withTransaction(static fn (): string => 'value'));
         $this->assertSame(['START TRANSACTION', 'COMMIT', 'ROLLBACK'], $this->sql, 'a refused COMMIT is rolled back so the connection is not left in a transaction');
+
+        // A refused ROLLBACK: the connection may still hold the transaction,
+        // so no later withTransaction() may START on it.
+        $this->sql        = [];
+        $this->execResult = static fn (string $s): bool => 'ROLLBACK' !== $s;
+        $poisoned         = $this->handler($this->crypto(), true, $this->db());
+        $this->assertFalse($poisoned->withTransaction(static fn (): bool => false));
+        $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql);
+        try {
+            $poisoned->withTransaction(static fn (): bool => true);
+            $this->fail('a transaction started on a connection whose ROLLBACK was refused');
+        } catch (\LogicException) {
+            $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql, 'no second START TRANSACTION reached the connection');
+        }
+        $this->execResult = true;
 
         // lockRow() outside a transaction is a programming error.
         $this->expectException(\LogicException::class);
