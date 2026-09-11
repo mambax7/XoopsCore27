@@ -224,7 +224,10 @@ switch ($op) {
             // The account goes first: deleteUser() can refuse, and a refused
             // account keeps its profile row.
             if (!$handler->deleteUser($obj)) {
-                echo $obj->getHtmlErrors();
+                // A refused delete (tokens, memberships or the row) does not
+                // always leave an error on the object; say what failed.
+                $errors = $obj->getErrors();
+                xoops_error([] === $errors ? sprintf(_PROFILE_AM_DELETEFAILED, $obj->getVar('uname')) : $errors);
             } elseif ($profile && !$profile->isNew() && !$profile_handler->delete($profile)) {
                 echo $profile->getHtmlErrors();
             } else {

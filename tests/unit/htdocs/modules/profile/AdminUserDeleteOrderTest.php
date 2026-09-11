@@ -41,6 +41,8 @@ final class AdminUserDeleteOrderTest extends TestCase
     protected function setUp(): void
     {
         defined('_PROFILE_AM_DELETEDSUCCESS') || define('_PROFILE_AM_DELETEDSUCCESS', 'Deleted %s');
+        defined('_PROFILE_AM_DELETEFAILED') || define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed');
+        $GLOBALS['userErrors'] = [];
         $GLOBALS['deleteOrderLog']       = [];
         $GLOBALS['deleteUserResult']     = true;
         $GLOBALS['profileDeleteResult']  = true;
@@ -69,7 +71,20 @@ final class AdminUserDeleteOrderTest extends TestCase
         $out = $this->runBranch();
         self::assertNull($out['redirect']);
         self::assertSame(['deleteUser:10'], $GLOBALS['deleteOrderLog'], 'the profile row must not be touched');
-        self::assertSame('user-errors', $out['echo']);
+        // deleteUser() leaves no error on the object when its token step fails
+        self::assertSame('error:Deleting alice failed', $out['echo']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aRefusedAccountDeleteShowsTheObjectErrorsWhenThereAreAny(): void
+    {
+        $GLOBALS['deleteUserResult'] = false;
+        $GLOBALS['userErrors']       = ['row locked'];
+        $out = $this->runBranch();
+        self::assertNull($out['redirect']);
+        self::assertSame('error:row locked', $out['echo']);
     }
 
     #[Test]
@@ -130,6 +145,9 @@ final class AdminUserDeleteOrderTest extends TestCase
         $stubs = <<<'PHP'
         namespace Tests\Unit\Modules\Profile\DeleteSandbox;
 
+        function xoops_error(string|array $msg): void {
+            echo 'error:' . (is_array($msg) ? implode(',', $msg) : $msg);
+        }
         function xoops_getModuleHandler(string $name): object {
             return new class {
                 public function get(int $uid): ?object {
@@ -155,7 +173,7 @@ final class AdminUserDeleteOrderTest extends TestCase
         $wrapper = 'namespace ' . self::NS . ";\n"
             . "function run_confirmed_delete(): void {\n"
             . "    \$handler = new class { public function deleteUser(object \$u): bool { \$GLOBALS['deleteOrderLog'][] = 'deleteUser:' . \$u->getVar('uid'); return \$GLOBALS['deleteUserResult']; } };\n"
-            . "    \$obj = new class { public function getVar(string \$k): mixed { return ['uid' => 10, 'uname' => 'alice', 'email' => 'a@example.org'][\$k] ?? null; } public function getHtmlErrors(): string { return 'user-errors'; } };\n"
+            . "    \$obj = new class { public function getVar(string \$k): mixed { return ['uid' => 10, 'uname' => 'alice', 'email' => 'a@example.org'][\$k] ?? null; } public function getErrors(): array { return \$GLOBALS['userErrors']; } public function getHtmlErrors(): string { return 'user-errors'; } };\n"
             . $branch . "\n}\n";
         eval($wrapper);
     }
