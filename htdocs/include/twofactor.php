@@ -36,6 +36,7 @@ function xoops_2fa_reauthenticate(XoopsUser $user, string $password): XoopsUser|
 /** Best-effort security notification, outside any factor transaction. */
 function xoops_2fa_notice(XoopsUser $user, string $subject, string $body): void
 {
+    $sent = false;
     try {
         $mailer = xoops_getMailer();
         $mailer->useMail();
@@ -44,10 +45,15 @@ function xoops_2fa_notice(XoopsUser $user, string $subject, string $body): void
         $mailer->setFromName($GLOBALS['xoopsConfig']['sitename']);
         $mailer->setSubject(sprintf($subject, $GLOBALS['xoopsConfig']['sitename']));
         $mailer->setBody(sprintf($body, $GLOBALS['xoopsConfig']['sitename'], \Xmf\IPAddress::fromRequest()->asReadable()));
-        if (!$mailer->send()) {
-            trigger_error('Two-factor management notice could not be sent', E_USER_WARNING);
-        }
+        $sent = $mailer->send();
     } catch (\Throwable) {
-        // A mail outage must not undo an already committed security action.
+        // Report transport exceptions without exposing their credentials or message.
+    }
+    if (!$sent) {
+        try {
+            trigger_error('Two-factor management notice could not be sent', E_USER_WARNING);
+        } catch (\Throwable) {
+            // A custom diagnostic handler must not fail an already committed action.
+        }
     }
 }

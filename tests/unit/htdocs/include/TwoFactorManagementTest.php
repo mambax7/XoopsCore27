@@ -5,6 +5,46 @@ use PHPUnit\Framework\TestCase;
 
 final class TwoFactorManagementTest extends TestCase
 {
+    public function testMailFailuresAreReportedWithoutEscapingIntoTheCommittedAction(): void
+    {
+        $source = file_get_contents(XOOPS_ROOT_PATH . '/include/twofactor.php');
+        $start = strpos($source, 'function xoops_2fa_notice(');
+        self::assertNotFalse($start);
+        eval('namespace TwoFactorNoticeTest; class XoopsUser {} function xoops_getMailer() {'
+            . 'if ($GLOBALS["noticeMode"] === "throw") { throw new \\RuntimeException("private transport credentials"); }'
+            . 'return new class { public function __call($name, $args) {} public function send() { return $GLOBALS["noticeMode"] === "success"; } }; }'
+            . substr($source, $start));
+        $user = new \TwoFactorNoticeTest\XoopsUser();
+        $config = $GLOBALS['xoopsConfig'] ?? [];
+        $GLOBALS['xoopsConfig'] = ['adminmail' => 'nobody@example.invalid', 'sitename' => 'Test'];
+        try {
+            foreach (['throw', 'false', 'success'] as $mode) {
+                $GLOBALS['noticeMode'] = $mode;
+                $warnings = [];
+                set_error_handler(static function ($level, $message) use (&$warnings): bool {
+                    $warnings[] = [$level, $message];
+                    return true;
+                });
+                try {
+                    \TwoFactorNoticeTest\xoops_2fa_notice($user, 'Subject', 'Body');
+                } finally {
+                    restore_error_handler();
+                }
+                self::assertSame($mode === 'success' ? [] : [[E_USER_WARNING, 'Two-factor management notice could not be sent']], $warnings, $mode);
+            }
+            $GLOBALS['noticeMode'] = 'throw';
+            set_error_handler(static function (): never { throw new \RuntimeException('Diagnostic handler failed'); });
+            try {
+                \TwoFactorNoticeTest\xoops_2fa_notice($user, 'Subject', 'Body');
+            } finally {
+                restore_error_handler();
+            }
+        } finally {
+            $GLOBALS['xoopsConfig'] = $config;
+            unset($GLOBALS['noticeMode']);
+        }
+    }
+
     public function testPendingSetupIsBoundToAccountPasswordGenerationAndExpiry(): void
     {
         require_once XOOPS_ROOT_PATH . '/include/twofactor.php';

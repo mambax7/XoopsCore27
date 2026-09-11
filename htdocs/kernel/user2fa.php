@@ -522,7 +522,8 @@ final class XoopsUser2faHandler
      * @param int    $now          unix time
      * @param string|null $expectedGeneration setup generation, empty for no row; null for legacy callers
      *
-     * @return array{generation: string, codes: list<string>}|false
+     * @return array|false the new generation and recovery codes
+     * @phpstan-return array{generation: string, codes: list<string>}|false
      */
     public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now, ?string $expectedGeneration = null): array|false
     {
@@ -616,7 +617,8 @@ final class XoopsUser2faHandler
      * Verify the current factor and disable it or replace its recovery codes
      * under the same row lock, so reset cannot race verification and mutation.
      *
-     * @return list<string>|string|false new codes, disabled generation, or rejected verification
+     * @return string[]|string|false new codes, disabled generation, or rejected verification
+     * @phpstan-return list<string>|string|false
      * @throws \InvalidArgumentException for an unknown action
      * @throws \RuntimeException for unavailable crypto or failed storage
      */
@@ -675,7 +677,8 @@ final class XoopsUser2faHandler
     /**
      * @param int $uid account
      *
-     * @return list<string>|false ten new codes
+     * @return string[]|false ten new codes
+     * @phpstan-return list<string>|false
      */
     public function regenerateRecoveryCodes(int $uid): array|false
     {
@@ -692,7 +695,8 @@ final class XoopsUser2faHandler
     /**
      * Revoke the previous codes, then issue ten fresh ones (inside the caller's transaction).
      *
-     * @return list<string>|false
+     * @return string[]|false
+     * @phpstan-return list<string>|false
      */
     private function issueRecoveryCodes(int $uid): array|false
     {

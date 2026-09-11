@@ -262,7 +262,8 @@ class Upgrade_274 extends XoopsUpgrade
      * Which of the twofactor_mode options are missing for this conf_id?
      *
      * @param int $confId conf_id of the preference row
-     * @return array<int, array{string, string}>|null the missing options, or null when the table could not be read
+     * @return string[][]|null the missing options, or null when the table could not be read
+     * @phpstan-return array<int, array{string, string}>|null
      */
     private function missingModeOptions(int $confId): ?array
     {

@@ -80,9 +80,9 @@ final class LoginPathSplitTest extends TestCase
         $this->loadSourceFile('htdocs/include/loginsession.php');
         $body  = $this->functionBody('xoops_login_establish_session');
         $order = [
+            'xoops_login_set_session($user, $factorGeneration, null !== $verifiedGeneration)',
             "\$user->setVar('last_login', time());",
             '->insertUser($user)',
-            'xoops_login_set_session($user, $factorGeneration, null !== $verifiedGeneration)',
             "triggerEvent('core.behavior.user.login', \$user)",
             'XoopsUserUtility::rememberKey()',
             "'pfp' => XoopsUserUtility::rememberFingerprint(\$user, \$rememberKey->getSigning())",

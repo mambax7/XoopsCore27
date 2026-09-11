@@ -65,6 +65,7 @@ final class CheckLogin2faTest extends TestCase
         $GLOBALS['sandboxRecovery'] = false;
         $GLOBALS['sandboxHatch']   = false;
         $GLOBALS['sandboxToken']   = true;
+        $GLOBALS['sandboxGroups']  = [2];
         $GLOBALS['sandboxUser']    = new class {
             public function getVar(string $k, string $f = 's'): mixed
             {
@@ -73,7 +74,7 @@ final class CheckLogin2faTest extends TestCase
 
             public function getGroups(): array
             {
-                return [2];
+                return $GLOBALS['sandboxGroups'];
             }
         };
         $GLOBALS['xoopsSecurity'] = new class {
@@ -392,6 +393,26 @@ final class CheckLogin2faTest extends TestCase
         self::assertNull($args[3]);
         self::assertContains('hatch:9', $GLOBALS['sandboxLog']);
         self::assertArrayNotHasKey('xoops2faPending', $_SESSION);
+    }
+
+    #[Test]
+    public function closedSiteNormalizesDatabaseGroupIdsBeforeStrictComparison(): void
+    {
+        foreach ([
+            [['2'], [2], true],
+            [[2], ['2'], true],
+            [['1'], [], true],
+            [[2], [true], false],
+            [['3'], [2], false],
+        ] as [$groups, $allowed, $expected]) {
+            $this->pending();
+            $GLOBALS['sandboxGroups'] = $groups;
+            $GLOBALS['xoopsConfig']['closesite'] = 1;
+            $GLOBALS['xoopsConfig']['closesite_okgrp'] = $allowed;
+            [$what, $vars] = $this->execute();
+            self::assertSame('rendered', $what);
+            self::assertSame(!$expected, $vars['start_again']);
+        }
     }
 
     #[Test]

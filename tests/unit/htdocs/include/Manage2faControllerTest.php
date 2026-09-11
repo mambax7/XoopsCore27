@@ -40,6 +40,7 @@ final class Manage2faControllerTest extends TestCase
         $GLOBALS['manageCrypto'] = true;
         $GLOBALS['manageInstalled'] = true;
         $GLOBALS['manageAccept'] = true;
+        $GLOBALS['manageSessionFails'] = false;
         $GLOBALS['xoopsConfig'] = ['sitename' => 'Test', 'usercookie' => 'remember', 'twofactor_mode' => 'optional'];
         $userClass = self::NS . '\\XoopsUser';
         $GLOBALS['xoopsUser'] = new $userClass(9);
@@ -115,6 +116,21 @@ final class Manage2faControllerTest extends TestCase
     }
 
     #[Test]
+    public function failedSessionRotationDoesNotDisplayCommittedRecoveryCodes(): void
+    {
+        $vars = $this->execute(['action' => 'begin', 'password' => 'correct']);
+        $code = \XoopsTotp::codeAt($vars['secret'], \XoopsTotp::stepAt(time()));
+        $GLOBALS['manageSessionFails'] = true;
+        $vars = $this->execute(['action' => 'confirm', 'code' => $code]);
+        self::assertSame(_US_2FAM_UNAVAILABLE, $vars['error']);
+        self::assertSame('', $vars['message']);
+        self::assertSame([], $vars['codes']);
+        self::assertSame([], $_SESSION);
+        self::assertSame('enrolled', $GLOBALS['manageRow']['state'], 'Committed enrolment is retained');
+        self::assertNotContains('notice', $GLOBALS['manageLog']);
+    }
+
+    #[Test]
     public function unavailableCryptoPreventsSetupAndStoresNothing(): void
     {
         $GLOBALS['manageCrypto'] = false;
@@ -171,7 +187,17 @@ final class Manage2faControllerTest extends TestCase
         self::assertCount(10, $vars['codes']);
         self::assertContains('manage:9:gen:regenerate', $GLOBALS['manageLog']);
         $GLOBALS['manageLog'] = [];
-        $vars = @$this->execute(['action' => 'reset', 'password' => 'correct', 'uid' => 12], true);
+        $notices = [];
+        set_error_handler(static function (int $level, string $message) use (&$notices): bool {
+            $notices[] = [$level, $message];
+            return true;
+        });
+        try {
+            $vars = $this->execute(['action' => 'reset', 'password' => 'correct', 'uid' => 12], true);
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_NOTICE, 'Two-factor admin reset: actor 9, uid 12']], $notices);
         self::assertSame(_US_2FAM_RESET_DONE, $vars['message']);
         self::assertContains('reauth:9', $GLOBALS['manageLog']);
         self::assertContains('disable:12', $GLOBALS['manageLog']);
@@ -183,7 +209,17 @@ final class Manage2faControllerTest extends TestCase
         foreach ([null, ['state' => 'disabled', 'generation' => 'oldgen']] as $row) {
             $GLOBALS['manageRow'] = $row;
             $GLOBALS['manageLog'] = [];
-            $vars = @$this->execute(['action' => 'reset', 'password' => 'correct', 'uid' => 12], true);
+            $notices = [];
+            set_error_handler(static function (int $level, string $message) use (&$notices): bool {
+                $notices[] = [$level, $message];
+                return true;
+            });
+            try {
+                $vars = $this->execute(['action' => 'reset', 'password' => 'correct', 'uid' => 12], true);
+            } finally {
+                restore_error_handler();
+            }
+            self::assertSame([], $notices, 'No-op reset must not emit an audit notice');
             self::assertSame('', $vars['error']);
             self::assertSame(_US_2FAM_DISABLED, $vars['message']);
             self::assertContains('reauth:9', $GLOBALS['manageLog']);
@@ -235,7 +271,11 @@ class XoopsUser2faHandler {
 }
 function xoops_getHandler(string $name): object { return $name === 'user2fa' ? new XoopsUser2faHandler() : new class { public function getUser(int $uid): XoopsUser { return new XoopsUser($uid); } }; }
 function xoops_2fa_reauthenticate(XoopsUser $user, string $password): XoopsUser|false { $GLOBALS['manageLog'][] = 'reauth:' . $user->getVar('uid'); return $GLOBALS['manageAuth'] ? $user : false; }
-function xoops_login_set_session(XoopsUser $user, string $generation, bool $verified): void { $_SESSION = ['xoopsUserId' => $user->getVar('uid'), 'xoops2faGeneration' => $generation, 'xoops2faVerified' => $verified]; }
+function xoops_login_set_session(XoopsUser $user, string $generation, bool $verified): void {
+    $_SESSION = [];
+    if ($GLOBALS['manageSessionFails']) { throw new \RuntimeException('Session rotation failed'); }
+    $_SESSION = ['xoopsUserId' => $user->getVar('uid'), 'xoops2faGeneration' => $generation, 'xoops2faVerified' => $verified];
+}
 function xoops_2fa_notice(...$args): void { $GLOBALS['manageLog'][] = 'notice'; }
 function xoops_setcookie(...$args): void { $GLOBALS['manageLog'][] = 'cookie'; }
 function header(string $value): void { $GLOBALS['manageLog'][] = 'header:' . $value; }

@@ -1,6 +1,6 @@
 # Two-factor authentication for XOOPS 2.7 — design proposal
 
-Date: 2026-09-11. Revision 9, self-contained: every retained requirement is
+Date: 2026-09-11. Revision 10, self-contained: every retained requirement is
 written out here and nothing refers to an earlier revision.
 Status: implementation and local verification complete; CI and integration
 of the remaining PR stack are release gates. PRs #201 and #204
@@ -11,6 +11,8 @@ completion work adds management, preflight and MySQL coverage. Target: 2.7.4 Bet
 over plain HTTP warns rather than refuses. The password and session cookie
 already travel in the clear on such a site, so 2FA there still defends
 against credential stuffing and reuse; the warning names the risk.
+The same warning policy applies to management and recovery-code display.
+HTTPS refusal remains a policy change, not part of these implementation fixes.
 
 ## 1. Decisions
 
@@ -324,8 +326,9 @@ After PR A:
 - `xoops_login_authenticate()` — password auth, level and closed-site checks.
   No `last_login` write, no save, no maintenance.
 - `xoops_login_establish_session(XoopsUser $user, bool $remember, string $redirect, ?string $verifiedGeneration)`
-  — writes `last_login`, saves the user, regenerates the session id once,
-  seeds `$_SESSION` including `xoops2faGeneration` and `xoops2faVerified`,
+  — regenerates the session id once and refuses failure before any account
+  writes; seeds `$_SESSION` including `xoops2faGeneration` and `xoops2faVerified`,
+  writes `last_login` and saves the user,
   fires the login event, runs `doLoginMaintenance()`, issues the remember-me
   cookie with `fgen` only when the row state is not `enrolled`, and
   redirects. **`xoops2faVerified` is true only when `$verifiedGeneration` is
@@ -341,7 +344,8 @@ Between them, the gate:
 ```
 $state = stateFor($user);      // none | enrolled | unavailable | required-unenrolled (deferred)
 if ('off' !== policy && 'none' !== $state) {
-    regenerate_id(true); $_SESSION = [];
+    if (!regenerate_id(true)) { clear session and refuse login; }
+    $_SESSION = [];
     $_SESSION['xoops2faPending'] = [
         'uid', 'state', 'generation',
         'passdigest' => hash('sha256', stored password hash),   // server-side only, no key
@@ -448,6 +452,10 @@ The SSL popup buffers output until session rotation can send its cookie and
 refuses authentication if rotation fails. Its factor refusal redirects only
 to an HTTPS core URL; an HTTP core URL gets an explicit transport warning and
 link, since the separate SSL bridge does not prove HTTPS exists for the core.
+Core pending-login and authenticated-session creation, enrolment session
+re-establishment and wizard login also refuse failed session rotation before
+granting authentication state. A failed enrolment session reset leaves the
+committed factor in place; the user must sign in again with the authenticator.
 
 ## 11. Enrolment and management, in core
 

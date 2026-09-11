@@ -14,6 +14,7 @@
     <{if $message}><p role="status"><{$message|escape}></p><{/if}>
     <{if $error}><p role="alert"><{$error|escape}></p><{/if}>
     <{if $paused}><p><{$labels.paused|escape}></p><{/if}>
+    <{if $http_warning}><p role="alert"><{$labels.http|escape}></p><{/if}>
     <{if $codes}>
         <h2><{$labels.codes|escape}></h2>
         <p><{$labels.codes_help|escape}></p>
@@ -24,7 +25,6 @@
         <{elseif $enrolled}>
             <p><{$labels.enabled|escape}></p>
         <{else}>
-            <{if $http_warning}><p role="alert"><{$labels.http|escape}></p><{/if}>
             <{if $secret}>
                 <p><{$labels.scan|escape}></p>
                 <{if $qr}><img src="<{$qr|escape}>" alt="<{$labels.scan|escape}>" width="256" height="256"><{/if}>

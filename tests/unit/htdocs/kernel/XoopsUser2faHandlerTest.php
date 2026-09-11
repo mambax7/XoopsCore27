@@ -796,7 +796,17 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $handler    = $this->handler();
         $this->rows = [$this->row(['uid' => 7])];
 
-        $this->assertTrue(@$handler->resetByEscapeHatch(7, $dir));
+        $notices = [];
+        set_error_handler(static function (int $level, string $message) use (&$notices): bool {
+            $notices[] = [$level, $message];
+            return true;
+        });
+        try {
+            $this->assertTrue($handler->resetByEscapeHatch(7, $dir));
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_NOTICE, 'Two-factor escape hatch used for uid 7']], $notices);
         $this->assertFileDoesNotExist($dir . '/2fa-reset-7.txt');
         $this->assertFileExists($dir . '/2fa-reset-7.used');
         $this->assertCount(1, $this->statements('UPDATE `xoops_user_2fa`'));

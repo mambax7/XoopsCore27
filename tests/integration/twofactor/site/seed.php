@@ -32,12 +32,20 @@ if (!$groups || !make_data($dbm, 'smokeadmin', password_hash('test-password-only
 if ($dbm->f_tables !== []) {
     throw new RuntimeException('Installer reported failed inserts: ' . json_encode($dbm->f_tables));
 }
-$dbm->db->exec('UPDATE ' . $dbm->prefix('config') . " SET conf_value='optional' WHERE conf_name='twofactor_mode'");
-$dbm->db->exec('UPDATE ' . $dbm->prefix('config') . " SET conf_value='0' WHERE conf_name IN ('debug_mode','use_mysession','enable_online_tracking')");
+if (!$dbm->db->exec('UPDATE ' . $dbm->prefix('config') . " SET conf_value='optional' WHERE conf_name='twofactor_mode'")) {
+    throw new RuntimeException('Could not enable fixture two-factor policy');
+}
+if (!$dbm->db->exec('UPDATE ' . $dbm->prefix('config') . " SET conf_value='0' WHERE conf_name IN ('debug_mode','use_mysession','enable_online_tracking')")) {
+    throw new RuntimeException('Could not configure fixture sessions and logging');
+}
 // Profile routing/preloads need the real module metadata and read permission;
 // these management routes do not use Profile's custom field tables.
-$dbm->insert('modules', "(mid,name,version,last_update,weight,isactive,dirname,hasmain,hasadmin,hassearch,hasconfig,hascomments,hasnotification) VALUES (2,'Profile',192,0,1,0,'profile',1,1,0,0,0,0)");
+if (!$dbm->insert('modules', "(mid,name,version,last_update,weight,isactive,dirname,hasmain,hasadmin,hassearch,hasconfig,hascomments,hasnotification) VALUES (2,'Profile',192,0,1,0,'profile',1,1,0,0,0,0)")) {
+    throw new RuntimeException('Could not seed Profile module');
+}
 foreach ([1, 2, 3] as $group) {
-    $dbm->insert('group_permission', "(gperm_groupid,gperm_itemid,gperm_modid,gperm_name) VALUES ($group,2,1,'module_read')");
+    if (!$dbm->insert('group_permission', "(gperm_groupid,gperm_itemid,gperm_modid,gperm_name) VALUES ($group,2,1,'module_read')")) {
+        throw new RuntimeException('Could not seed Profile permission for group ' . $group);
+    }
 }
 echo "Installed shipped schema and seed data\n";

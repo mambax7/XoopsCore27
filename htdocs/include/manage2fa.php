@@ -23,11 +23,14 @@ if (!($actor instanceof XoopsUser)) {
 $adminReset = isset($xoops2faAdminReset) && true === $xoops2faAdminReset;
 $post = 'POST' === \Xmf\Request::getMethod();
 $uid = $adminReset ? \Xmf\Request::getInt('uid', 0, $post ? 'POST' : 'GET') : (int) $actor->getVar('uid');
-$user = $adminReset ? xoops_getHandler('member')->getUser($uid) : $actor;
+/** @var XoopsMemberHandler $memberHandler */
+$memberHandler = xoops_getHandler('member');
+$user = $adminReset ? $memberHandler->getUser($uid) : $actor;
 if (!($user instanceof XoopsUser) || ($adminReset && (!$GLOBALS['xoopsModule'] || !$actor->isAdmin($GLOBALS['xoopsModule']->mid())))) {
     http_response_code(403);
     exit(_NOPERM);
 }
+/** @var XoopsUser2faHandler $handler */
 $handler = xoops_getHandler('user2fa');
 $crypto = new XoopsTwoFactorCrypto(new \Xmf\Key\FileStorage(XOOPS_VAR_PATH . '/data'), XOOPS_VAR_PATH . '/data/twofactor.lock');
 $now = time();

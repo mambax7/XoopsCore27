@@ -68,10 +68,12 @@ final class LoginSessionBehaviourTest extends TestCase
         $GLOBALS['sandboxInsertResult'] = true;
         $GLOBALS['sandboxKey']          = null;
         $GLOBALS['sandboxRow']          = null;
+        $GLOBALS['sandboxRotate']       = true;
         $GLOBALS['sess_handler']        = new class {
-            public function regenerate_id(bool $delete): void
+            public function regenerate_id(bool $delete): bool
             {
                 $GLOBALS['sandboxLog'][] = 'regenerate_id:uid=' . ($_SESSION['xoopsUserId'] ?? 'none');
+                return $GLOBALS['sandboxRotate'];
             }
         };
         $GLOBALS['xoopsConfig'] = [
@@ -89,6 +91,36 @@ final class LoginSessionBehaviourTest extends TestCase
         if (is_file($this->emptyInclude)) {
             unlink($this->emptyInclude);
         }
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function rotationFailureNeverEstablishesPendingOrAuthenticatedState(): void
+    {
+        $GLOBALS['sandboxRotate'] = false;
+        $user = $this->user();
+        foreach (['xoops_login_begin_challenge', 'xoops_login_establish_session', 'xoops_login_set_session'] as $name) {
+            $_SESSION = ['xoopsUserId' => 'stale'];
+            $fn = self::NS . '\\' . $name;
+            try {
+                if ($name === 'xoops_login_begin_challenge') {
+                    $fn($user, 'enrolled', 'gen', true, '');
+                } elseif ($name === 'xoops_login_set_session') {
+                    $fn($user, 'gen', true);
+                } else {
+                    $fn($user, false, '');
+                }
+                self::fail('Rotation failure was accepted');
+            } catch (RedirectHeaderException $e) {
+                self::assertSame(_US_2FA_UNAVAILABLE, $e->getMessage());
+            } catch (\RuntimeException $e) {
+                self::assertSame('Session rotation failed', $e->getMessage());
+            }
+            self::assertSame([], $_SESSION);
+        }
+        self::assertNotContains('insertUser:5', $GLOBALS['sandboxLog']);
+        self::assertNotContains('event:core.behavior.user.login:uid=5', $GLOBALS['sandboxLog']);
     }
 
     #[Test]
@@ -179,9 +211,9 @@ final class LoginSessionBehaviourTest extends TestCase
         }
         self::assertSame([
             'getRow:5',
+            'regenerate_id:uid=stale',              // rotation must succeed before any account writes
             'setVar:last_login',
             'insertUser:5',
-            'regenerate_id:uid=stale',              // the old session is still there when it is regenerated
             'event:core.behavior.user.login:uid=5', // ... and the new one is seeded before the event
             'setcookie:xoops_user:expire',
             'setcookie:xoops_user:expire',

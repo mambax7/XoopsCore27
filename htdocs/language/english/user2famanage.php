@@ -6,7 +6,7 @@ define('_US_2FAM_ENABLE', 'Set up an authenticator');
 define('_US_2FAM_CONFIRM', 'Confirm authenticator');
 define('_US_2FAM_MANUAL', 'Manual setup key');
 define('_US_2FAM_SCAN', 'Scan this QR code in your authenticator app, or enter the manual key. Then enter its six-digit code below.');
-define('_US_2FAM_HTTP', 'This connection uses plain HTTP. Your password, session and authenticator setup key can be intercepted. Use HTTPS whenever possible.');
+define('_US_2FAM_HTTP', 'This connection uses plain HTTP. Your password, session, authenticator setup key and recovery codes can be intercepted. Use HTTPS whenever possible.');
 define('_US_2FAM_CODES', 'Save these recovery codes now');
 define('_US_2FAM_CODES_HELP', 'Each code works once. These codes will not be displayed again. Keep them somewhere safe, separate from this account.');
 define('_US_2FAM_DISABLE', 'Disable two-factor authentication');

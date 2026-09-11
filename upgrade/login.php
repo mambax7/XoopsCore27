@@ -111,6 +111,12 @@ if ('' === $uname || '' === $pass) {
             header('location: ' . XOOPS_URL . '/upgrade/index.php');
             exit();
         }
+        if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+            $_SESSION = [];
+            trigger_error('Upgrade login refused: session rotation failed', E_USER_WARNING);
+            header('location: ' . XOOPS_URL . '/upgrade/index.php');
+            exit();
+        }
         $user->setVar('last_login', time());
         if (!$member_handler->insertUser($user)) {
             $errors = method_exists($user, 'getErrors') ? $user->getErrors() : [];
@@ -124,8 +130,6 @@ if ('' === $uname || '' === $pass) {
                 E_USER_WARNING
             );
         }
-        // Regenerate a new session id and destroy old session
-        $GLOBALS['sess_handler']->regenerate_id(true);
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();

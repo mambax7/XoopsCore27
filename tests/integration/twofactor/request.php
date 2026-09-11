@@ -107,7 +107,7 @@ function xoops_getMailer(): object
     return new class { public function __call(string $method, array $args): bool { return true; } };
 }
 $GLOBALS['xoops'] = new class { public function path(string $path): string { return XOOPS_ROOT_PATH . '/' . $path; } };
-$GLOBALS['sess_handler'] = new class { public function regenerate_id(bool $delete): void { session_regenerate_id($delete); } };
+$GLOBALS['sess_handler'] = new class { public function regenerate_id(bool $delete): bool { return session_regenerate_id($delete); } };
 $GLOBALS['xoopsSecurity'] = new class {
     public function check(): bool { return ($_POST['csrf'] ?? '') === 'valid'; }
     public function getErrors(): array { return ['Invalid CSRF token']; }

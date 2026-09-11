@@ -88,7 +88,11 @@ function xoops_login_begin_challenge(XoopsUser $user, string $state, string $gen
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
     }
-    $GLOBALS['sess_handler']->regenerate_id(true);
+    if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+        $_SESSION = [];
+        redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_UNAVAILABLE, false);
+        exit();
+    }
     $_SESSION                    = [];
     $_SESSION['xoops2faPending'] = [
         'uid'        => (int) $user->getVar('uid'),
@@ -142,12 +146,18 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
         exit();
     }
 
+    try {
+        xoops_login_set_session($user, $factorGeneration, null !== $verifiedGeneration);
+    } catch (\RuntimeException $e) {
+        redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_UNAVAILABLE, false);
+        exit();
+    }
+
     /** @var XoopsMemberHandler $member_handler */
     $member_handler = xoops_getHandler('member');
     $user->setVar('last_login', time());
     if (!$member_handler->insertUser($user)) {
     }
-    xoops_login_set_session($user, $factorGeneration, null !== $verifiedGeneration);
     $xoopsPreload = XoopsPreload::getInstance();
     $xoopsPreload->triggerEvent('core.behavior.user.login', $user);
     // Set cookie for rememberme
@@ -225,10 +235,16 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
     exit();
 }
 
-/** Establish fresh session state after login or a committed enrolment, without redirecting. */
+/**
+ * Establish fresh session state after login or committed enrolment, without redirecting.
+ * @throws \RuntimeException when the session identifier cannot be replaced
+ */
 function xoops_login_set_session(XoopsUser $user, string $factorGeneration, bool $verified): void
 {
-    $GLOBALS['sess_handler']->regenerate_id(true);
+    if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+        $_SESSION = [];
+        throw new \RuntimeException('Session rotation failed');
+    }
     $_SESSION = [];
     $_SESSION['xoopsUserId'] = $user->getVar('uid');
     $_SESSION['xoopsUserGroups'] = $user->getGroups();

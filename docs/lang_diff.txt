@@ -41,7 +41,7 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_CONFIRM', 'Confirm authenticator');
 - added define('_US_2FAM_MANUAL', 'Manual setup key');
 - added define('_US_2FAM_SCAN', 'Scan this QR code in your authenticator app, or enter the manual key. Then enter its six-digit code below.');
-- added define('_US_2FAM_HTTP', 'This connection uses plain HTTP. Your password, session and authenticator setup key can be intercepted. Use HTTPS whenever possible.');
+- added define('_US_2FAM_HTTP', 'This connection uses plain HTTP. Your password, session, authenticator setup key and recovery codes can be intercepted. Use HTTPS whenever possible.');
 - added define('_US_2FAM_CODES', 'Save these recovery codes now');
 - added define('_US_2FAM_CODES_HELP', 'Each code works once. These codes will not be displayed again. Keep them somewhere safe, separate from this account.');
 - added define('_US_2FAM_DISABLE', 'Disable two-factor authentication');

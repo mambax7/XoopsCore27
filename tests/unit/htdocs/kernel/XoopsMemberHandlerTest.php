@@ -525,7 +525,17 @@ class XoopsMemberHandlerTest extends TestCase
         $this->membershipHandler->expects($this->once())->method('deleteAll')->willReturn(true);
         $this->userHandler->expects($this->once())->method('delete')->willReturn(true);
 
-        $this->assertTrue(@$this->handler->deleteUser($user));
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = [$level, $message];
+            return true;
+        });
+        try {
+            $this->assertTrue($this->handler->deleteUser($user));
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_WARNING, 'User 10 deleted; second-factor cleanup unavailable']], $warnings);
     }
 
     public function testDeleteUserSkipsTheFactorRowWhenTheFeatureIsNotInstalled(): void

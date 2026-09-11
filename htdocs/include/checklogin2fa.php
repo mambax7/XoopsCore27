@@ -115,8 +115,9 @@ if ($xo2faValid) {
         && hash_equals($xo2faPending['passdigest'], hash('sha256', (string) $xo2faUser->getVar('pass', 'n')));
     if ($xo2faValid && 1 == $GLOBALS['xoopsConfig']['closesite']) {
         $xo2faValid = false;
+        $xo2faAllowedGroups = array_map('intval', $GLOBALS['xoopsConfig']['closesite_okgrp']);
         foreach ($xo2faUser->getGroups() as $xo2faGroup) {
-            if (in_array($xo2faGroup, $GLOBALS['xoopsConfig']['closesite_okgrp']) || XOOPS_GROUP_ADMIN == $xo2faGroup) {
+            if (in_array((int) $xo2faGroup, $xo2faAllowedGroups, true) || (int) XOOPS_GROUP_ADMIN === (int) $xo2faGroup) {
                 $xo2faValid = true;
                 break;
             }
@@ -174,7 +175,7 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
 
 if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xoops_2fa', 'POST')) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
-        $xo2faVars['error']      = implode('<br>', $GLOBALS['xoopsSecurity']->getErrors());
+        $xo2faVars['error']      = implode("\n", $GLOBALS['xoopsSecurity']->getErrors());
         $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
         xoops_2fa_render($xo2faVars);
     }

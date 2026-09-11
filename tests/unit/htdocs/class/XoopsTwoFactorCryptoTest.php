@@ -167,11 +167,20 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
         $crypto = $this->crypto();
         $this->assertNull($crypto->loadKey());
 
-        $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, 'not base64!');
-        $this->assertNull(@$crypto->loadKey());
-
-        $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, base64_encode(random_bytes(31)));
-        $this->assertNull(@$crypto->loadKey());
+        foreach (['not base64!', base64_encode(random_bytes(31))] as $key) {
+            $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, $key);
+            $warnings = [];
+            set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+                $warnings[] = [$level, $message];
+                return true;
+            });
+            try {
+                $this->assertNull($crypto->loadKey());
+            } finally {
+                restore_error_handler();
+            }
+            self::assertSame([[E_USER_WARNING, 'XoopsTwoFactorCrypto: key file unreadable or malformed']], $warnings);
+        }
 
         $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, base64_encode(random_bytes(32)));
         $this->assertSame(32, strlen((string) $crypto->loadKey()));

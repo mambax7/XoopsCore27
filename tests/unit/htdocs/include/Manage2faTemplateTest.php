@@ -46,6 +46,7 @@ final class Manage2faTemplateTest extends TestCase
                 $smarty->assign($overrides + $base);
                 $html = $smarty->fetch('file:' . XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa_manage.tpl');
                 self::assertStringContainsString('<title>Label title</title>', $html);
+                self::assertStringContainsString('Label http', $html);
                 self::assertStringNotContainsString('<script>', $html);
                 self::assertStringContainsString('&lt;script&gt;', $html);
                 self::assertStringContainsString('name="XOOPS_TOKEN"', $html);
@@ -69,6 +70,7 @@ final class Manage2faTemplateTest extends TestCase
             $smarty->assign(['codes' => ['<unsafe>']] + $base);
             $html = $smarty->fetch('file:' . XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa_manage.tpl');
             self::assertStringContainsString('&lt;unsafe&gt;', $html);
+            self::assertStringContainsString('Label http', $html);
             self::assertStringNotContainsString('<form', $html);
         } finally {
             foreach (glob($directory . '/*') as $compiled) { unlink($compiled); }
