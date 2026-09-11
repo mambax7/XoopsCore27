@@ -49,6 +49,7 @@ $modversion['templates'][] = ['file' => 'system_comments_thread.tpl', 'descripti
 $modversion['templates'][] = ['file' => 'system_comments_nest.tpl', 'description' => ''];
 $modversion['templates'][] = ['file' => 'system_siteclosed.tpl', 'description' => ''];
 $modversion['templates'][] = ['file' => 'system_user2fa.tpl', 'description' => ''];
+$modversion['templates'][] = ['file' => 'system_user2fa_manage.tpl', 'description' => ''];
 $modversion['templates'][] = ['file' => 'system_dummy.tpl', 'description' => ''];
 $modversion['templates'][] = ['file' => 'system_notification_list.tpl', 'description' => ''];
 $modversion['templates'][] = ['file' => 'system_notification_select.tpl', 'description' => ''];

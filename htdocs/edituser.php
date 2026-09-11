@@ -221,6 +221,10 @@ if ($op === 'editprofile') {
     $form->addElement($op_hidden);
     //$form->addElement($token_hidden);
     $form->addElement($submit_button);
+    if (defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED) {
+        xoops_loadLanguage('user2famanage');
+        $form->addElement(new XoopsFormLabel(_US_2FAM_TITLE, '<a href="' . htmlspecialchars(XOOPS_URL . '/user.php?op=2fa_manage', ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(_US_2FAM_TITLE, ENT_QUOTES, 'UTF-8') . '</a>'));
+    }
     $form->display();
     include $GLOBALS['xoops']->path('footer.php');
 }

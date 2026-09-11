@@ -432,6 +432,16 @@ global $xoopsUser;
 if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
     include_once __DIR__ . '/login.php';
 } else {
+    // Sodium is required by 2FA, not by legacy installations with 2FA off.
+    $sodiumAvailable = extension_loaded('sodium')
+        && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_keygen')
+        && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
+        && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_decrypt');
+    $upgradeControl->loadLanguage('twofactor');
+    echo '<div class="alert alert-' . ($sodiumAvailable ? 'success' : 'warning') . '">'
+        . htmlspecialchars($sodiumAvailable ? _XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK : _XOOPS_UPGRADE_TWOFACTOR_SODIUM_MISSING, ENT_QUOTES, 'UTF-8')
+        . '</div>';
+
     // All form inputs are read from POST only: the forms submit via POST, and
     // reading from the default bag ($_REQUEST) would let a GET like
     // "?runfix=on" drive a mutating action without ever being a POST — and so

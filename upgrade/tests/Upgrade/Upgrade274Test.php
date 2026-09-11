@@ -56,6 +56,9 @@ final class Upgrade274Test extends TestCase
 
     protected function setUp(): void
     {
+        if (!class_exists(\mysqli_result::class)) {
+            self::markTestSkipped('The mysqli extension is required for database result mocks.');
+        }
         require_once dirname(__DIR__) . '/fixtures/XoopsMySQLDatabaseStub.php';
         $file = dirname(__DIR__, 2) . '/upd_2.7.3-to-2.7.4/index.php';
         if (!is_file($file)) {

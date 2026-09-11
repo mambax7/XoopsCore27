@@ -37,6 +37,12 @@ $op = Request::getString('op', 'list');
 /** @var XoopsMemberHandler $member_handler */
 $member_handler = xoops_getHandler('member');
 
+if ('users_2fa_reset' === $op) {
+    $xoops2faAdminReset = true;
+    include XOOPS_ROOT_PATH . '/include/manage2fa.php';
+    exit();
+}
+
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_users.tpl';
 // Call Header
@@ -68,6 +74,10 @@ switch ($op) {
         $xoBreadCrumb->addLink(_AM_SYSTEM_USERS_NAV_EDIT_USER);
         $xoBreadCrumb->render();
         form_user(false, $uid);
+        if (defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED) {
+            xoops_loadLanguage('user2famanage');
+            echo '<p><a href="admin.php?fct=users&amp;op=users_2fa_reset&amp;uid=' . (int) $uid . '">' . htmlspecialchars(_US_2FAM_RESET, ENT_QUOTES, 'UTF-8') . '</a></p>';
+        }
         break;
 
         // Add user

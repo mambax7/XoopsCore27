@@ -6,6 +6,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  twofactor-mysql:
+    name: Two-factor / MySQL 8 / PHP ${{ matrix.php }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.2", "8.3", "8.4", "8.5"]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: integration-only
+          MYSQL_DATABASE: xoops_twofactor_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, intl, mbstring, mysqli, sodium
+          tools: composer
+          coverage: none
+      - name: Install XOOPS dependencies
+        working-directory: htdocs/xoops_lib
+        run: |
+          cp composer.dist.json composer.json
+          cp composer.dist.lock composer.lock
+          composer install --no-interaction --prefer-dist --no-progress
+      - name: Run isolated MySQL concurrency and request integration tests
+        env:
+          XOOPS_2FA_TEST_DATABASE: xoops_twofactor_test
+          XOOPS_2FA_TEST_HOST: 127.0.0.1
+          XOOPS_2FA_TEST_USER: root
+          XOOPS_2FA_TEST_PASSWORD: integration-only
+        run: php tests/integration/twofactor/run.php
+      - name: Run installed-site HTTP smoke
+        env:
+          XOOPS_2FA_TEST_DATABASE: xoops_twofactor_test
+          XOOPS_2FA_TEST_HOST: 127.0.0.1
+          XOOPS_2FA_TEST_USER: root
+          XOOPS_2FA_TEST_PASSWORD: integration-only
+        run: php tests/integration/twofactor/site-smoke.php
+
   tests:
     name: PHP ${{ matrix.php }}${{ matrix.deps && format(' / {0}', matrix.deps) || '' }}${{ matrix.coverage && ' / Coverage' || '' }}
     runs-on: ubuntu-22.04

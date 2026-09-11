@@ -90,6 +90,25 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
     }
 
     #[Test]
+    public function encryptedRowCallbackRunsUnderTheProvisioningLock(): void
+    {
+        $crypto = $this->crypto();
+        $called = false;
+        self::assertFalse($crypto->provisionKey(function () use (&$called): bool {
+            $called = true;
+            $other = fopen($this->dir . '/twofactor.lock', 'c');
+            try {
+                self::assertFalse(flock($other, LOCK_EX | LOCK_NB));
+            } finally {
+                fclose($other);
+            }
+            return true;
+        }));
+        self::assertTrue($called);
+        self::assertFalse($crypto->hasKey());
+    }
+
+    #[Test]
     public function provisionRefusesToReplaceALostKeyWhileEncryptedRowsExist(): void
     {
         $crypto = $this->crypto();

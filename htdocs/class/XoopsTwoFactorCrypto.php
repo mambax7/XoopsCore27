@@ -140,11 +140,11 @@ final class XoopsTwoFactorCrypto
      * first provisioning and report the factor unavailable for that request.
      * Publish atomically (temp file + rename) once FileStorage supports it.
      *
-     * @param bool $encryptedRowsExist whether any user_2fa row holds a secret
+     * @param bool|callable $encryptedRowsExist callback checked under the provisioning lock, or a known fixed result
      *
      * @return bool true when a usable key exists afterwards
      */
-    public function provisionKey(bool $encryptedRowsExist): bool
+    public function provisionKey(bool|callable $encryptedRowsExist): bool
     {
         if (!$this->isAvailable()) {
             return false;
@@ -152,7 +152,7 @@ final class XoopsTwoFactorCrypto
         if ($this->hasKey() && null !== $this->readKey()) {
             return true;
         }
-        if ($encryptedRowsExist) {
+        if (true === $encryptedRowsExist) {
             return false;
         }
         set_error_handler(static fn (): bool => true);
@@ -169,6 +169,9 @@ final class XoopsTwoFactorCrypto
                 return false;
             }
             if (!$this->hasKey() || null === $this->readKey()) {
+                if (is_callable($encryptedRowsExist) && $encryptedRowsExist()) {
+                    return false;
+                }
                 $key = sodium_crypto_aead_xchacha20poly1305_ietf_keygen();
                 // Same rule as loadKey(): a write warning carries the key
                 // file's path, which must not reach a page.

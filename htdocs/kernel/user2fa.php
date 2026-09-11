@@ -164,6 +164,25 @@ final class XoopsUser2faHandler
     }
 
     /**
+     * Key provisioning must never replace a lost key while encrypted rows exist.
+     *
+     * @throws \RuntimeException when the database cannot answer
+     */
+    public function hasEncryptedSecrets(): bool
+    {
+        $this->assertConnectionUsable();
+        if (!$this->installed) {
+            return false;
+        }
+        $result = $this->db->query(sprintf('SELECT `uid` FROM `%s` WHERE `secret` IS NOT NULL LIMIT 1', $this->table()));
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            throw new \RuntimeException('Two-factor encrypted-secret lookup failed');
+        }
+
+        return is_array($this->db->fetchArray($result));
+    }
+
+    /**
      * The row locked for the current transaction.
      *
      * @param int $uid account
@@ -501,13 +520,17 @@ final class XoopsUser2faHandler
      * @param string $secretBase32 the secret the user confirmed a code against
      * @param int    $acceptedStep the step of that code
      * @param int    $now          unix time
+     * @param string|null $expectedGeneration setup generation, empty for no row; null for legacy callers
      *
      * @return array{generation: string, codes: list<string>}|false
      */
-    public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now): array|false
+    public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now, ?string $expectedGeneration = null): array|false
     {
-        return $this->withTransaction(function () use ($uid, $secretBase32, $acceptedStep, $now): array|false {
+        return $this->withTransaction(function () use ($uid, $secretBase32, $acceptedStep, $now, $expectedGeneration): array|false {
             $row = $this->lockRow($uid);
+            if (null !== $expectedGeneration && !hash_equals((string) ($row['generation'] ?? ''), $expectedGeneration)) {
+                return false;
+            }
             if (null !== $row && self::ROW_DISABLED !== $row['state']) {
                 // Enrolled: the second tab loses. Anything else is a row this
                 // code does not know and must not overwrite (see stateFor()).
@@ -566,20 +589,87 @@ final class XoopsUser2faHandler
             if (null === $this->lockRow($uid)) {
                 return false;
             }
-            $generation = $this->newGeneration();
-            $sql        = sprintf(
-                'UPDATE `%s` SET `state` = %s, `secret` = NULL, `generation` = %s WHERE `uid` = %d',
-                $this->table(),
-                $this->db->quote(self::ROW_DISABLED),
-                $this->db->quote($generation),
-                $uid
-            );
-            if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+
+            return $this->disableLocked($uid);
+        });
+    }
+
+    /** The caller holds the factor row lock until commit. */
+    private function disableLocked(int $uid): string|false
+    {
+        $generation = $this->newGeneration();
+        $sql = sprintf(
+            'UPDATE `%s` SET `state` = %s, `secret` = NULL, `generation` = %s WHERE `uid` = %d',
+            $this->table(),
+            $this->db->quote(self::ROW_DISABLED),
+            $this->db->quote($generation),
+            $uid
+        );
+        if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+            return false;
+        }
+
+        return $generation;
+    }
+
+    /**
+     * Verify the current factor and disable it or replace its recovery codes
+     * under the same row lock, so reset cannot race verification and mutation.
+     *
+     * @return list<string>|string|false new codes, disabled generation, or rejected verification
+     * @throws \InvalidArgumentException for an unknown action
+     * @throws \RuntimeException for unavailable crypto or failed storage
+     */
+    public function manage(int $uid, string $expectedGeneration, string $code, string $recovery, string $action, int $now): array|string|false
+    {
+        if (!in_array($action, ['disable', 'regenerate'], true)) {
+            throw new \InvalidArgumentException('Unknown two-factor management action');
+        }
+        $this->assertConnectionUsable();
+        if (!$this->installed) {
+            return false;
+        }
+
+        return $this->withTransaction(function () use ($uid, $expectedGeneration, $code, $recovery, $action, $now): array|string|false {
+            $row = $this->lockRow($uid);
+            if (null === $row || self::ROW_ENROLLED !== $row['state']
+                || !hash_equals((string) $row['generation'], $expectedGeneration)) {
                 return false;
             }
+            $canonical = $this->canonicalRecoveryCode($recovery);
+            if ('' !== $canonical) {
+                // Recovery remains available when the encryption key is lost
+                // and while the authenticator-code throttle is locked.
+                if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical, true)) {
+                    return false;
+                }
+                if (!$this->db->exec(sprintf(
+                    'UPDATE `%s` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = %d',
+                    $this->table(),
+                    $uid
+                ))) {
+                    throw new \RuntimeException('Two-factor throttle reset failed');
+                }
+            } else {
+                if ($row['locked_until'] > $now || self::METHOD_TOTP !== $row['method']) {
+                    return false;
+                }
+                $secret = $this->secretFromRow($row);
+                if (null === $secret) {
+                    throw new \RuntimeException('Two-factor verification unavailable');
+                }
+                $step = XoopsTotp::matchStep($secret, $code, $now, (int) $row['last_counter']);
+                if (false === $step || !$this->acceptTotp($uid, $step, $expectedGeneration, $now)) {
+                    return false;
+                }
+            }
+            $result = $action === 'disable' ? $this->disableLocked($uid) : $this->issueRecoveryCodes($uid);
+            if (false === $result) {
+                throw new \RuntimeException('Two-factor management write failed');
+            }
 
-            return $generation;
-        });
+            return $result;
+        }, true);
     }
 
     /**
