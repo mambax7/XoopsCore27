@@ -86,7 +86,7 @@ final class LoginPathSplitTest extends TestCase
             "\$_SESSION['xoopsUserId']     = \$user->getVar('uid');",
             "triggerEvent('core.behavior.user.login', \$user)",
             'XoopsUserUtility::rememberKey()',
-            "'pfp'  => XoopsUserUtility::rememberFingerprint(\$user, \$rememberKey->getSigning())",
+            "'pfp' => XoopsUserUtility::rememberFingerprint(\$user, \$rememberKey->getSigning())",
             '->doLoginMaintenance(',
             'redirect_header($url, 1, sprintf(_US_LOGGINGU',
         ];

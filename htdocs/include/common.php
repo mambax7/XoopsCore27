@@ -367,6 +367,27 @@ if (empty($_SESSION['xoopsUserId'])
                 && is_string($rememberClaims->pfp ?? null)
                 && hash_equals(XoopsUserUtility::rememberFingerprint($rememberCandidate, $rememberSigningKey), $rememberClaims->pfp))
                 ? $rememberCandidate : null;
+            // The factor: an enrolled account never restores from a cookie in
+            // this phase, and a cookie issued before the last factor change
+            // (its fgen differs from the row's generation) is refused. An
+            // absent fgen reads as '' so cookies issued before this claim
+            // existed keep working for accounts with no row; a lookup failure
+            // refuses, because this is a login.
+            if (null !== $rememberUser) {
+                $rememberFgen = $rememberClaims->fgen ?? '';
+                try {
+                    $rememberRow = xoops_getHandler('user2fa')->getRow((int) $rememberUser->getVar('uid'));
+                } catch (\Throwable $e) {
+                    $rememberRow = false;
+                }
+                if (false === $rememberRow || !is_string($rememberFgen)
+                    || (is_array($rememberRow) && XoopsUser2faHandler::ROW_ENROLLED === $rememberRow['state'])
+                    || !hash_equals(is_array($rememberRow) ? (string) $rememberRow['generation'] : '', $rememberFgen)
+                ) {
+                    $rememberUser = null;
+                }
+                unset($rememberRow, $rememberFgen);
+            }
         }
     }
     if (null !== $rememberUser) {
@@ -388,7 +409,41 @@ if (!empty($_SESSION['xoopsUserId'])) {
     // A missing or deactivated account ends the session here, whether it was
     // restored from the session store or from the remember-me cookie (whose
     // own checks ran above, before the session was seeded).
-    if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {
+    $endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();
+    $factorRow  = null;
+    if (!$endSession) {
+        // The factor row, read on every request so a reset, disable or
+        // enrolment in another browser ends this session on its next request.
+        // A failed lookup on an established session is logged and the
+        // request continues; failing closed here would sign out the whole
+        // site on a database blip.
+        try {
+            $factorRow = xoops_getHandler('user2fa')->getRow((int) $_SESSION['xoopsUserId']);
+        } catch (\Throwable $e) {
+            trigger_error('user_2fa lookup failed; the session continues', E_USER_WARNING);
+            $factorRow = false;
+        }
+        $factorState = XoopsUser2faHandler::STATE_NONE;
+        if (is_array($factorRow) && XoopsUser2faHandler::ROW_ENROLLED === $factorRow['state']) {
+            // Only a completed challenge or enrolment may put the generation
+            // in a session: none stored ends it, whatever the policy.
+            $factorState = XoopsUser2faHandler::STATE_ENROLLED;
+            $stored      = $_SESSION['xoops2faGeneration'] ?? null;
+            $endSession  = !is_string($stored) || !hash_equals((string) $factorRow['generation'], $stored);
+            unset($stored);
+        } elseif (false !== $factorRow) {
+            // Absent or disabled: stamp, so a later write to a non-enrolled
+            // row cannot sign anyone out.
+            $_SESSION['xoops2faGeneration'] = is_array($factorRow) ? (string) $factorRow['generation'] : '';
+        }
+        if (!$endSession && false !== $factorRow
+            && XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState) && true !== ($_SESSION['xoops2faVerified'] ?? false)
+        ) {
+            $endSession = true;
+        }
+        unset($factorState);
+    }
+    if ($endSession) {
         $xoopsUser = '';
         $_SESSION  = [];
         session_destroy();
@@ -431,6 +486,7 @@ if (!empty($_SESSION['xoopsUserId'])) {
             $claims = [
                 'uid' => $_SESSION['xoopsUserId'],
                 'pfp' => XoopsUserUtility::rememberFingerprint($xoopsUser, $rememberSigningKey),
+                'fgen' => is_array($factorRow) ? (string) $factorRow['generation'] : '',
             ];
             $rememberTime = 60 * 60 * 24 * 30;
             $token = \Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime);
@@ -450,6 +506,7 @@ if (!empty($_SESSION['xoopsUserId'])) {
 // The key bytes have no reader past the renewal above; keep them out of the
 // globals that templates, blocks and debug dumps can walk.
 unset($rememberKey, $rememberSigningKey);
+unset($factorRow, $endSession);
 // Cookie is handled by session_set_cookie_params() in the session handler (PHP 8.2+)
 // user characteristics are established
 $xoopsPreload->triggerEvent('core.include.common.auth.success');

@@ -179,7 +179,7 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
         if (null !== $rememberKey) {
             $claims = [
                 'uid' => $_SESSION['xoopsUserId'],
-                'pfp'  => XoopsUserUtility::rememberFingerprint($user, $rememberKey->getSigning()),
+                'pfp' => XoopsUserUtility::rememberFingerprint($user, $rememberKey->getSigning()),
                 'fgen' => $factorGeneration,
             ];
             $rememberTime = 60 * 60 * 24 * 30;

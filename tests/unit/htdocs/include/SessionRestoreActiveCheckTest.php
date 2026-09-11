@@ -53,12 +53,12 @@ final class SessionRestoreActiveCheckTest extends TestCase
     #[Test]
     public function inactiveAccountIsTreatedLikeAMissingOne(): void
     {
-        self::assertStringContainsString('if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {', $this->restore);
+        self::assertStringContainsString('$endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();', $this->restore);
         // The cookie's own checks run before the session is seeded (see the
         // cookie-path test below); this condition carries only the account
         // checks that apply to both the session-store and the cookie path.
-        $conditionStart = (int) strpos($this->restore, 'if (!is_object($xoopsUser)');
-        $branchCondition = substr($this->restore, $conditionStart, (int) strpos($this->restore, ') {', $conditionStart) - $conditionStart);
+        $conditionStart = (int) strpos($this->restore, '$endSession = !is_object($xoopsUser)');
+        $branchCondition = substr($this->restore, $conditionStart, (int) strpos($this->restore, ';', $conditionStart) - $conditionStart);
         self::assertStringNotContainsString('rememberFingerprint(', $branchCondition);
         self::assertStringNotContainsString('rememberClaims', $branchCondition);
 
