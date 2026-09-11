@@ -366,6 +366,57 @@ class XoopsMemberHandlerTest extends TestCase
         $this->assertFalse($this->handler->deleteUser($user));
     }
 
+    public function testDeleteUserRemovesTheAccountTokensBeforeTheMembershipsAndTheUser(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
+        $user  = $this->createStubUser(10, 'olduser');
+        $order = [];
+        $sql   = [];
+
+        $tokenDb = $this->createMock(XoopsMySQLDatabase::class);
+        $tokenDb->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
+        $tokenDb->method('exec')->willReturnCallback(function ($statement) use (&$order, &$sql) {
+            $order[] = 'tokens';
+            $sql[]   = $statement;
+            return true;
+        });
+        $this->setProtectedProperty($this->handler, 'tokenHandler', new \XoopsTokenHandler($tokenDb));
+
+        $this->membershipHandler->expects($this->once())
+                                ->method('deleteAll')
+                                ->willReturnCallback(function () use (&$order) {
+                                    $order[] = 'memberships';
+                                    return true;
+                                });
+        $this->userHandler->expects($this->once())
+                          ->method('delete')
+                          ->with($user)
+                          ->willReturnCallback(function () use (&$order) {
+                              $order[] = 'user';
+                              return true;
+                          });
+
+        $this->assertTrue($this->handler->deleteUser($user));
+        $this->assertSame(['tokens', 'memberships', 'user'], $order);
+        $this->assertSame(['DELETE FROM `xoops_tokens` WHERE `uid` = 10'], $sql);
+    }
+
+    public function testDeleteUserStopsWhenTheTokenDeleteFails(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
+        $user = $this->createStubUser(10, 'olduser');
+
+        $tokenDb = $this->createMock(XoopsMySQLDatabase::class);
+        $tokenDb->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
+        $tokenDb->method('exec')->willReturn(false);
+        $this->setProtectedProperty($this->handler, 'tokenHandler', new \XoopsTokenHandler($tokenDb));
+
+        $this->membershipHandler->expects($this->never())->method('deleteAll');
+        $this->userHandler->expects($this->never())->method('delete');
+
+        $this->assertFalse($this->handler->deleteUser($user));
+    }
+
     // =========================================================================
     // getGroups / getUsers
     // =========================================================================
