@@ -479,6 +479,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', $cfgCols . " VALUES (137, 0, 1, 'session_cookie_secure', '_MD_AM_SESSSECURE', '0', '_MD_AM_SESSSECURE_DSC', 'yesno', 'int', 44)");
     $dbm->insert('config', $cfgCols . " VALUES (138, 1, 0, 'active_menus', '_MI_SYSTEM_MENUS_ACTIVE', '1', '_MI_SYSTEM_MENUS_ACTIVE_DESC', 'yesno', 'int', 145)");
     $dbm->insert('config', $cfgCols . " VALUES (139, 0, 1, 'enable_online_tracking', '_MD_AM_ONLINETRACKING', '1', '_MD_AM_ONLINETRACKINGDSC', 'yesno', 'int', 45)");
+    $dbm->insert('config', $cfgCols . " VALUES (140, 0, 1, 'twofactor_mode', '_MD_AM_TWOFACTORMODE', 'off', '_MD_AM_TWOFACTORMODEDSC', 'select', 'text', 46)");
 
     require_once XOOPS_ROOT_PATH . '/class/xoopslists.php';
     $editors = XoopsLists::getDirListAsArray(XOOPS_ROOT_PATH . '/class/xoopseditor');
@@ -523,6 +524,11 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, 'Strict', 'Strict', 136)");
     ++$conf;
     $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, 'None', 'None', 136)");
+    ++$conf;
+    // Two-factor authentication policy (conf_id 140)
+    $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '_MD_AM_TWOFACTORMODE_OFF', 'off', 140)");
+    ++$conf;
+    $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional', 140)");
     ++$conf;
 
     return $groups;

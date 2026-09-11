@@ -9,6 +9,12 @@ Below are language differences from a version to next version.
 /htdocs/modules/profile/language/english/admin.php
 - added define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed; the account was not removed');
 
+/htdocs/modules/system/language/english/admin/preferences.php
+- added define('_MD_AM_TWOFACTORMODE', 'Two-factor authentication');
+- added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol a time-based code app and challenges those who have.');
+- added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
+- added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
+
 ================================
 2026/09: Version 2.7.4-Beta1
 ================================
