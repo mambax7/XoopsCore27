@@ -139,7 +139,11 @@ try {
                         throw new \RuntimeException('Reset refused');
                     }
                     $row = null;
-                    trigger_error(sprintf('Two-factor admin reset: actor %d, uid %d', (int) $actor->getVar('uid'), $uid), E_USER_NOTICE);
+                    try {
+                        trigger_error(sprintf('Two-factor admin reset: actor %d, uid %d', (int) $actor->getVar('uid'), $uid), E_USER_NOTICE);
+                    } catch (\Throwable) {
+                        // The reset is committed; a throwing diagnostic handler must not report it as failed.
+                    }
                     xoops_2fa_notice($user, _US_2FAM_RESET_SUBJECT, _US_2FAM_RESET_BODY);
                     $message = _US_2FAM_RESET_DONE;
                 } elseif ('begin' === $action && !$enrolled) {

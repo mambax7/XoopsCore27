@@ -781,7 +781,11 @@ final class XoopsUser2faHandler
         if (!$consumed) {
             return false;
         }
-        trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+        try {
+            trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+        } catch (\Throwable) {
+            // The marker is already renamed; a throwing diagnostic handler must not skip the reset and its restore path.
+        }
         $disabled = false;
         try {
             $disabled = false !== $this->disable($uid);

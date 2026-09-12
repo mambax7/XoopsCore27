@@ -65,18 +65,33 @@ class XoopsUser
         return ['uid' => $this->uid, 'pass' => $this->passwordHash, 'level' => 1, 'uname' => 'tester', 'theme' => '', 'last_login' => time()][$name] ?? '';
     }
     public function setVar(string $name, mixed $value): void {}
-    public function getGroups(): array { return [2]; }
-    public function isActive(): bool { return true; }
-    public function isAdmin(): bool { return false; }
+    public function getGroups(): array
+    {
+        return [2];
+    }
+    public function isActive(): bool
+    {
+        return true;
+    }
+    public function isAdmin(): bool
+    {
+        return false;
+    }
 }
 class XoopsPreload
 {
-    public static function getInstance(): self { return new self(); }
+    public static function getInstance(): self
+    {
+        return new self();
+    }
     public function triggerEvent(string $event, mixed $args = null): void {}
 }
 class XoopsDatabaseFactory
 {
-    public static function getDatabaseConnection(): XoopsMySQLDatabase { return $GLOBALS['xoopsDB']; }
+    public static function getDatabaseConnection(): XoopsMySQLDatabase
+    {
+        return $GLOBALS['xoopsDB'];
+    }
 }
 require XOOPS_ROOT_PATH . '/class/userutility.php';
 function xoops_getHandler(string $name): object
@@ -85,8 +100,14 @@ function xoops_getHandler(string $name): object
         'user2fa' => $GLOBALS['factorHandler'],
         'tplfile' => new class { public function find(...$args): array { return [new stdClass()]; } },
         'member' => new class {
-            public function getUser(int $uid): XoopsUser { return new XoopsUser($uid); }
-            public function insertUser(XoopsUser $user): bool { return true; }
+            public function getUser(int $uid): XoopsUser
+            {
+                return new XoopsUser($uid);
+            }
+            public function insertUser(XoopsUser $user): bool
+            {
+                return true;
+            }
             public function loginUser(string $name, string $password): XoopsUser|false
             {
                 if ($password !== 'correct-password') {
@@ -108,10 +129,19 @@ function xoops_getHandler(string $name): object
         default => throw new RuntimeException('Unexpected handler: ' . $name),
     };
 }
-function xoops_loadLanguage(string $name): void { require_once XOOPS_ROOT_PATH . '/language/english/' . $name . '.php'; }
+function xoops_loadLanguage(string $name): void
+{
+    require_once XOOPS_ROOT_PATH . '/language/english/' . $name . '.php';
+}
 function xoops_load(string $name): void {}
-function xoops_validateThemeName(string $name): string { return ''; }
-function xoops_setcookie(string $name, mixed $value, mixed ...$arguments): void { $GLOBALS['cookies'][] = [$name, $value]; }
+function xoops_validateThemeName(string $name): string
+{
+    return '';
+}
+function xoops_setcookie(string $name, mixed $value, mixed ...$arguments): void
+{
+    $GLOBALS['cookies'][] = [$name, $value];
+}
 function requestResult(array $result): never
 {
     $result += ['session' => $_SESSION, 'cookies' => $GLOBALS['cookies'], 'session_id' => session_id()];
@@ -123,7 +153,10 @@ function redirect_header(string $url, int $seconds, string $message, bool $addRe
 {
     requestResult(['redirect' => $url, 'message' => $message]);
 }
-function xoops_2fa_render(array $vars): never { requestResult(['render' => $vars]); }
+function xoops_2fa_render(array $vars): never
+{
+    requestResult(['render' => $vars]);
+}
 function xoops_getMailer(): object
 {
     return new class { public function __call(string $method, array $args): bool { return true; } };
@@ -131,9 +164,18 @@ function xoops_getMailer(): object
 $GLOBALS['xoops'] = new class { public function path(string $path): string { return XOOPS_ROOT_PATH . '/' . $path; } };
 $GLOBALS['sess_handler'] = new class { public function regenerate_id(bool $delete): bool { return session_regenerate_id($delete); } };
 $GLOBALS['xoopsSecurity'] = new class {
-    public function check(): bool { return ($_POST['csrf'] ?? '') === 'valid'; }
-    public function getErrors(): array { return ['Invalid CSRF token']; }
-    public function getTokenHTML(): string { return '<input name="csrf" value="valid">'; }
+    public function check(): bool
+    {
+        return ($_POST['csrf'] ?? '') === 'valid';
+    }
+    public function getErrors(): array
+    {
+        return ['Invalid CSRF token'];
+    }
+    public function getTokenHTML(): string
+    {
+        return '<input name="csrf" value="valid">';
+    }
 };
 xoops_loadLanguage('user');
 xoops_loadLanguage('user2fa');

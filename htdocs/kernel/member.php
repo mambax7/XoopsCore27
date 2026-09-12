@@ -215,7 +215,11 @@ class XoopsMemberHandler
             }
         } catch (\Throwable $e) {
             // The account is already gone; an orphaned factor grants no login.
-            trigger_error(sprintf('User %d deleted; second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
+            try {
+                trigger_error(sprintf('User %d deleted; second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
+            } catch (\Throwable) {
+                // The account is already gone; a throwing diagnostic handler must not report the deletion as failed.
+            }
         }
 
         return true;
