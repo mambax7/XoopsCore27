@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace kernel;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\Test;
 use Xmf\Key\FileStorage;
 use XoopsMySQLDatabase;
@@ -760,6 +762,17 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'optional']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'required']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'OFF']));
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function policyFailsClosedWhenTheInstalledSignalSaysTheConfigurationReadFailed(): void
+    {
+        // common.php merges file configs after capturing the signal, so the row set is not empty any more
+        define('XOOPS_2FA_INSTALLED', true);
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['debugLevel' => 0]));
+        $this->assertSame('off', XoopsUser2faHandler::policy(['twofactor_mode' => 'off']));
     }
 
     #[Test]
