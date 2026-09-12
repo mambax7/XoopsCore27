@@ -17,7 +17,11 @@ final class Manage2faTemplateTest extends TestCase
     #[Test]
     public function realSmartyRendersEveryFormAndEscapesUntrustedValues(): void
     {
-        require_once XOOPS_ROOT_PATH . '/xoops_lib/vendor/smarty/smarty/libs/Smarty.class.php';
+        $smartyClass = XOOPS_ROOT_PATH . '/xoops_lib/vendor/smarty/smarty/libs/Smarty.class.php';
+        if (!is_file($smartyClass)) {
+            self::markTestSkipped('Smarty is not installed in xoops_lib/vendor');
+        }
+        require_once $smartyClass;
         $directory = sys_get_temp_dir() . '/xoops-2fa-template-' . bin2hex(random_bytes(6));
         mkdir($directory);
         $GLOBALS['xoops'] = new class { public function url(string $url): string { return XOOPS_URL . '/' . $url; } };

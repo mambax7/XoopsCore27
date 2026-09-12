@@ -38,7 +38,8 @@ try {
             }
             $enrolled = false;
         }
-        echo json_encode(['connection' => $db->conn->thread_id, 'result' => ['enrolled' => $enrolled, 'key' => hash('sha256', $enrolCrypto->loadKey())]], JSON_THROW_ON_ERROR) . "\n";
+        $enrolKey = $enrolCrypto->loadKey();
+        echo json_encode(['connection' => $db->conn->thread_id, 'result' => ['enrolled' => $enrolled, 'key' => null === $enrolKey ? false : hash('sha256', $enrolKey)]], JSON_THROW_ON_ERROR) . "\n";
         exit;
     }
     $result = match ($job['action']) {

@@ -69,7 +69,9 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
         $tpl->caching = 0;
         // The row is registered by the System module update; until then the shipped file renders the page.
         $template = 'db:system_user2fa.tpl';
-        if ([] === xoops_getHandler('tplfile')->find('default', null, null, null, 'system_user2fa.tpl', true)) {
+        /** @var XoopsTplfileHandler $xo2faTplfiles */
+        $xo2faTplfiles = xoops_getHandler('tplfile');
+        if ([] === $xo2faTplfiles->find('default', null, null, null, 'system_user2fa.tpl', true)) {
             $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl';
         }
         $tpl->display($template);

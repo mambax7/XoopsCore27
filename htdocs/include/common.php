@@ -429,8 +429,10 @@ if (!empty($_SESSION['xoopsUserId'])) {
         if (is_array($factorRow) && XoopsUser2faHandler::ROW_DISABLED !== $factorRow['state']) {
             // Enrolled, or a row this code cannot check (never "none"): only
             // a completed challenge or enrolment may put the generation in a
-            // session, so none stored ends it, whatever the policy.
-            $factorState = xoops_getHandler('user2fa')->stateOfRow($factorRow);
+            // session, so none stored ends it, whatever the policy. The exact
+            // state is resolved by the challenge page; opening the secret here
+            // would read and decrypt the key on every authenticated request.
+            $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
             $stored      = $_SESSION['xoops2faGeneration'] ?? null;
             $endSession  = !is_string($stored) || !hash_equals((string) $factorRow['generation'], $stored);
             unset($stored);

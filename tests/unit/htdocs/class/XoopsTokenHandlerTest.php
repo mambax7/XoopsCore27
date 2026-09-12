@@ -263,6 +263,15 @@ class XoopsTokenHandlerTest extends KernelTestCase
     }
 
     #[Test]
+    public function testStrictVerifyReturnsFalseWhenNoRowMatches(): void
+    {
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturn(true);
+        $db->method('getAffectedRows')->willReturn(0);
+        $this->assertFalse((new XoopsTokenHandler($db))->verify(1, '2fa_recovery', 'wrong-token', true));
+    }
+
+    #[Test]
     public function testVerifyUsesAtomicUpdate(): void
     {
         $capturedSql = '';

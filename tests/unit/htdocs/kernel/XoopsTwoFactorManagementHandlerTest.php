@@ -68,8 +68,8 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        if ($this->dir !== '') {
-            foreach (glob($this->dir . '/*') as $file) {
+        if ('' !== $this->dir && is_dir($this->dir)) {
+            foreach ((array) glob($this->dir . '/*') as $file) {
                 unlink($file);
             }
             rmdir($this->dir);

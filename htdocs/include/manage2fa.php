@@ -232,7 +232,9 @@ $tpl->assign(['labels' => $labels, 'admin_reset' => $adminReset, 'uid' => $uid,
     'direction' => \Xmf\I18n\Direction::dir(_LANGCODE)]);
 // The row is registered by the System module update; until then the shipped file renders the page.
 $template = 'db:system_user2fa_manage.tpl';
-if ([] === xoops_getHandler('tplfile')->find('default', null, null, null, 'system_user2fa_manage.tpl', true)) {
+/** @var XoopsTplfileHandler $tplfiles */
+$tplfiles = xoops_getHandler('tplfile');
+if ([] === $tplfiles->find('default', null, null, null, 'system_user2fa_manage.tpl', true)) {
     $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa_manage.tpl';
 }
 $tpl->display($template);

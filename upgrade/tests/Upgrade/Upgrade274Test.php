@@ -54,6 +54,7 @@ final class Upgrade274Test extends TestCase
 
     private bool $execFails = false;
     private bool $lockGranted = true;
+    private bool $lockReleased = true;
     private array $queries = [];
 
     protected function setUp(): void
@@ -98,7 +99,7 @@ final class Upgrade274Test extends TestCase
                 return [$this->lockGranted ? 1 : 0];
             }
             if (str_contains((string) end($this->queries), 'RELEASE_LOCK(')) {
-                return [1];
+                return [$this->lockReleased ? 1 : 0];
             }
             $row = array_shift($this->rows);
 
@@ -133,6 +134,17 @@ final class Upgrade274Test extends TestCase
         self::assertStringContainsString('GET_LOCK(', $this->queries[0]);
         self::assertStringContainsString('RELEASE_LOCK(', end($this->queries));
         self::assertSame([], $this->exec);
+    }
+
+    #[Test]
+    public function modeMigrationReportsFailureWhenItsLockCannotBeReleased(): void
+    {
+        $this->lockReleased = false;
+        $this->rows         = [[140], [1], [1]];
+        $patch              = $this->patch();
+        self::assertFalse($patch->apply_twofactormode());
+        self::assertSame([], $this->exec, 'the rows were already complete');
+        self::assertNotSame([], $patch->logs);
     }
 
     #[Test]
