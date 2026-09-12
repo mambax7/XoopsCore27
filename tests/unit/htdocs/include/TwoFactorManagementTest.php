@@ -60,14 +60,17 @@ final class TwoFactorManagementTest extends TestCase
         }
     }
 
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
     public function testALanguageFileGapIsFilledFromEnglishWithoutOverwritingTheTranslation(): void
     {
         require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
         $config = $GLOBALS['xoopsConfig'] ?? [];
         $GLOBALS['xoopsConfig'] = ['language' => 'klingon'];
-        // A translation that defined this one constant and nothing else.
-        defined('_US_2FAM_TITLE') || define('_US_2FAM_TITLE', 'translated');
-        $translated = _US_2FAM_TITLE;
+        // A fresh process: the gap is real, and the translation defined this one constant and nothing else.
+        self::assertFalse(defined('_US_2FAM_TITLE'));
+        self::assertFalse(defined('_US_2FAM_RESET'));
+        define('_US_2FAM_TITLE', 'translated');
+        $translated = 'translated';
         $warnings = [];
         set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
             $warnings[] = $message;
