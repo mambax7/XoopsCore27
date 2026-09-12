@@ -22,6 +22,8 @@ final class PopupSessionRotationTest extends TestCase
         mkdir($directory . '/language');
         mkdir($directory . '/language/english');
         file_put_contents($directory . '/language/english/user.php', '<?php');
+        mkdir($directory . '/include');
+        copy(dirname(__DIR__, 4) . '/htdocs/include/twofactor.php', $directory . '/include/twofactor.php');
         $source = file_get_contents(dirname(__DIR__, 4) . '/extras/login.php');
         $source = str_replace("'/path/to/xoops/directory'", var_export($directory, true), $source);
         file_put_contents($directory . '/popup.php', $source);
@@ -98,6 +100,8 @@ PHP;
             }
         } finally {
             foreach (glob($directory . '/*') as $file) { if (is_file($file)) { unlink($file); } }
+            unlink($directory . '/include/twofactor.php');
+            rmdir($directory . '/include');
             unlink($directory . '/language/english/user.php');
             rmdir($directory . '/language/english');
             rmdir($directory . '/language');

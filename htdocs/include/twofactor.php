@@ -18,6 +18,28 @@ declare(strict_types=1);
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+/**
+ * Load a two-factor language file and fill its gaps from English.
+ *
+ * xoops_loadLanguage() falls back to English only when the whole file is
+ * absent. A translation that predates a constant would otherwise leave it
+ * undefined, and the page reading it would stop with an Error.
+ */
+function xoops_2fa_loadLanguage(string $name): void
+{
+    xoops_loadLanguage($name);
+    if ('english' === ($GLOBALS['xoopsConfig']['language'] ?? 'english')) {
+        return;
+    }
+    // The English file is a list of define() calls; the ones the translation already made warn and are skipped.
+    set_error_handler(static fn (): bool => true);
+    try {
+        include XOOPS_ROOT_PATH . '/language/english/' . $name . '.php';
+    } finally {
+        restore_error_handler();
+    }
+}
+
 /** Validate the password-authorised setup session before using its encrypted secret. */
 function xoops_2fa_setup_valid(mixed $pending, int $uid, string $passwordHash, string $generation, int $now): bool
 {

@@ -60,6 +60,34 @@ final class TwoFactorManagementTest extends TestCase
         }
     }
 
+    public function testALanguageFileGapIsFilledFromEnglishWithoutOverwritingTheTranslation(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+        $config = $GLOBALS['xoopsConfig'] ?? [];
+        $GLOBALS['xoopsConfig'] = ['language' => 'klingon'];
+        // A translation that defined this one constant and nothing else.
+        defined('_US_2FAM_TITLE') || define('_US_2FAM_TITLE', 'translated');
+        $translated = _US_2FAM_TITLE;
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            xoops_2fa_loadLanguage('user2famanage');
+        } finally {
+            restore_error_handler();
+            $GLOBALS['xoopsConfig'] = $config;
+        }
+        self::assertSame([], $warnings);
+        self::assertSame($translated, _US_2FAM_TITLE);
+        preg_match_all("/define\('(_US_2FAM_[A-Z_]+)'/", (string) file_get_contents(XOOPS_ROOT_PATH . '/language/english/user2famanage.php'), $m);
+        self::assertNotEmpty($m[1]);
+        foreach ($m[1] as $constant) {
+            self::assertTrue(defined($constant), $constant);
+        }
+    }
+
     public function testPendingSetupIsBoundToAccountPasswordGenerationAndExpiry(): void
     {
         require_once XOOPS_ROOT_PATH . '/include/twofactor.php';

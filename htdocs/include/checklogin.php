@@ -17,7 +17,8 @@
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 xoops_loadLanguage('user');
-xoops_loadLanguage('user2fa');
+require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+xoops_2fa_loadLanguage('user2fa');
 
 // from $_POST we use keys: uname, pass, rememberme, xoops_redirect
 XoopsLoad::load('XoopsRequest');

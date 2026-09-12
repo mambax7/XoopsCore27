@@ -28,11 +28,12 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
 
 // user.php loads the first itself; the closed-site page does not. The
-// challenge strings have a file of their own so a language pack that
-// predates them falls back to English as a whole, as xoops_loadLanguage()
-// does for a missing file (it never fills gaps in a present one).
+// challenge strings have a file of their own; a pack that predates them
+// falls back to English as a whole, and one that predates a single
+// constant is filled from English by the helper.
 xoops_loadLanguage('user');
-xoops_loadLanguage('user2fa');
+require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+xoops_2fa_loadLanguage('user2fa');
 
 if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
     /**

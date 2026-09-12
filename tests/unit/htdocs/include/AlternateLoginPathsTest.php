@@ -116,7 +116,7 @@ final class AlternateLoginPathsTest extends TestCase
         $this->loadSourceFile('extras/login.php');
         self::assertStringContainsString("if (!\$GLOBALS['sess_handler']->regenerate_id(true))", $this->sourceContent);
         self::assertStringContainsString("redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);", $this->sourceContent);
-        self::assertStringContainsString("xoops_loadLanguage('user2fa');", $this->sourceContent);
+        self::assertStringContainsString("xoops_2fa_loadLanguage('user2fa');", $this->sourceContent);
         $this->assertBindsTheSession('extras/login.php');
         $this->loadSourceFile('htdocs/class/xml/rpc/xmlrpcapi.php');
         // the login failure, the factor refusal and the module-read refusal

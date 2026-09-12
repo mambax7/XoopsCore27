@@ -28,7 +28,8 @@ if (!defined('XOOPS_ROOT_PATH')) {
     exit();
 }
 include_once XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/user.php';
-xoops_loadLanguage('user2fa');
+require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+xoops_2fa_loadLanguage('user2fa');
 $op = Request::getString('op', 'login', 'POST') === 'dologin' ? 'dologin' : 'login';
 
 $username = trim(Request::getString('username', '', 'POST'));
