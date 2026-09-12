@@ -24,7 +24,12 @@ final class Manage2faTemplateTest extends TestCase
         require_once $smartyClass;
         $directory = sys_get_temp_dir() . '/xoops-2fa-template-' . bin2hex(random_bytes(6));
         mkdir($directory);
-        $GLOBALS['xoops'] = new class { public function url(string $url): string { return XOOPS_URL . '/' . $url; } };
+        $GLOBALS['xoops'] = new class {
+            public function url(string $url): string
+            {
+                return XOOPS_URL . '/' . $url;
+            }
+        };
         $smarty = new \Smarty();
         $smarty->left_delimiter = '<{';
         $smarty->right_delimiter = '}>';

@@ -44,7 +44,12 @@ final class Manage2faControllerTest extends TestCase
         $GLOBALS['xoopsConfig'] = ['sitename' => 'Test', 'usercookie' => 'remember', 'twofactor_mode' => 'optional'];
         $userClass = self::NS . '\\XoopsUser';
         $GLOBALS['xoopsUser'] = new $userClass(9);
-        $GLOBALS['xoopsModule'] = new class { public function mid(): int { return 1; } };
+        $GLOBALS['xoopsModule'] = new class {
+            public function mid(): int
+            {
+                return 1;
+            }
+        };
         $GLOBALS['xoopsSecurity'] = new class {
             public function check(): bool { $GLOBALS['manageLog'][] = 'csrf'; return $GLOBALS['manageToken']; }
             public function getTokenHTML(): string { return '<input name="token">'; }
@@ -274,8 +279,18 @@ class XoopsUser2faHandler {
 function xoops_getHandler(string $name): object {
     return match ($name) {
         'user2fa' => new XoopsUser2faHandler(),
-        'tplfile' => new class { public function find(...$args): array { return [new \stdClass()]; } },
-        default => new class { public function getUser(int $uid): XoopsUser { return new XoopsUser($uid); } },
+        'tplfile' => new class {
+            public function find(...$args): array
+            {
+                return [new \stdClass()];
+            }
+        },
+        default => new class {
+            public function getUser(int $uid): XoopsUser
+            {
+                return new XoopsUser($uid);
+            }
+        },
     };
 }
 function xoops_2fa_reauthenticate(XoopsUser $user, string $password): XoopsUser|false { $GLOBALS['manageLog'][] = 'reauth:' . $user->getVar('uid'); return $GLOBALS['manageAuth'] ? $user : false; }

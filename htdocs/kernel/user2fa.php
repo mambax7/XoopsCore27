@@ -631,6 +631,13 @@ final class XoopsUser2faHandler
      * Verify the current factor and disable it or replace its recovery codes
      * under the same row lock, so reset cannot race verification and mutation.
      *
+     * @param int    $uid                account
+     * @param string $expectedGeneration the generation the management page verified against
+     * @param string $code               the six-digit code, or '' when a recovery code is used
+     * @param string $recovery           the recovery code, or '' when a TOTP code is used
+     * @param string $action             'disable' or 'regenerate'
+     * @param int    $now                the current time
+     *
      * @return string[]|string|false new codes, disabled generation, or rejected verification
      * @phpstan-return list<string>|string|false
      * @throws \InvalidArgumentException for an unknown action
@@ -762,11 +769,16 @@ final class XoopsUser2faHandler
         if (false === $real || !str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
             return false;
         }
-        $content = file_get_contents($real);
-        if (!is_string($content) || 'reset' !== trim($content)) {
-            return false;
+        // A file that vanishes or turns unreadable between the checks and these
+        // calls must not put its path into a warning on the page.
+        set_error_handler(static fn (): bool => true);
+        try {
+            $content  = file_get_contents($real);
+            $consumed = is_string($content) && 'reset' === trim($content) && rename($real, $used);
+        } finally {
+            restore_error_handler();
         }
-        if (!rename($real, $used)) {
+        if (!$consumed) {
             return false;
         }
         trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
@@ -799,6 +811,7 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return bool
+     * @throws \RuntimeException on a connection whose rollback did not go through
      */
     public function deleteByUid(int $uid): bool
     {

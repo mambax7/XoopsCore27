@@ -133,6 +133,20 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
     }
 
     #[Test]
+    public function provisionWritesTheKeyWhenTheCallbackReportsNoEncryptedRows(): void
+    {
+        $crypto = $this->crypto();
+        $called = false;
+        self::assertTrue($crypto->provisionKey(function () use (&$called): bool {
+            $called = true;
+
+            return false;
+        }));
+        self::assertTrue($called);
+        self::assertSame(32, strlen((string) $crypto->loadKey()));
+    }
+
+    #[Test]
     public function provisionRefusesToReplaceALostKeyWhileEncryptedRowsExist(): void
     {
         $crypto = $this->crypto();

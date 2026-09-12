@@ -100,8 +100,8 @@ if ('' === $uname || '' === $pass) {
                     $factorRow = $factorHandler->getRow((int) $user->getVar('uid'));
                 } else {
                     $refusal = sprintf(
-                        'second factor required; create %s containing "reset" to proceed',
-                        XOOPS_VAR_PATH . '/data/2fa-reset-' . (int) $user->getVar('uid') . '.txt'
+                        'second factor required; create XOOPS_VAR_PATH/data/2fa-reset-%d.txt containing "reset" to proceed',
+                        (int) $user->getVar('uid')
                     );
                 }
             }

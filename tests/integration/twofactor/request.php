@@ -37,7 +37,11 @@ class XoopsUser
     public function __construct(private readonly int $uid, ?string $passwordHash = null)
     {
         $file = XOOPS_VAR_PATH . '/accounts/' . $uid;
-        $this->passwordHash = $passwordHash ?? (is_file($file) ? file_get_contents($file) : 'test-password-hash');
+        $storedHash = is_file($file) ? file_get_contents($file) : 'test-password-hash';
+        if (!is_string($storedHash)) {
+            throw new RuntimeException('Test account hash could not be read');
+        }
+        $this->passwordHash = $passwordHash ?? $storedHash;
     }
     public function getVar(string $name, string $format = 's'): mixed
     {

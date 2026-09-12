@@ -464,7 +464,12 @@ final class CheckLogin2faTest extends TestCase
         }
         function xoops_getHandler(string $name): object {
             return match ($name) {
-                'member' => new class { public function getUser(int $uid): mixed { return $GLOBALS['sandboxUser']; } },
+                'member' => new class {
+                    public function getUser(int $uid): mixed
+                    {
+                        return $GLOBALS['sandboxUser'];
+                    }
+                },
                 'user2fa' => new class {
                     public function getRow(int $uid): ?array { if ($GLOBALS['sandboxRow'] instanceof \Throwable) { throw $GLOBALS['sandboxRow']; } return $GLOBALS['sandboxRow']; }
                     public function stateOfRow(?array $row): string { return $GLOBALS['sandboxState']; }
@@ -474,7 +479,12 @@ final class CheckLogin2faTest extends TestCase
                     public function acceptRecovery(int $uid, string $code, string $gen): bool { $GLOBALS['sandboxLog'][] = "acceptRecovery:$uid:$code:$gen"; return $GLOBALS['sandboxRecovery']; }
                     public function resetByEscapeHatch(int $uid): bool { $GLOBALS['sandboxLog'][] = "hatch:$uid"; return $GLOBALS['sandboxHatch']; }
                 },
-                'tplfile' => new class { public function find(...$args): array { return [new \stdClass()]; } },
+                'tplfile' => new class {
+                    public function find(...$args): array
+                    {
+                        return [new \stdClass()];
+                    }
+                },
             };
         }
         function xoops_getMailer(): object {
