@@ -347,7 +347,17 @@ final class CheckLogin2faTest extends TestCase
         $GLOBALS['sandboxAccept'] = new \RuntimeException('down');
         $step = \XoopsTotp::stepAt(time());
         $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step)]);
-        [$what, $vars] = @$this->execute();
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = [$level, $message];
+            return true;
+        });
+        try {
+            [$what, $vars] = $this->execute();
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_WARNING, 'Two-factor challenge failed for uid 9']], $warnings);
         self::assertSame('rendered', $what);
         self::assertSame(_US_2FA_UNAVAILABLE, $vars['error']);
         self::assertContains('acceptTotp:9:' . $step . ':gen-1', $GLOBALS['sandboxLog']);

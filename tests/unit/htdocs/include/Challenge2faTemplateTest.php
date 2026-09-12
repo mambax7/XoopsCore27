@@ -18,7 +18,11 @@ final class Challenge2faTemplateTest extends TestCase
     #[PreserveGlobalState(false)]
     public function testChallengeTextIsEscapedAndErrorsKeepTheirLineBreaks(): void
     {
-        require_once XOOPS_ROOT_PATH . '/xoops_lib/vendor/smarty/smarty/libs/Smarty.class.php';
+        $smarty = XOOPS_ROOT_PATH . '/xoops_lib/vendor/smarty/smarty/libs/Smarty.class.php';
+        if (!is_file($smarty)) {
+            self::markTestSkipped('Smarty is not installed in xoops_lib/vendor');
+        }
+        require_once $smarty;
         $directory = sys_get_temp_dir() . '/xoops-2fa-challenge-' . bin2hex(random_bytes(6));
         mkdir($directory);
         $GLOBALS['xoops'] = new class { public function url(string $url): string { return XOOPS_URL . '/' . $url; } };

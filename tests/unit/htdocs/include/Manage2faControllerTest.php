@@ -291,6 +291,7 @@ PHP;
         $source = str_replace("require_once XOOPS_ROOT_PATH . '/class/template.php';", '', $source);
         // Avoid FileStorage's default prefix lookup opening a real database connection.
         $source = str_replace("new \\Xmf\\Key\\FileStorage(XOOPS_VAR_PATH . '/data')", "new \\Xmf\\Key\\FileStorage(XOOPS_VAR_PATH . '/data', 'controller-test')", $source);
+        self::assertStringStartsWith('<?php', $source);
         self::$body = 'namespace ' . self::NS . ';' . substr($source, 5);
     }
 }

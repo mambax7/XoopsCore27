@@ -308,6 +308,7 @@ final class XoopsUser2faHandler
 
     /**
      * @return string 128 random bits as 32 hex characters
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function newGeneration(): string
     {
@@ -316,6 +317,7 @@ final class XoopsUser2faHandler
 
     /**
      * @return string 128 random bits as 26 base32 characters
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function newRecoveryCode(): string
     {
@@ -404,6 +406,7 @@ final class XoopsUser2faHandler
      * @param int    $now                unix time
      *
      * @return bool
+     * @throws \RuntimeException when the update statement itself fails
      */
     public function acceptTotp(int $uid, int $step, string $verifiedGeneration, int $now): bool
     {
