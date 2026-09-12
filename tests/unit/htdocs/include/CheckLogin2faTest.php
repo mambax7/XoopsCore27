@@ -319,6 +319,28 @@ final class CheckLogin2faTest extends TestCase
     }
 
     #[Test]
+    public function aThrowingNoticeHandlerStillCountsASkewedCodeAsAFailure(): void
+    {
+        $this->pending();
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step + 3)]);
+        set_error_handler(static function (int $no, string $msg): bool {
+            throw new \ErrorException($msg, 0, $no);
+        }, E_USER_NOTICE);
+        try {
+            [$what, $vars] = $this->execute();
+        } finally {
+            restore_error_handler();
+        }
+        if (\XoopsTotp::stepAt(time()) !== $step) {
+            self::markTestSkipped('the 30-second step boundary passed during the test');
+        }
+        self::assertSame('rendered', $what);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+        self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
+    }
+
+    #[Test]
     public function anUnavailableFactorRefusesTotpButARecoveryCodeStillWorks(): void
     {
         $this->pending(['state' => 'unavailable']);

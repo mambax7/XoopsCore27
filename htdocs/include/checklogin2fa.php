@@ -238,7 +238,11 @@ if ('POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa', 'P
                 foreach ([-3, -2, 2, 3] as $xo2faOffset) {
                     $xo2faExpected = XoopsTotp::codeAt($xo2faSecret, $xo2faStepNow + $xo2faOffset);
                     if (false !== $xo2faExpected && hash_equals($xo2faExpected, $xo2faCode)) {
-                        trigger_error(sprintf('Two-factor code for uid %d matched %d steps from now; probable clock skew', $xo2faUid, $xo2faOffset), E_USER_NOTICE);
+                        try {
+                            trigger_error(sprintf('Two-factor code for uid %d matched %d steps from now; probable clock skew', $xo2faUid, $xo2faOffset), E_USER_NOTICE);
+                        } catch (\Throwable) {
+                            // A throwing diagnostic handler must not skip the failure count below.
+                        }
                         break;
                     }
                 }
