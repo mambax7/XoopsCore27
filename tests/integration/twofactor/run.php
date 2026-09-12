@@ -337,7 +337,7 @@ try {
     $exitCode = 1;
 } finally {
     // Only exact names created by this run are eligible for deletion.
-    foreach (array_reverse($created) as $name) {
+    foreach (null === $db ? [] : array_reverse($created) as $name) {
         $db->exec('DROP TABLE IF EXISTS `' . $name . '`');
     }
     foreach (['data', 'concurrent', 'sessions', 'first-enrolment', 'accounts'] as $subdirectory) {

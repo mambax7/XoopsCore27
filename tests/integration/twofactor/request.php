@@ -123,7 +123,8 @@ if ($job['request'] === 'manage') {
 }
 if (isset($job['cookie'])) {
     $key = XoopsUserUtility::rememberKey();
-    $claims = ['uid' => $job['uid'], 'pfp' => XoopsUserUtility::rememberFingerprint($user, $key->getSigning())] + $job['cookie'];
+    // The job overrides every claim, so a forged uid or fingerprint is really what the cookie carries.
+    $claims = $job['cookie'] + ['uid' => $job['uid'], 'pfp' => XoopsUserUtility::rememberFingerprint($user, $key->getSigning())];
     $_COOKIE['remember'] = Xmf\Jwt\TokenFactory::build($key, $claims, 3600);
 }
 if ($job['request'] === 'common') {

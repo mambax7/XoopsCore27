@@ -63,6 +63,8 @@ try {
                 } else {
                     $secret = $crypto->open($pending['blob'], XoopsTwoFactorCrypto::pendingAad($uid));
                     if (null === $secret) {
+                        // The pending blob cannot be read any more (key lost or replaced): offer a fresh start.
+                        unset($_SESSION['xoops2faSetup']);
                         throw new \RuntimeException('Setup secret unavailable');
                     }
                     $step = XoopsTotp::matchStep($secret, $code, $now, 0);
@@ -70,6 +72,9 @@ try {
                         ++$_SESSION['xoops2faSetup']['attempts'];
                         if ($_SESSION['xoops2faSetup']['attempts'] >= 5) {
                             unset($_SESSION['xoops2faSetup']);
+                        } else {
+                            // Keep the manual key on the retry; the pending secret is still the one to enter.
+                            $setupSecret = $secret;
                         }
                         $error = _US_2FA_BADCODE;
                     } else {

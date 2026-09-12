@@ -837,6 +837,26 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     }
 
     #[Test]
+    public function theEscapeHatchGivesTheFileBackWhenTheResetDoesNotHappen(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset
+");
+        $handler    = $this->handler();
+        $this->rows = [null]; // no row to lock: disable() refuses
+
+        set_error_handler(static fn (): bool => true);
+        try {
+            $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        } finally {
+            restore_error_handler();
+        }
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        $this->assertFileDoesNotExist($dir . '/2fa-reset-7.used');
+        $this->assertSame([], $this->statements('UPDATE `xoops_user_2fa`'));
+    }
+
+    #[Test]
     public function theEscapeHatchRefusesASymlink(): void
     {
         $dir = $this->hatchDir();

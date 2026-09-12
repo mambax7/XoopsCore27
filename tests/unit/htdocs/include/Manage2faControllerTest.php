@@ -148,10 +148,12 @@ final class Manage2faControllerTest extends TestCase
         $vars = $this->execute(['action' => 'confirm', 'code' => '000000']);
         self::assertSame(_US_2FAM_STARTAGAIN, $vars['error']);
         self::assertArrayNotHasKey('xoops2faSetup', $_SESSION);
-        $this->execute(['action' => 'begin', 'password' => 'correct']);
+        $secret = $this->execute(['action' => 'begin', 'password' => 'correct'])['secret'];
         for ($i = 0; $i < 5; ++$i) {
             $vars = $this->execute(['action' => 'confirm', 'code' => 'invalid']);
             self::assertSame(_US_2FA_BADCODE, $vars['error']);
+            // the manual key stays on the retry, and disappears with the pending secret
+            self::assertSame($i < 4 ? $secret : '', $vars['secret']);
         }
         self::assertArrayNotHasKey('xoops2faSetup', $_SESSION);
         self::assertNotContains('enrol', $GLOBALS['manageLog']);

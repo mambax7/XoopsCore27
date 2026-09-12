@@ -753,8 +753,17 @@ final class XoopsUser2faHandler
             return false;
         }
         trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+        $disabled = false;
+        try {
+            $disabled = false !== $this->disable($uid);
+        } finally {
+            if (!$disabled) {
+                // The reset did not happen: give the file back so the next attempt is not refused as used.
+                rename($used, $file);
+            }
+        }
 
-        return false !== $this->disable($uid);
+        return $disabled;
     }
 
     /**

@@ -167,7 +167,9 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
         $mailer->setFromName($GLOBALS['xoopsConfig']['sitename']);
         $mailer->setSubject(sprintf($subject, $GLOBALS['xoopsConfig']['sitename']));
         $mailer->setBody(sprintf($body, $GLOBALS['xoopsConfig']['sitename'], \Xmf\IPAddress::fromRequest()->asReadable()));
-        $mailer->send();
+        if (!$mailer->send()) {
+            throw new \RuntimeException('Mailer refused the notice');
+        }
     } catch (\Throwable $e) {
         try {
             trigger_error('Two-factor notice mail failed', E_USER_WARNING);
