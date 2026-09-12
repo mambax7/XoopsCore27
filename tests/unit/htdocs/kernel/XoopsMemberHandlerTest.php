@@ -514,6 +514,9 @@ class XoopsMemberHandlerTest extends TestCase
      */
     private function retainedFactor(XoopsMySQLDatabase $db): \XoopsUser2faHandler
     {
+        if (!extension_loaded('sodium')) {
+            $this->markTestSkipped('ext-sodium is required');
+        }
         require_once XOOPS_ROOT_PATH . '/class/XoopsTwoFactorCrypto.php';
         $dir = sys_get_temp_dir() . '/xoops2fa-member-' . bin2hex(random_bytes(4));
         mkdir($dir, 0700);

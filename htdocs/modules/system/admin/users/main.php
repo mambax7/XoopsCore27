@@ -76,6 +76,8 @@ switch ($op) {
         form_user(false, $uid);
         if (defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED) {
             xoops_loadLanguage('user2famanage');
+            // An incomplete translation pack must not take the users admin down.
+            defined('_US_2FAM_RESET') || define('_US_2FAM_RESET', 'Reset this user’s two-factor authentication');
             echo '<p><a href="admin.php?fct=users&amp;op=users_2fa_reset&amp;uid=' . (int) $uid . '">' . htmlspecialchars(_US_2FAM_RESET, ENT_QUOTES, 'UTF-8') . '</a></p>';
         }
         break;
