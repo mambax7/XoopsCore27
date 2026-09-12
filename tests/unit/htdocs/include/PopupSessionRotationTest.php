@@ -44,6 +44,8 @@ namespace {
     $xoopsConfig = ['language' => 'english', 'sitename' => 'Test', 'theme_set' => 'default', 'closesite' => 0, 'use_ssl' => 0];
     session_start();
     $initial = session_id();
+    // an earlier identity on the same session must not survive a failed rotation
+    $_SESSION['xoopsUserId'] = 7;
     register_shutdown_function(static function () use ($initial): void {
         file_put_contents(__DIR__ . '/result.json', json_encode(['initial' => $initial, 'final' => session_id(), 'uid' => $_SESSION['xoopsUserId'] ?? null]));
     });

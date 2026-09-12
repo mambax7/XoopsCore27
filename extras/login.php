@@ -90,6 +90,8 @@ if ($op === 'dologin') {
             exit();
         }
         if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+            // A failed rotation must not keep an earlier session's identity alive.
+            $_SESSION = [];
             xoops_error(_US_2FA_STARTAGAIN);
             exit();
         }
