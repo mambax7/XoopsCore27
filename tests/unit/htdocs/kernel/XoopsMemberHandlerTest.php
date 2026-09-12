@@ -1059,7 +1059,14 @@ class XoopsMemberHandlerTest extends TestCase
                  $setVarCalls[] = [$key, $value];
              });
 
-        $this->assertSame($user, $partialHandler->loginUser('legacyuser', $password));
+        // the security log runs while the visitor is still a guest: common.php seeds '' here
+        $previous             = $GLOBALS['xoopsUser'] ?? null;
+        $GLOBALS['xoopsUser'] = '';
+        try {
+            $this->assertSame($user, $partialHandler->loginUser('legacyuser', $password));
+        } finally {
+            $GLOBALS['xoopsUser'] = $previous;
+        }
         $this->assertSame('pass', $setVarCalls[0][0]);
         $this->assertStringStartsWith('$', $setVarCalls[0][1]);
         $this->assertSame(['pass', $hash], $setVarCalls[1]);

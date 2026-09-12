@@ -890,7 +890,8 @@ class XoopsMemberHandler
 
         $errorInfo = [
             'message' => $message,
-            'user_id' => isset($GLOBALS['xoopsUser']) ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
+            // during a login the global is still the '' that common.php seeds, not an object
+            'user_id' => ($GLOBALS['xoopsUser'] ?? null) instanceof XoopsUser ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
             'timestamp' => date('Y-m-d H:i:s')
         ];
 
@@ -967,7 +968,8 @@ class XoopsMemberHandler
         $logData = [
             'event' => $event,
             'timestamp' => date('Y-m-d H:i:s'),
-            'user_id' => isset($GLOBALS['xoopsUser']) ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
+            // during a login the global is still the '' that common.php seeds, not an object
+            'user_id' => ($GLOBALS['xoopsUser'] ?? null) instanceof XoopsUser ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
             'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
         ];
 
