@@ -459,7 +459,12 @@ class XoopsMemberHandler
             } else {
                 $newHash = password_hash($pwd, PASSWORD_DEFAULT);
                 $user->setVar('pass', $newHash);
-                $this->userHandler->insert($user);
+                if (!$this->userHandler->insert($user)) {
+                    // The row still holds the verified hash; keep the object in step with it so
+                    // a digest taken from the object (the two-factor challenge) matches the row.
+                    $user->setVar('pass', $hash);
+                    $this->logSecurityEvent('Password rehash not persisted', ['uid' => (int) $user->getVar('uid')]);
+                }
             }
         }
 

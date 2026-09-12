@@ -25,6 +25,16 @@ use XoopsTotp;
 use XoopsTwoFactorCrypto;
 use XoopsUser2faHandler;
 
+/**
+ * Management paths of XoopsUser2faHandler: enrol, disable, recovery replacement and admin reset
+ *
+ * @category  Test
+ * @package   Kernel
+ * @author    XOOPS Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
 final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
 {
     private const GEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -151,12 +161,24 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
             $this->row = $original;
             $this->sql = [];
             $code = $this->code();
-            if ($case === 'badcode') { $code = 'invalid'; }
-            if ($case === 'generation') { $this->row['generation'] = str_repeat('b', 32); }
-            if ($case === 'locked') { $this->row['locked_until'] = self::NOW + 1; }
-            if ($case === 'disabled') { $this->row['state'] = 'disabled'; }
-            if ($case === 'method') { $this->row['method'] = 'unknown'; }
-            if ($case === 'replay') { $this->row['last_counter'] = XoopsTotp::stepAt(self::NOW) + 1; }
+            if ($case === 'badcode') {
+                $code = 'invalid';
+            }
+            if ($case === 'generation') {
+                $this->row['generation'] = str_repeat('b', 32);
+            }
+            if ($case === 'locked') {
+                $this->row['locked_until'] = self::NOW + 1;
+            }
+            if ($case === 'disabled') {
+                $this->row['state'] = 'disabled';
+            }
+            if ($case === 'method') {
+                $this->row['method'] = 'unknown';
+            }
+            if ($case === 'replay') {
+                $this->row['last_counter'] = XoopsTotp::stepAt(self::NOW) + 1;
+            }
             self::assertFalse($this->handler()->manage(10, self::GEN, $code, '', 'disable', self::NOW), $case);
             self::assertCount(3, $this->sql, $case);
             self::assertSame('ROLLBACK', end($this->sql));

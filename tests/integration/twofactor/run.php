@@ -260,6 +260,7 @@ try {
         check(isset($rehashed['session']['xoops2faSetup']), 'Reauthentication creates pending setup after rehash');
         if ($persistRehash) {
             $persistedHash = file_get_contents($directory . '/accounts/' . $uid);
+            check(is_string($persistedHash), 'Reauthenticated account hash was not persisted');
             check(hash('sha256', $persistedHash) === $rehashed['session']['xoops2faSetup']['passdigest'], 'Setup digest uses reauthenticated object, not stale session actor');
         }
         $rehashedConfirm = $request(['request' => 'manage', 'uid' => $uid, 'session' => $rehashed['session_id'], 'method' => 'POST',

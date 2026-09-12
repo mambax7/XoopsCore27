@@ -1015,10 +1015,54 @@ class XoopsMemberHandlerTest extends TestCase
              ->with('pass', $this->callback(function ($v) { return is_string($v); }));
         $this->userHandler->expects($this->once())
                           ->method('insert')
-                          ->with($user);
+                          ->with($user)
+                          ->willReturn(true);
 
         $result = $partialHandler->loginUser('legacyuser', $password);
         $this->assertSame($user, $result);
+    }
+
+    public function testLoginUserRestoresStoredHashWhenRehashWriteFails(): void
+    {
+        $password = 'legacy_password';
+        $hash     = md5($password);
+
+        $user = $this->createMock(XoopsUser::class);
+        $user->method('pass')
+             ->willReturn($hash);
+        $user->method('getVar')
+             ->willReturn(1);
+
+        $partialHandler = $this->getMockBuilder(XoopsMemberHandler::class)
+                               ->disableOriginalConstructor()
+                               ->onlyMethods(['getColumnCharacterLength'])
+                               ->getMock();
+        $partialHandler->method('getColumnCharacterLength')
+                       ->willReturn(255);
+
+        $this->setProtectedProperty($partialHandler, 'userHandler', $this->userHandler);
+        $this->setProtectedProperty($partialHandler, 'membershipHandler', $this->membershipHandler);
+        $this->setProtectedProperty($partialHandler, 'membersWorkingList', []);
+
+        $this->userHandler->method('getObjects')
+                          ->willReturn([$user]);
+        $this->userHandler->expects($this->once())
+                          ->method('insert')
+                          ->with($user)
+                          ->willReturn(false);
+
+        // the new hash is set, then the stored one is put back so the object matches the row
+        $setVarCalls = [];
+        $user->expects($this->exactly(2))
+             ->method('setVar')
+             ->willReturnCallback(function ($key, $value) use (&$setVarCalls) {
+                 $setVarCalls[] = [$key, $value];
+             });
+
+        $this->assertSame($user, $partialHandler->loginUser('legacyuser', $password));
+        $this->assertSame('pass', $setVarCalls[0][0]);
+        $this->assertStringStartsWith('$', $setVarCalls[0][1]);
+        $this->assertSame(['pass', $hash], $setVarCalls[1]);
     }
 
     public function testLoginUserWithWrongPasswordReturnsFalse(): void
