@@ -414,9 +414,10 @@ if (!empty($_SESSION['xoopsUserId'])) {
     $endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();
     $factorRow  = null;
     if (!$endSession) {
-        // The factor row, read on every request so an enrolment or a reset in
-        // another browser ends this session on its next request; a disable
-        // leaves it signed in, stamped with the disabled row's generation.
+        // The factor row, read on every request so an enrolment in another
+        // browser ends this session on its next request; a disable or an
+        // admin reset (which disables) leaves it signed in, stamped with the
+        // disabled row's generation.
         // A failed lookup on an established session is logged and the
         // request continues; failing closed here would sign out the whole
         // site on a database blip.
