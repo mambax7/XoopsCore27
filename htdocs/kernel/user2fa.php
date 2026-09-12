@@ -775,8 +775,17 @@ final class XoopsUser2faHandler
             $disabled = false !== $this->disable($uid);
         } finally {
             // The reset did not happen: give the file back so the next attempt is not refused as used.
-            if (!$disabled && !rename($used, $file)) {
-                trigger_error(sprintf('Two-factor escape hatch for uid %d could not be restored; remove the used marker by hand', $uid), E_USER_WARNING);
+            if (!$disabled) {
+                // rename() reports its failure with both paths in a warning; keep those out of the page
+                set_error_handler(static fn (): bool => true);
+                try {
+                    $restored = rename($used, $file);
+                } finally {
+                    restore_error_handler();
+                }
+                if (!$restored) {
+                    trigger_error(sprintf('Two-factor escape hatch for uid %d could not be restored; remove the used marker by hand', $uid), E_USER_WARNING);
+                }
             }
         }
 

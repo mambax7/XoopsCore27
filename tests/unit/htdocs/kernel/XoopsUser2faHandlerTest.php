@@ -89,6 +89,8 @@ class XoopsUser2faHandlerTest extends KernelTestCase
 
     /** @var bool|callable(string): bool */
     private mixed $execResult = true;
+    /** @var callable|null runs on every query() with the statement, before the result is produced */
+    private $onQuery = null;
 
     private int $affected = 1;
 
@@ -150,6 +152,9 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         });
         $db->method('query')->willReturnCallback(function (string $statement) {
             $this->sql[] = $statement;
+            if (is_callable($this->onQuery)) {
+                ($this->onQuery)($statement);
+            }
 
             return $this->queryFails ? false : (new \ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor();
         });
@@ -873,6 +878,37 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir . '/does-not-exist'));
         $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchReportsAFailedRestoreWithoutThePaths(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
+        $handler       = $this->handler();
+        $this->rows    = [null]; // no row to lock: disable() refuses, so the file must be given back
+        $this->onQuery = static function () use ($dir): void {
+            // by now the sentinel is the .used marker; a directory in its old place refuses the rename back
+            if (!is_dir($dir . '/2fa-reset-7.txt')) {
+                mkdir($dir . '/2fa-reset-7.txt');
+            }
+        };
+
+        $warnings = [];
+        set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
+            $warnings[] = $msg; // every level: a leaked rename() warning would show up here
+
+            return true;
+        });
+        try {
+            $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        } finally {
+            restore_error_handler();
+            rmdir($dir . '/2fa-reset-7.txt');
+        }
+        $this->assertSame(['Two-factor escape hatch used for uid 7', 'Two-factor escape hatch for uid 7 could not be restored; remove the used marker by hand'], $warnings);
+        $this->assertFileExists($dir . '/2fa-reset-7.used');
+        $this->assertSame([], $this->statements('UPDATE `xoops_user_2fa`'));
     }
 
     #[Test]
