@@ -837,6 +837,30 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     }
 
     #[Test]
+    public function theEscapeHatchRefusesWhenTheUsedMarkerIsADanglingSymlink(): void
+    {
+        $dir     = $this->hatchDir();
+        $handler = $this->handler();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
+        set_error_handler(static fn (): bool => true);
+        try {
+            $linked = symlink($dir . '/missing-target', $dir . '/2fa-reset-7.used');
+        } finally {
+            restore_error_handler();
+        }
+        if (!$linked) {
+            self::markTestSkipped('symlinks cannot be created here');
+        }
+        // file_exists() says false for the dangling link; rename() would still replace it
+        $this->assertFalse(file_exists($dir . '/2fa-reset-7.used'));
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        $this->assertTrue(is_link($dir . '/2fa-reset-7.used'));
+        $this->assertSame([], $this->sql);
+        unlink($dir . '/2fa-reset-7.used');
+    }
+
+    #[Test]
     public function theEscapeHatchRefusesAMissingFileAFileWithoutTheSentinelAndAnotherUidsFile(): void
     {
         $dir     = $this->hatchDir();

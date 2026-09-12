@@ -99,7 +99,10 @@ if ('' === $uname || '' === $pass) {
                     // generation: read it again for the session stamp below.
                     $factorRow = $factorHandler->getRow((int) $user->getVar('uid'));
                 } else {
-                    $refusal = 'second factor required; drop the 2fa-reset file to proceed';
+                    $refusal = sprintf(
+                        'second factor required; create %s containing "reset" to proceed',
+                        XOOPS_VAR_PATH . '/data/2fa-reset-' . (int) $user->getVar('uid') . '.txt'
+                    );
                 }
             }
         } catch (\Throwable $e) {

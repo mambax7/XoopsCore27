@@ -754,7 +754,8 @@ final class XoopsUser2faHandler
         $name = $root . DIRECTORY_SEPARATOR . '2fa-reset-' . $uid;
         $file = $name . '.txt';
         $used = $name . '.used';
-        if (file_exists($used) || is_link($file) || !is_file($file)) {
+        // file_exists() is false for a dangling symlink, which rename() would still replace
+        if (file_exists($used) || is_link($used) || is_link($file) || !is_file($file)) {
             return false;
         }
         $real = realpath($file);

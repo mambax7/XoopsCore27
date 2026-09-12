@@ -186,7 +186,7 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
     }
 };
 
-if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xoops_2fa', 'POST')) {
+if ('POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa', 'POST')) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
         $xo2faVars['error']      = implode("\n", $GLOBALS['xoopsSecurity']->getErrors());
         $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
