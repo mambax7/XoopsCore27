@@ -39,6 +39,6 @@ define('_US_2FAM_BACK', 'Back to account');
 define('_US_2FAM_DONE', 'Two-factor authentication is enabled.');
 define('_US_2FAM_REPLACED', 'Previous recovery codes have been revoked.');
 define('_US_2FAM_NOTICE_SUBJECT', '%s: two-factor authentication changed');
-define('_US_2FAM_NOTICE_BODY', 'Two-factor authentication or recovery codes were changed for your account at %s. If this was not you, contact the site administrator.');
+define('_US_2FAM_NOTICE_BODY', 'Two-factor authentication or recovery codes were changed for your account at %s from %s. If this was not you, contact the site administrator.');
 define('_US_2FAM_RESET_SUBJECT', '%s: an administrator reset your two-factor authentication');
-define('_US_2FAM_RESET_BODY', 'An administrator disabled your authenticator and revoked its recovery codes at %s. Existing signed-in sessions remain active. Sign in and set up your authenticator again. Contact the site administrator if this was unexpected.');
+define('_US_2FAM_RESET_BODY', 'An administrator disabled your authenticator and revoked its recovery codes at %s from %s. Existing signed-in sessions remain active. Sign in and set up your authenticator again. Contact the site administrator if this was unexpected.');

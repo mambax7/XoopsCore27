@@ -62,6 +62,7 @@ function xoops_getHandler(string $name): object
 {
     return match ($name) {
         'user2fa' => $GLOBALS['factorHandler'],
+        'tplfile' => new class { public function find(...$args): array { return [new stdClass()]; } },
         'member' => new class {
             public function getUser(int $uid): XoopsUser { return new XoopsUser($uid); }
             public function insertUser(XoopsUser $user): bool { return true; }

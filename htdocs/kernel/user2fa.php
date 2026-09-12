@@ -439,6 +439,7 @@ final class XoopsUser2faHandler
      * @param string|null $expectedGeneration generation of the rejected challenge; null for legacy callers
      *
      * @return array{locked: bool, transitioned: bool}|false
+     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
      */
     public function recordFailure(int $uid, int $now, ?string $expectedGeneration = null): array|false
     {
@@ -492,6 +493,7 @@ final class XoopsUser2faHandler
      * @param string $pendingGeneration the generation the pending login recorded
      *
      * @return bool
+     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
      */
     public function acceptRecovery(int $uid, string $code, string $pendingGeneration): bool
     {
@@ -531,6 +533,8 @@ final class XoopsUser2faHandler
      * @param string|null $expectedGeneration setup generation, empty for no row; null for legacy callers
      *
      * @return array|false the new generation and recovery codes
+     * @throws \RuntimeException when the row lookup fails
+     * @throws \Random\RandomException when the secure random source fails
      * @phpstan-return array{generation: string, codes: list<string>}|false
      */
     public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now, ?string $expectedGeneration = null): array|false
@@ -591,6 +595,8 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return string|false the new generation
+     * @throws \RuntimeException when the row lookup fails
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function disable(int $uid): string|false
     {
@@ -686,6 +692,8 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return string[]|false ten new codes
+     * @throws \RuntimeException when the row lookup fails
+     * @throws \Random\RandomException when the secure random source fails
      * @phpstan-return list<string>|false
      */
     public function regenerateRecoveryCodes(int $uid): array|false
@@ -765,9 +773,9 @@ final class XoopsUser2faHandler
         try {
             $disabled = false !== $this->disable($uid);
         } finally {
-            if (!$disabled) {
-                // The reset did not happen: give the file back so the next attempt is not refused as used.
-                rename($used, $file);
+            // The reset did not happen: give the file back so the next attempt is not refused as used.
+            if (!$disabled && !rename($used, $file)) {
+                trigger_error(sprintf('Two-factor escape hatch for uid %d could not be restored; remove the used marker by hand', $uid), E_USER_WARNING);
             }
         }
 

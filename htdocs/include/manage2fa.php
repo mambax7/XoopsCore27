@@ -49,6 +49,27 @@ $message = '';
 $codes = [];
 $setupSecret = '';
 $qr = '';
+/**
+ * Local renderer only; the manual key remains available without the QR package.
+ *
+ * @param string $secret the pending base32 secret
+ *
+ * @return string data URI, or '' when no image can be produced
+ */
+$qrFor = static function (string $secret) use ($user): string {
+    if (!class_exists(\chillerlan\QRCode\QRCode::class)) {
+        return '';
+    }
+    try {
+        $issuer = (string) $GLOBALS['xoopsConfig']['sitename'];
+        // Key URI label: issuer and account are encoded separately around a literal colon.
+        $uri = 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode((string) $user->getVar('uname', 'n')) . '?' . http_build_query(['secret' => $secret, 'issuer' => $issuer, 'algorithm' => 'SHA1', 'digits' => 6, 'period' => 30], '', '&', PHP_QUERY_RFC3986);
+
+        return (new \chillerlan\QRCode\QRCode(new \chillerlan\QRCode\QROptions(['outputBase64' => true])))->render($uri);
+    } catch (\Throwable) {
+        return '';
+    }
+};
 $row = null;
 $installed = $handler->isInstalled();
 try {
@@ -82,9 +103,6 @@ try {
                         ++$_SESSION['xoops2faSetup']['attempts'];
                         if ($_SESSION['xoops2faSetup']['attempts'] >= 5) {
                             unset($_SESSION['xoops2faSetup']);
-                        } else {
-                            // Keep the manual key on the retry; the pending secret is still the one to enter.
-                            $setupSecret = $secret;
                         }
                         $error = _US_2FA_BADCODE;
                     } else {
@@ -97,6 +115,7 @@ try {
                             unset($_SESSION['xoops2faSetup']);
                             throw new \RuntimeException('Factor changed before completion');
                         }
+                        $row = $current;
                         xoops_login_set_session($user, $result['generation'], true);
                         if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
                             xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
@@ -119,6 +138,7 @@ try {
                     if (false === $handler->disable($uid)) {
                         throw new \RuntimeException('Reset refused');
                     }
+                    $row = null;
                     trigger_error(sprintf('Two-factor admin reset: actor %d, uid %d', (int) $actor->getVar('uid'), $uid), E_USER_NOTICE);
                     xoops_2fa_notice($user, _US_2FAM_RESET_SUBJECT, _US_2FAM_RESET_BODY);
                     $message = _US_2FAM_RESET_DONE;
@@ -141,16 +161,7 @@ try {
                     if (!is_string($setupSecret)) {
                         throw new \RuntimeException('Setup secret unavailable');
                     }
-                    // Local renderer only; manual key remains available without the QR package.
-                    if (class_exists(\chillerlan\QRCode\QRCode::class)) {
-                        try {
-                            $issuer = (string) $GLOBALS['xoopsConfig']['sitename'];
-                            $uri = 'otpauth://totp/' . rawurlencode($issuer . ':' . $user->getVar('uname', 'n')) . '?' . http_build_query(['secret' => $setupSecret, 'issuer' => $issuer, 'algorithm' => 'SHA1', 'digits' => 6, 'period' => 30], '', '&', PHP_QUERY_RFC3986);
-                            $qr = (new \chillerlan\QRCode\QRCode(new \chillerlan\QRCode\QROptions(['outputBase64' => true])))->render($uri);
-                        } catch (\Throwable) {
-                            $qr = '';
-                        }
-                    }
+                    $qr = $qrFor($setupSecret);
                 } elseif (in_array($action, ['disable', 'regenerate'], true) && $enrolled) {
                     $result = $handler->manage($uid, $generation, $code, $recovery, $action, $now);
                     if (false === $result) {
@@ -161,6 +172,9 @@ try {
                         }
                     } else {
                         $codes = is_array($result) ? $result : [];
+                        if ('disable' === $action) {
+                            $row = null;
+                        }
                         $message = 'disable' === $action ? _US_2FAM_DISABLED : _US_2FAM_REPLACED;
                         xoops_2fa_notice($user, _US_2FAM_NOTICE_SUBJECT, _US_2FAM_NOTICE_BODY);
                     }
@@ -168,13 +182,35 @@ try {
             }
         }
     }
-    $row = $handler->getRow($uid);
+    try {
+        $row = $handler->getRow($uid);
+    } catch (\Throwable $e) {
+        if ('' === $message) {
+            throw $e;
+        }
+        // The action itself committed: report it, with the row as the action left it.
+    }
 } catch (\Throwable) {
     $error = _US_2FAM_UNAVAILABLE;
 }
 
 $enrolled = is_array($row) && XoopsUser2faHandler::ROW_DISABLED !== $row['state'];
 $confirm = !$adminReset && !$enrolled && xoops_2fa_setup_valid($_SESSION['xoops2faSetup'] ?? null, $uid, (string) $user->getVar('pass', 'n'), is_array($row) ? (string) $row['generation'] : '', $now);
+if ($confirm && '' === $setupSecret) {
+    // A pending setup keeps showing its key and QR: on a wrong code, a refresh or a new tab. Nothing is written.
+    try {
+        $secret = $crypto->open($_SESSION['xoops2faSetup']['blob'], XoopsTwoFactorCrypto::pendingAad($uid));
+    } catch (\Throwable) {
+        $secret = null;
+    }
+    if (is_string($secret)) {
+        $setupSecret = $secret;
+        $qr = $qrFor($secret);
+    } else {
+        unset($_SESSION['xoops2faSetup']);
+        $confirm = false;
+    }
+}
 require_once XOOPS_ROOT_PATH . '/class/template.php';
 $tpl = new XoopsTpl();
 $tpl->caching = 0;
@@ -194,5 +230,10 @@ $tpl->assign(['labels' => $labels, 'admin_reset' => $adminReset, 'uid' => $uid,
     'back_url' => $adminReset ? XOOPS_URL . '/modules/system/admin.php?fct=users' : XOOPS_URL . '/userinfo.php?uid=' . $uid,
     'token_html' => $GLOBALS['xoopsSecurity']->getTokenHTML(), 'langcode' => _LANGCODE, 'charset' => _CHARSET,
     'direction' => \Xmf\I18n\Direction::dir(_LANGCODE)]);
-$tpl->display('db:system_user2fa_manage.tpl');
+// The row is registered by the System module update; until then the shipped file renders the page.
+$template = 'db:system_user2fa_manage.tpl';
+if ([] === xoops_getHandler('tplfile')->find('default', null, null, null, 'system_user2fa_manage.tpl', true)) {
+    $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa_manage.tpl';
+}
+$tpl->display($template);
 exit();

@@ -95,12 +95,6 @@ if ($op === 'editprofile') {
     include_once $GLOBALS['xoops']->path('header.php');
     include_once __DIR__ . '/include/forms.php';
     $form = profile_getUserForm($GLOBALS['xoopsUser']);
-    if (defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED) {
-        xoops_loadLanguage('user2famanage');
-        // An incomplete translation pack must not take the profile form down.
-        defined('_US_2FAM_TITLE') || define('_US_2FAM_TITLE', 'Two-factor authentication');
-        $form->addElement(new XoopsFormLabel(_US_2FAM_TITLE, '<a href="' . htmlspecialchars(XOOPS_URL . '/user.php?op=2fa_manage', ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(_US_2FAM_TITLE, ENT_QUOTES, 'UTF-8') . '</a>'));
-    }
     $form->assign($GLOBALS['xoopsTpl']);
     if (!empty($stop)) {
         $GLOBALS['xoopsTpl']->assign('stop', $stop);

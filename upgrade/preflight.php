@@ -439,7 +439,9 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
         && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_decrypt');
     $upgradeControl->loadLanguage('twofactor');
     echo '<div class="alert alert-' . ($sodiumAvailable ? 'success' : 'warning') . '">'
-        . htmlspecialchars($sodiumAvailable ? _XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK : _XOOPS_UPGRADE_TWOFACTOR_SODIUM_MISSING, ENT_QUOTES, 'UTF-8')
+        . htmlspecialchars($sodiumAvailable
+            ? (defined('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK') ? _XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK : 'Sodium is available for two-factor authentication.')
+            : (defined('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_MISSING') ? _XOOPS_UPGRADE_TWOFACTOR_SODIUM_MISSING : 'Two-factor authentication requires the PHP sodium extension.'), ENT_QUOTES, 'UTF-8')
         . '</div>';
 
     // All form inputs are read from POST only: the forms submit via POST, and

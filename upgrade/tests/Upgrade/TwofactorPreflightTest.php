@@ -71,7 +71,13 @@ final class TwofactorPreflightTest extends TestCase
                 }, $expression);
                 self::assertSame($missing === null, eval('return ' . $probe . ';'), $file . ': ' . ($missing ?? 'available'));
             }
-            self::assertStringContainsString('TWOFACTOR_SODIUM', $source);
+            // the real symbols, each with an English fallback for an incomplete language pack
+            $constants = str_ends_with($file, 'preflight.php')
+                ? ['_XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK', '_XOOPS_UPGRADE_TWOFACTOR_SODIUM_MISSING']
+                : ['TWOFACTOR_SODIUM', 'TWOFACTOR_SODIUM_MSG'];
+            foreach ($constants as $constant) {
+                self::assertMatchesRegularExpression("/defined\\('" . $constant . "'\\) \\? " . $constant . " : '[^']+'/", $source, $file . ': ' . $constant);
+            }
             self::assertStringNotContainsString('$blockNext = !$sodiumAvailable', $source);
         }
     }

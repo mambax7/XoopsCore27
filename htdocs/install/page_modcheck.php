@@ -110,9 +110,9 @@ ob_start();
         </tbody>
     </table>
 
-    <p><?php echo xoDiag($sodiumAvailable ? 1 : 0, TWOFACTOR_SODIUM); ?></p>
+    <p><?php echo xoDiag($sodiumAvailable ? 1 : 0, defined('TWOFACTOR_SODIUM') ? TWOFACTOR_SODIUM : 'Sodium extension: required for two-factor authentication'); ?></p>
     <?php if (!$sodiumAvailable): ?>
-        <p><?php echo TWOFACTOR_SODIUM_MSG; ?></p>
+        <p><?php echo defined('TWOFACTOR_SODIUM_MSG') ? TWOFACTOR_SODIUM_MSG : 'Enable the PHP sodium extension for the web server and reload this page before enabling two-factor authentication.'; ?></p>
     <?php endif; ?>
 
     <h3><?php echo RECOMMENDED_EXTENSIONS; ?></h3>

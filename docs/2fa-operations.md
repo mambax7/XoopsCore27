@@ -83,8 +83,10 @@ After identifying the account UID through trusted administration records:
 3. The file is renamed to `2fa-reset-<uid>.used` **before** the database
    reset. A pre-existing `.used` marker or a failed rename refuses the reset.
 4. Check the outcome, remove the `.used` marker after resolving the incident,
-   and enrol again. If the database reset failed after consumption, repair
-   that failure before removing the marker and creating a new sentinel.
+   and enrol again. If the database reset fails after consumption, the file
+   is renamed back to `.txt` so the same sentinel can be retried once the
+   failure is repaired. Should that rename fail too, a warning is logged and
+   the `.used` marker stays; remove it by hand before the next attempt.
 
 Markers accumulate until an administrator removes them. A `.php` file
 returning `true`, described in an earlier proposal, is not recognised.

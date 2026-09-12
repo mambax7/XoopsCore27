@@ -59,9 +59,9 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_DONE', 'Two-factor authentication is enabled.');
 - added define('_US_2FAM_REPLACED', 'Previous recovery codes have been revoked.');
 - added define('_US_2FAM_NOTICE_SUBJECT', '%s: two-factor authentication changed');
-- added define('_US_2FAM_NOTICE_BODY', 'Two-factor authentication or recovery codes were changed for your account at %s. If this was not you, contact the site administrator.');
+- added define('_US_2FAM_NOTICE_BODY', 'Two-factor authentication or recovery codes were changed for your account at %s from %s. If this was not you, contact the site administrator.');
 - added define('_US_2FAM_RESET_SUBJECT', '%s: an administrator reset your two-factor authentication');
-- added define('_US_2FAM_RESET_BODY', 'An administrator disabled your authenticator and revoked its recovery codes at %s. Existing signed-in sessions remain active. Sign in and set up your authenticator again. Contact the site administrator if this was unexpected.');
+- added define('_US_2FAM_RESET_BODY', 'An administrator disabled your authenticator and revoked its recovery codes at %s from %s. Existing signed-in sessions remain active. Sign in and set up your authenticator again. Contact the site administrator if this was unexpected.');
 
 /upgrade/language/english/twofactor.php (new file)
 - added define('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK', 'Sodium is available for two-factor authentication.');

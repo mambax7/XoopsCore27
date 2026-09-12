@@ -67,7 +67,12 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
         ]);
         $tpl->assign($vars);
         $tpl->caching = 0;
-        $tpl->display('db:system_user2fa.tpl');
+        // The row is registered by the System module update; until then the shipped file renders the page.
+        $template = 'db:system_user2fa.tpl';
+        if ([] === xoops_getHandler('tplfile')->find('default', null, null, null, 'system_user2fa.tpl', true)) {
+            $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl';
+        }
+        $tpl->display($template);
         exit();
     }
 }

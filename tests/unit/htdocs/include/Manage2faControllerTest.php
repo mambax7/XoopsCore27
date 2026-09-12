@@ -271,7 +271,13 @@ class XoopsUser2faHandler {
     public function recordFailure(int $uid, int $now, string $generation): array { $GLOBALS['manageLog'][] = "failure:$uid:$generation"; return ['locked' => false, 'transitioned' => false]; }
     public function disable(int $uid): string { $GLOBALS['manageLog'][] = "disable:$uid"; $GLOBALS['manageRow'] = ['state' => 'disabled', 'generation' => 'disabledgen']; return 'disabledgen'; }
 }
-function xoops_getHandler(string $name): object { return $name === 'user2fa' ? new XoopsUser2faHandler() : new class { public function getUser(int $uid): XoopsUser { return new XoopsUser($uid); } }; }
+function xoops_getHandler(string $name): object {
+    return match ($name) {
+        'user2fa' => new XoopsUser2faHandler(),
+        'tplfile' => new class { public function find(...$args): array { return [new \stdClass()]; } },
+        default => new class { public function getUser(int $uid): XoopsUser { return new XoopsUser($uid); } },
+    };
+}
 function xoops_2fa_reauthenticate(XoopsUser $user, string $password): XoopsUser|false { $GLOBALS['manageLog'][] = 'reauth:' . $user->getVar('uid'); return $GLOBALS['manageAuth'] ? $user : false; }
 function xoops_login_set_session(XoopsUser $user, string $generation, bool $verified): void {
     $_SESSION = [];

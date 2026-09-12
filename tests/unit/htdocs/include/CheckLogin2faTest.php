@@ -474,6 +474,7 @@ final class CheckLogin2faTest extends TestCase
                     public function acceptRecovery(int $uid, string $code, string $gen): bool { $GLOBALS['sandboxLog'][] = "acceptRecovery:$uid:$code:$gen"; return $GLOBALS['sandboxRecovery']; }
                     public function resetByEscapeHatch(int $uid): bool { $GLOBALS['sandboxLog'][] = "hatch:$uid"; return $GLOBALS['sandboxHatch']; }
                 },
+                'tplfile' => new class { public function find(...$args): array { return [new \stdClass()]; } },
             };
         }
         function xoops_getMailer(): object {
