@@ -753,7 +753,9 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     #[Test]
     public function policyIsOffWhenAbsentAndFallsBackToOptionalForUnknownValues(): void
     {
-        $this->assertSame('off', XoopsUser2faHandler::policy([]));
+        // an empty row set is a failed configuration read: fail closed
+        $this->assertSame('optional', XoopsUser2faHandler::policy([]));
+        $this->assertSame('off', XoopsUser2faHandler::policy(['sitename' => 'x']));
         $this->assertSame('off', XoopsUser2faHandler::policy(['twofactor_mode' => 'off']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'optional']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'required']));

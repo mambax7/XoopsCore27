@@ -150,7 +150,9 @@ final class XoopsTotp
      *
      * Only steps above $lastCounter are considered, so a step is accepted
      * once and a code for N-1 is refused after N: the window tolerates
-     * clock skew, not reuse. The caller records the returned step.
+     * clock skew, not reuse. The caller records the returned step. The
+     * window is scanned newest first, so when two steps happen to share a
+     * code the higher one is recorded and the code cannot be replayed.
      *
      * @param string $secretBase32 shared secret in base32
      * @param string $code         code as typed
@@ -165,7 +167,7 @@ final class XoopsTotp
             return false;
         }
         $current = self::stepAt($now);
-        for ($offset = -self::WINDOW; $offset <= self::WINDOW; $offset++) {
+        for ($offset = self::WINDOW; $offset >= -self::WINDOW; $offset--) {
             $step = $current + $offset;
             if ($step <= $lastCounter) {
                 continue;

@@ -218,7 +218,9 @@ final class XoopsUser2faHandler
     /**
      * The site policy, validated. A value this code does not know (including
      * the deferred "required") falls back to optional; an absent preference
-     * means the 2.7.4 patch has not run and the feature is off.
+     * means the 2.7.4 patch has not run and the feature is off. An empty row
+     * set is a failed configuration read (see XOOPS_2FA_INSTALLED in
+     * include/common.php), so every login gate fails closed on it.
      *
      * @param array $config the XOOPS_CONF row set ($xoopsConfig)
      *
@@ -226,6 +228,9 @@ final class XoopsUser2faHandler
      */
     public static function policy(array $config): string
     {
+        if ([] === $config) {
+            return self::POLICY_OPTIONAL;
+        }
         if (!array_key_exists('twofactor_mode', $config)) {
             return self::POLICY_OFF;
         }

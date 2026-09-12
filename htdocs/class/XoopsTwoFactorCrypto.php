@@ -203,6 +203,7 @@ final class XoopsTwoFactorCrypto
      * @param string $aad   associated data (rowAad() or pendingAad())
      *
      * @return string|null 'v1:' + base64(nonce || ciphertext), or null without a key
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function seal(string $plain, string $aad): ?string
     {
