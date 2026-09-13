@@ -111,6 +111,79 @@ body.dark-mode .confirmMsg {
 }
 
 
+/* jGrowl redirect messages are appended to body, outside the admin layout.
+   Keep the plugin's empty placeholder hidden; its animation reveals messages. */
+body > div.jGrowl {
+    position: fixed;
+    z-index: 9999;
+    inset-block-start: 1rem;
+    inset-inline-end: 1rem;
+    width: min(32rem, calc(100% - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+}
+
+body > div.jGrowl.center {
+    inset-inline: 0;
+    margin-inline: auto;
+}
+
+body > div.jGrowl.top-left,
+body > div.jGrowl.bottom-left {
+    inset-inline-start: 1rem;
+    inset-inline-end: auto;
+}
+
+body > div.jGrowl.bottom-left,
+body > div.jGrowl.bottom-right {
+    inset-block-start: auto;
+    inset-block-end: 1rem;
+}
+
+div.jGrowl .jGrowl-notification,
+div.jGrowl .jGrowl-closer {
+    display: none;
+    padding: 1rem;
+    margin-block-end: .5rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-inline-start: 4px solid var(--primary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow-wrap: anywhere;
+    pointer-events: auto;
+}
+
+div.jGrowl .jGrowl-header {
+    font-weight: 600;
+}
+
+div.jGrowl .jGrowl-close {
+    float: inline-end;
+    min-width: 44px;
+    min-height: 44px;
+    margin-inline-start: .5rem;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+div.jGrowl .jGrowl-close:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+div.jGrowl .jGrowl-closer {
+    cursor: pointer;
+    text-align: center;
+}
+
 /* ===================================
    XOOPS Admin Content Overrides
    Style the old XOOPS admin tables/forms

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Modern jGrowl regression check</title>
+    <link rel="stylesheet" href="../css/modern.css">
+    <link rel="stylesheet" href="../css/xoops.css">
+    <link rel="stylesheet" href="../css/dark.css">
+    <link rel="stylesheet" href="../css/fixes.css">
+    <script src="../../../../../browse.php?Frameworks/jquery/jquery.js"></script>
+    <script src="../../../../../browse.php?Frameworks/jquery/plugins/jquery.jgrowl.js"></script>
+</head>
+<body>
+    <!-- Open this file through the XOOPS web server. No login or database writes.
+         Repeat at a narrow viewport to check responsive positioning. -->
+    <main style="min-height: 1600px"><h1>Modern jGrowl regression check</h1><pre id="result">RUNNING</pre></main>
+    <script>
+    (async () => {
+        const check = (condition, message) => { if (!condition) throw new Error(message); };
+        const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const notice = () => document.querySelector('.jGrowl-message')?.closest('.jGrowl-notification');
+        try {
+            // Real plugin and core redirect options, with a long admin page.
+            jQuery.jGrowl('Settings saved', { life: 3000, position: 'center', speed: 'slow', sticky: true });
+            await wait(1100);
+            const container = document.getElementById('jGrowl');
+            check(getComputedStyle(container).position === 'fixed', 'Notification is not fixed to the viewport');
+            const rect = notice().getBoundingClientRect();
+            check(rect.top >= 0 && rect.bottom <= innerHeight, 'Notification is off screen');
+            check(rect.left >= 0 && rect.right <= document.documentElement.clientWidth, 'Notification overflows horizontally');
+            check(getComputedStyle(container.firstElementChild).display === 'none', 'Empty plugin placeholder is visible');
+            const light = getComputedStyle(notice()).backgroundColor;
+            document.body.classList.add('dark-mode');
+            check(getComputedStyle(notice()).backgroundColor !== light, 'Dark background did not change');
+            check(getComputedStyle(notice()).color !== getComputedStyle(notice()).backgroundColor, 'Unreadable dark text');
+            document.documentElement.dir = 'rtl';
+            check(Math.abs(container.getBoundingClientRect().left - (document.documentElement.clientWidth - container.offsetWidth) / 2) < 2, 'RTL center alignment failed');
+            notice().querySelector('.jGrowl-close').click();
+            await wait(750);
+            check(!notice(), 'Close button failed');
+            jQuery.jGrowl('Timed message', { life: 100, position: 'center', speed: 0 });
+            await wait(1000);
+            check(!notice(), 'Automatic dismissal failed');
+            document.getElementById('result').textContent = 'PASS: viewport position, width, placeholder, dark mode, RTL, close and automatic dismissal';
+            document.documentElement.dataset.testResult = 'pass';
+        } catch (error) {
+            document.getElementById('result').textContent = 'FAIL: ' + error.message;
+            document.documentElement.dataset.testResult = 'fail';
+        }
+    })();
+    </script>
+</body>
+</html>
