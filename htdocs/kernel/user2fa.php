@@ -800,7 +800,11 @@ final class XoopsUser2faHandler
                     restore_error_handler();
                 }
                 if (!$restored) {
-                    trigger_error(sprintf('Two-factor escape hatch for uid %d could not be restored; remove the used marker by hand', $uid), E_USER_WARNING);
+                    try {
+                        trigger_error(sprintf('Two-factor escape hatch for uid %d could not be restored; remove the used marker by hand', $uid), E_USER_WARNING);
+                    } catch (\Throwable) {
+                        // A throwing diagnostic handler must not replace the failure that brought us here.
+                    }
                 }
             }
         }
