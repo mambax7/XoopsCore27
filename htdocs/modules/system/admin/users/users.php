@@ -60,6 +60,11 @@ function xoops_2fa_admin_status_row(int $uid): XoopsFormLabel
         // A lookup that fails is not "not enrolled": say so, and keep the reset reachable.
         $row   = null;
         $known = false;
+        try {
+            trigger_error('Two-factor status for uid ' . $uid . ' could not be read', E_USER_WARNING);
+        } catch (\Throwable) {
+            // The page still renders whatever a diagnostic handler does.
+        }
     }
     $enrolled = is_array($row) && XoopsUser2faHandler::ROW_DISABLED !== $row['state'];
     if (!$known) {

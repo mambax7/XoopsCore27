@@ -225,6 +225,8 @@ final class TwoFactorManagementTest extends TestCase
         self::assertSame('', xoops_2fa_posted_action(['begin']));
     }
 
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
     public function testMailedCodeDeliveryReportsCooldownFailureAndTheMaskedAddress(): void
     {
         foreach (['_US_2FA_SEND_WAIT' => 'wait', '_US_2FA_SEND_FAILED' => 'failed', '_US_2FA_SENT' => 'sent to %s',

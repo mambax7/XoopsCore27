@@ -68,6 +68,33 @@ $qrFor = static function (string $secret) use ($user): string {
         return '';
     }
 };
+/**
+ * Everything both confirmations do once the factor row is written: check that
+ * the row is the one just enrolled, stamp the session, drop the remember-me
+ * cookies, show the recovery codes and tell the account. One copy: session
+ * rotation and cookie clearing are security-relevant enough not to drift.
+ *
+ * @param array $result the enrolment result: its generation and recovery codes
+ *
+ * @return void
+ */
+$completeEnrolment = static function (array $result) use ($handler, $uid, &$user, &$row, &$codes, &$message): void {
+    $current = $handler->getRow($uid);
+    if (!is_array($current) || $current['state'] !== XoopsUser2faHandler::ROW_ENROLLED || !hash_equals($result['generation'], $current['generation'])) {
+        unset($_SESSION['xoops2faSetup']);
+        throw new \RuntimeException('Factor changed before completion');
+    }
+    $row = $current;
+    xoops_login_set_session($user, $result['generation'], true);
+    if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
+        xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
+        xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
+    }
+    $codes   = $result['codes'];
+    $message = _US_2FAM_DONE;
+    unset($_SESSION['xoops2faSetup']);
+    xoops_2fa_notice($user, _US_2FAM_NOTICE_SUBJECT, _US_2FAM_NOTICE_BODY);
+};
 $row = null;
 $installed = $handler->isInstalled();
 try {
@@ -102,21 +129,7 @@ try {
                         }
                         $error = _US_2FA_BADCODE;
                     } else {
-                        $current = $handler->getRow($uid);
-                        if (!is_array($current) || $current['state'] !== XoopsUser2faHandler::ROW_ENROLLED || !hash_equals($result['generation'], $current['generation'])) {
-                            unset($_SESSION['xoops2faSetup']);
-                            throw new \RuntimeException('Factor changed before completion');
-                        }
-                        $row = $current;
-                        xoops_login_set_session($user, $result['generation'], true);
-                        if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
-                            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
-                            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
-                        }
-                        $codes = $result['codes'];
-                        $message = _US_2FAM_DONE;
-                        unset($_SESSION['xoops2faSetup']);
-                        xoops_2fa_notice($user, _US_2FAM_NOTICE_SUBJECT, _US_2FAM_NOTICE_BODY);
+                        $completeEnrolment($result);
                     }
                 } else {
                     $secret = $crypto->open($pending['blob'], XoopsTwoFactorCrypto::pendingAad($uid));
@@ -137,20 +150,7 @@ try {
                         if (false === $result) {
                             throw new \RuntimeException('Enrolment refused');
                         }
-                        $current = $handler->getRow($uid);
-                        if (!is_array($current) || $current['state'] !== XoopsUser2faHandler::ROW_ENROLLED || !hash_equals($result['generation'], $current['generation'])) {
-                            unset($_SESSION['xoops2faSetup']);
-                            throw new \RuntimeException('Factor changed before completion');
-                        }
-                        $row = $current;
-                        xoops_login_set_session($user, $result['generation'], true);
-                        if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
-                            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
-                            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
-                        }
-                        $codes = $result['codes'];
-                        $message = _US_2FAM_DONE;
-                        xoops_2fa_notice($user, _US_2FAM_NOTICE_SUBJECT, _US_2FAM_NOTICE_BODY);
+                        $completeEnrolment($result);
                     }
                 }
             } elseif ('send' === $action && !$adminReset) {

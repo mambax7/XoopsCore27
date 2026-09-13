@@ -745,8 +745,8 @@ final class XoopsUser2faHandler
      * @param int         $now                unix time
      * @param string|null $expectedGeneration the generation the setup began against
      *
-     * @return array{generation: string, codes: string[]}|false
-     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
+     * @return array{generation: string, codes: string[]}|false false only when the code itself is refused
+     * @throws \RuntimeException when the key, the transaction, the row lookup, the token consumption or the write fails
      * @throws \Random\RandomException when the secure random source fails
      */
     public function enrolEmail(int $uid, string $code, int $now, ?string $expectedGeneration = null): array|false
@@ -759,12 +759,24 @@ final class XoopsUser2faHandler
             if (null !== $row && self::ROW_DISABLED !== $row['state']) {
                 return false;
             }
-            $token = preg_match('/^[0-9]{6}$/', $code) ? $this->mailCodeToken($code) : null;
-            if (null === $token || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $token, true)) {
+            if (!preg_match('/^[0-9]{6}$/', $code)) {
                 return false;
             }
+            $token = $this->mailCodeToken($code);
+            if (null === $token) {
+                // No site key: the setup cannot proceed, and this is not a wrong code.
+                throw new \RuntimeException('Two-factor code key unavailable');
+            }
+            if (!$this->tokens->verify($uid, self::EMAIL_SCOPE, $token, true)) {
+                return false;
+            }
+            $written = $this->writeEnrolmentLocked($row, $uid, self::METHOD_EMAIL, null, $now, 0);
+            if (false === $written) {
+                // The code was right and is now spent: a failed write is unavailable, not a bad guess.
+                throw new \RuntimeException('Two-factor enrolment write failed');
+            }
 
-            return $this->writeEnrolmentLocked($row, $uid, self::METHOD_EMAIL, null, $now, 0);
+            return $written;
         }, true);
     }
 

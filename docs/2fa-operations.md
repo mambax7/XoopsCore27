@@ -36,9 +36,12 @@ it within ten minutes. Each code works once, one is issued per minute, and
 a fresh one can be requested from the page. At login the challenge page
 mails a code when it opens and offers "Send a new code". This method is
 weaker than an app: whoever reads the mailbox passes the step, and the
-mailbox usually also resets the password. Like the authenticator method it
-needs the site key, and so the sodium extension that provisions it. Both
-methods share recovery codes, the lockout and the administrator reset.
+mailbox usually also resets the password. It authenticates its codes with
+the site key, which sodium provisions, so a site that never had the
+extension cannot offer either method; a site that has a key keeps mailing
+and checking codes even if the extension is later disabled, because the
+authentication is a keyed hash and only sealing needs sodium. Both methods
+share recovery codes, the lockout and the administrator reset.
 
 Plain HTTP displays a warning; use HTTPS in production.
 

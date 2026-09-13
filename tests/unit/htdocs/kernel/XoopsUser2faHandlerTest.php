@@ -939,6 +939,19 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->affected = 0;
         $this->assertFalse($this->handler()->enrolEmail(10, '123456', self::NOW, ''), 'an unknown or expired code enrols nothing');
         $this->assertSame([], $this->statements('INSERT INTO `xoops_user_2fa`'));
+
+        // A code that was accepted and is now spent: a failed write is unavailable, not a wrong code.
+        $this->sql        = [];
+        $this->rows       = [false];
+        $this->affected   = 1;
+        $this->execResult = static fn (string $statement): bool => !str_starts_with($statement, 'INSERT INTO `xoops_user_2fa`');
+        try {
+            $this->handler()->enrolEmail(10, '123456', self::NOW, '');
+            $this->fail('a failed enrolment write must not read as a wrong code');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Two-factor enrolment write failed', $e->getMessage());
+        }
+        $this->execResult = true;
     }
 
     #[Test]
