@@ -314,3 +314,7 @@ define('_MD_AM_SENDMAIL_HELP_MISSING_BIN', 'No valid sendmail-compatible binary 
 // 2.7.3
 define('_MD_AM_ONLINETRACKING', 'Track who is online?');
 define('_MD_AM_ONLINETRACKINGDSC', 'Records each visitor in the online table so the "Who is Online" block and the online list can report member and guest counts. Costs a couple of small queries per page view. Turn this off if you do not need those figures - the block will then show nothing rather than wrong numbers.');
+define('_MD_AM_TWOFACTORMODE', 'Two-factor authentication');
+define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol a time-based code app and challenges those who have.');
+define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
+define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');

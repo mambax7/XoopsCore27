@@ -173,6 +173,14 @@ $xoopsDB = XoopsDatabaseFactory::getDatabaseConnection();
 $config_handler = xoops_getHandler('config');
 $xoopsConfig    = $config_handler->getConfigsByCat(XOOPS_CONF);
 
+// The two-factor feature is installed when its preference row came from the
+// database. Captured before the file configs merge so a file override cannot
+// fake installation. An empty result means the configuration read failed,
+// not that the feature is absent, so that case counts as installed and the
+// factor lookup decides: fail closed, never "no factor". Read by
+// XoopsUser2faHandler.
+defined('XOOPS_2FA_INSTALLED') || define('XOOPS_2FA_INSTALLED', [] === $xoopsConfig || array_key_exists('twofactor_mode', $xoopsConfig));
+
 /**
  * Merge file and db configs.
  */

@@ -15,6 +15,7 @@
     "php": "^8.2",
     "ext-iconv": "*",
     "ext-mbstring": "*",
+    "ext-sodium": "*",
 
     "boenrobot/money_format_polyfill": "^1.0",
     "dflydev/apache-mime-types": "^1.0",

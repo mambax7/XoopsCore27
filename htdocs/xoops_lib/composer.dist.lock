@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2c62ffb9156618f97fa3f0ff81ea9597",
+    "content-hash": "e4b0ca3d7fb166e7061201d31a9f4cd2",
     "packages": [
         {
             "name": "boenrobot/money_format_polyfill",
@@ -1889,7 +1889,8 @@
     "platform": {
         "php": "^8.2",
         "ext-iconv": "*",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "ext-sodium": "*"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"

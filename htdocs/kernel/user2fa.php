@@ -1,0 +1,573 @@
+<?php
+/**
+ * XOOPS second-factor handler
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.7.4
+ */
+
+declare(strict_types=1);
+
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+
+require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
+require_once XOOPS_ROOT_PATH . '/class/XoopsTotp.php';
+require_once XOOPS_ROOT_PATH . '/class/XoopsTwoFactorCrypto.php';
+
+use Xmf\Key\FileStorage;
+
+/**
+ * The second-factor row of an account: state, encrypted TOTP secret,
+ * monotonic step counter, failure throttle and factor generation, plus the
+ * recovery codes kept in the tokens table under scope '2fa_recovery'.
+ *
+ * Every write that can race another (throttle, enrol, disable, regenerate)
+ * runs in withTransaction() with the row locked FOR UPDATE, so a reset either
+ * lands before a code is accepted or after it, never between the check and
+ * the grant. Acceptance is the one exception: acceptTotp() is a single
+ * conditional UPDATE whose WHERE clause carries every precondition, and
+ * exactly one affected row grants, which gives the same guarantee without a
+ * lock. Nothing inside a transaction touches `users`, redirects, mails or
+ * fires events.
+ *
+ * Loaded by xoops_getHandler('user2fa'). Not a XoopsObjectHandler: there is
+ * no XoopsObject for this row.
+ *
+ * @category  Kernel
+ * @package   core
+ * @author    XOOPS Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
+final class XoopsUser2faHandler
+{
+    public const STATE_NONE        = 'none';
+    public const STATE_ENROLLED    = 'enrolled';
+    public const STATE_UNAVAILABLE = 'unavailable';
+    public const ROW_ENROLLED      = 'enrolled';
+    public const ROW_DISABLED      = 'disabled';
+    public const METHOD_TOTP       = 'totp';
+    public const RECOVERY_SCOPE    = '2fa_recovery';
+    public const RECOVERY_CODES    = 10;
+    public const LOCK_THRESHOLD    = 5;
+    public const LOCK_SECONDS      = 900;
+
+    private readonly XoopsTokenHandler $tokens;
+    private ?XoopsTwoFactorCrypto $crypto;
+    private readonly bool $installed;
+
+    /**
+     * Connections with a withTransaction() in progress. Keyed by connection,
+     * not by handler: two handlers on one mysqli handle share one transaction,
+     * and a second START TRANSACTION would silently commit the first.
+     *
+     * @var \WeakMap<\XoopsMySQLDatabase, true>|null
+     */
+    private static ?\WeakMap $open = null;
+
+    /**
+     * Connections whose ROLLBACK was refused or threw: the abandoned
+     * transaction may still be open, so nothing this handler does on them can
+     * be trusted to persist. Every entry point refuses them for the rest of
+     * the request.
+     *
+     * @var \WeakMap<\XoopsMySQLDatabase, true>|null
+     */
+    private static ?\WeakMap $poisoned = null;
+
+    /**
+     * @param \XoopsMySQLDatabase       $db        connection
+     * @param XoopsTokenHandler|null    $tokens    recovery-code store (default: a handler on $db)
+     * @param XoopsTwoFactorCrypto|null $crypto    key and cipher (default: built lazily on XOOPS_VAR_PATH/data)
+     * @param bool|null                 $installed whether the 2.7.4 patch has run (default: the XOOPS_2FA_INSTALLED constant)
+     */
+    public function __construct(
+        private readonly \XoopsMySQLDatabase $db,
+        ?XoopsTokenHandler $tokens = null,
+        ?XoopsTwoFactorCrypto $crypto = null,
+        ?bool $installed = null,
+    ) {
+        $this->tokens    = $tokens ?? new XoopsTokenHandler($db);
+        $this->crypto    = $crypto;
+        $this->installed = $installed ?? (defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED);
+    }
+
+    /**
+     * @return bool whether the 2.7.4 patch has created the table and preference
+     */
+    public function isInstalled(): bool
+    {
+        return $this->installed;
+    }
+
+    private function crypto(): XoopsTwoFactorCrypto
+    {
+        return $this->crypto ??= new XoopsTwoFactorCrypto(
+            new FileStorage(XOOPS_VAR_PATH . '/data'),
+            XOOPS_VAR_PATH . '/data/twofactor.lock'
+        );
+    }
+
+    private function table(): string
+    {
+        return $this->db->prefix('user_2fa');
+    }
+
+    /**
+     * @throws \RuntimeException when the query fails
+     */
+    private function selectRow(int $uid, bool $forUpdate): ?array
+    {
+        $sql = sprintf(
+            'SELECT `uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation` FROM `%s` WHERE `uid` = %d%s',
+            $this->table(),
+            $uid,
+            $forUpdate ? ' FOR UPDATE' : ''
+        );
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            throw new \RuntimeException('user_2fa lookup failed');
+        }
+        $row = $this->db->fetchArray($result);
+        if (!is_array($row)) {
+            return null;
+        }
+        foreach (['uid', 'confirmed_at', 'last_counter', 'failed_attempts', 'locked_until'] as $int) {
+            $row[$int] = (int) $row[$int];
+        }
+
+        return $row;
+    }
+
+    /**
+     * @param int $uid account
+     *
+     * @return array|null the row, or null when absent or the feature is not installed
+     * @throws \RuntimeException when the query fails
+     */
+    public function getRow(int $uid): ?array
+    {
+        $this->assertConnectionUsable();
+
+        return $this->installed ? $this->selectRow($uid, false) : null;
+    }
+
+    /**
+     * The row locked for the current transaction.
+     *
+     * @param int $uid account
+     *
+     * @return array|null
+     * @throws \LogicException   outside withTransaction()
+     * @throws \RuntimeException when the query fails
+     */
+    public function lockRow(int $uid): ?array
+    {
+        if (!$this->inTransaction()) {
+            throw new \LogicException('lockRow() requires withTransaction()');
+        }
+
+        return $this->selectRow($uid, true);
+    }
+
+    private function inTransaction(): bool
+    {
+        return null !== self::$open && isset(self::$open[$this->db]);
+    }
+
+    /**
+     * @throws \RuntimeException when this connection's last ROLLBACK did not go through
+     */
+    private function assertConnectionUsable(): void
+    {
+        if (null !== self::$poisoned && isset(self::$poisoned[$this->db])) {
+            throw new \RuntimeException('user_2fa: the connection may still hold an abandoned transaction');
+        }
+    }
+
+    /**
+     * Factor state from the row and the key, never from the policy.
+     *
+     * @param int $uid account
+     *
+     * @return string one of the STATE_* constants
+     * @throws \RuntimeException when the lookup fails (the login gate reads that as unavailable)
+     */
+    public function stateFor(int $uid): string
+    {
+        $row = $this->getRow($uid);
+        if (null === $row || self::ROW_DISABLED === $row['state']) {
+            return self::STATE_NONE;
+        }
+        // "none" is reserved for an absent or disabled row: the login gate
+        // reads it as "no factor". A state or method this code does not know
+        // is a factor it cannot check, so it fails closed.
+        if (self::ROW_ENROLLED !== $row['state'] || self::METHOD_TOTP !== $row['method']) {
+            return self::STATE_UNAVAILABLE;
+        }
+
+        return null === $this->secretFromRow($row) ? self::STATE_UNAVAILABLE : self::STATE_ENROLLED;
+    }
+
+    /**
+     * @param int $uid account
+     *
+     * @return string|null the base32 TOTP secret of an enrolled row, or null
+     * @throws \RuntimeException when the lookup fails
+     */
+    public function secretFor(int $uid): ?string
+    {
+        $row = $this->getRow($uid);
+
+        return (null === $row || self::ROW_ENROLLED !== $row['state']) ? null : $this->secretFromRow($row);
+    }
+
+    private function secretFromRow(array $row): ?string
+    {
+        if (!is_string($row['secret']) || '' === $row['secret']) {
+            return null;
+        }
+
+        return $this->crypto()->open($row['secret'], XoopsTwoFactorCrypto::rowAad($row['uid'], (string) $row['method']));
+    }
+
+    /**
+     * @return string 128 random bits as 32 hex characters
+     */
+    public function newGeneration(): string
+    {
+        return bin2hex(random_bytes(16));
+    }
+
+    /**
+     * @return string 128 random bits as 26 base32 characters
+     */
+    public function newRecoveryCode(): string
+    {
+        return XoopsTotp::base32Encode(random_bytes(16));
+    }
+
+    /**
+     * @param string $code a recovery code as typed
+     *
+     * @return string whitespace stripped and upper-cased
+     */
+    public function canonicalRecoveryCode(string $code): string
+    {
+        return strtoupper((string) preg_replace('/\s+/', '', $code));
+    }
+
+    /**
+     * Run $fn inside one transaction on the request's connection.
+     *
+     * @param callable $fn the work; return false to roll back
+     *
+     * @return mixed $fn's return value; false when the transaction could not start,
+     *               when $fn returned false (rolled back), or when COMMIT failed (rolled back)
+     * @throws \LogicException on nesting
+     * @throws \Throwable      whatever $fn throws, after ROLLBACK
+     */
+    public function withTransaction(callable $fn): mixed
+    {
+        $this->assertConnectionUsable();
+        if ($this->inTransaction()) {
+            throw new \LogicException('withTransaction() does not nest');
+        }
+        if (!$this->db->exec('START TRANSACTION')) {
+            return false;
+        }
+        self::$open ??= new \WeakMap();
+        self::$open[$this->db] = true;
+        // True only once the connection accepted a COMMIT or a ROLLBACK; a
+        // ROLLBACK that is refused or throws leaves it false.
+        $closed = false;
+        try {
+            try {
+                $value = $fn();
+                if (false !== $value && $this->db->exec('COMMIT')) {
+                    $closed = true;
+
+                    return $value;
+                }
+            } catch (\Throwable $e) {
+                $closed = $this->db->exec('ROLLBACK');
+                throw $e;
+            }
+            // $fn declined, or COMMIT was refused: either way the transaction
+            // is still open on the connection and the next statement would
+            // join it. Close it before letting go.
+            $closed = $this->db->exec('ROLLBACK');
+
+            return false;
+        } finally {
+            // A ROLLBACK that was refused or threw leaves the connection in a
+            // state this code cannot see: a later START TRANSACTION would
+            // implicitly commit the abandoned work, and a plain statement would
+            // join it and could be rolled back later. Poison the connection so
+            // every entry point refuses it for the rest of the request.
+            if (!$closed) {
+                self::$poisoned ??= new \WeakMap();
+                self::$poisoned[$this->db] = true;
+            }
+            unset(self::$open[$this->db]);
+        }
+    }
+
+    /**
+     * Accept a TOTP step: exactly one affected row grants.
+     *
+     * @param int    $uid                account
+     * @param int    $step               the step the code matched
+     * @param string $verifiedGeneration the generation the challenge verified against
+     * @param int    $now                unix time
+     *
+     * @return bool
+     */
+    public function acceptTotp(int $uid, int $step, string $verifiedGeneration, int $now): bool
+    {
+        $this->assertConnectionUsable();
+        $sql = sprintf(
+            'UPDATE `%s` SET `last_counter` = %d, `failed_attempts` = 0, `locked_until` = 0'
+            . ' WHERE `uid` = %d AND `state` = %s AND `method` = %s AND `generation` = %s AND `locked_until` <= %d AND `last_counter` < %d',
+            $this->table(),
+            $step,
+            $uid,
+            $this->db->quote(self::ROW_ENROLLED),
+            $this->db->quote(self::METHOD_TOTP),
+            $this->db->quote($verifiedGeneration),
+            $now,
+            $step
+        );
+
+        return $this->db->exec($sql) && $this->db->getAffectedRows() === 1;
+    }
+
+    /**
+     * Count a failed code and report whether this request locked the account.
+     *
+     * @param int $uid account
+     * @param int $now unix time
+     *
+     * @return array{locked: bool, transitioned: bool}|false
+     */
+    public function recordFailure(int $uid, int $now): array|false
+    {
+        return $this->withTransaction(function () use ($uid, $now): array|false {
+            $before = $this->lockRow($uid);
+            if (null === $before || self::ROW_ENROLLED !== $before['state']) {
+                // The UPDATE below would match nothing and exec() would still
+                // report success; refuse here so nothing is "counted".
+                return false;
+            }
+            $sql = sprintf(
+                'UPDATE `%1$s` SET `failed_attempts` = IF(`locked_until` > 0 AND `locked_until` <= %2$d, 1, LEAST(`failed_attempts` + 1, 65535)),'
+                . ' `locked_until` = IF(`locked_until` > 0 AND `locked_until` <= %2$d, 0, IF(`locked_until` = 0 AND `failed_attempts` >= %3$d, %4$d, `locked_until`))'
+                . ' WHERE `uid` = %5$d AND `state` = %6$s',
+                $this->table(),
+                $now,
+                self::LOCK_THRESHOLD,
+                $now + self::LOCK_SECONDS,
+                $uid,
+                $this->db->quote(self::ROW_ENROLLED)
+            );
+            if (!$this->db->exec($sql)) {
+                return false;
+            }
+            $after = $this->selectRow($uid, false);
+            if (null === $after) {
+                return false;
+            }
+            $wasLocked = $before['locked_until'] > $now;
+            $isLocked  = $after['locked_until'] > $now;
+
+            return ['locked' => $isLocked, 'transitioned' => $isLocked && !$wasLocked];
+        });
+    }
+
+    /**
+     * Consume a recovery code with the factor row locked.
+     *
+     * @param int    $uid               account
+     * @param string $code              code as typed
+     * @param string $pendingGeneration the generation the pending login recorded
+     *
+     * @return bool
+     */
+    public function acceptRecovery(int $uid, string $code, string $pendingGeneration): bool
+    {
+        $canonical = $this->canonicalRecoveryCode($code);
+        if ('' === $canonical) {
+            return false;
+        }
+
+        return (bool) $this->withTransaction(function () use ($uid, $canonical, $pendingGeneration): bool {
+            $row = $this->lockRow($uid);
+            if (null === $row || self::ROW_ENROLLED !== $row['state'] || !hash_equals((string) $row['generation'], $pendingGeneration)) {
+                return false;
+            }
+            if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical)) {
+                return false;
+            }
+
+            return $this->db->exec(sprintf(
+                'UPDATE `%s` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = %d',
+                $this->table(),
+                $uid
+            ));
+        });
+    }
+
+    /**
+     * Create (or re-enable a disabled) row and issue ten recovery codes.
+     *
+     * @param int    $uid          account
+     * @param string $secretBase32 the secret the user confirmed a code against
+     * @param int    $acceptedStep the step of that code
+     * @param int    $now          unix time
+     *
+     * @return array{generation: string, codes: list<string>}|false
+     */
+    public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now): array|false
+    {
+        return $this->withTransaction(function () use ($uid, $secretBase32, $acceptedStep, $now): array|false {
+            $row = $this->lockRow($uid);
+            if (null !== $row && self::ROW_DISABLED !== $row['state']) {
+                // Enrolled: the second tab loses. Anything else is a row this
+                // code does not know and must not overwrite (see stateFor()).
+                return false;
+            }
+            $blob = $this->crypto()->seal($secretBase32, XoopsTwoFactorCrypto::rowAad($uid, self::METHOD_TOTP));
+            if (null === $blob) {
+                return false;
+            }
+            $generation = $this->newGeneration();
+            $table      = $this->table();
+            $sql        = null === $row
+                ? sprintf(
+                    'INSERT INTO `%s` (`uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation`)'
+                    . ' VALUES (%d, %s, %s, %s, %d, %d, 0, 0, %s)',
+                    $table,
+                    $uid,
+                    $this->db->quote(self::ROW_ENROLLED),
+                    $this->db->quote(self::METHOD_TOTP),
+                    $this->db->quote($blob),
+                    $now,
+                    $acceptedStep,
+                    $this->db->quote($generation)
+                )
+                : sprintf(
+                    'UPDATE `%s` SET `state` = %s, `method` = %s, `secret` = %s, `confirmed_at` = %d, `last_counter` = %d,'
+                    . ' `failed_attempts` = 0, `locked_until` = 0, `generation` = %s WHERE `uid` = %d',
+                    $table,
+                    $this->db->quote(self::ROW_ENROLLED),
+                    $this->db->quote(self::METHOD_TOTP),
+                    $this->db->quote($blob),
+                    $now,
+                    $acceptedStep,
+                    $this->db->quote($generation),
+                    $uid
+                );
+            if (!$this->db->exec($sql)) {
+                return false;
+            }
+            $codes = $this->issueRecoveryCodes($uid);
+
+            return false === $codes ? false : ['generation' => $generation, 'codes' => $codes];
+        });
+    }
+
+    /**
+     * Disable the factor: state, secret, codes and generation, in one transaction.
+     *
+     * @param int $uid account
+     *
+     * @return string|false the new generation
+     */
+    public function disable(int $uid): string|false
+    {
+        return $this->withTransaction(function () use ($uid): string|false {
+            if (null === $this->lockRow($uid)) {
+                return false;
+            }
+            $generation = $this->newGeneration();
+            $sql        = sprintf(
+                'UPDATE `%s` SET `state` = %s, `secret` = NULL, `generation` = %s WHERE `uid` = %d',
+                $this->table(),
+                $this->db->quote(self::ROW_DISABLED),
+                $this->db->quote($generation),
+                $uid
+            );
+            if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+                return false;
+            }
+
+            return $generation;
+        });
+    }
+
+    /**
+     * @param int $uid account
+     *
+     * @return list<string>|false ten new codes
+     */
+    public function regenerateRecoveryCodes(int $uid): array|false
+    {
+        return $this->withTransaction(function () use ($uid): array|false {
+            $row = $this->lockRow($uid);
+            if (null === $row || self::ROW_ENROLLED !== $row['state']) {
+                return false;
+            }
+
+            return $this->issueRecoveryCodes($uid);
+        });
+    }
+
+    /**
+     * Revoke the previous codes, then issue ten fresh ones (inside the caller's transaction).
+     *
+     * @return list<string>|false
+     */
+    private function issueRecoveryCodes(int $uid): array|false
+    {
+        if (!$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+            return false;
+        }
+        $codes = [];
+        for ($i = 0; $i < self::RECOVERY_CODES; $i++) {
+            $code = $this->newRecoveryCode();
+            if (false === $this->tokens->create($uid, self::RECOVERY_SCOPE, null, false, $code)) {
+                return false;
+            }
+            $codes[] = $code;
+        }
+
+        return $codes;
+    }
+
+    /**
+     * Remove the row when an account is deleted. True without a query when the
+     * feature is not installed, so a file-first upgrade can still delete users.
+     *
+     * @param int $uid account
+     *
+     * @return bool
+     */
+    public function deleteByUid(int $uid): bool
+    {
+        $this->assertConnectionUsable();
+        if (!$this->installed) {
+            return true;
+        }
+
+        return $this->db->exec(sprintf('DELETE FROM `%s` WHERE `uid` = %d', $this->table(), $uid));
+    }
+}

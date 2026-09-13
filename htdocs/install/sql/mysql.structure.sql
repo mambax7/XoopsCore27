@@ -639,6 +639,24 @@ CREATE TABLE tokens (
 # --------------------------------------------------------
 
 #
+# Table structure for table `user_2fa`
+#
+
+CREATE TABLE user_2fa (
+  uid             mediumint unsigned NOT NULL,
+  state           varchar(10)        NOT NULL,
+  method          varchar(16)        NOT NULL DEFAULT 'totp',
+  secret          varbinary(255)     NULL,
+  confirmed_at    int unsigned       NOT NULL DEFAULT 0,
+  last_counter    bigint unsigned    NOT NULL DEFAULT 0,
+  failed_attempts smallint unsigned  NOT NULL DEFAULT 0,
+  locked_until    int unsigned       NOT NULL DEFAULT 0,
+  generation      char(32)           NOT NULL,
+  PRIMARY KEY (uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+# --------------------------------------------------------
+
+#
 # Table structure for table `cache_model`
 #
 
