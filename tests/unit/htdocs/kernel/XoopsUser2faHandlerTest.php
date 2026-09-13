@@ -962,7 +962,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $key = $this->crypto()->macKey();
         $this->assertIsString($key);
 
-        return hash('sha256', hash_hmac('sha256', $code, $key));
+        return hash('sha256', hash_hmac('sha256', $code, hash_hmac('sha256', '2fa_email', $key, true)));
     }
 
     private function hatchDir(): string

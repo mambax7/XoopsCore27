@@ -146,6 +146,8 @@ final class XoopsTwoFactorCrypto
      * @param bool|callable $encryptedRowsExist callback checked under the provisioning lock, or a known fixed result
      *
      * @return bool true when a usable key exists afterwards
+     *
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function provisionKey(bool|callable $encryptedRowsExist): bool
     {

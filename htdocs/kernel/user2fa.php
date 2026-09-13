@@ -372,14 +372,16 @@ final class XoopsUser2faHandler
      * @param string $code the six-digit code
      *
      * @return string|null the stored form, or null when the site has no key
-     *
-     * @throws \Random\RandomException when the secure random source fails
      */
     private function mailCodeToken(string $code): ?string
     {
         $key = $this->crypto()->macKey();
-
-        return null === $key ? null : hash_hmac('sha256', $code, $key);
+        if (null === $key) {
+            return null;
+        }
+        // A subkey of its own: the site key seals the authenticator secrets,
+        // and one key serving two primitives is a habit worth not forming.
+        return hash_hmac('sha256', $code, hash_hmac('sha256', self::EMAIL_SCOPE, $key, true));
     }
 
     /**
