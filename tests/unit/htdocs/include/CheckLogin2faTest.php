@@ -301,12 +301,50 @@ final class CheckLogin2faTest extends TestCase
         self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
         self::assertSame(sprintf(_US_2FA_PROMPT_EMAIL, 'u***@x.y'), $vars['message']);
 
-        // The button mails again, behind the CSRF token.
+        // A code submission never issues, even when the first mail never went out:
+        // issuing would revoke the code being submitted.
+        unset($_SESSION['xoops2faPending']['emailed']);
+        $GLOBALS['sandboxLog'] = [];
+        $this->post(['code' => '000000']);
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+
+        // A locked factor gets no code, on open or on request; a recovery code stays possible.
+        $this->pending();
+        $GLOBALS['sandboxRow']['method']       = 'email';
+        $GLOBALS['sandboxRow']['secret']       = null;
+        $GLOBALS['sandboxRow']['locked_until'] = time() + 100;
+        $GLOBALS['sandboxLog'] = [];
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_POST = [];
+        [$what, $vars] = $this->execute();
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertSame(_US_2FA_LOCKED, $vars['error']);
+        self::assertArrayNotHasKey('emailed', $_SESSION['xoops2faPending']);
+        $this->post(['xoops_2fa_send' => '1']);
+        [$what, $vars] = $this->execute();
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertSame(_US_2FA_LOCKED, $vars['error']);
+        self::assertNotSame('', $vars['token_html'], 'the page still offers the recovery form');
+        $GLOBALS['sandboxRow']['locked_until'] = 0;
+        $this->pending();
+
+        // The button mails again, behind the CSRF token, and the pending login
+        // is carried to cover the new code without outliving the password step.
+        $_SESSION['xoops2faPending']['expires'] = time() + 30;
         $this->post(['xoops_2fa_send' => '1']);
         [$what, $vars] = $this->execute();
         self::assertSame('rendered', $what);
         self::assertContains('deliver:9', $GLOBALS['sandboxLog']);
         self::assertSame('sent-msg', $vars['message']);
+        self::assertEqualsWithDelta(time() + 600, $_SESSION['xoops2faPending']['expires'], 5);
+        $_SESSION['xoops2faPending']['started'] = time() - 1700;
+        $this->post(['xoops_2fa_send' => '1']);
+        $this->execute();
+        self::assertEqualsWithDelta(time() + 100, $_SESSION['xoops2faPending']['expires'], 5, 'a resend cannot keep an unverified login alive for ever');
         self::assertNotContains('recordFailure:9', $GLOBALS['sandboxLog'], 'asking for a code is not a failed attempt');
 
         $GLOBALS['sandboxToken'] = false;

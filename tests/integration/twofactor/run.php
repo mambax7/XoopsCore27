@@ -165,6 +165,28 @@ try {
     check(count(array_filter($results)) === 1, 'One recovery code must grant exactly once');
     echo "PASS: concurrent single-use recovery\n";
 
+    // E-mail codes: four resend requests inside one cooldown issue exactly one code,
+    // that code enrols the method once, and two submissions of a fresh code grant once.
+    // Four resends at once on an account that has no code yet: the per-account
+    // lock must serialise them without deadlocking on the token table.
+    $issued = race(array_fill(0, 4, ['action' => 'issue', 'uid' => 70]));
+    $codes  = array_values(array_filter($issued, 'is_string'));
+    check(count($codes) === 1 && count(array_filter($issued, 'is_null')) === 3, 'One mailed code per cooldown under concurrency');
+    $count = $db->query(sprintf("SELECT COUNT(*) AS cnt FROM `%s` WHERE `uid` = 70 AND `scope` = '2fa_email' AND `used_at` = 0", $db->prefix('tokens')))->fetch_assoc();
+    check((int) $count['cnt'] === 1, 'Exactly one live mailed code stored');
+    $wrongCode = '000000' === $codes[0] ? '111111' : '000000';
+    check(false === $handler->enrolEmail(70, $wrongCode, $now, ''), 'Wrong mailed code enrols nothing');
+    $mailed = $handler->enrolEmail(70, $codes[0], $now, '');
+    check(is_array($mailed) && count($mailed['codes']) === 10, 'E-mail enrolment with the mailed code and ten recovery codes');
+    check($handler->stateFor(70) === XoopsUser2faHandler::STATE_ENROLLED, 'E-mail row is enrolled without a secret');
+    $db->exec(sprintf("UPDATE `%s` SET `issued_at` = `issued_at` - 120 WHERE `uid` = 70 AND `scope` = '2fa_email'", $db->prefix('tokens')));
+    $fresh = $handler->issueEmailCode(70);
+    check(is_string($fresh), 'A code can be issued again after the cooldown');
+    $results = race(array_fill(0, 2, ['action' => 'emailcode', 'uid' => 70, 'code' => $fresh, 'generation' => $mailed['generation'], 'now' => $now]));
+    check(count(array_filter($results)) === 1, 'One mailed code must grant exactly once');
+    check(!$handler->acceptEmailCode(70, $fresh, $mailed['generation'], $now), 'A consumed mailed code is refused');
+    echo "PASS: concurrent mailed-code issuance and single-use acceptance\n";
+
     $results = race(array_fill(0, 5, ['action' => 'failure'] + $job));
     check(count(array_filter($results, static fn ($result): bool => is_array($result) && $result['transitioned'])) === 1, 'Exactly one lock transition');
     $row = $handler->getRow(1);

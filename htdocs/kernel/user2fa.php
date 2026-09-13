@@ -60,6 +60,8 @@ final class XoopsUser2faHandler
     public const EMAIL_SCOPE       = '2fa_email';
     public const EMAIL_TTL         = 600;
     public const EMAIL_COOLDOWN    = 60;
+    /** The longest a password-authenticated but unverified login may be kept alive by resends. */
+    public const PENDING_MAX       = 1800;
     public const RECOVERY_SCOPE    = '2fa_recovery';
     public const RECOVERY_CODES    = 10;
     public const LOCK_THRESHOLD    = 5;
@@ -300,34 +302,71 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return string|null|false the six-digit code; null while the cooldown runs; false on a storage failure
-     * @throws \RuntimeException when the transaction or the cooldown lookup fails
+     * @throws \RuntimeException when the lock, the transaction or the cooldown lookup fails
      * @throws \Random\RandomException when the secure random source fails
      */
     public function issueEmailCode(int $uid): string|null|false
     {
-        return $this->withTransaction(function () use ($uid): string|null|false {
-            // The cooldown read locks the account's recent codes (and, under
-            // the default isolation level, the gap after them), so two resend
-            // requests issue one code between them. A lookup that fails is a
-            // refusal, not an empty count.
-            $result = $this->db->query(sprintf(
-                'SELECT COUNT(*) AS `cnt` FROM `%s` WHERE `uid` = %d AND `scope` = %s AND `issued_at` > %d FOR UPDATE',
-                $this->db->prefix('tokens'),
-                $uid,
-                $this->db->quote(self::EMAIL_SCOPE),
-                time() - self::EMAIL_COOLDOWN
-            ));
-            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-                throw new \RuntimeException('Two-factor code lookup failed');
-            }
-            $row = $this->db->fetchArray($result);
-            if (is_array($row) && (int) ($row['cnt'] ?? 0) > 0) {
-                return null;
-            }
-            $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        // Issuance is serialised per account with the site lock the upgrade
+        // patch uses, not with a range lock on the token table: several
+        // requests racing on an account that has no code yet would each take
+        // a gap lock and then deadlock on their inserts.
+        $lock   = 'SHA2(CONCAT(DATABASE(), ' . $this->db->quote(':' . self::EMAIL_SCOPE . ':' . $uid) . '), 256)';
+        $result = $this->db->query('SELECT GET_LOCK(' . $lock . ', 5) AS `got`');
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            throw new \RuntimeException('Two-factor code lock failed');
+        }
+        $row = $this->db->fetchArray($result);
+        if (!is_array($row) || 1 !== (int) ($row['got'] ?? 0)) {
+            // Another request is issuing a code for this account right now:
+            // that is the cooldown, from the visitor's point of view.
+            return null;
+        }
+        try {
+            return $this->withTransaction(function () use ($uid): string|null|false {
+                // The row is read again under its own lock: the page that asked
+                // for this code may have read the factor before another request
+                // committed the failure that locked it, and the lock outlives
+                // any code issued now.
+                $factor = $this->lockRow($uid);
+                if (is_array($factor) && self::ROW_ENROLLED === $factor['state'] && (int) $factor['locked_until'] > time()) {
+                    return false;
+                }
+                // A lookup that fails is a refusal, not an empty count: an
+                // unreadable token table must not mail an unlimited number of codes.
+                $result = $this->db->query(sprintf(
+                    'SELECT COUNT(*) AS `cnt` FROM `%s` WHERE `uid` = %d AND `scope` = %s AND `issued_at` > %d',
+                    $this->db->prefix('tokens'),
+                    $uid,
+                    $this->db->quote(self::EMAIL_SCOPE),
+                    time() - self::EMAIL_COOLDOWN
+                ));
+                if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                    throw new \RuntimeException('Two-factor code lookup failed');
+                }
+                $row = $this->db->fetchArray($result);
+                if (is_array($row) && (int) ($row['cnt'] ?? 0) > 0) {
+                    return null;
+                }
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-            return $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $code);
-        }, true);
+                return $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $code);
+            }, true);
+        } finally {
+            $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
+        }
+    }
+
+    /**
+     * Revoke every unused mailed code of the account.
+     *
+     * @param int $uid account
+     *
+     * @return bool whether the statement ran
+     */
+    public function revokeEmailCodes(int $uid): bool
+    {
+        return $this->tokens->revokeByScope($uid, self::EMAIL_SCOPE);
     }
 
     /**

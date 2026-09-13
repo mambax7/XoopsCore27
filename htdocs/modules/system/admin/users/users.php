@@ -53,21 +53,28 @@ function xoops_2fa_admin_status_row(int $uid): XoopsFormLabel
     xoops_2fa_loadLanguage('user2famanage');
     /** @var XoopsUser2faHandler $handler */
     $handler = xoops_getHandler('user2fa');
+    $known = true;
     try {
         $row = $handler->getRow($uid);
     } catch (\Throwable) {
-        $row = null;
+        // A lookup that fails is not "not enrolled": say so, and keep the reset reachable.
+        $row   = null;
+        $known = false;
     }
     $enrolled = is_array($row) && XoopsUser2faHandler::ROW_DISABLED !== $row['state'];
-    if (!$enrolled) {
+    if (!$known) {
+        $status = _US_2FAM_STATUS_UNAVAILABLE;
+    } elseif (!$enrolled) {
         $status = _US_2FAM_STATUS_NONE;
     } elseif (XoopsUser2faHandler::METHOD_EMAIL === $row['method']) {
         $status = _US_2FAM_STATUS_EMAIL;
-    } else {
+    } elseif (XoopsUser2faHandler::METHOD_TOTP === $row['method']) {
         $status = _US_2FAM_STATUS_TOTP;
+    } else {
+        $status = _US_2FAM_STATUS_UNAVAILABLE;
     }
     $value = htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
-    if ($enrolled) {
+    if ($enrolled || !$known) {
         $value .= ' &middot; <a href="admin.php?fct=users&amp;op=users_2fa_reset&amp;uid=' . $uid . '">'
             . htmlspecialchars(_US_2FAM_RESET, ENT_QUOTES, 'UTF-8') . '</a>';
     }

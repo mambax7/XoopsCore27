@@ -291,6 +291,55 @@ final class Manage2faControllerTest extends TestCase
     }
 
     #[Test]
+    public function restartingEmailSetupKeepsSpentGuessesAndExhaustionRevokesTheCode(): void
+    {
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        $this->execute(['action' => 'confirm', 'code' => '111111']);
+        $this->execute(['action' => 'confirm', 'code' => '222222']);
+        self::assertSame(2, $_SESSION['xoops2faSetup']['attempts']);
+
+        // The cooldown refuses a new code: the restart keeps the two guesses.
+        $GLOBALS['manageDeliver'] = false;
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame(2, $_SESSION['xoops2faSetup']['attempts']);
+
+        // A fresh code starts the count over.
+        $GLOBALS['manageDeliver'] = true;
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame(0, $_SESSION['xoops2faSetup']['attempts']);
+
+        $GLOBALS['manageLog'] = [];
+        foreach (['1', '2', '3', '4'] as $n) {
+            $this->execute(['action' => 'confirm', 'code' => str_repeat($n, 6)]);
+        }
+        self::assertArrayHasKey('xoops2faSetup', $_SESSION);
+
+        // A code asked for with the send button also replaces the one the guesses were spent on.
+        self::assertSame(4, $_SESSION['xoops2faSetup']['attempts']);
+        $_SESSION['xoops2faSetup']['expires'] = time() + 10;
+        $this->execute(['action' => 'send']);
+        self::assertSame(0, $_SESSION['xoops2faSetup']['attempts']);
+        self::assertEqualsWithDelta(time() + 600, $_SESSION['xoops2faSetup']['expires'], 5);
+        foreach (['1', '2', '3', '4'] as $n) {
+            $this->execute(['action' => 'confirm', 'code' => str_repeat($n, 6)]);
+        }
+        self::assertNotContains('revokeEmail:9', $GLOBALS['manageLog']);
+        $vars = $this->execute(['action' => 'confirm', 'code' => '555555']);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+        self::assertArrayNotHasKey('xoops2faSetup', $_SESSION, 'the fifth wrong code ends the setup');
+        self::assertContains('revokeEmail:9', $GLOBALS['manageLog'], 'and the live code dies with it');
+    }
+
+    #[Test]
+    public function aLockedEmailFactorIsNotMailedACodeFromTheManagementPage(): void
+    {
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'gen', 'locked_until' => time() + 100];
+        $vars = $this->execute(['action' => 'send']);
+        self::assertSame(_US_2FA_LOCKED, $vars['error']);
+        self::assertNotContains('deliver:9', $GLOBALS['manageLog']);
+    }
+
+    #[Test]
     public function aMailedCodeCanBeRequestedForAPendingOrEnrolledEmailFactorOnly(): void
     {
         // Nothing pending and nothing enrolled: the button does nothing.
@@ -406,6 +455,7 @@ class XoopsUser2faHandler {
         $GLOBALS['manageRow'] = ['state' => 'disabled', 'generation' => 'disabledgen'];
         return 'disabledgen';
     }
+    public function revokeEmailCodes(int $uid): bool { $GLOBALS['manageLog'][] = "revokeEmail:$uid"; return true; }
     public function enrolEmail(int $uid, string $code, int $now, ?string $generation = null): array|false {
         $GLOBALS['manageLog'][] = "enrolEmail:$uid:$code:$generation";
         if ($GLOBALS['manageRefuse'] || '654321' !== $code) { return false; }

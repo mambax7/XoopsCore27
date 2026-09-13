@@ -94,7 +94,9 @@ try {
                     if (false === $result) {
                         ++$_SESSION['xoops2faSetup']['attempts'];
                         if ($_SESSION['xoops2faSetup']['attempts'] >= 5) {
+                            // The live code has been guessed at five times: it dies with the setup.
                             unset($_SESSION['xoops2faSetup']);
+                            $handler->revokeEmailCodes($uid);
                         }
                         $error = _US_2FA_BADCODE;
                     } else {
@@ -154,9 +156,17 @@ try {
                 $pending = $_SESSION['xoops2faSetup'] ?? null;
                 $pendingEmail = !$enrolled && xoops_2fa_setup_valid($pending, $uid, (string) $user->getVar('pass', 'n'), $generation, $now)
                     && XoopsUser2faHandler::METHOD_EMAIL === ($pending['method'] ?? '');
-                if ($pendingEmail || ($enrolled && XoopsUser2faHandler::METHOD_EMAIL === ($row['method'] ?? ''))) {
+                if ($enrolled && XoopsUser2faHandler::METHOD_EMAIL === ($row['method'] ?? '') && (int) ($row['locked_until'] ?? 0) > $now) {
+                    // The lock outlives a mailed code: nothing sent now could be accepted.
+                    $error = _US_2FA_LOCKED;
+                } elseif ($pendingEmail || ($enrolled && XoopsUser2faHandler::METHOD_EMAIL === ($row['method'] ?? ''))) {
                     $delivery = xoops_2fa_deliver_code($handler, $user);
                     if ($delivery['sent']) {
+                        if ($pendingEmail) {
+                            // The guesses were spent against the code this one replaces.
+                            $_SESSION['xoops2faSetup']['attempts'] = 0;
+                            $_SESSION['xoops2faSetup']['expires']  = $now + XoopsUser2faHandler::EMAIL_TTL;
+                        }
                         $message = $delivery['message'];
                     } else {
                         $error = $delivery['message'];
@@ -184,9 +194,15 @@ try {
                     $message = _US_2FAM_RESET_DONE;
                 } elseif ('begin_email' === $action && !$enrolled) {
                     $user = $authenticated;
-                    $_SESSION['xoops2faSetup'] = ['uid' => $uid, 'generation' => $generation, 'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')), 'expires' => $now + XoopsUser2faHandler::EMAIL_TTL, 'blob' => '', 'attempts' => 0, 'method' => XoopsUser2faHandler::METHOD_EMAIL];
+                    // Restarting keeps the guesses already spent against a code that is still live;
+                    // only a freshly mailed code starts the count over.
+                    $pending  = $_SESSION['xoops2faSetup'] ?? null;
+                    $attempts = xoops_2fa_setup_valid($pending, $uid, (string) $user->getVar('pass', 'n'), $generation, $now)
+                        && XoopsUser2faHandler::METHOD_EMAIL === ($pending['method'] ?? '') ? (int) $pending['attempts'] : 0;
+                    $_SESSION['xoops2faSetup'] = ['uid' => $uid, 'generation' => $generation, 'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')), 'expires' => $now + XoopsUser2faHandler::EMAIL_TTL, 'blob' => '', 'attempts' => $attempts, 'method' => XoopsUser2faHandler::METHOD_EMAIL];
                     $delivery = xoops_2fa_deliver_code($handler, $user);
                     if ($delivery['sent']) {
+                        $_SESSION['xoops2faSetup']['attempts'] = 0;
                         $message = $delivery['message'];
                     } else {
                         $error = $delivery['message'];

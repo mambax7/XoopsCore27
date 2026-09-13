@@ -211,21 +211,35 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
 };
 
 if ($xo2faByEmail && XoopsUser2faHandler::STATE_ENROLLED === $xo2faState) {
-    // One code goes out when the page first opens; later ones only on request, under the cooldown.
+    // One code goes out when the page first opens; later ones only on request,
+    // under the cooldown. A code submission never issues: issuing revokes the
+    // code the visitor is typing. A locked factor gets no code either: the
+    // lock outlives the code, so it could only ever be refused.
     $xo2faSend = 'POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa_send', 'POST');
     if ($xo2faSend && !$GLOBALS['xoopsSecurity']->check()) {
         $xo2faVars['error']      = implode("\n", $GLOBALS['xoopsSecurity']->getErrors());
         $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
         xoops_2fa_render($xo2faVars);
     }
-    if ($xo2faSend || empty($xo2faPending['emailed'])) {
-        try {
-            $xo2faDelivery = xoops_2fa_deliver_code($xo2faHandler, $xo2faUser);
-        } catch (\Throwable) {
-            $xo2faDelivery = ['sent' => false, 'message' => _US_2FA_SEND_FAILED];
+    $xo2faFirstOpen = 'GET' === \Xmf\Request::getMethod() && empty($xo2faPending['emailed']);
+    if ($xo2faSend || $xo2faFirstOpen) {
+        if ((int) ($xo2faRow['locked_until'] ?? 0) > $xo2faNow) {
+            $xo2faDelivery = ['sent' => false, 'message' => _US_2FA_LOCKED];
+        } else {
+            try {
+                $xo2faDelivery = xoops_2fa_deliver_code($xo2faHandler, $xo2faUser);
+            } catch (\Throwable) {
+                $xo2faDelivery = ['sent' => false, 'message' => _US_2FA_SEND_FAILED];
+            }
         }
         if ($xo2faDelivery['sent']) {
             $_SESSION['xoops2faPending']['emailed'] = $xo2faNow;
+            // A code mailed at minute nine would otherwise outlive the login it is for.
+            $xo2faStarted = (int) ($xo2faPending['started'] ?? $xo2faNow);
+            $_SESSION['xoops2faPending']['expires'] = min(
+                $xo2faNow + XoopsUser2faHandler::EMAIL_TTL,
+                $xo2faStarted + XoopsUser2faHandler::PENDING_MAX
+            );
         }
         $xo2faVars[$xo2faDelivery['sent'] ? 'message' : 'error'] = $xo2faDelivery['message'];
         if ($xo2faSend) {

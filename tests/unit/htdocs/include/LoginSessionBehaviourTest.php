@@ -281,6 +281,12 @@ final class LoginSessionBehaviourTest extends TestCase
         self::assertEqualsWithDelta(time() + 300, $pending['expires'], 5);
         self::assertSame(['setcookie:xoops_user:expire', 'setcookie:xoops_user:expire', 'regenerate_id:uid=stale'], $GLOBALS['sandboxLog'], 'expires both cookie forms without account writes or events');
         self::assertSame([], $user->writes);
+        // An e-mail account keeps its pending login as long as the mailed code it is waiting for.
+        try {
+            $fn($user, 'enrolled', 'gen-1', false, '', 'email');
+        } catch (RedirectHeaderException) {
+        }
+        self::assertEqualsWithDelta(time() + 600, $_SESSION['xoops2faPending']['expires'], 5);
     }
 
     #[Test]
@@ -464,6 +470,9 @@ final class LoginSessionBehaviourTest extends TestCase
         class XoopsUser2faHandler {
             public const ROW_ENROLLED = 'enrolled';
             public const ROW_DISABLED = 'disabled';
+            public const METHOD_TOTP  = 'totp';
+            public const METHOD_EMAIL = 'email';
+            public const EMAIL_TTL    = 600;
             public function getRow(int $uid): ?array {
                 $GLOBALS['sandboxLog'][] = 'getRow:' . $uid;
                 if ($GLOBALS['sandboxRow'] instanceof \Throwable) { throw $GLOBALS['sandboxRow']; }

@@ -813,15 +813,42 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     #[Test]
     public function issueEmailCodeHonoursTheCooldownAndStoresOnlyAHash(): void
     {
-        $this->rows = [['cnt' => 1]];
-        $this->assertNull($this->handler()->issueEmailCode(10), 'a code issued within the last minute blocks a new one');
+        // The cooldown: a code issued within the last minute blocks a new one.
+        $this->rows = [['got' => 1], $this->row(['method' => 'email', 'secret' => null]), ['cnt' => 1]];
+        $this->assertNull($this->handler()->issueEmailCode(10));
         $this->assertSame([], $this->statements('INSERT'));
-        $this->assertSame('START TRANSACTION', $this->sql[0]);
-        $this->assertStringEndsWith("`scope` = '2fa_email' AND `issued_at` > " . (time() - 60) . ' FOR UPDATE', $this->sql[1]);
-        $this->assertSame('COMMIT', end($this->sql));
+        $this->assertStringContainsString("GET_LOCK(SHA2(CONCAT(DATABASE(), ':2fa_email:10'), 256), 5)", $this->sql[0]);
+        $this->assertSame('START TRANSACTION', $this->sql[1]);
+        $this->assertStringEndsWith('FOR UPDATE', $this->sql[2]);
+        $this->assertMatchesRegularExpression("/`scope` = '2fa_email' AND `issued_at` > [0-9]+$/", $this->sql[3]);
+        $this->assertSame('COMMIT', $this->sql[4]);
+        $this->assertStringContainsString('RELEASE_LOCK(', end($this->sql));
 
-        $this->sql        = [];
-        $this->queryFails = true;
+        // Another request holds the lock: that is the cooldown, seen from here.
+        $this->sql  = [];
+        $this->rows = [['got' => 0]];
+        $this->assertNull($this->handler()->issueEmailCode(10));
+        $this->assertSame([], $this->statements('INSERT'));
+        $this->assertSame([], $this->statements('START TRANSACTION'));
+        $this->assertSame([], $this->statements('SELECT RELEASE_LOCK'), 'a lock that was not taken is not released');
+
+        // A factor locked by another request between the page read and the send gets no code.
+        $this->sql  = [];
+        $this->rows = [['got' => 1], $this->row(['method' => 'email', 'secret' => null, 'locked_until' => time() + 100])];
+        $this->assertFalse($this->handler()->issueEmailCode(10));
+        $this->assertSame([], $this->statements('INSERT'));
+        $this->assertSame('ROLLBACK', $this->sql[3]);
+        $this->assertStringContainsString('RELEASE_LOCK(', end($this->sql));
+
+        // An unreadable token table refuses the code and still releases the lock.
+        $this->sql     = [];
+        $this->rows    = [['got' => 1], $this->row(['method' => 'email', 'secret' => null])];
+        $this->onQuery = function (string $statement): void {
+            // Everything up to the cooldown count answers; the count itself fails.
+            if (str_contains($statement, 'COUNT(*)')) {
+                $this->queryFails = true;
+            }
+        };
         try {
             $this->handler()->issueEmailCode(10);
             $this->fail('an unreadable token table must not issue a code');
@@ -829,14 +856,16 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             $this->assertSame('Two-factor code lookup failed', $e->getMessage());
         }
         $this->assertSame([], $this->statements('INSERT'));
-        $this->assertSame('ROLLBACK', end($this->sql));
+        $this->onQuery    = null;
         $this->queryFails = false;
+        $this->assertSame('ROLLBACK', $this->sql[count($this->sql) - 2]);
+        $this->assertStringContainsString('RELEASE_LOCK(', end($this->sql), 'the lock is released on the exception path');
 
         $this->sql  = [];
-        $this->rows = [['cnt' => 0]];
+        $this->rows = [['got' => 1], $this->row(['method' => 'email', 'secret' => null]), ['cnt' => 0]];
         $code       = $this->handler()->issueEmailCode(10);
         $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $code);
-        $this->assertSame('COMMIT', end($this->sql));
+        $this->assertStringContainsString('RELEASE_LOCK(', end($this->sql));
         $revokes = $this->statements('UPDATE `xoops_tokens`');
         $this->assertCount(1, $revokes, 'the previous code is revoked first');
         $this->assertStringContainsString("`scope` = '2fa_email'", $revokes[0]);
@@ -874,6 +903,15 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->rows = [$this->row()];
         $this->assertFalse($this->handler()->acceptEmailCode(10, '123456', self::GEN, self::NOW), 'a TOTP row does not take a mailed code');
         $this->assertSame([], $this->statements('UPDATE `xoops_tokens`'));
+    }
+
+    #[Test]
+    public function revokeEmailCodesDropsEveryUnusedMailedCode(): void
+    {
+        $this->assertTrue($this->handler()->revokeEmailCodes(10));
+        $revokes = $this->statements('UPDATE `xoops_tokens`');
+        $this->assertCount(1, $revokes);
+        $this->assertStringEndsWith("WHERE `uid` = 10 AND `scope` = '2fa_email' AND `used_at` = 0", $revokes[0]);
     }
 
     #[Test]

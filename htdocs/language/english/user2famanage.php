@@ -48,6 +48,7 @@ define('_US_2FAM_RESET', 'Reset this user’s two-factor authentication');
 define('_US_2FAM_STATUS_NONE', 'Not enrolled');
 define('_US_2FAM_STATUS_TOTP', 'Authenticator app enrolled');
 define('_US_2FAM_STATUS_EMAIL', 'E-mail codes enrolled');
+define('_US_2FAM_STATUS_UNAVAILABLE', 'Status unavailable');
 define('_US_2FAM_RESET_HELP', 'This disables the user’s second factor, whichever method they enrolled, and revokes their recovery codes and remember-me cookies. Existing signed-in sessions remain active. Enter your own administrator password to confirm.');
 define('_US_2FAM_RESET_DONE', 'The user’s two-factor authentication was reset.');
 define('_US_2FAM_BACK', 'Back to account');

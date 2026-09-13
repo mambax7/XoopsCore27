@@ -64,6 +64,7 @@ final class LoginGateSourceTest extends TestCase
         $this->loadSourceFile('htdocs/include/site-closed.php');
         self::assertStringContainsString("include_once \$GLOBALS['xoops']->path('include/checklogin2fa.php');", $this->sourceContent);
         self::assertStringContainsString("hasVar('xoops_2fa', 'POST')", $this->sourceContent);
+        self::assertStringContainsString("hasVar('xoops_2fa_send', 'POST')", $this->sourceContent, 'a closed site forwards the e-mail resend too');
         self::assertStringContainsString("isset(\$_SESSION['xoops2faPending'])", $this->sourceContent);
     }
 
