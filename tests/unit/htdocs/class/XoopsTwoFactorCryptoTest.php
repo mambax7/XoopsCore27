@@ -100,6 +100,24 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
     }
 
     #[Test]
+    public function macKeyReadsTheProvisionedKeyAndNeverWritesOne(): void
+    {
+        $crypto = $this->crypto();
+        $this->assertFalse($crypto->hasKey());
+        // Writing here would let an unreadable key file be replaced, and every
+        // sealed secret dies with the key it was sealed under.
+        $this->assertNull($crypto->macKey());
+        $this->assertFalse($crypto->hasKey());
+
+        $this->assertTrue($crypto->provisionKey(false));
+        $key = $crypto->macKey();
+        $this->assertIsString($key);
+        $this->assertSame(32, strlen($key));
+        $this->assertSame($key, $crypto->loadKey(), 'the sealing key and the MAC key are one key');
+        $this->assertSame($key, $this->crypto()->macKey(), 'and every instance reads the same one');
+    }
+
+    #[Test]
     public function provisionWritesOneKeyAndKeepsItOnASecondCall(): void
     {
         $crypto = $this->crypto();

@@ -79,7 +79,8 @@ function xoops_login_authenticate(string $uname, string $pass)
  * @param string    $state      the factor state the gate found
  * @param string    $generation the row generation the gate found ('' when none)
  * @param bool      $remember   whether the visitor asked to be remembered
- * @param string    $redirect   the posted xoops_redirect value, or ''
+ * @param string      $redirect the posted xoops_redirect value, or ''
+ * @param string|null $method   the factor's method, which sets how long the record lives
  * @return never
  */
 function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect, ?string $method = null): never

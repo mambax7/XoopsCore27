@@ -348,13 +348,38 @@ final class XoopsUser2faHandler
                 if (is_array($row) && (int) ($row['cnt'] ?? 0) > 0) {
                     return null;
                 }
-                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $code  = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $token = $this->mailCodeToken($code);
+                if (null === $token) {
+                    return false;
+                }
 
-                return $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $code);
+                // The visitor is mailed the code; the table keeps the MAC.
+                return false === $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $token) ? false : $code;
             }, true);
         } finally {
             $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
         }
+    }
+
+    /**
+     * The stored form of a mailed code.
+     *
+     * Six digits is a million possibilities: a hash of the code alone is
+     * recovered by hashing all of them, so what reaches the token table is a
+     * MAC under the site key, which the database does not hold.
+     *
+     * @param string $code the six-digit code
+     *
+     * @return string|null the stored form, or null when the site has no key
+     *
+     * @throws \Random\RandomException when the secure random source fails
+     */
+    private function mailCodeToken(string $code): ?string
+    {
+        $key = $this->crypto()->macKey();
+
+        return null === $key ? null : hash_hmac('sha256', $code, $key);
     }
 
     /**
@@ -410,7 +435,8 @@ final class XoopsUser2faHandler
         }
         $uid = (int) $row['uid'];
         if (self::METHOD_EMAIL === $row['method']) {
-            if (!preg_match('/^[0-9]{6}$/', $code) || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $code, true)) {
+            $token = preg_match('/^[0-9]{6}$/', $code) ? $this->mailCodeToken($code) : null;
+            if (null === $token || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $token, true)) {
                 return false;
             }
             if (!$this->db->exec(sprintf(
@@ -731,7 +757,8 @@ final class XoopsUser2faHandler
             if (null !== $row && self::ROW_DISABLED !== $row['state']) {
                 return false;
             }
-            if (!preg_match('/^[0-9]{6}$/', $code) || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $code, true)) {
+            $token = preg_match('/^[0-9]{6}$/', $code) ? $this->mailCodeToken($code) : null;
+            if (null === $token || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $token, true)) {
                 return false;
             }
 

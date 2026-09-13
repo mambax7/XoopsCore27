@@ -96,7 +96,9 @@ try {
                         if ($_SESSION['xoops2faSetup']['attempts'] >= 5) {
                             // The live code has been guessed at five times: it dies with the setup.
                             unset($_SESSION['xoops2faSetup']);
-                            $handler->revokeEmailCodes($uid);
+                            if (!$handler->revokeEmailCodes($uid)) {
+                                throw new \RuntimeException('Code revocation failed');
+                            }
                         }
                         $error = _US_2FA_BADCODE;
                     } else {
@@ -194,6 +196,10 @@ try {
                     $message = _US_2FAM_RESET_DONE;
                 } elseif ('begin_email' === $action && !$enrolled) {
                     $user = $authenticated;
+                    // The mailed code is stored under the site key, so this path needs one too.
+                    if (!$crypto->provisionKey(fn (): bool => $handler->hasEncryptedSecrets())) {
+                        throw new \RuntimeException('Key provisioning refused');
+                    }
                     // Restarting keeps the guesses already spent against a code that is still live;
                     // only a freshly mailed code starts the count over.
                     $pending  = $_SESSION['xoops2faSetup'] ?? null;
@@ -213,7 +219,9 @@ try {
                         throw new \RuntimeException('Key provisioning refused');
                     }
                     $pending = $_SESSION['xoops2faSetup'] ?? null;
-                    if (xoops_2fa_setup_valid($pending, $uid, (string) $user->getVar('pass', 'n'), $generation, $now)) {
+                    // Only a pending authenticator setup is resumed: the e-mail one carries no secret to open.
+                    if (xoops_2fa_setup_valid($pending, $uid, (string) $user->getVar('pass', 'n'), $generation, $now)
+                        && XoopsUser2faHandler::METHOD_TOTP === ($pending['method'] ?? XoopsUser2faHandler::METHOD_TOTP)) {
                         $setupSecret = $crypto->open($pending['blob'], XoopsTwoFactorCrypto::pendingAad($uid));
                     } else {
                         $setupSecret = XoopsTotp::newSecret();
@@ -221,7 +229,7 @@ try {
                         if (null === $blob) {
                             throw new \RuntimeException('Setup encryption failed');
                         }
-                        $_SESSION['xoops2faSetup'] = ['uid' => $uid, 'generation' => $generation, 'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')), 'expires' => $now + 300, 'blob' => $blob, 'attempts' => 0];
+                        $_SESSION['xoops2faSetup'] = ['uid' => $uid, 'generation' => $generation, 'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')), 'expires' => $now + 300, 'blob' => $blob, 'attempts' => 0, 'method' => XoopsUser2faHandler::METHOD_TOTP];
                     }
                     if (!is_string($setupSecret)) {
                         throw new \RuntimeException('Setup secret unavailable');

@@ -41,6 +41,7 @@ if (false !== $user) {
     // account. The row is read once; the challenge gets its generation.
     /** @var XoopsUser2faHandler $factorHandler */
     $factorHandler = xoops_getHandler('user2fa');
+    $factorRow     = null;
     try {
         $factorRow        = $factorHandler->getRow((int) $user->getVar('uid'));
         $factorState      = $factorHandler->stateOfRow($factorRow);

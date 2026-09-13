@@ -29,21 +29,24 @@ minutes; five incorrect confirmation codes require setup to start again.
 Two browser tabs share one setup secret; only one confirmation can enrol
 the account.
 
-E-mail codes: a six-digit code is mailed to the account address; confirm
+E-mail codes: a six-digit code is mailed to the account address, and the
+token table keeps only a MAC of it under the site key, so a reader of the
+database cannot recover a code by hashing all million of them; confirm
 it within ten minutes. Each code works once, one is issued per minute, and
 a fresh one can be requested from the page. At login the challenge page
 mails a code when it opens and offers "Send a new code". This method is
 weaker than an app: whoever reads the mailbox passes the step, and the
-mailbox usually also resets the password. It needs no sodium extension and
-no encryption key. Both methods share recovery codes, the lockout and the
-administrator reset.
+mailbox usually also resets the password. Like the authenticator method it
+needs the site key, and so the sodium extension that provisions it. Both
+methods share recovery codes, the lockout and the administrator reset.
 
 Plain HTTP displays a warning; use HTTPS in production.
 
 Save the ten recovery codes immediately. They appear only in the successful
 POST response, grouped for reading, and each works once. If you lose that
 display, use the management page with your password and an authenticator
-code to generate a replacement set. Existing recovery codes are revoked.
+code or a mailed code to generate a replacement set. Existing recovery
+codes are revoked.
 Do not share the key or the recovery codes with support staff.
 
 Disabling or replacing recovery codes requires your current password and

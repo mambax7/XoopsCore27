@@ -871,8 +871,9 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertStringContainsString("`scope` = '2fa_email'", $revokes[0]);
         $inserts = $this->statements('INSERT INTO `xoops_tokens`');
         $this->assertCount(1, $inserts);
-        $this->assertStringContainsString("'2fa_email', '" . hash('sha256', $code) . "'", $inserts[0]);
+        $this->assertStringContainsString("'2fa_email', '" . $this->mailToken($code) . "'", $inserts[0]);
         $this->assertStringNotContainsString("'{$code}'", $inserts[0], 'the code itself is never stored');
+        $this->assertStringNotContainsString(hash('sha256', $code), $inserts[0], 'nor a hash a database reader could brute-force');
     }
 
     #[Test]
@@ -883,7 +884,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertTrue($this->handler()->acceptEmailCode(10, '123456', self::GEN, self::NOW));
         $this->assertSame('START TRANSACTION', $this->sql[0]);
         $this->assertStringEndsWith('FOR UPDATE', $this->sql[1]);
-        $this->assertStringContainsString("`scope` = '2fa_email' AND `hash` = '" . hash('sha256', '123456') . "'", $this->sql[2]);
+        $this->assertStringContainsString("`scope` = '2fa_email' AND `hash` = '" . $this->mailToken('123456') . "'", $this->sql[2]);
         $this->assertSame('UPDATE `xoops_user_2fa` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = 10', $this->sql[3]);
         $this->assertSame('COMMIT', $this->sql[4]);
 
@@ -922,7 +923,7 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $result         = $this->handler()->enrolEmail(10, '123456', self::NOW, '');
         $this->assertIsArray($result);
         $this->assertCount(10, $result['codes']);
-        $this->assertStringContainsString("`hash` = '" . hash('sha256', '123456') . "'", $this->sql[2], 'the mailed code is consumed before the row is written');
+        $this->assertStringContainsString("`hash` = '" . $this->mailToken('123456') . "'", $this->sql[2], 'the mailed code is consumed before the row is written');
         $inserts = $this->statements('INSERT INTO `xoops_user_2fa`');
         $this->assertCount(1, $inserts);
         $this->assertStringContainsString("'enrolled', 'email', NULL,", $inserts[0]);
@@ -947,8 +948,21 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->affected = 1;
         $generation     = $this->handler()->manage(10, self::GEN, '123456', '', 'disable', self::NOW);
         $this->assertIsString($generation);
-        $this->assertStringContainsString("`scope` = '2fa_email' AND `hash` = '" . hash('sha256', '123456') . "'", $this->sql[2]);
+        $this->assertStringContainsString("`scope` = '2fa_email' AND `hash` = '" . $this->mailToken('123456') . "'", $this->sql[2]);
         $this->assertCount(1, $this->statements("UPDATE `xoops_user_2fa` SET `state` = 'disabled'"));
+    }
+
+    /**
+     * What the token table stores for a mailed code: the token handler's own
+     * hash of the MAC this handler gives it, so the code is not recoverable
+     * from the table without the site key.
+     */
+    private function mailToken(string $code): string
+    {
+        $key = $this->crypto()->macKey();
+        $this->assertIsString($key);
+
+        return hash('sha256', hash_hmac('sha256', $code, $key));
     }
 
     private function hatchDir(): string

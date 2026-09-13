@@ -331,6 +331,32 @@ final class Manage2faControllerTest extends TestCase
     }
 
     #[Test]
+    public function anAuthenticatorSetupDoesNotAdoptAPendingEmailSetup(): void
+    {
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame('email', $_SESSION['xoops2faSetup']['method']);
+
+        // The other button, from a stale form or a second tab: a fresh secret, not the e-mail record.
+        $vars = $this->execute(['action' => 'begin', 'password' => 'correct']);
+        self::assertSame('', $vars['error']);
+        self::assertMatchesRegularExpression('/^[A-Z2-7]{32}$/', $vars['secret']);
+        self::assertSame('totp', $_SESSION['xoops2faSetup']['method']);
+        self::assertFalse($vars['by_email']);
+    }
+
+    #[Test]
+    public function aFailedCodeRevocationIsReportedRatherThanIgnored(): void
+    {
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        foreach (['1', '2', '3', '4'] as $n) {
+            $this->execute(['action' => 'confirm', 'code' => str_repeat($n, 6)]);
+        }
+        $GLOBALS['manageRefuse'] = true;
+        $vars = $this->execute(['action' => 'confirm', 'code' => '555555']);
+        self::assertSame(_US_2FAM_UNAVAILABLE, $vars['error'], 'a code that could not be revoked is not reported as a plain bad code');
+    }
+
+    #[Test]
     public function aLockedEmailFactorIsNotMailedACodeFromTheManagementPage(): void
     {
         $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'gen', 'locked_until' => time() + 100];
@@ -455,7 +481,7 @@ class XoopsUser2faHandler {
         $GLOBALS['manageRow'] = ['state' => 'disabled', 'generation' => 'disabledgen'];
         return 'disabledgen';
     }
-    public function revokeEmailCodes(int $uid): bool { $GLOBALS['manageLog'][] = "revokeEmail:$uid"; return true; }
+    public function revokeEmailCodes(int $uid): bool { $GLOBALS['manageLog'][] = "revokeEmail:$uid"; return !$GLOBALS['manageRefuse']; }
     public function enrolEmail(int $uid, string $code, int $now, ?string $generation = null): array|false {
         $GLOBALS['manageLog'][] = "enrolEmail:$uid:$code:$generation";
         if ($GLOBALS['manageRefuse'] || '654321' !== $code) { return false; }
