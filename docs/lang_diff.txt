@@ -11,7 +11,7 @@ Below are language differences from a version to next version.
 
 /htdocs/modules/system/language/english/admin/preferences.php
 - added define('_MD_AM_TWOFACTORMODE', 'Two-factor authentication');
-- added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol a time-based code app and challenges members who have enrolled.');
+- added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol an authenticator app or e-mail codes, and challenges members who have enrolled.');
 - added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
 - added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
 
@@ -20,6 +20,14 @@ Below are language differences from a version to next version.
 - added define('_US_2FA_TITLE', 'Second step');
 - added define('_US_2FA_PROMPT', 'Enter the code from your authenticator app');
 - added define('_US_2FA_CODE', 'Authenticator code');
+- added define('_US_2FA_PROMPT_EMAIL', 'We sent a six-digit code to %s. Enter it below.');
+- added define('_US_2FA_CODE_EMAIL', 'Code from your e-mail');
+- added define('_US_2FA_SEND', 'Send a new code');
+- added define('_US_2FA_SENT', 'A new code was sent to %s. It is valid for ten minutes.');
+- added define('_US_2FA_SEND_WAIT', 'A code was sent less than a minute ago. Check your inbox and spam folder before requesting another one.');
+- added define('_US_2FA_SEND_FAILED', 'The code could not be sent right now. Try again in a moment, or use a recovery code.');
+- added define('_US_2FA_EMAIL_SUBJECT', '%s: your sign-in code');
+- added define('_US_2FA_EMAIL_BODY', 'Your sign-in code for %s is:\n\n%s\n\nIt is valid for %d minutes and works once. If you did not request it, ignore this message and consider changing your password.');
 - added define('_US_2FA_RECOVERY', 'Use a recovery code instead');
 - added define('_US_2FA_RECOVERY_HINT', 'Each recovery code works once. Using one sends you an e-mail.');
 - added define('_US_2FA_SUBMIT', 'Continue');
@@ -27,10 +35,10 @@ Below are language differences from a version to next version.
 - added define('_US_2FA_BACKTOLOGIN', 'Back to the login form');
 - added define('_US_2FA_BADCODE', 'That code was not accepted.');
 - added define('_US_2FA_LOCKED', 'Too many attempts. The second step is locked for fifteen minutes; a recovery code still works.');
-- added define('_US_2FA_UNAVAILABLE', 'The authenticator step is not available right now. A recovery code still works, or contact the site administrator.');
+- added define('_US_2FA_UNAVAILABLE', 'The second step is not available right now. A recovery code still works, or contact the site administrator.');
 - added define('_US_2FA_REQUIRED', 'This account has two-factor authentication enabled. Please sign in through the site\'s login page.');
 - added define('_US_2FA_LOCKED_MAIL_SUBJECT', '%s: second step locked');
-- added define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong authenticator codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
+- added define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong second-step codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
 - added define('_US_2FA_RECOVERY_MAIL_SUBJECT', '%s: a recovery code was used');
 - added define('_US_2FA_RECOVERY_MAIL_BODY', 'A recovery code was used to sign in to your account at %s from %s. That code no longer works. If this was not you, change your password and reset your recovery codes.');
 
@@ -39,8 +47,20 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_PASSWORD', 'Your current password');
 - added define('_US_2FAM_ENABLE', 'Set up an authenticator');
 - added define('_US_2FAM_CONFIRM', 'Confirm authenticator');
+- added define('_US_2FAM_CHOOSE', 'Choose how you want to receive your second step: an authenticator app, or a code by e-mail.');
+- added define('_US_2FAM_ENABLE_EMAIL', 'Use e-mail codes');
+- added define('_US_2FAM_EMAIL_HELP', 'E-mail codes: a six-digit code is sent to %s each time you sign in. Less secure than an authenticator app, because anyone who can read your e-mail can pass this step.');
+- added define('_US_2FAM_EMAIL_STEP', 'We sent a six-digit code to %s. Enter it below to confirm. It is valid for ten minutes.');
+- added define('_US_2FAM_CONFIRM_EMAIL', 'Confirm e-mail codes');
+- added define('_US_2FAM_CODE_HELP_EMAIL', 'The six-digit code from the e-mail we just sent you.');
+- added define('_US_2FAM_ENABLED_EMAIL', 'E-mail codes are enrolled. To make a change, enter your current password and the code we e-mail you, or a recovery code. Use the button below to request a code.');
+- added define('_US_2FAM_SEND', 'Send me a code');
 - added define('_US_2FAM_MANUAL', 'Manual setup key');
-- added define('_US_2FAM_SCAN', 'Scan this QR code in your authenticator app, or enter the manual key. Then enter its six-digit code below.');
+- added define('_US_2FAM_SCAN', 'QR code for your authenticator app');
+- added define('_US_2FAM_STEP_APP', 'You need an authenticator: any app or password manager that generates time-based one-time codes (TOTP) will work, on your phone or computer. If you do not have one yet, install one of your choice first (e.g. Google Authenticator, Microsoft Authenticator, Aegis or FreeOTP).');
+- added define('_US_2FAM_STEP_ADD', 'In the app, add an account: scan this QR code, or choose manual entry and type the setup key shown below it.');
+- added define('_US_2FAM_STEP_CODE', 'The app now shows a six-digit code that changes every 30 seconds. Type the code it shows right now into the field below and confirm.');
+- added define('_US_2FAM_CODE_HELP', 'The six-digit code your authenticator app shows right now.');
 - added define('_US_2FAM_HTTP', 'This connection uses plain HTTP. Your password, session, authenticator setup key and recovery codes can be intercepted. Use HTTPS whenever possible.');
 - added define('_US_2FAM_CODES', 'Save these recovery codes now');
 - added define('_US_2FAM_CODES_HELP', 'Each code works once. These codes will not be displayed again. Keep them somewhere safe, separate from this account.');
@@ -53,7 +73,11 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_STARTAGAIN', 'Setup expired or the account changed. Enter your password to start setup again.');
 - added define('_US_2FAM_BADPASSWORD', 'Your current password was not accepted.');
 - added define('_US_2FAM_RESET', 'Reset this user’s two-factor authentication');
-- added define('_US_2FAM_RESET_HELP', 'This disables the user’s authenticator and revokes their recovery codes and remember-me cookies. Existing signed-in sessions remain active. Enter your own administrator password to confirm.');
+- added define('_US_2FAM_STATUS_NONE', 'Not enrolled');
+- added define('_US_2FAM_STATUS_TOTP', 'Authenticator app enrolled');
+- added define('_US_2FAM_STATUS_EMAIL', 'E-mail codes enrolled');
+- added define('_US_2FAM_STATUS_UNAVAILABLE', 'Status unavailable');
+- added define('_US_2FAM_RESET_HELP', 'This disables the user’s second factor, whichever method they enrolled, and revokes their recovery codes and remember-me cookies. Existing signed-in sessions remain active. Enter your own administrator password to confirm.');
 - added define('_US_2FAM_RESET_DONE', 'The user’s two-factor authentication was reset.');
 - added define('_US_2FAM_BACK', 'Back to account');
 - added define('_US_2FAM_DONE', 'Two-factor authentication is enabled.');
@@ -61,7 +85,7 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_NOTICE_SUBJECT', '%s: two-factor authentication changed');
 - added define('_US_2FAM_NOTICE_BODY', 'Two-factor authentication or recovery codes were changed for your account at %s from %s. If this was not you, contact the site administrator.');
 - added define('_US_2FAM_RESET_SUBJECT', '%s: an administrator reset your two-factor authentication');
-- added define('_US_2FAM_RESET_BODY', 'An administrator disabled your authenticator and revoked its recovery codes at %s from %s. Existing signed-in sessions remain active. Sign in and set up your authenticator again. Contact the site administrator if this was unexpected.');
+- added define('_US_2FAM_RESET_BODY', 'An administrator disabled your second factor and revoked its recovery codes at %s from %s. Existing signed-in sessions remain active. Sign in and set up two-factor authentication again. Contact the site administrator if this was unexpected.');
 
 /upgrade/language/english/twofactor.php (new file)
 - added define('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK', 'Sodium is available for two-factor authentication.');

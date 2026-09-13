@@ -42,10 +42,20 @@ final class Challenge2faTemplateTest extends TestCase
             'error' => "<img src=x onerror=alert(2)>\nSecond error", 'start_again' => false,
             'login_url' => '/user.php', 'action_url' => '/user.php', 'lang_startagain' => 'Start again',
             'lang_code' => 'Code', 'lang_recovery' => 'Recovery', 'lang_recovery_hint' => 'Recovery hint', 'lang_submit' => 'Submit',
-            'token_html' => '<input name="XOOPS_TOKEN" value="token">',
+            'token_html' => '<input name="XOOPS_TOKEN" value="token">', 'standalone' => true, 'by_email' => false, 'lang_send' => 'Send again',
+            'form' => '<form data-rendered="challenge"><input name="XOOPS_TOKEN" value="token"></form>', 'send_form' => '',
         ]);
         try {
             $html = $smarty->fetch('file:' . XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl');
+            self::assertStringStartsWith('<!DOCTYPE html>', $html, 'a closed site gets a whole document');
+            self::assertStringContainsString('<form data-rendered="challenge">', $html, 'the rendered form passes through unescaped');
+            self::assertStringNotContainsString('data-rendered="send"', $html);
+            $smarty->assign(['standalone' => false, 'by_email' => true, 'send_form' => '<form data-rendered="send"></form>']);
+            $themed = $smarty->fetch('file:' . XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl');
+            self::assertStringNotContainsString('<html', $themed, 'the theme supplies the document');
+            self::assertStringNotContainsString('</body>', $themed);
+            self::assertStringContainsString('<form data-rendered="send"></form>', $themed);
+            $smarty->assign(['standalone' => true, 'by_email' => false, 'send_form' => '']);
             self::assertStringNotContainsString('<script>', $html);
             self::assertStringNotContainsString('<img', $html);
             self::assertStringContainsString('&lt;script&gt;title&lt;/script&gt;', $html);

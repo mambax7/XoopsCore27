@@ -52,50 +52,43 @@ final class Manage2faTemplateTest extends TestCase
         $smarty->addPluginsDir(XOOPS_ROOT_PATH . '/class/smarty3_plugins');
         $smarty->caching = 0;
         $labels = [];
-        foreach (['title', 'paused', 'codes', 'codes_help', 'reset_help', 'enabled', 'http', 'scan', 'manual', 'password', 'reset', 'regenerate', 'disable', 'confirm', 'enable', 'back'] as $name) {
+        foreach (['title', 'paused', 'codes', 'codes_help', 'reset_help', 'enabled', 'enabled_email', 'http', 'scan', 'manual', 'password', 'reset', 'regenerate', 'disable', 'confirm', 'confirm_email', 'enable', 'enable_email', 'choose', 'email_help', 'email_step', 'send', 'step_app', 'step_add', 'step_code', 'code_help', 'code_help_email', 'back'] as $name) {
             $labels[$name] = 'Label ' . $name;
         }
         $base = ['labels' => $labels, 'langcode' => 'en', 'charset' => 'UTF-8', 'account' => '<script>alert(1)</script>',
+            'form' => '<form data-rendered="manage"><input name="password"></form>', 'send_form' => '',
             'message' => '', 'error' => '', 'paused' => false, 'codes' => [], 'installed' => true, 'admin_reset' => false,
             'enrolled' => false, 'http_warning' => true, 'secret' => '', 'qr' => '', 'action_url' => XOOPS_URL . '/user.php',
             'token_html' => '<input type="hidden" name="XOOPS_TOKEN" value="csrf">', 'uid' => 9, 'confirm_setup' => false,
-            'lang_code' => 'Code', 'lang_recovery' => 'Recovery', 'back_url' => XOOPS_URL . '/userinfo.php?uid=9'];
+            'lang_code' => 'Code', 'lang_recovery' => 'Recovery', 'back_url' => XOOPS_URL . '/userinfo.php?uid=9', 'by_email' => false];
         try {
             foreach ([
                 'begin' => [],
                 'confirm' => ['confirm_setup' => true, 'secret' => '<img src=x onerror=alert(1)>'],
                 'regenerate' => ['enrolled' => true],
                 'reset' => ['admin_reset' => true],
-            ] as $action => $overrides) {
+                'send' => ['enrolled' => true, 'by_email' => true, 'send_form' => '<form data-rendered="send"></form>'],
+            ] as $case => $overrides) {
                 $smarty->assign($overrides + $base);
                 $html = $smarty->fetch('file:' . XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa_manage.tpl');
-                self::assertStringContainsString('<title>Label title</title>', $html);
-                self::assertStringContainsString('Label http', $html);
-                self::assertStringNotContainsString('<script>', $html);
-                self::assertStringContainsString('&lt;script&gt;', $html);
-                self::assertStringContainsString('name="XOOPS_TOKEN"', $html);
-                self::assertStringContainsString('name="action" value="' . $action . '"', $html);
-                if ($action === 'confirm') {
-                    self::assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $html);
-                    self::assertStringNotContainsString('name="password"', $html);
-                    self::assertStringContainsString('name="code"', $html);
+                self::assertStringContainsString('<h1>Label title</h1>', $html, $case);
+                self::assertStringNotContainsString('<html', $html, 'the theme supplies the document');
+                self::assertStringContainsString('Label http', $html, $case);
+                self::assertStringNotContainsString('<script>', $html, $case);
+                self::assertStringContainsString('&lt;script&gt;', $html, $case);
+                self::assertStringContainsString('<form data-rendered="manage"><input name="password"></form>', $html, 'the rendered form passes through unescaped');
+                self::assertStringNotContainsString('<img src=x', $html, 'the template itself prints no untrusted value');
+                if ('send' === $case) {
+                    self::assertStringContainsString('<form data-rendered="send"></form>', $html);
                 } else {
-                    self::assertStringContainsString('name="password"', $html);
-                }
-                if ($action === 'regenerate') {
-                    self::assertStringContainsString('name="recovery"', $html);
-                    self::assertStringContainsString('value="disable"', $html);
-                }
-                if ($action === 'reset') {
-                    self::assertStringContainsString('name="uid" value="9"', $html);
-                    self::assertStringNotContainsString('name="code"', $html);
+                    self::assertStringNotContainsString('data-rendered="send"', $html, $case);
                 }
             }
             $smarty->assign(['codes' => ['<unsafe>']] + $base);
             $html = $smarty->fetch('file:' . XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa_manage.tpl');
             self::assertStringContainsString('&lt;unsafe&gt;', $html);
             self::assertStringContainsString('Label http', $html);
-            self::assertStringNotContainsString('<form', $html);
+            self::assertStringNotContainsString('<form', $html, 'the codes page shows the codes, not the form');
         } finally {
             foreach (glob($directory . '/*') as $compiled) { unlink($compiled); }
             rmdir($directory);

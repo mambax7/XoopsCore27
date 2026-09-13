@@ -64,6 +64,7 @@ final class LoginGateSourceTest extends TestCase
         $this->loadSourceFile('htdocs/include/site-closed.php');
         self::assertStringContainsString("include_once \$GLOBALS['xoops']->path('include/checklogin2fa.php');", $this->sourceContent);
         self::assertStringContainsString("hasVar('xoops_2fa', 'POST')", $this->sourceContent);
+        self::assertStringContainsString("hasVar('xoops_2fa_send', 'POST')", $this->sourceContent, 'a closed site forwards the e-mail resend too');
         self::assertStringContainsString("isset(\$_SESSION['xoops2faPending'])", $this->sourceContent);
     }
 
@@ -73,14 +74,21 @@ final class LoginGateSourceTest extends TestCase
         $this->loadSourceFile('htdocs/include/checklogin2fa.php');
         self::assertSame(1, substr_count($this->sourceContent, "\n    function "));
         self::assertStringContainsString("if (!function_exists(ltrim(__NAMESPACE__ . '\\\\xoops_2fa_render', '\\\\'))) {", $this->sourceContent);
-        // the headers are sent for every outcome, before anything is decided
-        $headers = strpos($this->sourceContent, "header('Cache-Control: no-store');");
+        // the headers are sent for every outcome, before anything is decided, and again when the
+        // response starts, because footer.php replaces Cache-Control for a signed-in visitor
+        $headers = strpos($this->sourceContent, 'xoops_2fa_sensitive_headers();');
         $pending = strpos($this->sourceContent, "\$_SESSION['xoops2faPending'] ?? null");
         self::assertNotFalse($headers);
         self::assertNotFalse($pending);
         self::assertLessThan($pending, $headers);
-        self::assertStringContainsString("header('Referrer-Policy: no-referrer');", $this->sourceContent);
-        self::assertStringContainsString("header('X-Frame-Options: DENY');", $this->sourceContent);
+        $helper = file_get_contents(dirname(__DIR__, 4) . '/htdocs/include/twofactor.php');
+        $body   = substr($helper, strpos($helper, 'function xoops_2fa_sensitive_headers('));
+        $body   = substr($body, 0, strpos($body, "
+}
+"));
+        foreach (["header('Cache-Control: no-store');", "header('Referrer-Policy: no-referrer');", "header('X-Frame-Options: DENY');", 'header_register_callback($send);'] as $line) {
+            self::assertStringContainsString($line, $body);
+        }
         self::assertStringContainsString('$tpl->caching = 0;', $this->sourceContent);
         // the closed-site page includes this without loading the user language first
         self::assertStringContainsString("xoops_loadLanguage('user');", $this->sourceContent);

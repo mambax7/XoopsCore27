@@ -60,6 +60,8 @@ try {
     $result = match ($job['action']) {
         'totp' => $handler->acceptTotp($job['uid'], $job['step'], $job['generation'], $job['now']),
         'recovery' => $handler->acceptRecovery($job['uid'], $job['code'], $job['generation']),
+        'issue' => $handler->issueEmailCode($job['uid']),
+        'emailcode' => $handler->acceptEmailCode($job['uid'], $job['code'], $job['generation'], $job['now']),
         'failure' => $handler->recordFailure($job['uid'], $job['now'], $job['generation']),
         'reset' => $handler->disable($job['uid']),
         'key' => (static function (): string|false {

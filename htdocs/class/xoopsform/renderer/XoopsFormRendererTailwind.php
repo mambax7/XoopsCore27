@@ -613,8 +613,10 @@ EOJS;
      */
     public function renderFormLabel(XoopsFormLabel $element)
     {
+        // The value is markup on every renderer: modules put links, <code> and
+        // images in labels, and Bootstrap and Legacy emit it as given.
         return '<label class="label label-text" id="' . $this->esc($element->getName(false)) . '">'
-            . $this->esc($element->getValue())
+            . $element->getValue()
             . '</label>';
     }
 

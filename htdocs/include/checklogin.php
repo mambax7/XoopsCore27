@@ -41,6 +41,7 @@ if (false !== $user) {
     // account. The row is read once; the challenge gets its generation.
     /** @var XoopsUser2faHandler $factorHandler */
     $factorHandler = xoops_getHandler('user2fa');
+    $factorRow     = null;
     try {
         $factorRow        = $factorHandler->getRow((int) $user->getVar('uid'));
         $factorState      = $factorHandler->stateOfRow($factorRow);
@@ -50,7 +51,7 @@ if (false !== $user) {
         $factorGeneration = '';
     }
     if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($GLOBALS['xoopsConfig']), $factorState)) {
-        xoops_login_begin_challenge($user, $factorState, $factorGeneration, !empty($rememberme), $redirect);
+        xoops_login_begin_challenge($user, $factorState, $factorGeneration, !empty($rememberme), $redirect, is_array($factorRow) ? (string) $factorRow['method'] : null);
     }
     xoops_login_establish_session($user, !empty($rememberme), $redirect);
 } elseif (empty($redirect)) {

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<{if $standalone}><!DOCTYPE html>
 <html lang="<{$xoops_langcode|escape}>">
 <head>
     <meta charset="<{$xoops_charset|escape}>"/>
@@ -8,8 +8,8 @@
     <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'browse.php?xoops.css'}>"/>
     <link rel="stylesheet" type="text/css" media="screen" href="<{$xoops_themecss|escape}>"/>
 </head>
-<body>
-<div class="width60 txtcenter" style="margin: 3em auto;">
+<body><{/if}>
+<div class="xo-2fa-challenge<{if $standalone}> width60 txtcenter" style="margin: 3em auto;<{/if}>">
     <h2><{$title|escape}></h2>
     <{if $start_again}>
         <p class="errorMsg"><{$message|escape}></p>
@@ -17,26 +17,10 @@
     <{else}>
         <p><{$message|escape}></p>
         <{if $error}><p class="errorMsg"><{$error|escape|nl2br}></p><{/if}>
-        <form action="<{$action_url|escape}>" method="post" autocomplete="off">
-            <p>
-                <label for="xo-2fa-code"><{$lang_code|escape}></label><br>
-                <input type="text" id="xo-2fa-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" pattern="[0-9]{6}" autofocus/>
-            </p>
-            <details>
-                <summary><{$lang_recovery|escape}></summary>
-                <p>
-                    <label for="xo-2fa-recovery"><{$lang_recovery|escape}></label><br>
-                    <input type="text" id="xo-2fa-recovery" name="recovery" inputmode="text" autocomplete="off" maxlength="40" dir="ltr"/><br>
-                    <small><{$lang_recovery_hint|escape}></small>
-                </p>
-            </details>
-            <input type="hidden" name="op" value="2fa"/>
-            <input type="hidden" name="xoops_2fa" value="1"/>
-            <{$token_html}>
-            <p><input type="submit" value="<{$lang_submit|escape}>"/></p>
-        </form>
+        <{$form}>
+        <{if $send_form}><{$send_form}><{/if}>
         <p><a href="<{$login_url|escape}>"><{$lang_startagain|escape}></a></p>
     <{/if}>
 </div>
-</body>
-</html>
+<{if $standalone}></body>
+</html><{/if}>

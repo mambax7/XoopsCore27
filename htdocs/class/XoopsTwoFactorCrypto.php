@@ -146,6 +146,8 @@ final class XoopsTwoFactorCrypto
      * @param bool|callable $encryptedRowsExist callback checked under the provisioning lock, or a known fixed result
      *
      * @return bool true when a usable key exists afterwards
+     *
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function provisionKey(bool|callable $encryptedRowsExist): bool
     {
@@ -158,6 +160,39 @@ final class XoopsTwoFactorCrypto
         if (true === $encryptedRowsExist) {
             return false;
         }
+        if (!$this->createKey($encryptedRowsExist)) {
+            return false;
+        }
+
+        return null !== $this->loadKey();
+    }
+
+    /**
+     * The site key for message authentication.
+     *
+     * Reads only: provisioning stays with provisionKey(), whose guard refuses
+     * to replace a key while sealed secrets depend on it. Sealing needs
+     * sodium, authenticating a short code does not, so this skips the
+     * extension check loadKey() applies.
+     *
+     * @return string|null the key, or null when the site has none
+     */
+    public function macKey(): ?string
+    {
+        return $this->readKey();
+    }
+
+    /**
+     * Write a key unless one is already there, holding the provisioning lock.
+     *
+     * @param bool|callable $encryptedRowsExist guard re-checked under the lock
+     *
+     * @return bool whether a usable key is in place
+     *
+     * @throws \Random\RandomException when the secure random source fails
+     */
+    private function createKey(bool|callable $encryptedRowsExist): bool
+    {
         set_error_handler(static fn (): bool => true);
         try {
             $lock = fopen($this->lockFile, 'c');
@@ -175,7 +210,8 @@ final class XoopsTwoFactorCrypto
                 if (is_callable($encryptedRowsExist) && $encryptedRowsExist()) {
                     return false;
                 }
-                $key = sodium_crypto_aead_xchacha20poly1305_ietf_keygen();
+                // What sodium's keygen returns: KEY_BYTES from the system source.
+                $key = random_bytes(self::KEY_BYTES);
                 // Same rule as loadKey(): a write warning carries the key
                 // file's path, which must not reach a page.
                 set_error_handler(static fn (): bool => true);
@@ -195,7 +231,7 @@ final class XoopsTwoFactorCrypto
             fclose($lock);
         }
 
-        return null !== $this->loadKey();
+        return true;
     }
 
     /**

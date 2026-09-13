@@ -79,10 +79,11 @@ function xoops_login_authenticate(string $uname, string $pass)
  * @param string    $state      the factor state the gate found
  * @param string    $generation the row generation the gate found ('' when none)
  * @param bool      $remember   whether the visitor asked to be remembered
- * @param string    $redirect   the posted xoops_redirect value, or ''
+ * @param string      $redirect the posted xoops_redirect value, or ''
+ * @param string|null $method   the factor's method, which sets how long the record lives
  * @return never
  */
-function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect): never
+function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect, ?string $method = null): never
 {
     if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
@@ -99,7 +100,10 @@ function xoops_login_begin_challenge(XoopsUser $user, string $state, string $gen
         'state'      => $state,
         'generation' => $generation,
         'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')),
-        'expires'    => time() + 300,
+        // An e-mail code is valid for EMAIL_TTL; the pending login must outlive it.
+        'expires'    => time() + (XoopsUser2faHandler::METHOD_EMAIL === $method ? max(300, XoopsUser2faHandler::EMAIL_TTL) : 300),
+        // When the password was accepted: a resend may extend this record, never past PENDING_MAX from here.
+        'started'    => time(),
         'remember'   => $remember,
         'redirect'   => $redirect,
     ];

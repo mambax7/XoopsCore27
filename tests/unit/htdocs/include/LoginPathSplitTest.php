@@ -42,7 +42,7 @@ final class LoginPathSplitTest extends TestCase
     {
         $this->loadSourceFile('htdocs/include/loginsession.php');
         self::assertStringContainsString('function xoops_login_authenticate(string $uname, string $pass)', $this->sourceContent);
-        self::assertStringContainsString('function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect): never', $this->sourceContent);
+        self::assertStringContainsString('function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect, ?string $method = null): never', $this->sourceContent);
         self::assertStringContainsString('function xoops_login_establish_session(XoopsUser $user, bool $remember, string $redirect, ?string $verifiedGeneration = null): never', $this->sourceContent);
         // Side-effect free: no top-level statements that run on include. Each
         // declaration is removed with the brace walk below; what remains must

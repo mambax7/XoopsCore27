@@ -192,7 +192,7 @@ try {
     $closedCookies = [];
     siteRequest($siteUrl . '/user.php', $closedCookies, ['xoops_login' => '1', 'uname' => 'smokeadmin', 'pass' => 'test-password-only']);
     $page = siteRequest($siteUrl . '/user.php?op=2fa', $closedCookies);
-    siteCheck(str_contains($page['body'], 'name="recovery"'), 'Closed site blocked administrator challenge');
+    siteCheck(preg_match('/name=.recovery./', $page['body']) === 1, 'Closed site blocked administrator challenge');
     $db->query("UPDATE `{$prefix}_config` SET conf_value='0' WHERE conf_name='closesite'");
     echo "PASS: separate HTTP challenge, real session transport, closed-site challenge\n";
     $page = siteRequest($siteUrl . '/modules/system/admin.php?fct=users&op=users_2fa_reset&uid=1', $cookies);

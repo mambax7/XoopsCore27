@@ -39,9 +39,9 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
     /**
      * Render the challenge page and stop.
      *
-     * The page is a full document of its own (like the closed-site page): it
-     * must work on a closed site, where header.php never runs, and it should
-     * carry no blocks or cached fragments.
+     * On an open site the theme wraps the page like any other user.php view.
+     * On a closed site header.php never runs, so the page is a full document
+     * of its own (like the closed-site page).
      *
      * @param array $vars template variables
      * @return never
@@ -50,6 +50,29 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
     {
         global $xoopsConfig;
 
+        // The row is registered by the System module update; until then the shipped file renders the page.
+        $template = 'db:system_user2fa.tpl';
+        /** @var XoopsTplfileHandler $xo2faTplfiles */
+        $xo2faTplfiles = xoops_getHandler('tplfile');
+        if ([] === $xo2faTplfiles->find('default', null, null, null, 'system_user2fa.tpl', true)) {
+            $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl';
+        }
+        // Built after the theme has started: that is when it installs its form renderer.
+        $forms = static function () use (&$vars): void {
+            $vars['form']      = $vars['start_again'] ? '' : xoops_2fa_challenge_form($vars)->render();
+            $vars['send_form'] = !$vars['start_again'] && !empty($vars['by_email'])
+                ? xoops_2fa_send_form($vars['action_url'], ['op' => '2fa', 'xoops_2fa_send' => '1'], $vars['lang_send'])->render()
+                : '';
+        };
+        if (1 != $xoopsConfig['closesite']) {
+            include $GLOBALS['xoops']->path('header.php');
+            $forms();
+            $GLOBALS['xoopsTpl']->assign($vars);
+            $GLOBALS['xoopsTpl']->assign(['standalone' => false, 'xoops_pagetitle' => $vars['title'] ?? '']);
+            $GLOBALS['xoopsTpl']->display($template);
+            include $GLOBALS['xoops']->path('footer.php');
+            exit();
+        }
         require_once $GLOBALS['xoops']->path('class/template.php');
         require_once $GLOBALS['xoops']->path('class/theme.php');
         $factory                = new xos_opal_ThemeFactory();
@@ -65,16 +88,11 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
             'xoops_sitename' => htmlspecialchars((string) $xoopsConfig['sitename'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
             'xoops_charset'  => _CHARSET,
             'xoops_langcode' => _LANGCODE,
+            'standalone'     => true,
         ]);
+        $forms();
         $tpl->assign($vars);
         $tpl->caching = 0;
-        // The row is registered by the System module update; until then the shipped file renders the page.
-        $template = 'db:system_user2fa.tpl';
-        /** @var XoopsTplfileHandler $xo2faTplfiles */
-        $xo2faTplfiles = xoops_getHandler('tplfile');
-        if ([] === $xo2faTplfiles->find('default', null, null, null, 'system_user2fa.tpl', true)) {
-            $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl';
-        }
         $tpl->display($template);
         exit();
     }
@@ -82,9 +100,7 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
 
 // Set unconditionally: common.php already sent the site's own X-Frame-Options
 // value, or none, and only an unconditional header() replaces that.
-header('Cache-Control: no-store');
-header('Referrer-Policy: no-referrer');
-header('X-Frame-Options: DENY');
+xoops_2fa_sensitive_headers();
 
 $xo2faNow      = time();
 $xo2faLoginUrl = XOOPS_URL . '/user.php';
@@ -158,6 +174,13 @@ if (!$xo2faValid) {
 $xo2faUid        = $xo2faPending['uid'];
 $xo2faGeneration = $xo2faPending['generation'];
 $xo2faState      = $xo2faHandler->stateOfRow($xo2faRow);
+$xo2faByEmail    = XoopsUser2faHandler::METHOD_EMAIL === $xo2faRow['method'];
+if ($xo2faByEmail) {
+    $xo2faVars['by_email']  = true;
+    $xo2faVars['message']   = sprintf(_US_2FA_PROMPT_EMAIL, xoops_2fa_mask_email((string) $xo2faUser->getVar('email', 'n')));
+    $xo2faVars['lang_code'] = _US_2FA_CODE_EMAIL;
+    $xo2faVars['lang_send'] = _US_2FA_SEND;
+}
 
 /**
  * Best-effort account notice; never blocks the login path.
@@ -186,6 +209,45 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
         }
     }
 };
+
+if ($xo2faByEmail && XoopsUser2faHandler::STATE_ENROLLED === $xo2faState) {
+    // One code goes out when the page first opens; later ones only on request,
+    // under the cooldown. A code submission never issues: issuing revokes the
+    // code the visitor is typing. A locked factor gets no code either: the
+    // lock outlives the code, so it could only ever be refused.
+    $xo2faSend = 'POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa_send', 'POST');
+    if ($xo2faSend && !$GLOBALS['xoopsSecurity']->check()) {
+        $xo2faVars['error']      = implode("\n", $GLOBALS['xoopsSecurity']->getErrors());
+        $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
+        xoops_2fa_render($xo2faVars);
+    }
+    $xo2faFirstOpen = 'GET' === \Xmf\Request::getMethod() && empty($xo2faPending['emailed']);
+    if ($xo2faSend || $xo2faFirstOpen) {
+        if ((int) ($xo2faRow['locked_until'] ?? 0) > $xo2faNow) {
+            $xo2faDelivery = ['sent' => false, 'message' => _US_2FA_LOCKED];
+        } else {
+            try {
+                $xo2faDelivery = xoops_2fa_deliver_code($xo2faHandler, $xo2faUser);
+            } catch (\Throwable) {
+                $xo2faDelivery = ['sent' => false, 'message' => _US_2FA_SEND_FAILED];
+            }
+        }
+        if ($xo2faDelivery['sent']) {
+            $_SESSION['xoops2faPending']['emailed'] = $xo2faNow;
+            // A code mailed at minute nine would otherwise outlive the login it is for.
+            $xo2faStarted = (int) ($xo2faPending['started'] ?? $xo2faNow);
+            $_SESSION['xoops2faPending']['expires'] = min(
+                $xo2faNow + XoopsUser2faHandler::EMAIL_TTL,
+                $xo2faStarted + XoopsUser2faHandler::PENDING_MAX
+            );
+        }
+        $xo2faVars[$xo2faDelivery['sent'] ? 'message' : 'error'] = $xo2faDelivery['message'];
+        if ($xo2faSend) {
+            $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
+            xoops_2fa_render($xo2faVars);
+        }
+    }
+}
 
 if ('POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa', 'POST')) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
@@ -223,6 +285,11 @@ if ('POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa', 'P
         } elseif (XoopsUser2faHandler::STATE_ENROLLED !== $xo2faState) {
             $xo2faError = _US_2FA_UNAVAILABLE;
             $xo2faCount = false;
+        } elseif ($xo2faByEmail) {
+            if ($xo2faHandler->acceptEmailCode($xo2faUid, $xo2faCode, $xo2faGeneration, $xo2faNow)) {
+                $xo2faAccepted = $xo2faGeneration;
+                $xo2faCount    = false;
+            }
         } elseif (null === ($xo2faSecret = $xo2faHandler->secretFor($xo2faUid))) {
             // The row changed under us, or its secret cannot be read.
             $xo2faError = _US_2FA_UNAVAILABLE;

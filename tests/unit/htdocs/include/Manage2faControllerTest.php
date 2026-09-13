@@ -56,6 +56,7 @@ final class Manage2faControllerTest extends TestCase
         $GLOBALS['manageInstalled'] = true;
         $GLOBALS['manageAccept'] = true;
         $GLOBALS['manageRefuse'] = false;
+        $GLOBALS['manageDeliver'] = true;
         $GLOBALS['manageSessionFails'] = false;
         $GLOBALS['xoopsConfig'] = ['sitename' => 'Test', 'usercookie' => 'remember', 'twofactor_mode' => 'optional'];
         $userClass = self::NS . '\\XoopsUser';
@@ -260,6 +261,152 @@ final class Manage2faControllerTest extends TestCase
     }
 
     #[Test]
+    public function emailEnrolmentMailsACodeAfterThePasswordAndConfirmsWithIt(): void
+    {
+        $vars = $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame('', $vars['error']);
+        self::assertSame('sent-msg', $vars['message']);
+        self::assertTrue($vars['by_email']);
+        self::assertTrue($vars['confirm_setup']);
+        self::assertSame('', $vars['secret'], 'no authenticator secret is minted for the e-mail path');
+        self::assertContains('reauth:9', $GLOBALS['manageLog']);
+        self::assertContains('deliver:9', $GLOBALS['manageLog']);
+        self::assertSame('email', $_SESSION['xoops2faSetup']['method']);
+
+        $vars = $this->execute(['action' => 'confirm', 'code' => '111111']);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+        self::assertSame(1, $_SESSION['xoops2faSetup']['attempts']);
+        self::assertNull($GLOBALS['manageRow']);
+
+        $vars = $this->execute(['action' => 'confirm', 'code' => '654321']);
+        self::assertSame('', $vars['error']);
+        self::assertSame(_US_2FAM_DONE, $vars['message']);
+        self::assertCount(10, $vars['codes']);
+        self::assertContains('enrolEmail:9:654321:', $GLOBALS['manageLog']);
+        self::assertContains('notice', $GLOBALS['manageLog']);
+        self::assertSame('email', $GLOBALS['manageRow']['method']);
+        self::assertArrayNotHasKey('xoops2faSetup', $_SESSION);
+        self::assertSame('mailgen', $_SESSION['xoops2faGeneration']);
+        self::assertTrue($_SESSION['xoops2faVerified']);
+    }
+
+    #[Test]
+    public function restartingEmailSetupKeepsSpentGuessesAndExhaustionRevokesTheCode(): void
+    {
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        $this->execute(['action' => 'confirm', 'code' => '111111']);
+        $this->execute(['action' => 'confirm', 'code' => '222222']);
+        self::assertSame(2, $_SESSION['xoops2faSetup']['attempts']);
+
+        // The cooldown refuses a new code: the restart keeps the two guesses.
+        $GLOBALS['manageDeliver'] = false;
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame(2, $_SESSION['xoops2faSetup']['attempts']);
+
+        // A fresh code starts the count over.
+        $GLOBALS['manageDeliver'] = true;
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame(0, $_SESSION['xoops2faSetup']['attempts']);
+
+        $GLOBALS['manageLog'] = [];
+        foreach (['1', '2', '3', '4'] as $n) {
+            $this->execute(['action' => 'confirm', 'code' => str_repeat($n, 6)]);
+        }
+        self::assertArrayHasKey('xoops2faSetup', $_SESSION);
+
+        // A code asked for with the send button also replaces the one the guesses were spent on.
+        self::assertSame(4, $_SESSION['xoops2faSetup']['attempts']);
+        $_SESSION['xoops2faSetup']['expires'] = time() + 10;
+        $this->execute(['action' => 'send']);
+        self::assertSame(0, $_SESSION['xoops2faSetup']['attempts']);
+        self::assertEqualsWithDelta(time() + 600, $_SESSION['xoops2faSetup']['expires'], 5);
+        foreach (['1', '2', '3', '4'] as $n) {
+            $this->execute(['action' => 'confirm', 'code' => str_repeat($n, 6)]);
+        }
+        self::assertNotContains('revokeEmail:9', $GLOBALS['manageLog']);
+        $vars = $this->execute(['action' => 'confirm', 'code' => '555555']);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+        self::assertArrayNotHasKey('xoops2faSetup', $_SESSION, 'the fifth wrong code ends the setup');
+        self::assertContains('revokeEmail:9', $GLOBALS['manageLog'], 'and the live code dies with it');
+    }
+
+    #[Test]
+    public function anAuthenticatorSetupDoesNotAdoptAPendingEmailSetup(): void
+    {
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        self::assertSame('email', $_SESSION['xoops2faSetup']['method']);
+
+        // The other button, from a stale form or a second tab: a fresh secret, not the e-mail record.
+        $vars = $this->execute(['action' => 'begin', 'password' => 'correct']);
+        self::assertSame('', $vars['error']);
+        self::assertMatchesRegularExpression('/^[A-Z2-7]{32}$/', $vars['secret']);
+        self::assertSame('totp', $_SESSION['xoops2faSetup']['method']);
+        self::assertFalse($vars['by_email']);
+    }
+
+    #[Test]
+    public function aFailedCodeRevocationIsReportedRatherThanIgnored(): void
+    {
+        $this->execute(['action' => 'begin_email', 'password' => 'correct']);
+        foreach (['1', '2', '3', '4'] as $n) {
+            $this->execute(['action' => 'confirm', 'code' => str_repeat($n, 6)]);
+        }
+        $GLOBALS['manageRefuse'] = true;
+        $vars = $this->execute(['action' => 'confirm', 'code' => '555555']);
+        self::assertSame(_US_2FAM_UNAVAILABLE, $vars['error'], 'a code that could not be revoked is not reported as a plain bad code');
+    }
+
+    #[Test]
+    public function aLockedEmailFactorIsNotMailedACodeFromTheManagementPage(): void
+    {
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'gen', 'locked_until' => time() + 100];
+        $vars = $this->execute(['action' => 'send']);
+        self::assertSame(_US_2FA_LOCKED, $vars['error']);
+        self::assertNotContains('deliver:9', $GLOBALS['manageLog']);
+    }
+
+    #[Test]
+    public function aMailedCodeCanBeRequestedForAPendingOrEnrolledEmailFactorOnly(): void
+    {
+        // Nothing pending and nothing enrolled: the button does nothing.
+        $vars = $this->execute(['action' => 'send']);
+        self::assertNotContains('deliver:9', $GLOBALS['manageLog']);
+        self::assertSame('', $vars['message']);
+
+        // Enrolled by e-mail: no password, one delivery.
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'gen'];
+        $vars = $this->execute(['action' => 'send']);
+        self::assertSame('sent-msg', $vars['message']);
+        self::assertTrue($vars['by_email']);
+        self::assertSame('FORM', $vars['form']);
+        self::assertSame('SEND', $vars['send_form']);
+        self::assertSame(_US_2FA_CODE_EMAIL, $vars['lang_code']);
+        self::assertContains('deliver:9', $GLOBALS['manageLog']);
+        self::assertNotContains('reauth:9', $GLOBALS['manageLog']);
+
+        // The cooldown or a mailer failure is reported as the error, not as unavailable.
+        $GLOBALS['manageDeliver'] = false;
+        $vars = $this->execute(['action' => 'send']);
+        self::assertSame('send-fail', $vars['error']);
+        self::assertSame('', $vars['message']);
+
+        // Enrolled with an authenticator: the e-mail button is not offered and not honoured.
+        $GLOBALS['manageDeliver'] = true;
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'totp', 'generation' => 'gen'];
+        $GLOBALS['manageLog'] = [];
+        $vars = $this->execute(['action' => 'send']);
+        self::assertFalse($vars['by_email']);
+        self::assertSame('', $vars['send_form']);
+        self::assertNotContains('deliver:9', $GLOBALS['manageLog']);
+
+        // The button posts under its own name; the plain field is still honoured.
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'gen'];
+        $GLOBALS['manageLog'] = [];
+        $vars = $this->execute(['action_send' => 'Send me a code']);
+        self::assertContains('deliver:9', $GLOBALS['manageLog']);
+    }
+
+    #[Test]
     public function adminResetWithoutAnActiveFactorIsAnAuthenticatedNoOp(): void
     {
         foreach ([null, ['state' => 'disabled', 'generation' => 'oldgen']] as $row) {
@@ -293,13 +440,13 @@ namespace Tests\Unit\Include\Manage2faSandbox;
 class Rendered extends \RuntimeException { public function __construct(public array $vars) { parent::__construct('rendered'); } }
 class XoopsUser {
     public function __construct(private int $uid) {}
-    public function getVar(string $name, string $format = 's'): mixed { return ['uid' => $this->uid, 'uname' => 'user', 'pass' => 'hash'][$name] ?? null; }
+    public function getVar(string $name, string $format = 's'): mixed { return ['uid' => $this->uid, 'uname' => 'user', 'pass' => 'hash', 'email' => 'user@example.test'][$name] ?? null; }
     public function isAdmin(int $mid): bool { return true; }
 }
 class XoopsTpl {
     public int $caching = 0;
     private array $vars = [];
-    public function assign(array $vars): void { $this->vars = $vars; }
+    public function assign(array|string $vars, mixed $value = null): void { $this->vars = (is_array($vars) ? $vars : [$vars => $value]) + $this->vars; }
     public function display(string $template): never { throw new Rendered($this->vars); }
 }
 class XoopsTwoFactorCrypto {
@@ -310,7 +457,7 @@ class XoopsTwoFactorCrypto {
     public function open(string $blob, string $aad): ?string { return base64_decode(substr($blob, 10)); }
 }
 class XoopsUser2faHandler {
-    public const ROW_DISABLED = 'disabled', ROW_ENROLLED = 'enrolled', POLICY_OFF = 'off';
+    public const ROW_DISABLED = 'disabled', ROW_ENROLLED = 'enrolled', POLICY_OFF = 'off', METHOD_TOTP = 'totp', METHOD_EMAIL = 'email', EMAIL_TTL = 600;
     public static function policy(array $config): string { return $config['twofactor_mode']; }
     public function isInstalled(): bool { return $GLOBALS['manageInstalled']; }
     public function getRow(int $uid): ?array { return $GLOBALS['manageRow']; }
@@ -333,6 +480,13 @@ class XoopsUser2faHandler {
         if ($GLOBALS['manageRefuse']) { return false; }
         $GLOBALS['manageRow'] = ['state' => 'disabled', 'generation' => 'disabledgen'];
         return 'disabledgen';
+    }
+    public function revokeEmailCodes(int $uid): bool { $GLOBALS['manageLog'][] = "revokeEmail:$uid"; return !$GLOBALS['manageRefuse']; }
+    public function enrolEmail(int $uid, string $code, int $now, ?string $generation = null): array|false {
+        $GLOBALS['manageLog'][] = "enrolEmail:$uid:$code:$generation";
+        if ($GLOBALS['manageRefuse'] || '654321' !== $code) { return false; }
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'mailgen'];
+        return ['generation' => 'mailgen', 'codes' => array_fill(0, 10, 'ABCDEFGHIJKLMNOP')];
     }
 }
 function xoops_getHandler(string $name): object {
@@ -359,6 +513,13 @@ function xoops_login_set_session(XoopsUser $user, string $generation, bool $veri
     $_SESSION = ['xoopsUserId' => $user->getVar('uid'), 'xoops2faGeneration' => $generation, 'xoops2faVerified' => $verified];
 }
 function xoops_2fa_notice(...$args): void { $GLOBALS['manageLog'][] = 'notice'; }
+function xoops_2fa_sensitive_headers(): void { foreach (['Cache-Control: no-store', 'Referrer-Policy: no-referrer', 'X-Frame-Options: DENY'] as $h) { header($h); } }
+function xoops_2fa_manage_form(array $vars): object { return new class { public function render(): string { return 'FORM'; } }; }
+function xoops_2fa_send_form(string $url, array $hidden, string $label): object { return new class { public function render(): string { return 'SEND'; } }; }
+function xoops_2fa_posted_action(array $known): string { return \xoops_2fa_posted_action($known); }
+function xoops_2fa_deliver_code(object $handler, object $user): array { $GLOBALS['manageLog'][] = 'deliver:' . $user->getVar('uid'); return $GLOBALS['manageDeliver'] ? ['sent' => true, 'message' => 'sent-msg'] : ['sent' => false, 'message' => 'send-fail']; }
+function xoops_cp_header(): void { $GLOBALS['xoopsTpl'] = new XoopsTpl(); }
+function xoops_cp_footer(): void {}
 function xoops_setcookie(...$args): void { $GLOBALS['manageLog'][] = 'cookie'; }
 function header(string $value): void { $GLOBALS['manageLog'][] = 'header:' . $value; }
 function xoops_loadLanguage(string $name): void {}
@@ -369,6 +530,9 @@ PHP;
         $source = file_get_contents(XOOPS_ROOT_PATH . '/include/manage2fa.php');
         // Rendering is the test boundary; loading the real template also installs global handlers.
         $source = str_replace("require_once XOOPS_ROOT_PATH . '/class/template.php';", '', $source);
+        // The theme is the rendering boundary: header.php would boot a site.
+        $source = str_replace("include \$GLOBALS['xoops']->path('header.php');", "\$GLOBALS['xoopsTpl'] = new XoopsTpl();", $source);
+        $source = str_replace("include \$GLOBALS['xoops']->path('footer.php');", '', $source);
         // Avoid FileStorage's default prefix lookup opening a real database connection.
         $source = str_replace("new \\Xmf\\Key\\FileStorage(XOOPS_VAR_PATH . '/data')", "new \\Xmf\\Key\\FileStorage(XOOPS_VAR_PATH . '/data', 'controller-test')", $source);
         self::assertStringStartsWith('<?php', $source);

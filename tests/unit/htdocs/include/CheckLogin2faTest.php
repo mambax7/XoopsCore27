@@ -52,8 +52,9 @@ final class CheckLogin2faTest extends TestCase
     {
         foreach (['_US_2FA_TITLE', '_US_2FA_PROMPT', '_US_2FA_CODE', '_US_2FA_RECOVERY', '_US_2FA_RECOVERY_HINT', '_US_2FA_SUBMIT',
                   '_US_2FA_STARTAGAIN', '_US_2FA_BACKTOLOGIN', '_US_2FA_BADCODE', '_US_2FA_LOCKED', '_US_2FA_UNAVAILABLE',
-                  '_US_2FA_LOCKED_MAIL_SUBJECT', '_US_2FA_LOCKED_MAIL_BODY', '_US_2FA_RECOVERY_MAIL_SUBJECT', '_US_2FA_RECOVERY_MAIL_BODY'] as $c) {
-            defined($c) || define($c, $c . (str_ends_with($c, 'SUBJECT') ? ' %s' : ' %s %s'));
+                  '_US_2FA_LOCKED_MAIL_SUBJECT', '_US_2FA_LOCKED_MAIL_BODY', '_US_2FA_RECOVERY_MAIL_SUBJECT', '_US_2FA_RECOVERY_MAIL_BODY',
+                  '_US_2FA_PROMPT_EMAIL', '_US_2FA_CODE_EMAIL', '_US_2FA_SEND', '_US_2FA_SEND_FAILED'] as $c) {
+            defined($c) || define($c, $c . (str_ends_with($c, 'SUBJECT') || str_ends_with($c, '_EMAIL') ? ' %s' : ' %s %s'));
         }
         $GLOBALS['xoopsConfig']    = ['closesite' => 0, 'closesite_okgrp' => [], 'sitename' => 'Site', 'adminmail' => 'a@b.c'];
         $GLOBALS['sandboxLog']     = [];
@@ -64,6 +65,8 @@ final class CheckLogin2faTest extends TestCase
         $GLOBALS['sandboxFailure'] = ['locked' => false, 'transitioned' => false];
         $GLOBALS['sandboxRecovery'] = false;
         $GLOBALS['sandboxHatch']   = false;
+        $GLOBALS['sandboxDeliver'] = ['sent' => true, 'message' => 'sent-msg'];
+        $GLOBALS['sandboxEmailAccept'] = false;
         $GLOBALS['sandboxToken']   = true;
         $GLOBALS['sandboxGroups']  = [2];
         $GLOBALS['sandboxUser']    = new class {
@@ -279,6 +282,114 @@ final class CheckLogin2faTest extends TestCase
     }
 
     #[Test]
+    public function anEmailFactorMailsOneCodeWhenThePageOpensAndMoreOnlyOnRequest(): void
+    {
+        $this->pending();
+        $GLOBALS['sandboxRow']['method'] = 'email';
+        $GLOBALS['sandboxRow']['secret'] = null;
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertTrue($vars['by_email']);
+        self::assertSame('sent-msg', $vars['message']);
+        self::assertSame(_US_2FA_CODE_EMAIL, $vars['lang_code']);
+        self::assertSame(['deliver:9'], array_values(array_filter($GLOBALS['sandboxLog'], static fn (string $l): bool => !str_starts_with($l, 'header:'))));
+        self::assertIsInt($_SESSION['xoops2faPending']['emailed']);
+
+        // A refresh does not mail again.
+        $GLOBALS['sandboxLog'] = [];
+        [$what, $vars] = $this->execute();
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertSame(sprintf(_US_2FA_PROMPT_EMAIL, 'u***@x.y'), $vars['message']);
+
+        // A code submission never issues, even when the first mail never went out:
+        // issuing would revoke the code being submitted.
+        unset($_SESSION['xoops2faPending']['emailed']);
+        $GLOBALS['sandboxLog'] = [];
+        $this->post(['code' => '000000']);
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+
+        // A locked factor gets no code, on open or on request; a recovery code stays possible.
+        $this->pending();
+        $GLOBALS['sandboxRow']['method']       = 'email';
+        $GLOBALS['sandboxRow']['secret']       = null;
+        $GLOBALS['sandboxRow']['locked_until'] = time() + 100;
+        $GLOBALS['sandboxLog'] = [];
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $_POST = [];
+        [$what, $vars] = $this->execute();
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertSame(_US_2FA_LOCKED, $vars['error']);
+        self::assertArrayNotHasKey('emailed', $_SESSION['xoops2faPending']);
+        $this->post(['xoops_2fa_send' => '1']);
+        [$what, $vars] = $this->execute();
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertSame(_US_2FA_LOCKED, $vars['error']);
+        self::assertNotSame('', $vars['token_html'], 'the page still offers the recovery form');
+        $GLOBALS['sandboxRow']['locked_until'] = 0;
+        $this->pending();
+
+        // The button mails again, behind the CSRF token, and the pending login
+        // is carried to cover the new code without outliving the password step.
+        $_SESSION['xoops2faPending']['expires'] = time() + 30;
+        $this->post(['xoops_2fa_send' => '1']);
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertSame('sent-msg', $vars['message']);
+        self::assertEqualsWithDelta(time() + 600, $_SESSION['xoops2faPending']['expires'], 5);
+        $_SESSION['xoops2faPending']['started'] = time() - 1700;
+        $this->post(['xoops_2fa_send' => '1']);
+        $this->execute();
+        self::assertEqualsWithDelta(time() + 100, $_SESSION['xoops2faPending']['expires'], 5, 'a resend cannot keep an unverified login alive for ever');
+        self::assertNotContains('recordFailure:9', $GLOBALS['sandboxLog'], 'asking for a code is not a failed attempt');
+
+        $GLOBALS['sandboxToken'] = false;
+        $GLOBALS['sandboxLog']   = [];
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertNotContains('deliver:9', $GLOBALS['sandboxLog']);
+        self::assertNotSame('', $vars['error']);
+
+        // A failed delivery is shown as the error and leaves the page open for a recovery code.
+        $GLOBALS['sandboxToken']   = true;
+        $GLOBALS['sandboxDeliver'] = ['sent' => false, 'message' => 'wait'];
+        $this->post(['xoops_2fa_send' => '1']);
+        [$what, $vars] = $this->execute();
+        self::assertSame('wait', $vars['error']);
+    }
+
+    #[Test]
+    public function anEmailFactorAcceptsItsMailedCodeAndCountsAWrongOne(): void
+    {
+        $this->pending();
+        $GLOBALS['sandboxRow']['method'] = 'email';
+        $GLOBALS['sandboxRow']['secret'] = null;
+        $_SESSION['xoops2faPending']['emailed'] = time();
+        $GLOBALS['sandboxEmailAccept'] = true;
+        $this->post(['code' => '654321']);
+        [$what, $args] = $this->execute();
+        self::assertSame('established', $what);
+        self::assertSame('gen-1', $args[3]);
+        self::assertContains('acceptEmail:9:654321:gen-1', $GLOBALS['sandboxLog']);
+        self::assertStringNotContainsString('acceptTotp:9', implode(' ', $GLOBALS['sandboxLog']));
+        self::assertArrayNotHasKey('xoops2faPending', $_SESSION);
+
+        $this->pending();
+        $_SESSION['xoops2faPending']['emailed'] = time();
+        $GLOBALS['sandboxEmailAccept'] = false;
+        $GLOBALS['sandboxLog'] = [];
+        $this->post(['code' => '000000']);
+        [$what, $vars] = $this->execute();
+        self::assertSame('rendered', $what);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+        self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
+    }
+
+    #[Test]
     public function aLockedRowRefusesWithoutEvaluatingTheCode(): void
     {
         $this->pending();
@@ -481,6 +592,8 @@ final class CheckLogin2faTest extends TestCase
         class RenderedException extends \RuntimeException { public function __construct(public array $vars) { parent::__construct('rendered'); } }
         class EstablishedException extends \RuntimeException { public function __construct(public array $args) { parent::__construct('established'); } }
         function xoops_2fa_render(array $vars): never { throw new RenderedException($vars); }
+        function xoops_2fa_sensitive_headers(): void { foreach (['Cache-Control: no-store', 'Referrer-Policy: no-referrer', 'X-Frame-Options: DENY'] as $h) { header($h); } }
+        function xoops_2fa_deliver_code(object $handler, object $user): array { $GLOBALS['sandboxLog'][] = 'deliver:' . $user->getVar('uid'); return $GLOBALS['sandboxDeliver']; }
         function xoops_login_establish_session(object $user, bool $remember, string $redirect, ?string $verified = null): never {
             throw new EstablishedException([$user->getVar('uid'), $remember, $redirect, $verified]);
         }
@@ -500,6 +613,7 @@ final class CheckLogin2faTest extends TestCase
                     public function recordFailure(int $uid, int $now, string $generation): array|false { if ($generation !== 'gen-1') { throw new \LogicException('Wrong failure generation'); } $GLOBALS['sandboxLog'][] = "recordFailure:$uid"; return $GLOBALS['sandboxFailure']; }
                     public function acceptRecovery(int $uid, string $code, string $gen): bool { $GLOBALS['sandboxLog'][] = "acceptRecovery:$uid:$code:$gen"; return $GLOBALS['sandboxRecovery']; }
                     public function resetByEscapeHatch(int $uid): bool { $GLOBALS['sandboxLog'][] = "hatch:$uid"; return $GLOBALS['sandboxHatch']; }
+                    public function acceptEmailCode(int $uid, string $code, string $gen, int $now): bool { $GLOBALS['sandboxLog'][] = "acceptEmail:$uid:$code:$gen"; return $GLOBALS['sandboxEmailAccept']; }
                 },
                 'tplfile' => new class {
                     public function find(...$args): array
