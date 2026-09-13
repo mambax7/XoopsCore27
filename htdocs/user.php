@@ -92,6 +92,11 @@ if ($op === 'login') {
     exit();
 }
 
+if ($op === '2fa') {
+    include_once $GLOBALS['xoops']->path('include/checklogin2fa.php');
+    exit();
+}
+
 if ($op === 'logout') {
     $message = '';
     // Regenerate a new session id and destroy old session

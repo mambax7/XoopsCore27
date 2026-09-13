@@ -48,6 +48,35 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     private const GEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     private const NOW = 1700000000;
 
+    #[Test]
+    public function storageFailuresDoNotMasqueradeAsRejectedCodes(): void
+    {
+        foreach (['START TRANSACTION', 'UPDATE `xoops_tokens`', 'UPDATE `xoops_user_2fa`', 'COMMIT'] as $failed) {
+            $this->rows = [$this->row()];
+            $this->sql = [];
+            $this->execResult = static fn (string $sql): bool => !str_starts_with($sql, $failed);
+            $thrown = false;
+            try {
+                $this->handler()->acceptRecovery(10, 'ABCDEFGH', self::GEN);
+            } catch (\RuntimeException $e) {
+                $thrown = true;
+                self::assertNotSame('', $e->getMessage());
+            }
+            self::assertTrue($thrown, 'Storage failure was treated as a rejected code: ' . $failed);
+        }
+        $this->execResult = false;
+        $this->expectException(\RuntimeException::class);
+        $this->handler()->acceptTotp(10, 101, self::GEN, self::NOW);
+    }
+
+    #[Test]
+    public function oldPendingGenerationCannotThrottleANewFactor(): void
+    {
+        $this->rows = [$this->row(['generation' => str_repeat('b', 32)])];
+        self::assertFalse($this->handler()->recordFailure(10, self::NOW, self::GEN));
+        self::assertSame([], $this->statements('UPDATE'));
+    }
+
     /** @var list<string> every statement, exec() and query() alike, in order */
     private array $sql = [];
 
@@ -86,12 +115,22 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     {
         // tearDown runs after a skipped setUp too: only touch our own directory.
         if ('' !== $this->dir && is_dir($this->dir)) {
-            foreach ((array) glob($this->dir . '/*') as $file) {
-                unlink($file);
-            }
-            rmdir($this->dir);
+            $this->removeTree($this->dir);
         }
         parent::tearDown();
+    }
+
+    /** The escape-hatch tests use a subdirectory; symlinks are unlinked, not followed. */
+    private function removeTree(string $dir): void
+    {
+        foreach ((array) glob($dir . '/{,.}[!.,!..]*', GLOB_BRACE) as $path) {
+            if (is_dir($path) && !is_link($path)) {
+                $this->removeTree($path);
+            } else {
+                unlink($path);
+            }
+        }
+        rmdir($dir);
     }
 
     /* ---------------------------------------------------------------- */
@@ -251,7 +290,8 @@ class XoopsUser2faHandlerTest extends KernelTestCase
 
         $this->affected   = 1;
         $this->execResult = false;
-        $this->assertFalse($handler->acceptTotp(10, 101, self::GEN, self::NOW));
+        $this->expectException(\RuntimeException::class);
+        $handler->acceptTotp(10, 101, self::GEN, self::NOW);
     }
 
     #[Test]
@@ -307,27 +347,27 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertSame([
             'START TRANSACTION',
             'SELECT `uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation` FROM `xoops_user_2fa` WHERE `uid` = 10 FOR UPDATE',
-            'UPDATE `xoops_user_2fa` SET `failed_attempts` = IF(`locked_until` > 0 AND `locked_until` <= 1700000000, 1, LEAST(`failed_attempts` + 1, 65535)),'
-            . ' `locked_until` = IF(`locked_until` > 0 AND `locked_until` <= 1700000000, 0, IF(`locked_until` = 0 AND `failed_attempts` >= 5, 1700000900, `locked_until`))'
-            . " WHERE `uid` = 10 AND `state` = 'enrolled'",
-            'SELECT `uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation` FROM `xoops_user_2fa` WHERE `uid` = 10',
+            "UPDATE `xoops_user_2fa` SET `failed_attempts` = 5, `locked_until` = 1700000900 WHERE `uid` = 10 AND `state` = 'enrolled'",
             'COMMIT',
         ], $this->sql);
 
-        // Already locked before: counted, no transition.
+        // Already locked before: counted, no transition, the lock kept.
         $this->sql  = [];
-        $this->rows = [
-            $this->row(['failed_attempts' => 6, 'locked_until' => self::NOW + 100]),
-            $this->row(['failed_attempts' => 7, 'locked_until' => self::NOW + 100]),
-        ];
+        $this->rows = [$this->row(['failed_attempts' => 6, 'locked_until' => self::NOW + 100])];
         $this->assertSame(['locked' => true, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
+        $this->assertSame(["UPDATE `xoops_user_2fa` SET `failed_attempts` = 7, `locked_until` = 1700000100 WHERE `uid` = 10 AND `state` = 'enrolled'"], $this->statements('UPDATE'));
 
         // Fewer than five: not locked.
-        $this->rows = [
-            $this->row(['failed_attempts' => 1, 'locked_until' => 0]),
-            $this->row(['failed_attempts' => 2, 'locked_until' => 0]),
-        ];
+        $this->sql  = [];
+        $this->rows = [$this->row(['failed_attempts' => 1, 'locked_until' => 0])];
         $this->assertSame(['locked' => false, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
+        $this->assertSame(["UPDATE `xoops_user_2fa` SET `failed_attempts` = 2, `locked_until` = 0 WHERE `uid` = 10 AND `state` = 'enrolled'"], $this->statements('UPDATE'));
+
+        // An expired lock: the count restarts at one and the lock clears.
+        $this->sql  = [];
+        $this->rows = [$this->row(['failed_attempts' => 5, 'locked_until' => self::NOW - 1])];
+        $this->assertSame(['locked' => false, 'transitioned' => false], $handler->recordFailure(10, self::NOW));
+        $this->assertSame(["UPDATE `xoops_user_2fa` SET `failed_attempts` = 1, `locked_until` = 0 WHERE `uid` = 10 AND `state` = 'enrolled'"], $this->statements('UPDATE'));
 
         // Disabled row: the UPDATE would match nothing, so it is not issued.
         $this->sql  = [];
@@ -695,5 +735,97 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $handler->newGeneration());
         $this->assertNotSame($handler->newGeneration(), $handler->newGeneration());
         $this->assertSame('ABCDEFGH', $handler->canonicalRecoveryCode(" ab cd\nef\tgh "));
+    }
+
+    /* ---------------------------------------------------------------- */
+    /* policy, row state, escape hatch                                   */
+    /* ---------------------------------------------------------------- */
+
+    #[Test]
+    public function policyIsOffWhenAbsentAndFallsBackToOptionalForUnknownValues(): void
+    {
+        $this->assertSame('off', XoopsUser2faHandler::policy([]));
+        $this->assertSame('off', XoopsUser2faHandler::policy(['twofactor_mode' => 'off']));
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'optional']));
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'required']));
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'OFF']));
+    }
+
+    #[Test]
+    public function aChallengeIsRequiredOnlyWhenPolicyIsOnAndAFactorExists(): void
+    {
+        $this->assertFalse(XoopsUser2faHandler::mustChallenge('off', 'enrolled'));
+        $this->assertFalse(XoopsUser2faHandler::mustChallenge('off', 'unavailable'));
+        $this->assertFalse(XoopsUser2faHandler::mustChallenge('optional', 'none'));
+        $this->assertTrue(XoopsUser2faHandler::mustChallenge('optional', 'enrolled'));
+        $this->assertTrue(XoopsUser2faHandler::mustChallenge('optional', 'unavailable'));
+    }
+
+    #[Test]
+    public function stateOfRowMapsAbsentDisabledEnrolledAndBroken(): void
+    {
+        $handler = $this->handler();
+        $this->assertSame('none', $handler->stateOfRow(null));
+        $this->assertSame('none', $handler->stateOfRow($this->row(['state' => 'disabled', 'secret' => null])));
+        $this->assertSame('unavailable', $handler->stateOfRow($this->row(['secret' => 'v1:garbage'])));
+        $this->assertSame('unavailable', $handler->stateOfRow($this->row(['method' => 'sms'])));
+        $this->assertSame([], $this->sql);
+    }
+
+    private function hatchDir(): string
+    {
+        $dir = $this->dir . DIRECTORY_SEPARATOR . 'hatch-' . bin2hex(random_bytes(4));
+        mkdir($dir, 0700, true);
+
+        return $dir;
+    }
+
+    #[Test]
+    public function theEscapeHatchIsConsumedOnceAndDisablesTheRow(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
+        $handler    = $this->handler();
+        $this->rows = [$this->row(['uid' => 7])];
+
+        $this->assertTrue(@$handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileDoesNotExist($dir . '/2fa-reset-7.txt');
+        $this->assertFileExists($dir . '/2fa-reset-7.used');
+        $this->assertCount(1, $this->statements('UPDATE `xoops_user_2fa`'));
+        $this->assertStringContainsString('`uid` = 7', $this->statements('UPDATE `xoops_user_2fa`')[0]);
+
+        // second use: the .used twin refuses even after the operator drops a fresh file
+        $this->sql = [];
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchRefusesAMissingFileAFileWithoutTheSentinelAndAnotherUidsFile(): void
+    {
+        $dir     = $this->hatchDir();
+        $handler = $this->handler();
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        file_put_contents($dir . '/2fa-reset-7.txt', "<?php\nreturn true;\n");
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        file_put_contents($dir . '/2fa-reset-8.txt', "reset\n");
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir . '/does-not-exist'));
+        $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchRefusesASymlink(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/real.txt', "reset\n");
+        if (!@symlink($dir . '/real.txt', $dir . '/2fa-reset-7.txt')) {
+            $this->markTestSkipped('symlink() not permitted here');
+        }
+        $this->assertFalse($this->handler()->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
     }
 }

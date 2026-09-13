@@ -60,6 +60,8 @@ final class XoopsUser2faHandler
     public const RECOVERY_CODES    = 10;
     public const LOCK_THRESHOLD    = 5;
     public const LOCK_SECONDS      = 900;
+    public const POLICY_OFF        = 'off';
+    public const POLICY_OPTIONAL   = 'optional';
 
     private readonly XoopsTokenHandler $tokens;
     private ?XoopsTwoFactorCrypto $crypto;
@@ -195,8 +197,36 @@ final class XoopsUser2faHandler
     }
 
     /**
-     * Factor state from the row and the key, never from the policy.
+     * The site policy, validated. A value this code does not know (including
+     * the deferred "required") falls back to optional; an absent preference
+     * means the 2.7.4 patch has not run and the feature is off.
      *
+     * @param array $config the XOOPS_CONF row set ($xoopsConfig)
+     *
+     * @return string POLICY_OFF or POLICY_OPTIONAL
+     */
+    public static function policy(array $config): string
+    {
+        if (!array_key_exists('twofactor_mode', $config)) {
+            return self::POLICY_OFF;
+        }
+        $mode = $config['twofactor_mode'];
+
+        return (self::POLICY_OFF === $mode || self::POLICY_OPTIONAL === $mode) ? $mode : self::POLICY_OPTIONAL;
+    }
+
+    /**
+     * @param string $policy from policy()
+     * @param string $state  from stateFor() / stateOfRow()
+     *
+     * @return bool whether a login must present the second factor
+     */
+    public static function mustChallenge(string $policy, string $state): bool
+    {
+        return self::POLICY_OFF !== $policy && self::STATE_NONE !== $state;
+    }
+
+    /**
      * @param int $uid account
      *
      * @return string one of the STATE_* constants
@@ -204,7 +234,19 @@ final class XoopsUser2faHandler
      */
     public function stateFor(int $uid): string
     {
-        $row = $this->getRow($uid);
+        return $this->stateOfRow($this->getRow($uid));
+    }
+
+    /**
+     * The state a row (or its absence) maps to. Pages that already hold the
+     * row from getRow() use this instead of a second lookup.
+     *
+     * @param array|null $row a getRow() result
+     *
+     * @return string one of the STATE_* constants
+     */
+    public function stateOfRow(?array $row): string
+    {
         if (null === $row || self::ROW_DISABLED === $row['state']) {
             return self::STATE_NONE;
         }
@@ -270,19 +312,23 @@ final class XoopsUser2faHandler
      * Run $fn inside one transaction on the request's connection.
      *
      * @param callable $fn the work; return false to roll back
+     * @param bool $strict throw when START or COMMIT reports failure
      *
      * @return mixed $fn's return value; false when the transaction could not start,
      *               when $fn returned false (rolled back), or when COMMIT failed (rolled back)
      * @throws \LogicException on nesting
      * @throws \Throwable      whatever $fn throws, after ROLLBACK
      */
-    public function withTransaction(callable $fn): mixed
+    public function withTransaction(callable $fn, bool $strict = false): mixed
     {
         $this->assertConnectionUsable();
         if ($this->inTransaction()) {
             throw new \LogicException('withTransaction() does not nest');
         }
         if (!$this->db->exec('START TRANSACTION')) {
+            if ($strict) {
+                throw new \RuntimeException('Two-factor transaction could not start');
+            }
             return false;
         }
         self::$open ??= new \WeakMap();
@@ -297,6 +343,9 @@ final class XoopsUser2faHandler
                     $closed = true;
 
                     return $value;
+                }
+                if (false !== $value && $strict) {
+                    throw new \RuntimeException('Two-factor transaction could not commit');
                 }
             } catch (\Throwable $e) {
                 $closed = $this->db->exec('ROLLBACK');
@@ -348,7 +397,11 @@ final class XoopsUser2faHandler
             $step
         );
 
-        return $this->db->exec($sql) && $this->db->getAffectedRows() === 1;
+        if (!$this->db->exec($sql)) {
+            throw new \RuntimeException('Two-factor counter write failed');
+        }
+
+        return $this->db->getAffectedRows() === 1;
     }
 
     /**
@@ -356,41 +409,52 @@ final class XoopsUser2faHandler
      *
      * @param int $uid account
      * @param int $now unix time
+     * @param string|null $expectedGeneration generation of the rejected challenge; null for legacy callers
      *
      * @return array{locked: bool, transitioned: bool}|false
      */
-    public function recordFailure(int $uid, int $now): array|false
+    public function recordFailure(int $uid, int $now, ?string $expectedGeneration = null): array|false
     {
-        return $this->withTransaction(function () use ($uid, $now): array|false {
+        return $this->withTransaction(function () use ($uid, $now, $expectedGeneration): array|false {
             $before = $this->lockRow($uid);
-            if (null === $before || self::ROW_ENROLLED !== $before['state']) {
+            if (null === $before || self::ROW_ENROLLED !== $before['state']
+                || (null !== $expectedGeneration && !hash_equals((string) $before['generation'], $expectedGeneration))) {
                 // The UPDATE below would match nothing and exec() would still
                 // report success; refuse here so nothing is "counted".
                 return false;
             }
+            // Computed here, under the FOR UPDATE lock, and written as
+            // literals: an UPDATE that derives one column from another reads
+            // the old or the new value depending on the server's assignment
+            // mode (MariaDB SIMULTANEOUS_ASSIGNMENT), which would move the
+            // lock from the fifth wrong code to the sixth.
+            $before['locked_until']    = (int) $before['locked_until'];
+            $before['failed_attempts'] = (int) $before['failed_attempts'];
+            $expired  = $before['locked_until'] > 0 && $before['locked_until'] <= $now;
+            $attempts = $expired ? 1 : min($before['failed_attempts'] + 1, 65535);
+            if ($expired) {
+                $lockedUntil = 0;
+            } elseif (0 === $before['locked_until'] && $attempts >= self::LOCK_THRESHOLD) {
+                $lockedUntil = $now + self::LOCK_SECONDS;
+            } else {
+                $lockedUntil = $before['locked_until'];
+            }
             $sql = sprintf(
-                'UPDATE `%1$s` SET `failed_attempts` = IF(`locked_until` > 0 AND `locked_until` <= %2$d, 1, LEAST(`failed_attempts` + 1, 65535)),'
-                . ' `locked_until` = IF(`locked_until` > 0 AND `locked_until` <= %2$d, 0, IF(`locked_until` = 0 AND `failed_attempts` >= %3$d, %4$d, `locked_until`))'
-                . ' WHERE `uid` = %5$d AND `state` = %6$s',
+                'UPDATE `%s` SET `failed_attempts` = %d, `locked_until` = %d WHERE `uid` = %d AND `state` = %s',
                 $this->table(),
-                $now,
-                self::LOCK_THRESHOLD,
-                $now + self::LOCK_SECONDS,
+                $attempts,
+                $lockedUntil,
                 $uid,
                 $this->db->quote(self::ROW_ENROLLED)
             );
             if (!$this->db->exec($sql)) {
-                return false;
-            }
-            $after = $this->selectRow($uid, false);
-            if (null === $after) {
-                return false;
+                throw new \RuntimeException('Two-factor throttle write failed');
             }
             $wasLocked = $before['locked_until'] > $now;
-            $isLocked  = $after['locked_until'] > $now;
+            $isLocked  = $lockedUntil > $now;
 
             return ['locked' => $isLocked, 'transitioned' => $isLocked && !$wasLocked];
-        });
+        }, true);
     }
 
     /**
@@ -414,16 +478,20 @@ final class XoopsUser2faHandler
             if (null === $row || self::ROW_ENROLLED !== $row['state'] || !hash_equals((string) $row['generation'], $pendingGeneration)) {
                 return false;
             }
-            if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical)) {
+            if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical, true)) {
                 return false;
             }
 
-            return $this->db->exec(sprintf(
+            if (!$this->db->exec(sprintf(
                 'UPDATE `%s` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = %d',
                 $this->table(),
                 $uid
-            ));
-        });
+            ))) {
+                throw new \RuntimeException('Two-factor throttle reset failed');
+            }
+
+            return true;
+        }, true);
     }
 
     /**
@@ -551,6 +619,48 @@ final class XoopsUser2faHandler
         }
 
         return $codes;
+    }
+
+    /**
+     * Operator escape hatch: xoops_data/data/2fa-reset-<uid>.txt containing
+     * the word "reset" disables the factor once. The file is read, never
+     * included: a write into the data directory must not become code. It is
+     * renamed to .used before the reset runs; a refused rename, or a .used
+     * twin already present, refuses the reset, because a rename would
+     * replace the earlier marker. The uid comes from the pending or
+     * wizard-authenticated login, never from the request.
+     *
+     * @param int         $uid     account
+     * @param string|null $dataDir directory holding the file (default XOOPS_VAR_PATH/data)
+     *
+     * @return bool true only when the file was consumed and the row disabled
+     */
+    public function resetByEscapeHatch(int $uid, ?string $dataDir = null): bool
+    {
+        $root = realpath($dataDir ?? (XOOPS_VAR_PATH . '/data'));
+        if (false === $root) {
+            return false;
+        }
+        $name = $root . DIRECTORY_SEPARATOR . '2fa-reset-' . $uid;
+        $file = $name . '.txt';
+        $used = $name . '.used';
+        if (file_exists($used) || is_link($file) || !is_file($file)) {
+            return false;
+        }
+        $real = realpath($file);
+        if (false === $real || !str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
+            return false;
+        }
+        $content = file_get_contents($real);
+        if (!is_string($content) || 'reset' !== trim($content)) {
+            return false;
+        }
+        if (!rename($real, $used)) {
+            return false;
+        }
+        trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+
+        return false !== $this->disable($uid);
     }
 
     /**

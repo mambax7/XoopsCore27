@@ -205,7 +205,13 @@ class XoopsMemberHandler
         // The factor row goes with the tokens: a dead account must not keep
         // a factor row any more than live recovery codes. Skipped, not
         // failed, while the 2.7.4 patch has not created the table.
-        if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
+        try {
+            if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
+                return false;
+            }
+        } catch (\Throwable $e) {
+            // A connection poisoned by an earlier failed rollback throws.
+            trigger_error(sprintf('User deletion refused for uid %d: second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
             return false;
         }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));

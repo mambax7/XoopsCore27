@@ -254,6 +254,15 @@ class XoopsTokenHandlerTest extends KernelTestCase
     }
 
     #[Test]
+    public function testStrictVerifyThrowsOnDbFailure(): void
+    {
+        $db = $this->createMockDatabase();
+        $db->method('exec')->willReturn(false);
+        $this->expectException(\RuntimeException::class);
+        (new XoopsTokenHandler($db))->verify(1, '2fa_recovery', 'some-token', true);
+    }
+
+    #[Test]
     public function testVerifyUsesAtomicUpdate(): void
     {
         $capturedSql = '';

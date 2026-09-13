@@ -507,6 +507,30 @@ class XoopsMemberHandlerTest extends TestCase
         $this->assertTrue($this->handler->deleteUser($user));
     }
 
+    public function testDeleteUserReportsFactorFailureWithoutExceptionDetails(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';
+        require_once XOOPS_ROOT_PATH . '/kernel/user2fa.php';
+        $user = $this->createStubUser(10, 'olduser');
+        $factorDb = $this->createMock(XoopsMySQLDatabase::class);
+        $factorDb->method('prefix')->willReturnCallback(static fn ($t) => 'xoops_' . $t);
+        $factorDb->method('exec')->willThrowException(new \RuntimeException('private SQL and secret'));
+        $this->setProtectedProperty($this->handler, 'user2faHandler', new \XoopsUser2faHandler($factorDb, new \XoopsTokenHandler($factorDb), null, true));
+        $this->membershipHandler->expects($this->never())->method('deleteAll');
+        $this->userHandler->expects($this->never())->method('delete');
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = [$level, $message];
+            return true;
+        });
+        try {
+            self::assertFalse($this->handler->deleteUser($user));
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_WARNING, 'User deletion refused for uid 10: second-factor cleanup unavailable']], $warnings);
+    }
+
     public function testDeleteUserStopsWhenTheTokenDeleteFails(): void
     {
         require_once XOOPS_ROOT_PATH . '/class/XoopsTokenHandler.php';

@@ -92,6 +92,11 @@ if ($op === 'login') {
     exit();
 }
 
+if ($op === '2fa') {
+    include_once $GLOBALS['xoops']->path('include/checklogin2fa.php');
+    exit();
+}
+
 if ($op === 'logout') {
     // A logout must present a valid session token: with none required, any
     // third-party page could end the visitor's session through a bare GET
