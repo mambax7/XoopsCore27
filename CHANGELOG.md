@@ -5,6 +5,98 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.4-Beta2] - 2026-09-13
+
+### Bug Fixes
+- **2fa**: Tell a wrong mailed code apart from a setup that cannot finish
+- **2fa**: Issue mailed codes under an account lock and only when one can be used
+- **2fa**: Keep the no-store and frame headers on the themed pages
+- **2fa**: Issue mailed codes under a lock, keep label markup on Tailwind, cut the harness at a marker
+- **2fa**: Keep a throwing diagnostic handler from replacing a failed escape-hatch restore
+- **2fa**: Fill a partial translation of the two-factor strings from English
+- **2fa**: Count a skewed code as a failure when the notice handler throws
+- **2fa**: Keep committed actions from failing on a throwing diagnostic handler
+- **2fa**: Keep every escape-hatch path out of warnings and complete the review contracts
+- **2fa**: Keep the file paths out of a failed escape-hatch restore
+- **member**: Log a security event while the visitor is still a guest
+- **2fa**: Keep the stored hash when the rehash write fails and complete the test contracts
+- **2fa**: Keep the setup visible, render before registration and complete the contracts
+- **2fa**: Guard the remaining language fallbacks and cover the step collision
+- **2fa**: Guard the profile link label and complete the contracts
+- **2fa**: Tighten enrolment retries, notices and the escape hatch
+- **2fa**: Harden the management round against review findings
+- **2fa**: Load the user language before the challenge renders on a closed site
+- **2fa**: Keep the key file path out of a failed write and scope the preference lookup to the core category
+- **2fa**: Roll back a refused commit and keep an unreadable config table from being taken as absent
+- **upgrade**: Look before creating the user_2fa table and resume the twofactor_mode options row by row
+- **profile**: Fall back to a built-in message when a translated pack lacks the new constant
+- **profile**: Cast the account name passed to the delete-failure message
+- **profile**: Report a refused account delete with a message when the object carries no error
+- **profile**: Delete the account before its profile row in the users admin
+- **token**: Write the largest expires_at for a ttl past the column range
+- **login**: Keep the empty() reading of the remember-me field and scope the cookie-path temporaries
+
+### Documentation
+- **2fa**: Say that an admin reset keeps the session like a disable
+- **token**: Document the mysqli exception contract of deleteByUid()
+- **login**: State the authenticate helper contract as no session or login-state writes
+
+### Features
+- **2fa**: Build the two-factor forms through the theme's form renderer
+- **2fa**: Add e-mail codes as a second method and render the pages in the theme
+- **2fa**: Add management and database integration coverage
+- **2fa**: Challenge a login whose account carries a factor, on the open and the closed site
+- **2fa**: Add the second-factor challenge page
+- **2fa**: Add the challenge page template and its language constants
+- **2fa**: Park a login behind the second factor and bind the session and cookie to the factor generation
+- **2fa**: Add the policy predicate, a row-to-state mapper and the operator escape hatch
+- **upgrade**: Create the user_2fa table and the twofactor_mode preference on upgrade
+- **install**: Add the user_2fa table and the twofactor_mode preference
+- **2fa**: Add the factor handler with atomic acceptance, throttle and recovery codes
+- **2fa**: Add the site key file and secret cipher
+- **totp**: Add an RFC 6238 helper with base32 and a monotonic step window
+- **token**: Accept a caller-supplied token, a no-expiry ttl, report the revoke outcome, delete by uid
+
+### Miscellaneous
+- **lib**: Declare ext-sodium in the library pack for two-factor authentication
+
+### Performance
+- **2fa**: Stop opening the secret on session restore and complete the harness contracts
+
+### Refactor
+- **login**: Split password login into authenticate and establish-session helpers
+
+### Security
+- **2fa**: Give the mailed-code MAC a subkey of its own
+- **2fa**: Keep a mailed code out of reach of a database reader
+- **2fa**: Treat a dangling reset marker as used and name the reset file in the wizard refusal
+- **2fa**: Fail closed on the installed signal, not the row set
+- **2fa**: Clear the popup session when rotation fails
+- **2fa**: Fail closed on a lost configuration and register the templates
+- **2fa**: Refuse failed authentication session rotation
+- **2fa**: Preserve protection across failure paths
+- **2fa**: Complete challenges and separate storage failures
+- **2fa**: Fail closed on unknown factor rows and harden the challenge
+- **2fa**: Refuse an account that must present its factor on the wizard, XML-RPC and popup logins
+- **2fa**: Bind every authenticated request and the remember-me cookie to the factor generation
+- **2fa**: Refuse every operation on a connection whose rollback did not go through, and reset the method when a disabled row re-enrols
+- **2fa**: Bind acceptance to the method, refuse to overwrite an unknown row, and replace only a malformed key that nothing depends on
+- **2fa**: Fail closed on an unknown factor row and keep a connection whose rollback was refused out of transactions
+- **2fa**: Treat a failed configuration read as installed and guard transactions per connection
+- **member**: Delete an account's factor row with its tokens and capture the 2FA installed signal
+- **member**: Stop the account delete when the membership delete does not run
+- **member**: Delete an account's tokens before its memberships and user row
+- **session**: Load the account before seeding the session from a remember-me cookie
+
+### Testing
+- **2fa**: Match the handler doubles to the production contract and cover refusals
+- **2fa**: Run the language fallback test in a fresh process so the gap is real
+- **2fa**: Add the source header to the harness scripts and the remaining new tests
+- **2fa**: Read the account file only when no hash was supplied to the harness
+- **2fa**: Leave the temp directory alone when a skipped setUp never created it
+- **member**: Exercise the token-handler wiring without the database factory
+- **login**: Execute the login helpers with spies instead of matching their source
+
 ## [v2.7.4-Beta1] - 2026-09-10
 
 ### Bug Fixes
@@ -28,6 +120,11 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 - **profile**: Validate a new account at the save step, not only at step 1 (#187)
 - **imagemanager**: Check category permissions in the editor plugin and pass insert codes as data (#186)
 
+## [v2.7.3b] - 2026-08-28
+
+### Other
+- Version correction
+
 ## [v2.7.3] - 2026-08-24
 
 ### Bug Fixes
@@ -50,7 +147,6 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 
 ### Other
 - Fix/273 hardening (#179)
-- Version correction
 - Adding 2.7.x versions to issue template
 - Deprecate XOBJ_DTYPE_UNICODE_* datatypes (2.7.3)- #164
 - Drop stray @deprecated tag from DEPRECATED_UNICODE_DATATYPES docblock
