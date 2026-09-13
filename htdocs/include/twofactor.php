@@ -105,6 +105,10 @@ function xoops_2fa_mask_email(string $email): string
 /**
  * The management form, built for the site's form renderer so every theme styles it.
  *
+ * Captions are language constants and go to the renderer as they are, like
+ * every core form; label values are markup, escaped here where they carry a
+ * value from the request or the row.
+ *
  * @param array $v the page variables: labels, admin_reset, enrolled, confirm_setup, by_email,
  *                 secret, qr, uid, action_url, lang_code, lang_recovery
  *
@@ -115,7 +119,7 @@ function xoops_2fa_manage_form(array $v): XoopsThemeForm
     require_once XOOPS_ROOT_PATH . '/class/xoopsformloader.php';
     $l    = $v['labels'];
     $e    = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-    $form = new XoopsThemeForm('', 'xo2fa-manage', $v['action_url'], 'post', true);
+    $form = new XoopsThemeForm('', 'xo2fa_manage', $v['action_url'], 'post', true);
     $form->setExtra('autocomplete="off"');
     if ($v['admin_reset']) {
         $form->addElement(new XoopsFormLabel('', $e($l['reset_help'] ?? '')));
@@ -132,26 +136,26 @@ function xoops_2fa_manage_form(array $v): XoopsThemeForm
             $steps .= '<p><img src="' . $e($v['qr']) . '" alt="' . $e($l['scan'] ?? '') . '" width="256" height="256"></p>';
         }
         $form->addElement(new XoopsFormLabel('', $steps));
-        $form->addElement(new XoopsFormLabel($e($l['manual'] ?? ''), '<code dir="ltr">' . $e($v['secret']) . '</code>'));
+        $form->addElement(new XoopsFormLabel($l['manual'] ?? '', '<code dir="ltr">' . $e($v['secret']) . '</code>'));
         $actions = ['confirm' => $l['confirm'] ?? 'confirm'];
     } else {
         $form->addElement(new XoopsFormLabel('', $e($l['choose'] ?? '') . '<br>' . $e($l['email_help'] ?? '')));
         $actions = ['begin' => $l['enable'] ?? 'begin', 'begin_email' => $l['enable_email'] ?? 'begin_email'];
     }
     if (!$v['confirm_setup'] || $v['admin_reset']) {
-        $password = new XoopsFormPassword($e($l['password'] ?? ''), 'password', 30, 255);
+        $password = new XoopsFormPassword($l['password'] ?? '', 'password', 30, 255);
         $password->setExtra('autocomplete="current-password" required');
         $form->addElement($password, true);
     }
     if (!$v['admin_reset'] && ($v['enrolled'] || $v['confirm_setup'])) {
-        $code = new XoopsFormText($e($v['lang_code']), 'code', 12, 6);
+        $code = new XoopsFormText($v['lang_code'], 'code', 12, 6);
         $code->setExtra('inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" dir="ltr"');
         if ($v['confirm_setup']) {
             $code->setDescription($e($v['by_email'] ? ($l['code_help_email'] ?? '') : ($l['code_help'] ?? '')));
         }
         $form->addElement($code);
         if ($v['enrolled']) {
-            $recovery = new XoopsFormText($e($v['lang_recovery']), 'recovery', 30, 40);
+            $recovery = new XoopsFormText($v['lang_recovery'], 'recovery', 30, 40);
             $recovery->setExtra('autocomplete="off" dir="ltr"');
             $form->addElement($recovery);
         }
@@ -182,7 +186,7 @@ function xoops_2fa_manage_form(array $v): XoopsThemeForm
 function xoops_2fa_send_form(string $actionUrl, array $hidden, string $label): XoopsThemeForm
 {
     require_once XOOPS_ROOT_PATH . '/class/xoopsformloader.php';
-    $form = new XoopsThemeForm('', 'xo2fa-send', $actionUrl, 'post', true);
+    $form = new XoopsThemeForm('', 'xo2fa_send', $actionUrl, 'post', true);
     foreach ($hidden as $name => $value) {
         $form->addElement(new XoopsFormHidden($name, $value));
     }
@@ -202,12 +206,12 @@ function xoops_2fa_challenge_form(array $v): XoopsThemeForm
 {
     require_once XOOPS_ROOT_PATH . '/class/xoopsformloader.php';
     $e    = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-    $form = new XoopsThemeForm('', 'xo2fa-challenge', $v['action_url'], 'post', true);
+    $form = new XoopsThemeForm('', 'xo2fa_challenge', $v['action_url'], 'post', true);
     $form->setExtra('autocomplete="off"');
-    $code = new XoopsFormText($e($v['lang_code']), 'code', 12, 6);
+    $code = new XoopsFormText($v['lang_code'], 'code', 12, 6);
     $code->setExtra('inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" dir="ltr" autofocus');
     $form->addElement($code);
-    $recovery = new XoopsFormText($e($v['lang_recovery']), 'recovery', 30, 40);
+    $recovery = new XoopsFormText($v['lang_recovery'], 'recovery', 30, 40);
     $recovery->setExtra('autocomplete="off" dir="ltr"');
     $recovery->setDescription($e($v['lang_recovery_hint']));
     $form->addElement($recovery);
@@ -232,7 +236,7 @@ function xoops_2fa_posted_action(array $known): string
 {
     $action = \Xmf\Request::getCmd('action', '', 'POST');
     if ('' !== $action) {
-        return $action;
+        return in_array($action, $known, true) ? $action : '';
     }
     foreach ($known as $candidate) {
         if (\Xmf\Request::hasVar('action_' . $candidate, 'POST')) {

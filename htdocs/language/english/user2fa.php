@@ -43,10 +43,10 @@ define('_US_2FA_STARTAGAIN', 'This sign-in has expired or was interrupted. Pleas
 define('_US_2FA_BACKTOLOGIN', 'Back to the login form');
 define('_US_2FA_BADCODE', 'That code was not accepted.');
 define('_US_2FA_LOCKED', 'Too many attempts. The second step is locked for fifteen minutes; a recovery code still works.');
-define('_US_2FA_UNAVAILABLE', 'The authenticator step is not available right now. A recovery code still works, or contact the site administrator.');
+define('_US_2FA_UNAVAILABLE', 'The second step is not available right now. A recovery code still works, or contact the site administrator.');
 define('_US_2FA_REQUIRED', 'This account has two-factor authentication enabled. Please sign in through the site\'s login page.');
 define('_US_2FA_HTTP_LOGIN', 'This popup cannot complete a two-factor login over HTTP because your password would be sent without encryption. Use the site login instead, or ask the administrator to enable HTTPS for the site.');
 define('_US_2FA_LOCKED_MAIL_SUBJECT', '%s: second step locked');
-define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong authenticator codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
+define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong second-step codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
 define('_US_2FA_RECOVERY_MAIL_SUBJECT', '%s: a recovery code was used');
 define('_US_2FA_RECOVERY_MAIL_BODY', 'A recovery code was used to sign in to your account at %s from %s. That code no longer works. If this was not you, change your password and reset your recovery codes.');

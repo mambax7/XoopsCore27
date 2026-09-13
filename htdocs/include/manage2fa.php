@@ -186,7 +186,7 @@ try {
                     $message = _US_2FAM_RESET_DONE;
                 } elseif ('begin_email' === $action && !$enrolled) {
                     $user = $authenticated;
-                    $_SESSION['xoops2faSetup'] = ['uid' => $uid, 'generation' => $generation, 'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')), 'expires' => $now + 300, 'blob' => '', 'attempts' => 0, 'method' => XoopsUser2faHandler::METHOD_EMAIL];
+                    $_SESSION['xoops2faSetup'] = ['uid' => $uid, 'generation' => $generation, 'passdigest' => hash('sha256', (string) $user->getVar('pass', 'n')), 'expires' => $now + XoopsUser2faHandler::EMAIL_TTL, 'blob' => '', 'attempts' => 0, 'method' => XoopsUser2faHandler::METHOD_EMAIL];
                     $delivery = xoops_2fa_deliver_code($handler, $user);
                     if ($delivery['sent']) {
                         $message = $delivery['message'];
@@ -263,6 +263,7 @@ if ($confirm && !$confirmEmail && '' === $setupSecret) {
         $confirm = false;
     }
 }
+// Rendering only below this line: nothing further changes state.
 $labels = [];
 foreach (get_defined_constants() as $name => $value) {
     if (str_starts_with($name, '_US_2FAM_')) {

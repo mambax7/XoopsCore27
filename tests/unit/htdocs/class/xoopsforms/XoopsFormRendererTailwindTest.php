@@ -103,13 +103,14 @@ class XoopsFormRendererTailwindTest extends TestCase
         $this->assertStringContainsString('Label text', $html);
     }
 
-    public function testRenderFormLabelEscapesValue(): void
+    public function testRenderFormLabelEmitsItsValueAsMarkupLikeEveryOtherRenderer(): void
     {
+        // XoopsFormLabel carries markup by contract: modules put links, <code> and images in it.
         $element = new XoopsFormLabel('Caption', '<b>bold</b>', 'name');
         $html    = $this->renderer->renderFormLabel($element);
 
-        $this->assertStringNotContainsString('<b>bold</b>', $html);
-        $this->assertStringContainsString('&lt;b&gt;', $html);
+        $this->assertStringContainsString('<b>bold</b>', $html);
+        $this->assertStringNotContainsString('&lt;b&gt;', $html);
     }
 
     public function testRenderFormElementTrayVerticalUsesSpaceY(): void

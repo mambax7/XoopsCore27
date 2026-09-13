@@ -382,7 +382,7 @@ class XoopsTwoFactorCrypto {
     public function open(string $blob, string $aad): ?string { return base64_decode(substr($blob, 10)); }
 }
 class XoopsUser2faHandler {
-    public const ROW_DISABLED = 'disabled', ROW_ENROLLED = 'enrolled', POLICY_OFF = 'off', METHOD_TOTP = 'totp', METHOD_EMAIL = 'email';
+    public const ROW_DISABLED = 'disabled', ROW_ENROLLED = 'enrolled', POLICY_OFF = 'off', METHOD_TOTP = 'totp', METHOD_EMAIL = 'email', EMAIL_TTL = 600;
     public static function policy(array $config): string { return $config['twofactor_mode']; }
     public function isInstalled(): bool { return $GLOBALS['manageInstalled']; }
     public function getRow(int $uid): ?array { return $GLOBALS['manageRow']; }

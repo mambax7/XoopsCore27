@@ -300,16 +300,34 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return string|null|false the six-digit code; null while the cooldown runs; false on a storage failure
+     * @throws \RuntimeException when the transaction or the cooldown lookup fails
      * @throws \Random\RandomException when the secure random source fails
      */
     public function issueEmailCode(int $uid): string|null|false
     {
-        if ($this->tokens->countRecent($uid, self::EMAIL_SCOPE, self::EMAIL_COOLDOWN) > 0) {
-            return null;
-        }
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        return $this->withTransaction(function () use ($uid): string|null|false {
+            // The cooldown read locks the account's recent codes (and, under
+            // the default isolation level, the gap after them), so two resend
+            // requests issue one code between them. A lookup that fails is a
+            // refusal, not an empty count.
+            $result = $this->db->query(sprintf(
+                'SELECT COUNT(*) AS `cnt` FROM `%s` WHERE `uid` = %d AND `scope` = %s AND `issued_at` > %d FOR UPDATE',
+                $this->db->prefix('tokens'),
+                $uid,
+                $this->db->quote(self::EMAIL_SCOPE),
+                time() - self::EMAIL_COOLDOWN
+            ));
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                throw new \RuntimeException('Two-factor code lookup failed');
+            }
+            $row = $this->db->fetchArray($result);
+            if (is_array($row) && (int) ($row['cnt'] ?? 0) > 0) {
+                return null;
+            }
+            $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        return $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $code);
+            return $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $code);
+        }, true);
     }
 
     /**

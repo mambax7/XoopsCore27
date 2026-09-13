@@ -47,9 +47,10 @@ code to generate a replacement set. Existing recovery codes are revoked.
 Do not share the key or the recovery codes with support staff.
 
 Disabling or replacing recovery codes requires your current password and
-an authenticator code, a mailed code, or a recovery code. Recovery codes work during a TOTP lock
-and when the encryption key or sodium is unavailable. Five incorrect factor
-attempts lock TOTP for fifteen minutes; the lock is not extended by retries.
+an authenticator code, a mailed code, or a recovery code. Recovery codes work while the factor is
+locked and when the encryption key or sodium is unavailable. Five incorrect
+codes, from an app or from e-mail, lock the factor for fifteen minutes; the
+lock is not extended by retries.
 
 Enrolment keeps the current browser signed in and invalidates other
 pre-enrolment sessions and remember-me cookies. Enrolled accounts never get

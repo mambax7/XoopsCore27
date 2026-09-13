@@ -201,7 +201,7 @@ try {
     check($end !== false, 'Common auth block end changed');
     file_put_contents($directory . '/common-auth.php', "<?php\n" . substr($common, $start, $end + strlen($endMarker) - $start));
     $manage = file_get_contents(XOOPS_ROOT_PATH . '/include/manage2fa.php');
-    $end = strpos($manage, "require_once XOOPS_ROOT_PATH . '/class/template.php';");
+    $end = strpos($manage, '// Rendering only below this line');
     check($end !== false, 'Management rendering boundary changed');
     file_put_contents($directory . '/manage-controller.php', substr($manage, 0, $end));
     $request = static function (array $job): array {

@@ -816,10 +816,27 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->rows = [['cnt' => 1]];
         $this->assertNull($this->handler()->issueEmailCode(10), 'a code issued within the last minute blocks a new one');
         $this->assertSame([], $this->statements('INSERT'));
+        $this->assertSame('START TRANSACTION', $this->sql[0]);
+        $this->assertStringEndsWith("`scope` = '2fa_email' AND `issued_at` > " . (time() - 60) . ' FOR UPDATE', $this->sql[1]);
+        $this->assertSame('COMMIT', end($this->sql));
 
+        $this->sql        = [];
+        $this->queryFails = true;
+        try {
+            $this->handler()->issueEmailCode(10);
+            $this->fail('an unreadable token table must not issue a code');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('Two-factor code lookup failed', $e->getMessage());
+        }
+        $this->assertSame([], $this->statements('INSERT'));
+        $this->assertSame('ROLLBACK', end($this->sql));
+        $this->queryFails = false;
+
+        $this->sql  = [];
         $this->rows = [['cnt' => 0]];
         $code       = $this->handler()->issueEmailCode(10);
         $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $code);
+        $this->assertSame('COMMIT', end($this->sql));
         $revokes = $this->statements('UPDATE `xoops_tokens`');
         $this->assertCount(1, $revokes, 'the previous code is revoked first');
         $this->assertStringContainsString("`scope` = '2fa_email'", $revokes[0]);

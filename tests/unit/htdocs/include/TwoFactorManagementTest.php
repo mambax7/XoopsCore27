@@ -126,7 +126,7 @@ final class TwoFactorManagementTest extends TestCase
         }
 
         return $over + ['labels' => $labels, 'admin_reset' => false, 'enrolled' => false, 'confirm_setup' => false, 'by_email' => false,
-            'secret' => '', 'qr' => '', 'uid' => 9, 'action_url' => 'http://localhost/user.php', 'lang_code' => 'Code <b>', 'lang_recovery' => 'Recovery'];
+            'secret' => '', 'qr' => '', 'uid' => 9, 'action_url' => 'http://localhost/user.php', 'lang_code' => 'Code', 'lang_recovery' => 'Recovery'];
     }
 
     public function testManagementFormOffersExactlyTheControlsOfEachState(): void
@@ -136,6 +136,7 @@ final class TwoFactorManagementTest extends TestCase
         $buttons = static fn (string $html): array => preg_match_all('/name=.action_([a-z_]+)/', $html, $m) ? $m[1] : [];
 
         $html = xoops_2fa_manage_form($this->manageVars())->render();
+        self::assertStringContainsString('xoopsFormValidate_xo2fa_manage()', $html, 'the form name is a JavaScript identifier');
         self::assertSame(['begin', 'begin_email'], $buttons($html));
         self::assertMatchesRegularExpression('/name=.password./', $html);
         self::assertStringContainsString('required', $html);
@@ -148,7 +149,6 @@ final class TwoFactorManagementTest extends TestCase
         self::assertSame(['confirm'], $buttons($html));
         self::assertDoesNotMatchRegularExpression('/name=.password./', $html);
         self::assertMatchesRegularExpression('/name=.code./', $html);
-        self::assertStringContainsString('Code &lt;b&gt;', $html, 'captions are escaped');
         self::assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $html);
         self::assertStringNotContainsString('<img src=x', $html);
         self::assertStringContainsString('<img src="data:image/png;base64,QQ==" alt="Label scan"', $html);
@@ -219,8 +219,56 @@ final class TwoFactorManagementTest extends TestCase
         self::assertSame('begin', xoops_2fa_posted_action(['begin', 'disable']));
         $_POST = ['action_reset' => 'x'];
         self::assertSame('', xoops_2fa_posted_action(['begin', 'disable']), 'an action the page does not accept is not returned');
+        $_POST = ['action' => 'reset', 'action_begin' => 'x'];
+        self::assertSame('', xoops_2fa_posted_action(['begin', 'disable']), 'the plain field is held to the same list and does not fall through');
         $_POST = [];
         self::assertSame('', xoops_2fa_posted_action(['begin']));
+    }
+
+    public function testMailedCodeDeliveryReportsCooldownFailureAndTheMaskedAddress(): void
+    {
+        foreach (['_US_2FA_SEND_WAIT' => 'wait', '_US_2FA_SEND_FAILED' => 'failed', '_US_2FA_SENT' => 'sent to %s',
+                  '_US_2FA_EMAIL_SUBJECT' => '%s code', '_US_2FA_EMAIL_BODY' => '%s %s %d'] as $constant => $value) {
+            defined($constant) || define($constant, $value);
+        }
+        $source = file_get_contents(XOOPS_ROOT_PATH . '/include/twofactor.php');
+        $start  = strpos($source, 'function xoops_2fa_send_code(');
+        $end    = strpos($source, '/** Validate the password-authorised setup session');
+        self::assertNotFalse($start);
+        self::assertNotFalse($end);
+        eval('namespace TwoFactorDeliverTest;'
+            . ' class XoopsUser { public function getVar(string $n, string $f = "s"): mixed { return ["uid" => 7, "email" => "someone@example.test"][$n] ?? ""; } }'
+            . ' class XoopsUser2faHandler { public const EMAIL_TTL = 600; public function issueEmailCode(int $uid): string|null|false { return $GLOBALS["deliverCode"]; } }'
+            . ' function xoops_getMailer(): object { if ("throw" === $GLOBALS["deliverMail"]) { throw new \\RuntimeException("transport"); }'
+            . ' return new class { public function __call(string $m, array $a): mixed { $GLOBALS["deliverLog"][] = [$m, $a]; return "send" === $m ? $GLOBALS["deliverMail"] : $this; } }; }'
+            . substr($source, $start, $end - $start));
+        $handler = new \TwoFactorDeliverTest\XoopsUser2faHandler();
+        $user    = new \TwoFactorDeliverTest\XoopsUser();
+        $config  = $GLOBALS['xoopsConfig'] ?? [];
+        $GLOBALS['xoopsConfig'] = ['adminmail' => 'nobody@example.invalid', 'sitename' => 'Site'];
+        try {
+            $GLOBALS['deliverLog'] = [];
+            [$GLOBALS['deliverCode'], $GLOBALS['deliverMail']] = [null, true];
+            self::assertSame(['sent' => false, 'message' => _US_2FA_SEND_WAIT], \TwoFactorDeliverTest\xoops_2fa_deliver_code($handler, $user));
+            [$GLOBALS['deliverCode'], $GLOBALS['deliverMail']] = [false, true];
+            self::assertSame(['sent' => false, 'message' => _US_2FA_SEND_FAILED], \TwoFactorDeliverTest\xoops_2fa_deliver_code($handler, $user));
+            self::assertSame([], $GLOBALS['deliverLog'], 'nothing is mailed without a code');
+            [$GLOBALS['deliverCode'], $GLOBALS['deliverMail']] = ['123456', false];
+            self::assertSame(['sent' => false, 'message' => _US_2FA_SEND_FAILED], \TwoFactorDeliverTest\xoops_2fa_deliver_code($handler, $user));
+            [$GLOBALS['deliverCode'], $GLOBALS['deliverMail']] = ['123456', 'throw'];
+            self::assertSame(['sent' => false, 'message' => _US_2FA_SEND_FAILED], \TwoFactorDeliverTest\xoops_2fa_deliver_code($handler, $user));
+            $GLOBALS['deliverLog'] = [];
+            [$GLOBALS['deliverCode'], $GLOBALS['deliverMail']] = ['123456', true];
+            self::assertSame(['sent' => true, 'message' => sprintf(_US_2FA_SENT, 's***@example.test')], \TwoFactorDeliverTest\xoops_2fa_deliver_code($handler, $user));
+            $calls = array_column($GLOBALS['deliverLog'], 1, 0);
+            self::assertSame([sprintf(_US_2FA_EMAIL_BODY, 'Site', '123456', 10)], $calls['setBody'], 'the body carries the code and its lifetime in minutes');
+            self::assertSame([sprintf(_US_2FA_EMAIL_SUBJECT, 'Site')], $calls['setSubject']);
+        } finally {
+            $GLOBALS['xoopsConfig'] = $config;
+            unset($GLOBALS['deliverCode'], $GLOBALS['deliverMail'], $GLOBALS['deliverLog']);
+        }
+        self::assertSame('***', \TwoFactorDeliverTest\xoops_2fa_mask_email('not-an-address'));
+        self::assertSame('é***@x.y', \TwoFactorDeliverTest\xoops_2fa_mask_email('émile@x.y'));
     }
 
     public function testPendingSetupIsBoundToAccountPasswordGenerationAndExpiry(): void

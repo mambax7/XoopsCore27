@@ -35,10 +35,10 @@ Below are language differences from a version to next version.
 - added define('_US_2FA_BACKTOLOGIN', 'Back to the login form');
 - added define('_US_2FA_BADCODE', 'That code was not accepted.');
 - added define('_US_2FA_LOCKED', 'Too many attempts. The second step is locked for fifteen minutes; a recovery code still works.');
-- added define('_US_2FA_UNAVAILABLE', 'The authenticator step is not available right now. A recovery code still works, or contact the site administrator.');
+- added define('_US_2FA_UNAVAILABLE', 'The second step is not available right now. A recovery code still works, or contact the site administrator.');
 - added define('_US_2FA_REQUIRED', 'This account has two-factor authentication enabled. Please sign in through the site\'s login page.');
 - added define('_US_2FA_LOCKED_MAIL_SUBJECT', '%s: second step locked');
-- added define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong authenticator codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
+- added define('_US_2FA_LOCKED_MAIL_BODY', 'Five wrong second-step codes were entered for your account at %s from %s. The second step is locked for fifteen minutes. If this was not you, change your password.');
 - added define('_US_2FA_RECOVERY_MAIL_SUBJECT', '%s: a recovery code was used');
 - added define('_US_2FA_RECOVERY_MAIL_BODY', 'A recovery code was used to sign in to your account at %s from %s. That code no longer works. If this was not you, change your password and reset your recovery codes.');
 
@@ -76,7 +76,7 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_STATUS_NONE', 'Not enrolled');
 - added define('_US_2FAM_STATUS_TOTP', 'Authenticator app enrolled');
 - added define('_US_2FAM_STATUS_EMAIL', 'E-mail codes enrolled');
-- added define('_US_2FAM_RESET_HELP', 'This disables the user’s authenticator and revokes their recovery codes and remember-me cookies. Existing signed-in sessions remain active. Enter your own administrator password to confirm.');
+- added define('_US_2FAM_RESET_HELP', 'This disables the user’s second factor, whichever method they enrolled, and revokes their recovery codes and remember-me cookies. Existing signed-in sessions remain active. Enter your own administrator password to confirm.');
 - added define('_US_2FAM_RESET_DONE', 'The user’s two-factor authentication was reset.');
 - added define('_US_2FAM_BACK', 'Back to account');
 - added define('_US_2FAM_DONE', 'Two-factor authentication is enabled.');
@@ -84,7 +84,7 @@ Below are language differences from a version to next version.
 - added define('_US_2FAM_NOTICE_SUBJECT', '%s: two-factor authentication changed');
 - added define('_US_2FAM_NOTICE_BODY', 'Two-factor authentication or recovery codes were changed for your account at %s from %s. If this was not you, contact the site administrator.');
 - added define('_US_2FAM_RESET_SUBJECT', '%s: an administrator reset your two-factor authentication');
-- added define('_US_2FAM_RESET_BODY', 'An administrator disabled your authenticator and revoked its recovery codes at %s from %s. Existing signed-in sessions remain active. Sign in and set up your authenticator again. Contact the site administrator if this was unexpected.');
+- added define('_US_2FAM_RESET_BODY', 'An administrator disabled your second factor and revoked its recovery codes at %s from %s. Existing signed-in sessions remain active. Sign in and set up two-factor authentication again. Contact the site administrator if this was unexpected.');
 
 /upgrade/language/english/twofactor.php (new file)
 - added define('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK', 'Sodium is available for two-factor authentication.');
