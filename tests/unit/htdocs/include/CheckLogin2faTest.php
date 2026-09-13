@@ -65,6 +65,7 @@ final class CheckLogin2faTest extends TestCase
         $GLOBALS['sandboxRecovery'] = false;
         $GLOBALS['sandboxHatch']   = false;
         $GLOBALS['sandboxToken']   = true;
+        $GLOBALS['sandboxGroups']  = [2];
         $GLOBALS['sandboxUser']    = new class {
             public function getVar(string $k, string $f = 's'): mixed
             {
@@ -73,7 +74,7 @@ final class CheckLogin2faTest extends TestCase
 
             public function getGroups(): array
             {
-                return [2];
+                return $GLOBALS['sandboxGroups'];
             }
         };
         $GLOBALS['xoopsSecurity'] = new class {
@@ -224,12 +225,13 @@ final class CheckLogin2faTest extends TestCase
     public function aValidCodeCompletesTheLoginWithTheVerifiedGeneration(): void
     {
         $this->pending(['remember' => true, 'redirect' => '/x']);
-        $this->post(['code' => $this->code()]);
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step)]);
         [$what, $args] = $this->execute();
         self::assertSame('established', $what);
         self::assertSame([9, true, '/x', 'gen-1'], $args);
         self::assertArrayNotHasKey('xoops2faPending', $_SESSION);
-        self::assertContains('acceptTotp:9:' . \XoopsTotp::stepAt(time()) . ':gen-1', $GLOBALS['sandboxLog']);
+        self::assertContains('acceptTotp:9:' . $step . ':gen-1', $GLOBALS['sandboxLog']);
         self::assertNotContains('mail', $GLOBALS['sandboxLog']);
     }
 
@@ -293,7 +295,8 @@ final class CheckLogin2faTest extends TestCase
     public function aCodeFromANearbyStepIsRefusedAndLoggedAsSkew(): void
     {
         $this->pending();
-        $this->post(['code' => $this->code(3)]);
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step + 3)]);
         $notices = [];
         set_error_handler(static function (int $no, string $msg) use (&$notices): bool {
             $notices[] = $msg;
@@ -305,11 +308,36 @@ final class CheckLogin2faTest extends TestCase
         } finally {
             restore_error_handler();
         }
+        if (\XoopsTotp::stepAt(time()) !== $step) {
+            self::markTestSkipped('the 30-second step boundary passed during the test');
+        }
         self::assertSame(_US_2FA_BADCODE, $vars['error']);
         self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
         self::assertCount(1, $notices);
         self::assertStringContainsString('3 steps from now', $notices[0]);
-        self::assertStringNotContainsString($this->code(3), $notices[0]);
+        self::assertStringNotContainsString((string) \XoopsTotp::codeAt(self::SECRET, $step + 3), $notices[0]);
+    }
+
+    #[Test]
+    public function aThrowingNoticeHandlerStillCountsASkewedCodeAsAFailure(): void
+    {
+        $this->pending();
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step + 3)]);
+        set_error_handler(static function (int $no, string $msg): bool {
+            throw new \ErrorException($msg, 0, $no);
+        }, E_USER_NOTICE);
+        try {
+            [$what, $vars] = $this->execute();
+        } finally {
+            restore_error_handler();
+        }
+        if (\XoopsTotp::stepAt(time()) !== $step) {
+            self::markTestSkipped('the 30-second step boundary passed during the test');
+        }
+        self::assertSame('rendered', $what);
+        self::assertSame(_US_2FA_BADCODE, $vars['error']);
+        self::assertContains('recordFailure:9', $GLOBALS['sandboxLog']);
     }
 
     #[Test]
@@ -339,11 +367,22 @@ final class CheckLogin2faTest extends TestCase
     {
         $this->pending();
         $GLOBALS['sandboxAccept'] = new \RuntimeException('down');
-        $this->post(['code' => $this->code()]);
-        [$what, $vars] = @$this->execute();
+        $step = \XoopsTotp::stepAt(time());
+        $this->post(['code' => (string) \XoopsTotp::codeAt(self::SECRET, $step)]);
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = [$level, $message];
+            return true;
+        });
+        try {
+            [$what, $vars] = $this->execute();
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_WARNING, 'Two-factor challenge failed for uid 9']], $warnings);
         self::assertSame('rendered', $what);
         self::assertSame(_US_2FA_UNAVAILABLE, $vars['error']);
-        self::assertContains('acceptTotp:9:' . \XoopsTotp::stepAt(time()) . ':gen-1', $GLOBALS['sandboxLog']);
+        self::assertContains('acceptTotp:9:' . $step . ':gen-1', $GLOBALS['sandboxLog']);
         self::assertNotContains('recordFailure:9', $GLOBALS['sandboxLog']);
         self::assertArrayHasKey('xoops2faPending', $_SESSION);
     }
@@ -393,6 +432,26 @@ final class CheckLogin2faTest extends TestCase
     }
 
     #[Test]
+    public function closedSiteNormalizesDatabaseGroupIdsBeforeStrictComparison(): void
+    {
+        foreach ([
+            [['2'], [2], true],
+            [[2], ['2'], true],
+            [['1'], [], true],
+            [[2], [true], false],
+            [['3'], [2], false],
+        ] as [$groups, $allowed, $expected]) {
+            $this->pending();
+            $GLOBALS['sandboxGroups'] = $groups;
+            $GLOBALS['xoopsConfig']['closesite'] = 1;
+            $GLOBALS['xoopsConfig']['closesite_okgrp'] = $allowed;
+            [$what, $vars] = $this->execute();
+            self::assertSame('rendered', $what);
+            self::assertSame(!$expected, $vars['start_again']);
+        }
+    }
+
+    #[Test]
     public function theRecheckRefusesAClosedSiteToAGroupWithoutAccess(): void
     {
         $this->pending();
@@ -427,7 +486,12 @@ final class CheckLogin2faTest extends TestCase
         }
         function xoops_getHandler(string $name): object {
             return match ($name) {
-                'member' => new class { public function getUser(int $uid): mixed { return $GLOBALS['sandboxUser']; } },
+                'member' => new class {
+                    public function getUser(int $uid): mixed
+                    {
+                        return $GLOBALS['sandboxUser'];
+                    }
+                },
                 'user2fa' => new class {
                     public function getRow(int $uid): ?array { if ($GLOBALS['sandboxRow'] instanceof \Throwable) { throw $GLOBALS['sandboxRow']; } return $GLOBALS['sandboxRow']; }
                     public function stateOfRow(?array $row): string { return $GLOBALS['sandboxState']; }
@@ -436,6 +500,12 @@ final class CheckLogin2faTest extends TestCase
                     public function recordFailure(int $uid, int $now, string $generation): array|false { if ($generation !== 'gen-1') { throw new \LogicException('Wrong failure generation'); } $GLOBALS['sandboxLog'][] = "recordFailure:$uid"; return $GLOBALS['sandboxFailure']; }
                     public function acceptRecovery(int $uid, string $code, string $gen): bool { $GLOBALS['sandboxLog'][] = "acceptRecovery:$uid:$code:$gen"; return $GLOBALS['sandboxRecovery']; }
                     public function resetByEscapeHatch(int $uid): bool { $GLOBALS['sandboxLog'][] = "hatch:$uid"; return $GLOBALS['sandboxHatch']; }
+                },
+                'tplfile' => new class {
+                    public function find(...$args): array
+                    {
+                        return [new \stdClass()];
+                    }
                 },
             };
         }

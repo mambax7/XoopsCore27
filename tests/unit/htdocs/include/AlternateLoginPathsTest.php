@@ -1,5 +1,19 @@
 <?php
-
+/**
+ * Tests for the alternate login paths (XML-RPC and the popup) on a two-factor site
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @package   core
+ * @since     2.7.4
+ */
 declare(strict_types=1);
 
 namespace Tests\Unit\Include;
@@ -15,6 +29,16 @@ require_once dirname(__DIR__) . '/modules/system/SourceFileTestTrait.php';
  * must be presented: the upgrade wizard (unless the escape-hatch file is
  * present), XML-RPC and the SSL popup login. Pinned from source; none of
  * these files can be executed in a unit test.
+ *
+ * @category  XoopsTest
+ * @package   XoopsCore27
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
+/**
+ * Source-level contracts every alternate login path must keep.
  *
  * @category  XoopsTest
  * @package   XoopsCore27
@@ -65,6 +89,43 @@ final class AlternateLoginPathsTest extends TestCase
     }
 
     #[Test]
+    public function popupDoesNotAutomaticallyDowngradeToAnHttpCore(): void
+    {
+        $this->loadSourceFile('extras/login.php');
+        $start = strpos($this->sourceContent, "            // The SSL bridge");
+        self::assertNotFalse($start);
+        $end = strpos($this->sourceContent, "        if (!\$GLOBALS['sess_handler']->regenerate_id", $start);
+        self::assertNotFalse($end);
+        $body = substr($this->sourceContent, $start, $end - $start);
+        // Exclude the enclosing mustChallenge brace; exit becomes an observable boundary.
+        $body = preg_replace('/\s*}\s*$/', '', $body);
+        $body = str_replace('exit();', 'return;', $body);
+        foreach (['http', 'https'] as $scheme) {
+            $ns = __NAMESPACE__ . '\\Popup' . ucfirst($scheme);
+            $GLOBALS['popupRedirect'] = null;
+            ob_start();
+            try {
+                eval('namespace ' . $ns . '; const XOOPS_URL = "' . $scheme . '://example.test";'
+                    . 'const _US_2FA_HTTP_LOGIN = "HTTP transport warning"; const _US_2FA_REQUIRED = "Core login";'
+                    . 'function xoops_error($message) { echo $message; }'
+                    . 'function redirect_header($url, ...$args) { $GLOBALS["popupRedirect"] = $url; }'
+                    . $body);
+                $html = ob_get_contents();
+            } finally {
+                ob_end_clean();
+            }
+            if ('http' === $scheme) {
+                self::assertNull($GLOBALS['popupRedirect']);
+                self::assertStringContainsString('HTTP transport warning', $html);
+                self::assertStringContainsString('href="http://example.test/user.php"', $html);
+            } else {
+                self::assertSame('https://example.test/user.php', $GLOBALS['popupRedirect']);
+                self::assertSame('', $html);
+            }
+        }
+    }
+
+    #[Test]
     public function xmlRpcAndTheSslPopupRefuseAnAccountThatMustBeChallenged(): void
     {
         foreach (['htdocs/class/xml/rpc/xmlrpcapi.php', 'extras/login.php'] as $file) {
@@ -77,8 +138,9 @@ final class AlternateLoginPathsTest extends TestCase
             self::assertStringContainsString('XoopsUser2faHandler::STATE_UNAVAILABLE', $this->sourceContent, $file);
         }
         $this->loadSourceFile('extras/login.php');
+        self::assertStringContainsString("if (!\$GLOBALS['sess_handler']->regenerate_id(true))", $this->sourceContent);
         self::assertStringContainsString("redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);", $this->sourceContent);
-        self::assertStringContainsString("xoops_loadLanguage('user2fa');", $this->sourceContent);
+        self::assertStringContainsString("xoops_2fa_loadLanguage('user2fa');", $this->sourceContent);
         $this->assertBindsTheSession('extras/login.php');
         $this->loadSourceFile('htdocs/class/xml/rpc/xmlrpcapi.php');
         // the login failure, the factor refusal and the module-read refusal

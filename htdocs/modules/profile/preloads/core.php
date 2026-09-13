@@ -58,7 +58,7 @@ class ProfileCorePreload extends XoopsPreloadItem
             $op = Request::getString('op', '', 'GET');
         }
         $from = Request::getString('from', '', 'GET');
-        if ($op !== 'login' && $from !== 'profile') {
+        if (!in_array($op, ['login', '2fa', '2fa_setup', '2fa_manage'], true) && $from !== 'profile') {
             header('location: ./modules/profile/user.php' . self::filteredQueryString());
             exit();
         }

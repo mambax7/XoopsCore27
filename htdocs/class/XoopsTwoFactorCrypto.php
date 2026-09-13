@@ -72,11 +72,14 @@ final class XoopsTwoFactorCrypto
     }
 
     /**
-     * @return bool whether the sodium extension is loaded
+     * @return bool whether the sodium functions required by this feature are callable
      */
     public function isAvailable(): bool
     {
-        return extension_loaded('sodium');
+        return extension_loaded('sodium')
+            && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_keygen')
+            && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
+            && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_decrypt');
     }
 
     /**
@@ -135,16 +138,16 @@ final class XoopsTwoFactorCrypto
      * replaced the same way as a missing one, but only while no user_2fa row
      * holds a secret: a lost key is never replaced while one does.
      *
-     * ponytail: FileStorage::save() writes the final file in place, so a reader
+     * Known gap: FileStorage::save() writes the final file in place, so a reader
      * can see the file between creation and completion during the site's one
      * first provisioning and report the factor unavailable for that request.
      * Publish atomically (temp file + rename) once FileStorage supports it.
      *
-     * @param bool $encryptedRowsExist whether any user_2fa row holds a secret
+     * @param bool|callable $encryptedRowsExist callback checked under the provisioning lock, or a known fixed result
      *
      * @return bool true when a usable key exists afterwards
      */
-    public function provisionKey(bool $encryptedRowsExist): bool
+    public function provisionKey(bool|callable $encryptedRowsExist): bool
     {
         if (!$this->isAvailable()) {
             return false;
@@ -152,7 +155,7 @@ final class XoopsTwoFactorCrypto
         if ($this->hasKey() && null !== $this->readKey()) {
             return true;
         }
-        if ($encryptedRowsExist) {
+        if (true === $encryptedRowsExist) {
             return false;
         }
         set_error_handler(static fn (): bool => true);
@@ -169,6 +172,9 @@ final class XoopsTwoFactorCrypto
                 return false;
             }
             if (!$this->hasKey() || null === $this->readKey()) {
+                if (is_callable($encryptedRowsExist) && $encryptedRowsExist()) {
+                    return false;
+                }
                 $key = sodium_crypto_aead_xchacha20poly1305_ietf_keygen();
                 // Same rule as loadKey(): a write warning carries the key
                 // file's path, which must not reach a page.
@@ -197,6 +203,7 @@ final class XoopsTwoFactorCrypto
      * @param string $aad   associated data (rowAad() or pendingAad())
      *
      * @return string|null 'v1:' + base64(nonce || ciphertext), or null without a key
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function seal(string $plain, string $aad): ?string
     {

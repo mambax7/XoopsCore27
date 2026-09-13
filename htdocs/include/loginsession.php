@@ -88,7 +88,11 @@ function xoops_login_begin_challenge(XoopsUser $user, string $state, string $gen
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
     }
-    $GLOBALS['sess_handler']->regenerate_id(true);
+    if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+        $_SESSION = [];
+        redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_UNAVAILABLE, false);
+        exit();
+    }
     $_SESSION                    = [];
     $_SESSION['xoops2faPending'] = [
         'uid'        => (int) $user->getVar('uid'),
@@ -142,27 +146,17 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
         exit();
     }
 
+    try {
+        xoops_login_set_session($user, $factorGeneration, null !== $verifiedGeneration);
+    } catch (\RuntimeException $e) {
+        redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_UNAVAILABLE, false);
+        exit();
+    }
+
     /** @var XoopsMemberHandler $member_handler */
     $member_handler = xoops_getHandler('member');
     $user->setVar('last_login', time());
     if (!$member_handler->insertUser($user)) {
-    }
-    // Regenerate a new session id and destroy old session
-    $GLOBALS['sess_handler']->regenerate_id(true);
-    $_SESSION                    = [];
-    $_SESSION['xoopsUserId']     = $user->getVar('uid');
-    $_SESSION['xoopsUserGroups'] = $user->getGroups();
-    // Only a completed challenge marks the session verified; the stamp is the
-    // row's generation either way, so an enrolled account that signed in with
-    // its password while the policy is off keeps its session until the
-    // policy resumes.
-    $_SESSION['xoops2faGeneration'] = $factorGeneration;
-    $_SESSION['xoops2faVerified']   = null !== $verifiedGeneration;
-    // Read raw via 'n' format — getVar()'s default 's' escapes '&' to
-    // '&amp;', which the validator's HTML guard would reject.
-    $user_theme = xoops_validateThemeName((string) $user->getVar('theme', 'n'));
-    if ($user_theme !== '' && in_array($user_theme, $xoopsConfig['theme_set_allowed'], true)) {
-        $_SESSION['xoopsUserTheme'] = $user_theme;
     }
     $xoopsPreload = XoopsPreload::getInstance();
     $xoopsPreload->triggerEvent('core.behavior.user.login', $user);
@@ -239,4 +233,31 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
 
     redirect_header($url, 1, sprintf(_US_LOGGINGU, $user->getVar('uname')), false);
     exit();
+}
+
+/**
+ * Establish fresh session state after login or committed enrolment, without redirecting.
+ *
+ * @param XoopsUser $user             the authenticated account
+ * @param string    $factorGeneration the factor row's generation ('' when none)
+ * @param bool      $verified         whether a completed challenge or enrolment verified the factor
+ *
+ * @return void
+ * @throws \RuntimeException when the session identifier cannot be replaced
+ */
+function xoops_login_set_session(XoopsUser $user, string $factorGeneration, bool $verified): void
+{
+    if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+        $_SESSION = [];
+        throw new \RuntimeException('Session rotation failed');
+    }
+    $_SESSION = [];
+    $_SESSION['xoopsUserId'] = $user->getVar('uid');
+    $_SESSION['xoopsUserGroups'] = $user->getGroups();
+    $_SESSION['xoops2faGeneration'] = $factorGeneration;
+    $_SESSION['xoops2faVerified'] = $verified;
+    $theme = xoops_validateThemeName((string) $user->getVar('theme', 'n'));
+    if ('' !== $theme && in_array($theme, $GLOBALS['xoopsConfig']['theme_set_allowed'], true)) {
+        $_SESSION['xoopsUserTheme'] = $theme;
+    }
 }

@@ -76,6 +76,30 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
     }
 
     #[Test]
+    public function disabledSodiumFunctionsMakeTheFeatureUnavailableWithoutThrowing(): void
+    {
+        $script = $this->dir . '/capability.php';
+        file_put_contents($script, '<?php define("XOOPS_ROOT_PATH", ' . var_export(XOOPS_ROOT_PATH, true) . ');'
+            . 'require XOOPS_ROOT_PATH . "/xoops_lib/vendor/autoload.php";'
+            . 'require XOOPS_ROOT_PATH . "/class/XoopsTwoFactorCrypto.php";'
+            . '$dir = ' . var_export($this->dir, true) . ';'
+            . '$crypto = new XoopsTwoFactorCrypto(new Xmf\\Key\\FileStorage($dir, "test"), $dir . "/twofactor.lock");'
+            . 'echo json_encode([$crypto->isAvailable(), $crypto->provisionKey(false), $crypto->seal("secret", "aad"), $crypto->open("v1:invalid", "aad")]);');
+        foreach (['keygen', 'encrypt', 'decrypt'] as $suffix) {
+            $function = 'sodium_crypto_aead_xchacha20poly1305_ietf_' . $suffix;
+            $process = proc_open([PHP_BINARY, '-d', 'disable_functions=' . $function, $script], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+            self::assertIsResource($process);
+            fclose($pipes[0]);
+            $output = stream_get_contents($pipes[1]);
+            $errors = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            self::assertSame(0, proc_close($process), $function . ': ' . $errors);
+            self::assertSame([false, false, null, null], json_decode($output, true), $function);
+        }
+    }
+
+    #[Test]
     public function provisionWritesOneKeyAndKeepsItOnASecondCall(): void
     {
         $crypto = $this->crypto();
@@ -87,6 +111,39 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
 
         $this->assertTrue($crypto->provisionKey(false));
         $this->assertSame($first, $crypto->loadKey());
+    }
+
+    #[Test]
+    public function encryptedRowCallbackRunsUnderTheProvisioningLock(): void
+    {
+        $crypto = $this->crypto();
+        $called = false;
+        self::assertFalse($crypto->provisionKey(function () use (&$called): bool {
+            $called = true;
+            $other = fopen($this->dir . '/twofactor.lock', 'c');
+            try {
+                self::assertFalse(flock($other, LOCK_EX | LOCK_NB));
+            } finally {
+                fclose($other);
+            }
+            return true;
+        }));
+        self::assertTrue($called);
+        self::assertFalse($crypto->hasKey());
+    }
+
+    #[Test]
+    public function provisionWritesTheKeyWhenTheCallbackReportsNoEncryptedRows(): void
+    {
+        $crypto = $this->crypto();
+        $called = false;
+        self::assertTrue($crypto->provisionKey(function () use (&$called): bool {
+            $called = true;
+
+            return false;
+        }));
+        self::assertTrue($called);
+        self::assertSame(32, strlen((string) $crypto->loadKey()));
     }
 
     #[Test]
@@ -124,11 +181,20 @@ class XoopsTwoFactorCryptoTest extends KernelTestCase
         $crypto = $this->crypto();
         $this->assertNull($crypto->loadKey());
 
-        $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, 'not base64!');
-        $this->assertNull(@$crypto->loadKey());
-
-        $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, base64_encode(random_bytes(31)));
-        $this->assertNull(@$crypto->loadKey());
+        foreach (['not base64!', base64_encode(random_bytes(31))] as $key) {
+            $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, $key);
+            $warnings = [];
+            set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+                $warnings[] = [$level, $message];
+                return true;
+            });
+            try {
+                $this->assertNull($crypto->loadKey());
+            } finally {
+                restore_error_handler();
+            }
+            self::assertSame([[E_USER_WARNING, 'XoopsTwoFactorCrypto: key file unreadable or malformed']], $warnings);
+        }
 
         $this->storage()->save(XoopsTwoFactorCrypto::KEY_NAME, base64_encode(random_bytes(32)));
         $this->assertSame(32, strlen((string) $crypto->loadKey()));

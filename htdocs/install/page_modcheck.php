@@ -27,6 +27,7 @@
 
 require_once __DIR__ . '/include/common.inc.php';
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
+$wizard->loadLangFile('twofactor');
 
 $pageHasForm = false;
 
@@ -42,6 +43,10 @@ $blockNext       = !empty($missingRequired);
 $mysqliSymbols   = $wizard->configs['extensions_required']['mysqli'][1] ?? [];
 $mysqliAvailable = xoInstallerExtensionAvailable('mysqli', $mysqliSymbols);
 $mysqliInfo      = $mysqliAvailable && function_exists('mysqli_get_client_info') ? mysqli_get_client_info() : '';
+$sodiumAvailable = extension_loaded('sodium')
+    && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_keygen')
+    && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
+    && function_exists('sodium_crypto_aead_xchacha20poly1305_ietf_decrypt');
 
 foreach ($wizard->configs['extensions'] as $ext => $value) {
     if (extension_loaded($ext)) {
@@ -104,6 +109,11 @@ ob_start();
         </tr>
         </tbody>
     </table>
+
+    <p><?php echo xoDiag($sodiumAvailable ? 1 : 0, defined('TWOFACTOR_SODIUM') ? TWOFACTOR_SODIUM : 'Sodium extension: required for two-factor authentication'); ?></p>
+    <?php if (!$sodiumAvailable): ?>
+        <p><?php echo defined('TWOFACTOR_SODIUM_MSG') ? TWOFACTOR_SODIUM_MSG : 'Enable the PHP sodium extension for the web server and reload this page before enabling two-factor authentication.'; ?></p>
+    <?php endif; ?>
 
     <h3><?php echo RECOMMENDED_EXTENSIONS; ?></h3>
     <table class="table table-hover">

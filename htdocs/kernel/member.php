@@ -202,26 +202,27 @@ class XoopsMemberHandler
         if (null !== $this->tokenHandler && !$this->tokenHandler->deleteByUid((int) $user->getVar('uid'))) {
             return false;
         }
-        // The factor row goes with the tokens: a dead account must not keep
-        // a factor row any more than live recovery codes. Skipped, not
-        // failed, while the 2.7.4 patch has not created the table.
+        $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
+        if (!$this->membershipHandler->deleteAll($criteria) || !$this->userHandler->delete($user)) {
+            return false;
+        }
+        // Users and memberships can be MyISAM. Keep the factor until the
+        // account is gone: deleting it first would disable 2FA on a failed
+        // account deletion, and a transaction cannot restore a MyISAM user.
         try {
             if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
-                return false;
+                throw new \RuntimeException('Second-factor cleanup failed');
             }
         } catch (\Throwable $e) {
-            // A connection poisoned by an earlier failed rollback throws.
-            trigger_error(sprintf('User deletion refused for uid %d: second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
-            return false;
-        }
-        $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
-        if (!$this->membershipHandler->deleteAll($criteria)) {
-            // Same rule: a step that did not run keeps the account, so a
-            // false return always means the row is still there.
-            return false;
+            // The account is already gone; an orphaned factor grants no login.
+            try {
+                trigger_error(sprintf('User %d deleted; second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
+            } catch (\Throwable) {
+                // The account is already gone; a throwing diagnostic handler must not report the deletion as failed.
+            }
         }
 
-        return (bool) $this->userHandler->delete($user);
+        return true;
     }
 
     /**
@@ -462,7 +463,12 @@ class XoopsMemberHandler
             } else {
                 $newHash = password_hash($pwd, PASSWORD_DEFAULT);
                 $user->setVar('pass', $newHash);
-                $this->userHandler->insert($user);
+                if (!$this->userHandler->insert($user)) {
+                    // The row still holds the verified hash; keep the object in step with it so
+                    // a digest taken from the object (the two-factor challenge) matches the row.
+                    $user->setVar('pass', $hash);
+                    $this->logSecurityEvent('Password rehash not persisted', ['uid' => (int) $user->getVar('uid')]);
+                }
             }
         }
 
@@ -888,7 +894,8 @@ class XoopsMemberHandler
 
         $errorInfo = [
             'message' => $message,
-            'user_id' => isset($GLOBALS['xoopsUser']) ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
+            // during a login the global is still the '' that common.php seeds, not an object
+            'user_id' => ($GLOBALS['xoopsUser'] ?? null) instanceof XoopsUser ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
             'timestamp' => date('Y-m-d H:i:s')
         ];
 
@@ -965,7 +972,8 @@ class XoopsMemberHandler
         $logData = [
             'event' => $event,
             'timestamp' => date('Y-m-d H:i:s'),
-            'user_id' => isset($GLOBALS['xoopsUser']) ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
+            // during a login the global is still the '' that common.php seeds, not an object
+            'user_id' => ($GLOBALS['xoopsUser'] ?? null) instanceof XoopsUser ? (int)$GLOBALS['xoopsUser']->getVar('uid') : 'anonymous',
             'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
         ];
 

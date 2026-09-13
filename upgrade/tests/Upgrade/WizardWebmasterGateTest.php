@@ -40,6 +40,26 @@ final class WizardWebmasterGateTest extends TestCase
         return $content;
     }
 
+    /**
+     * A refused session rotation must stop the wizard login before any state is written.
+     *
+     * @return void
+     */
+    #[Test]
+    public function sessionRotationMustSucceedBeforeTheWizardWritesLoginState(): void
+    {
+        $source = $this->source('login.php');
+        $guard = strpos($source, "if (!\$GLOBALS['sess_handler']->regenerate_id(true))");
+        $write = strpos($source, "\$user->setVar('last_login'");
+        self::assertNotFalse($guard);
+        self::assertNotFalse($write);
+        self::assertLessThan($write, $guard);
+        $failure = substr($source, $guard, $write - $guard);
+        self::assertStringContainsString('$_SESSION = [];', $failure);
+        self::assertStringContainsString('exit();', $failure);
+        self::assertStringNotContainsString("\$_SESSION['xoopsUserId']", $failure);
+    }
+
     #[Test]
     public function theSharedCheckIsDefinedInTheBootstrapAndRequiresAnActiveWebmaster(): void
     {

@@ -593,6 +593,14 @@ function profile_getUserForm(XoopsUser $user, ?ProfileProfile $profile = null, $
     }
 
     $form->addElement(new XoopsFormHidden('uid', $user->getVar('uid')));
+    // Self-service only: the link manages the signed-in account, not the one an administrator is editing.
+    $own = is_object($GLOBALS['xoopsUser']) && (int) $GLOBALS['xoopsUser']->getVar('uid') === (int) $user->getVar('uid');
+    if ($own && defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED) {
+        xoops_loadLanguage('user2famanage');
+        // An incomplete translation pack must not take the profile form down.
+        defined('_US_2FAM_TITLE') || define('_US_2FAM_TITLE', 'Two-factor authentication');
+        $form->addElement(new XoopsFormLabel(_US_2FAM_TITLE, '<a href="' . htmlspecialchars(XOOPS_URL . '/user.php?op=2fa_manage', ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(_US_2FAM_TITLE, ENT_QUOTES, 'UTF-8') . '</a>'));
+    }
     $form->addElement(new XoopsFormButton('', 'submit', _US_SAVECHANGES, 'submit'));
 
     return $form;

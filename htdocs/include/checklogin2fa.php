@@ -28,11 +28,12 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
 
 // user.php loads the first itself; the closed-site page does not. The
-// challenge strings have a file of their own so a language pack that
-// predates them falls back to English as a whole, as xoops_loadLanguage()
-// does for a missing file (it never fills gaps in a present one).
+// challenge strings have a file of their own; a pack that predates them
+// falls back to English as a whole, and one that predates a single
+// constant is filled from English by the helper.
 xoops_loadLanguage('user');
-xoops_loadLanguage('user2fa');
+require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+xoops_2fa_loadLanguage('user2fa');
 
 if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
     /**
@@ -67,7 +68,14 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
         ]);
         $tpl->assign($vars);
         $tpl->caching = 0;
-        $tpl->display('db:system_user2fa.tpl');
+        // The row is registered by the System module update; until then the shipped file renders the page.
+        $template = 'db:system_user2fa.tpl';
+        /** @var XoopsTplfileHandler $xo2faTplfiles */
+        $xo2faTplfiles = xoops_getHandler('tplfile');
+        if ([] === $xo2faTplfiles->find('default', null, null, null, 'system_user2fa.tpl', true)) {
+            $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl';
+        }
+        $tpl->display($template);
         exit();
     }
 }
@@ -115,8 +123,9 @@ if ($xo2faValid) {
         && hash_equals($xo2faPending['passdigest'], hash('sha256', (string) $xo2faUser->getVar('pass', 'n')));
     if ($xo2faValid && 1 == $GLOBALS['xoopsConfig']['closesite']) {
         $xo2faValid = false;
+        $xo2faAllowedGroups = array_map('intval', $GLOBALS['xoopsConfig']['closesite_okgrp']);
         foreach ($xo2faUser->getGroups() as $xo2faGroup) {
-            if (in_array($xo2faGroup, $GLOBALS['xoopsConfig']['closesite_okgrp']) || XOOPS_GROUP_ADMIN == $xo2faGroup) {
+            if (in_array((int) $xo2faGroup, $xo2faAllowedGroups, true) || (int) XOOPS_GROUP_ADMIN === (int) $xo2faGroup) {
                 $xo2faValid = true;
                 break;
             }
@@ -166,15 +175,21 @@ $xo2faMail = static function (object $user, string $subject, string $body): void
         $mailer->setFromName($GLOBALS['xoopsConfig']['sitename']);
         $mailer->setSubject(sprintf($subject, $GLOBALS['xoopsConfig']['sitename']));
         $mailer->setBody(sprintf($body, $GLOBALS['xoopsConfig']['sitename'], \Xmf\IPAddress::fromRequest()->asReadable()));
-        $mailer->send();
+        if (!$mailer->send()) {
+            throw new \RuntimeException('Mailer refused the notice');
+        }
     } catch (\Throwable $e) {
-        trigger_error('Two-factor notice mail failed', E_USER_WARNING);
+        try {
+            trigger_error('Two-factor notice mail failed', E_USER_WARNING);
+        } catch (\Throwable) {
+            // A custom diagnostic handler must not fail an already committed step.
+        }
     }
 };
 
-if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xoops_2fa', 'POST')) {
+if ('POST' === \Xmf\Request::getMethod() && \Xmf\Request::hasVar('xoops_2fa', 'POST')) {
     if (!$GLOBALS['xoopsSecurity']->check()) {
-        $xo2faVars['error']      = implode('<br>', $GLOBALS['xoopsSecurity']->getErrors());
+        $xo2faVars['error']      = implode("\n", $GLOBALS['xoopsSecurity']->getErrors());
         $xo2faVars['token_html'] = $GLOBALS['xoopsSecurity']->getTokenHTML();
         xoops_2fa_render($xo2faVars);
     }
@@ -224,7 +239,11 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xo
                 foreach ([-3, -2, 2, 3] as $xo2faOffset) {
                     $xo2faExpected = XoopsTotp::codeAt($xo2faSecret, $xo2faStepNow + $xo2faOffset);
                     if (false !== $xo2faExpected && hash_equals($xo2faExpected, $xo2faCode)) {
-                        trigger_error(sprintf('Two-factor code for uid %d matched %d steps from now; probable clock skew', $xo2faUid, $xo2faOffset), E_USER_NOTICE);
+                        try {
+                            trigger_error(sprintf('Two-factor code for uid %d matched %d steps from now; probable clock skew', $xo2faUid, $xo2faOffset), E_USER_NOTICE);
+                        } catch (\Throwable) {
+                            // A throwing diagnostic handler must not skip the failure count below.
+                        }
                         break;
                     }
                 }
@@ -234,7 +253,11 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && \Xmf\Request::hasVar('xo
             $xo2faFailure = $xo2faHandler->recordFailure($xo2faUid, $xo2faNow, $xo2faGeneration);
         }
     } catch (\Throwable $e) {
-        trigger_error('Two-factor challenge failed for uid ' . $xo2faUid, E_USER_WARNING);
+        try {
+            trigger_error('Two-factor challenge failed for uid ' . $xo2faUid, E_USER_WARNING);
+        } catch (\Throwable) {
+            // The visitor gets "unavailable" whatever a diagnostic handler does.
+        }
         $xo2faError    = _US_2FA_UNAVAILABLE;
         $xo2faAccepted = false;
         $xo2faFailure  = false;

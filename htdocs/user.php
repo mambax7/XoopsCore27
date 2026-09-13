@@ -92,6 +92,11 @@ if ($op === 'login') {
     exit();
 }
 
+if (in_array($op, ['2fa_setup', '2fa_manage'], true)) {
+    include_once $GLOBALS['xoops']->path('include/manage2fa.php');
+    exit();
+}
+
 if ($op === '2fa') {
     include_once $GLOBALS['xoops']->path('include/checklogin2fa.php');
     exit();

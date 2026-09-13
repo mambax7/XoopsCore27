@@ -414,8 +414,10 @@ if (!empty($_SESSION['xoopsUserId'])) {
     $endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();
     $factorRow  = null;
     if (!$endSession) {
-        // The factor row, read on every request so a reset, disable or
-        // enrolment in another browser ends this session on its next request.
+        // The factor row, read on every request so an enrolment in another
+        // browser ends this session on its next request; a disable or an
+        // admin reset (which disables) leaves it signed in, stamped with the
+        // disabled row's generation.
         // A failed lookup on an established session is logged and the
         // request continues; failing closed here would sign out the whole
         // site on a database blip.
@@ -429,8 +431,10 @@ if (!empty($_SESSION['xoopsUserId'])) {
         if (is_array($factorRow) && XoopsUser2faHandler::ROW_DISABLED !== $factorRow['state']) {
             // Enrolled, or a row this code cannot check (never "none"): only
             // a completed challenge or enrolment may put the generation in a
-            // session, so none stored ends it, whatever the policy.
-            $factorState = xoops_getHandler('user2fa')->stateOfRow($factorRow);
+            // session, so none stored ends it, whatever the policy. The exact
+            // state is resolved by the challenge page; opening the secret here
+            // would read and decrypt the key on every authenticated request.
+            $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
             $stored      = $_SESSION['xoops2faGeneration'] ?? null;
             $endSession  = !is_string($stored) || !hash_equals((string) $factorRow['generation'], $stored);
             unset($stored);

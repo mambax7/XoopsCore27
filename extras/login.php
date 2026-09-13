@@ -1,4 +1,19 @@
 <?php
+/**
+ * Popup login for a site that serves its login form over SSL from a separate directory
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @package   core
+ * @since     2.7.4
+ */
 // This script displays a login screen in a popupbox when SSL is enabled in the preferences. You should use this script only when your server supports SSL. Place this file under your SSL directory
 
 use Xmf\Request;
@@ -6,12 +21,15 @@ use Xmf\Request;
 // path to your xoops main directory
 $path = '/path/to/xoops/directory';
 
+// Keep headers writable until authentication has rotated the session cookie.
+ob_start();
 include $path . '/mainfile.php';
 if (!defined('XOOPS_ROOT_PATH')) {
     exit();
 }
 include_once XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/user.php';
-xoops_loadLanguage('user2fa');
+require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+xoops_2fa_loadLanguage('user2fa');
 $op = Request::getString('op', 'login', 'POST') === 'dologin' ? 'dologin' : 'login';
 
 $username = trim(Request::getString('username', '', 'POST'));
@@ -77,7 +95,20 @@ if ($op === 'dologin') {
             $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
         }
         if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
+            // The SSL bridge can use a different host; never invent an HTTPS core URL.
+            if ('https' !== strtolower((string) parse_url(XOOPS_URL, PHP_URL_SCHEME))) {
+                xoops_error(htmlspecialchars(_US_2FA_HTTP_LOGIN, ENT_QUOTES, 'UTF-8'));
+                echo '<p><a href="' . htmlspecialchars(XOOPS_URL . '/user.php', ENT_QUOTES, 'UTF-8') . '">'
+                    . htmlspecialchars(_US_2FA_REQUIRED, ENT_QUOTES, 'UTF-8') . '</a></p>';
+                exit();
+            }
             redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);
+            exit();
+        }
+        if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+            // A failed rotation must not keep an earlier session's identity alive.
+            $_SESSION = [];
+            xoops_error(_US_2FA_STARTAGAIN);
             exit();
         }
         $user->setVar('last_login', time());

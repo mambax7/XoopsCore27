@@ -71,7 +71,9 @@ final class SessionFactorBindingTest extends TestCase
         self::assertStringContainsString("\$factorRow = xoops_getHandler('user2fa')->getRow((int) \$_SESSION['xoopsUserId']);", $this->session);
         // any present row but a disabled one is checked, with the handler's own state (never "none")
         self::assertStringContainsString("if (is_array(\$factorRow) && XoopsUser2faHandler::ROW_DISABLED !== \$factorRow['state']) {", $this->session);
-        self::assertStringContainsString("\$factorState = xoops_getHandler('user2fa')->stateOfRow(\$factorRow);", $this->session);
+        self::assertStringContainsString('$factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;', $this->session);
+        // the secret is never opened on session restore; the challenge page resolves the exact state
+        self::assertStringNotContainsString('stateOfRow(', $this->session);
         self::assertStringContainsString("!is_string(\$stored) || !hash_equals((string) \$factorRow['generation'], \$stored)", $this->session);
         self::assertStringContainsString("\$_SESSION['xoops2faGeneration'] = is_array(\$factorRow) ? (string) \$factorRow['generation'] : '';", $this->session);
         self::assertStringContainsString("XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy(\$xoopsConfig), \$factorState) && true !== (\$_SESSION['xoops2faVerified'] ?? false)", $this->session);

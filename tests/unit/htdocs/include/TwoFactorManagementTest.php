@@ -1,0 +1,134 @@
+<?php
+/**
+ * Tests for the two-factor management helpers in include/twofactor.php
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @package   core
+ * @since     2.7.4
+ */
+declare(strict_types=1);
+
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Helpers in include/twofactor.php: notice delivery, setup binding and language fallback.
+ *
+ * @category  XoopsTest
+ * @package   XoopsCore27
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
+final class TwoFactorManagementTest extends TestCase
+{
+    public function testMailFailuresAreReportedWithoutEscapingIntoTheCommittedAction(): void
+    {
+        $source = file_get_contents(XOOPS_ROOT_PATH . '/include/twofactor.php');
+        $start = strpos($source, 'function xoops_2fa_notice(');
+        self::assertNotFalse($start);
+        eval('namespace TwoFactorNoticeTest; class XoopsUser {} function xoops_getMailer() {'
+            . 'if ($GLOBALS["noticeMode"] === "throw") { throw new \\RuntimeException("private transport credentials"); }'
+            . 'return new class { public function __call($name, $args) {} public function send() { return $GLOBALS["noticeMode"] === "success"; } }; }'
+            . substr($source, $start));
+        $user = new \TwoFactorNoticeTest\XoopsUser();
+        $config = $GLOBALS['xoopsConfig'] ?? [];
+        $GLOBALS['xoopsConfig'] = ['adminmail' => 'nobody@example.invalid', 'sitename' => 'Test'];
+        try {
+            foreach (['throw', 'false', 'success'] as $mode) {
+                $GLOBALS['noticeMode'] = $mode;
+                $warnings = [];
+                set_error_handler(static function ($level, $message) use (&$warnings): bool {
+                    $warnings[] = [$level, $message];
+                    return true;
+                });
+                try {
+                    \TwoFactorNoticeTest\xoops_2fa_notice($user, 'Subject', 'Body');
+                } finally {
+                    restore_error_handler();
+                }
+                self::assertSame($mode === 'success' ? [] : [[E_USER_WARNING, 'Two-factor management notice could not be sent']], $warnings, $mode);
+            }
+            $GLOBALS['noticeMode'] = 'throw';
+            set_error_handler(static function (): never { throw new \RuntimeException('Diagnostic handler failed'); });
+            try {
+                \TwoFactorNoticeTest\xoops_2fa_notice($user, 'Subject', 'Body');
+            } finally {
+                restore_error_handler();
+            }
+        } finally {
+            $GLOBALS['xoopsConfig'] = $config;
+            unset($GLOBALS['noticeMode']);
+        }
+    }
+
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    public function testALanguageFileGapIsFilledFromEnglishWithoutOverwritingTheTranslation(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+        $config = $GLOBALS['xoopsConfig'] ?? [];
+        $GLOBALS['xoopsConfig'] = ['language' => 'klingon'];
+        // A fresh process: the gap is real, and the translation defined this one constant and nothing else.
+        self::assertFalse(defined('_US_2FAM_TITLE'));
+        self::assertFalse(defined('_US_2FAM_RESET'));
+        define('_US_2FAM_TITLE', 'translated');
+        $translated = 'translated';
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            xoops_2fa_loadLanguage('user2famanage');
+        } finally {
+            restore_error_handler();
+            $GLOBALS['xoopsConfig'] = $config;
+        }
+        self::assertSame([], $warnings);
+        self::assertSame($translated, _US_2FAM_TITLE);
+        preg_match_all("/define\('(_US_2FAM_[A-Z_]+)'/", (string) file_get_contents(XOOPS_ROOT_PATH . '/language/english/user2famanage.php'), $m);
+        self::assertNotEmpty($m[1]);
+        foreach ($m[1] as $constant) {
+            self::assertTrue(defined($constant), $constant);
+        }
+    }
+
+    public function testPendingSetupIsBoundToAccountPasswordGenerationAndExpiry(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+        $pending = ['uid' => 7, 'passdigest' => hash('sha256', 'hash'), 'generation' => 'g', 'expires' => 200, 'blob' => 'sealed', 'attempts' => 0];
+        self::assertTrue(xoops_2fa_setup_valid($pending, 7, 'hash', 'g', 100));
+        foreach ([[8, 'hash', 'g', 100], [7, 'new', 'g', 100], [7, 'hash', 'new', 100], [7, 'hash', 'g', 200]] as $args) {
+            self::assertFalse(xoops_2fa_setup_valid($pending, ...$args));
+        }
+        self::assertFalse(xoops_2fa_setup_valid($pending + ['unused' => true], 7, 'hash', 'g', 201));
+        $pending['attempts'] = 5;
+        self::assertFalse(xoops_2fa_setup_valid($pending, 7, 'hash', 'g', 100));
+        self::assertFalse(xoops_2fa_setup_valid(null, 7, 'hash', 'g', 100));
+    }
+
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+    public function testProfilePreservesCoreTwoFactorPosts(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/modules/profile/preloads/core.php';
+        $saved = $_POST;
+        try {
+            foreach (['2fa', '2fa_setup', '2fa_manage'] as $op) {
+                $_POST = ['op' => $op];
+                ProfileCorePreload::eventCoreUserStart([]);
+                self::assertSame($op, $_POST['op']);
+            }
+        } finally {
+            $_POST = $saved;
+        }
+    }
+}

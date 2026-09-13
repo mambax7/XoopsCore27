@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace kernel;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\Test;
 use Xmf\Key\FileStorage;
 use XoopsMySQLDatabase;
@@ -87,6 +89,8 @@ class XoopsUser2faHandlerTest extends KernelTestCase
 
     /** @var bool|callable(string): bool */
     private mixed $execResult = true;
+    /** @var callable|null runs on every query() with the statement, before the result is produced */
+    private $onQuery = null;
 
     private int $affected = 1;
 
@@ -123,7 +127,8 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     /** The escape-hatch tests use a subdirectory; symlinks are unlinked, not followed. */
     private function removeTree(string $dir): void
     {
-        foreach ((array) glob($dir . '/{,.}[!.,!..]*', GLOB_BRACE) as $path) {
+        foreach (array_diff((array) scandir($dir), ['.', '..']) as $entry) {
+            $path = $dir . DIRECTORY_SEPARATOR . $entry;
             if (is_dir($path) && !is_link($path)) {
                 $this->removeTree($path);
             } else {
@@ -147,6 +152,9 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         });
         $db->method('query')->willReturnCallback(function (string $statement) {
             $this->sql[] = $statement;
+            if (is_callable($this->onQuery)) {
+                ($this->onQuery)($statement);
+            }
 
             return $this->queryFails ? false : (new \ReflectionClass(\mysqli_result::class))->newInstanceWithoutConstructor();
         });
@@ -459,15 +467,17 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         }
 
         $this->sql = [];
+        $thrown = false;
         try {
             $handler->withTransaction(static function (): void {
                 throw new \RuntimeException('boom');
             });
-            $this->fail('the exception was swallowed');
         } catch (\RuntimeException $e) {
+            $thrown = true;
             $this->assertSame('boom', $e->getMessage());
             $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql);
         }
+        $this->assertTrue($thrown, 'the exception was swallowed');
 
         $this->sql = [];
         $this->assertFalse($handler->withTransaction(static fn (): bool => false));
@@ -507,12 +517,14 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             static fn () => $poisoned->acceptTotp(10, 101, self::GEN, self::NOW),
             static fn () => $poisoned->deleteByUid(10),
         ] as $call) {
+            $thrown = false;
             try {
                 $call();
-                $this->fail('the handler used a connection whose ROLLBACK was refused');
             } catch (\RuntimeException) {
+                $thrown = true;
                 $this->assertSame(['START TRANSACTION', 'ROLLBACK'], $this->sql, 'no statement reached the connection');
             }
+            $this->assertTrue($thrown, 'the handler used a connection whose ROLLBACK was refused');
         }
         $this->execResult = true;
 
@@ -564,24 +576,28 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             return true;
         };
 
+        $thrown = false;
         try {
             $handler->withTransaction(static function (): void {
                 throw new \RuntimeException('boom');
             });
-            $this->fail('nothing propagated');
         } catch (\RuntimeException $e) {
+            $thrown = true;
             $this->assertSame('rollback failed', $e->getMessage());
         }
+        $this->assertTrue($thrown, 'nothing propagated');
 
         // The connection may still hold the transaction: closed to a new one.
         $this->execResult = true;
         $this->sql        = [];
+        $thrown = false;
         try {
             $handler->withTransaction(static fn (): bool => true);
-            $this->fail('a transaction started on a connection whose ROLLBACK threw');
         } catch (\RuntimeException) {
+            $thrown = true;
             $this->assertSame([], $this->sql, 'no START TRANSACTION reached the connection');
         }
+        $this->assertTrue($thrown, 'a transaction started on a connection whose ROLLBACK threw');
     }
 
     /* ---------------------------------------------------------------- */
@@ -744,11 +760,24 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     #[Test]
     public function policyIsOffWhenAbsentAndFallsBackToOptionalForUnknownValues(): void
     {
-        $this->assertSame('off', XoopsUser2faHandler::policy([]));
+        // an empty row set is a failed configuration read: fail closed
+        $this->assertSame('optional', XoopsUser2faHandler::policy([]));
+        $this->assertSame('off', XoopsUser2faHandler::policy(['sitename' => 'x']));
         $this->assertSame('off', XoopsUser2faHandler::policy(['twofactor_mode' => 'off']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'optional']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'required']));
         $this->assertSame('optional', XoopsUser2faHandler::policy(['twofactor_mode' => 'OFF']));
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function policyFailsClosedWhenTheInstalledSignalSaysTheConfigurationReadFailed(): void
+    {
+        // common.php merges file configs after capturing the signal, so the row set is not empty any more
+        define('XOOPS_2FA_INSTALLED', true);
+        $this->assertSame('optional', XoopsUser2faHandler::policy(['debugLevel' => 0]));
+        $this->assertSame('off', XoopsUser2faHandler::policy(['twofactor_mode' => 'off']));
     }
 
     #[Test]
@@ -788,7 +817,17 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $handler    = $this->handler();
         $this->rows = [$this->row(['uid' => 7])];
 
-        $this->assertTrue(@$handler->resetByEscapeHatch(7, $dir));
+        $notices = [];
+        set_error_handler(static function (int $level, string $message) use (&$notices): bool {
+            $notices[] = [$level, $message];
+            return true;
+        });
+        try {
+            $this->assertTrue($handler->resetByEscapeHatch(7, $dir));
+        } finally {
+            restore_error_handler();
+        }
+        self::assertSame([[E_USER_NOTICE, 'Two-factor escape hatch used for uid 7']], $notices);
         $this->assertFileDoesNotExist($dir . '/2fa-reset-7.txt');
         $this->assertFileExists($dir . '/2fa-reset-7.used');
         $this->assertCount(1, $this->statements('UPDATE `xoops_user_2fa`'));
@@ -800,6 +839,30 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
         $this->assertFileExists($dir . '/2fa-reset-7.txt');
         $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchRefusesWhenTheUsedMarkerIsADanglingSymlink(): void
+    {
+        $dir     = $this->hatchDir();
+        $handler = $this->handler();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
+        set_error_handler(static fn (): bool => true);
+        try {
+            $linked = symlink($dir . '/missing-target', $dir . '/2fa-reset-7.used');
+        } finally {
+            restore_error_handler();
+        }
+        if (!$linked) {
+            self::markTestSkipped('symlinks cannot be created here');
+        }
+        // file_exists() says false for the dangling link; rename() would still replace it
+        $this->assertFalse(file_exists($dir . '/2fa-reset-7.used'));
+        $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        $this->assertTrue(is_link($dir . '/2fa-reset-7.used'));
+        $this->assertSame([], $this->sql);
+        unlink($dir . '/2fa-reset-7.used');
     }
 
     #[Test]
@@ -815,6 +878,57 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
         $this->assertFalse($handler->resetByEscapeHatch(7, $dir . '/does-not-exist'));
         $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function theEscapeHatchReportsAFailedRestoreWithoutThePaths(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset\n");
+        $handler       = $this->handler();
+        $this->rows    = [null]; // no row to lock: disable() refuses, so the file must be given back
+        $this->onQuery = static function () use ($dir): void {
+            // by now the sentinel is the .used marker; a directory in its old place refuses the rename back
+            if (!is_dir($dir . '/2fa-reset-7.txt')) {
+                mkdir($dir . '/2fa-reset-7.txt');
+            }
+        };
+
+        $warnings = [];
+        set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
+            $warnings[] = $msg; // every level: a leaked rename() warning would show up here
+
+            return true;
+        });
+        try {
+            $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        } finally {
+            restore_error_handler();
+            rmdir($dir . '/2fa-reset-7.txt');
+        }
+        $this->assertSame(['Two-factor escape hatch used for uid 7', 'Two-factor escape hatch for uid 7 could not be restored; remove the used marker by hand'], $warnings);
+        $this->assertFileExists($dir . '/2fa-reset-7.used');
+        $this->assertSame([], $this->statements('UPDATE `xoops_user_2fa`'));
+    }
+
+    #[Test]
+    public function theEscapeHatchGivesTheFileBackWhenTheResetDoesNotHappen(): void
+    {
+        $dir = $this->hatchDir();
+        file_put_contents($dir . '/2fa-reset-7.txt', "reset
+");
+        $handler    = $this->handler();
+        $this->rows = [null]; // no row to lock: disable() refuses
+
+        set_error_handler(static fn (): bool => true);
+        try {
+            $this->assertFalse($handler->resetByEscapeHatch(7, $dir));
+        } finally {
+            restore_error_handler();
+        }
+        $this->assertFileExists($dir . '/2fa-reset-7.txt');
+        $this->assertFileDoesNotExist($dir . '/2fa-reset-7.used');
+        $this->assertSame([], $this->statements('UPDATE `xoops_user_2fa`'));
     }
 
     #[Test]

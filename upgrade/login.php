@@ -99,7 +99,10 @@ if ('' === $uname || '' === $pass) {
                     // generation: read it again for the session stamp below.
                     $factorRow = $factorHandler->getRow((int) $user->getVar('uid'));
                 } else {
-                    $refusal = 'second factor required; drop the 2fa-reset file to proceed';
+                    $refusal = sprintf(
+                        'second factor required; create XOOPS_VAR_PATH/data/2fa-reset-%d.txt containing "reset" to proceed',
+                        (int) $user->getVar('uid')
+                    );
                 }
             }
         } catch (\Throwable $e) {
@@ -108,6 +111,12 @@ if ('' === $uname || '' === $pass) {
         }
         if (null !== $refusal) {
             trigger_error(sprintf('Upgrade login refused for uid %d: %s', (int) $user->getVar('uid'), $refusal), E_USER_WARNING);
+            header('location: ' . XOOPS_URL . '/upgrade/index.php');
+            exit();
+        }
+        if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+            $_SESSION = [];
+            trigger_error('Upgrade login refused: session rotation failed', E_USER_WARNING);
             header('location: ' . XOOPS_URL . '/upgrade/index.php');
             exit();
         }
@@ -124,8 +133,6 @@ if ('' === $uname || '' === $pass) {
                 E_USER_WARNING
             );
         }
-        // Regenerate a new session id and destroy old session
-        $GLOBALS['sess_handler']->regenerate_id(true);
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();

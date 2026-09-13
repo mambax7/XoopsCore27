@@ -164,6 +164,25 @@ final class XoopsUser2faHandler
     }
 
     /**
+     * Key provisioning must never replace a lost key while encrypted rows exist.
+     *
+     * @throws \RuntimeException when the database cannot answer
+     */
+    public function hasEncryptedSecrets(): bool
+    {
+        $this->assertConnectionUsable();
+        if (!$this->installed) {
+            return false;
+        }
+        $result = $this->db->query(sprintf('SELECT `uid` FROM `%s` WHERE `secret` IS NOT NULL LIMIT 1', $this->table()));
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            throw new \RuntimeException('Two-factor encrypted-secret lookup failed');
+        }
+
+        return is_array($this->db->fetchArray($result));
+    }
+
+    /**
      * The row locked for the current transaction.
      *
      * @param int $uid account
@@ -199,7 +218,10 @@ final class XoopsUser2faHandler
     /**
      * The site policy, validated. A value this code does not know (including
      * the deferred "required") falls back to optional; an absent preference
-     * means the 2.7.4 patch has not run and the feature is off.
+     * means the 2.7.4 patch has not run and the feature is off. A failed
+     * configuration read leaves no preference either, but include/common.php
+     * captured that as XOOPS_2FA_INSTALLED before the file configs were
+     * merged in, so that signal makes every login gate fail closed.
      *
      * @param array $config the XOOPS_CONF row set ($xoopsConfig)
      *
@@ -208,7 +230,9 @@ final class XoopsUser2faHandler
     public static function policy(array $config): string
     {
         if (!array_key_exists('twofactor_mode', $config)) {
-            return self::POLICY_OFF;
+            $installed = [] === $config || (defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED);
+
+            return $installed ? self::POLICY_OPTIONAL : self::POLICY_OFF;
         }
         $mode = $config['twofactor_mode'];
 
@@ -284,6 +308,7 @@ final class XoopsUser2faHandler
 
     /**
      * @return string 128 random bits as 32 hex characters
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function newGeneration(): string
     {
@@ -292,6 +317,7 @@ final class XoopsUser2faHandler
 
     /**
      * @return string 128 random bits as 26 base32 characters
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function newRecoveryCode(): string
     {
@@ -380,6 +406,7 @@ final class XoopsUser2faHandler
      * @param int    $now                unix time
      *
      * @return bool
+     * @throws \RuntimeException when the update statement itself fails
      */
     public function acceptTotp(int $uid, int $step, string $verifiedGeneration, int $now): bool
     {
@@ -412,6 +439,7 @@ final class XoopsUser2faHandler
      * @param string|null $expectedGeneration generation of the rejected challenge; null for legacy callers
      *
      * @return array{locked: bool, transitioned: bool}|false
+     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
      */
     public function recordFailure(int $uid, int $now, ?string $expectedGeneration = null): array|false
     {
@@ -465,6 +493,7 @@ final class XoopsUser2faHandler
      * @param string $pendingGeneration the generation the pending login recorded
      *
      * @return bool
+     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
      */
     public function acceptRecovery(int $uid, string $code, string $pendingGeneration): bool
     {
@@ -501,13 +530,20 @@ final class XoopsUser2faHandler
      * @param string $secretBase32 the secret the user confirmed a code against
      * @param int    $acceptedStep the step of that code
      * @param int    $now          unix time
+     * @param string|null $expectedGeneration setup generation, empty for no row; null for legacy callers
      *
-     * @return array{generation: string, codes: list<string>}|false
+     * @return array|false the new generation and recovery codes
+     * @throws \RuntimeException when the row lookup fails
+     * @throws \Random\RandomException when the secure random source fails
+     * @phpstan-return array{generation: string, codes: list<string>}|false
      */
-    public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now): array|false
+    public function enrol(int $uid, string $secretBase32, int $acceptedStep, int $now, ?string $expectedGeneration = null): array|false
     {
-        return $this->withTransaction(function () use ($uid, $secretBase32, $acceptedStep, $now): array|false {
+        return $this->withTransaction(function () use ($uid, $secretBase32, $acceptedStep, $now, $expectedGeneration): array|false {
             $row = $this->lockRow($uid);
+            if (null !== $expectedGeneration && !hash_equals((string) ($row['generation'] ?? ''), $expectedGeneration)) {
+                return false;
+            }
             if (null !== $row && self::ROW_DISABLED !== $row['state']) {
                 // Enrolled: the second tab loses. Anything else is a row this
                 // code does not know and must not overwrite (see stateFor()).
@@ -559,6 +595,8 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return string|false the new generation
+     * @throws \RuntimeException when the row lookup fails
+     * @throws \Random\RandomException when the secure random source fails
      */
     public function disable(int $uid): string|false
     {
@@ -566,26 +604,104 @@ final class XoopsUser2faHandler
             if (null === $this->lockRow($uid)) {
                 return false;
             }
-            $generation = $this->newGeneration();
-            $sql        = sprintf(
-                'UPDATE `%s` SET `state` = %s, `secret` = NULL, `generation` = %s WHERE `uid` = %d',
-                $this->table(),
-                $this->db->quote(self::ROW_DISABLED),
-                $this->db->quote($generation),
-                $uid
-            );
-            if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+
+            return $this->disableLocked($uid);
+        });
+    }
+
+    /** The caller holds the factor row lock until commit. */
+    private function disableLocked(int $uid): string|false
+    {
+        $generation = $this->newGeneration();
+        $sql = sprintf(
+            'UPDATE `%s` SET `state` = %s, `secret` = NULL, `generation` = %s WHERE `uid` = %d',
+            $this->table(),
+            $this->db->quote(self::ROW_DISABLED),
+            $this->db->quote($generation),
+            $uid
+        );
+        if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+            return false;
+        }
+
+        return $generation;
+    }
+
+    /**
+     * Verify the current factor and disable it or replace its recovery codes
+     * under the same row lock, so reset cannot race verification and mutation.
+     *
+     * @param int    $uid                account
+     * @param string $expectedGeneration the generation the management page verified against
+     * @param string $code               the six-digit code, or '' when a recovery code is used
+     * @param string $recovery           the recovery code, or '' when a TOTP code is used
+     * @param string $action             'disable' or 'regenerate'
+     * @param int    $now                the current time
+     *
+     * @return string[]|string|false new codes, disabled generation, or rejected verification
+     * @phpstan-return list<string>|string|false
+     * @throws \InvalidArgumentException for an unknown action
+     * @throws \RuntimeException for unavailable crypto or failed storage
+     */
+    public function manage(int $uid, string $expectedGeneration, string $code, string $recovery, string $action, int $now): array|string|false
+    {
+        if (!in_array($action, ['disable', 'regenerate'], true)) {
+            throw new \InvalidArgumentException('Unknown two-factor management action');
+        }
+        $this->assertConnectionUsable();
+        if (!$this->installed) {
+            return false;
+        }
+
+        return $this->withTransaction(function () use ($uid, $expectedGeneration, $code, $recovery, $action, $now): array|string|false {
+            $row = $this->lockRow($uid);
+            if (null === $row || self::ROW_ENROLLED !== $row['state']
+                || !hash_equals((string) $row['generation'], $expectedGeneration)) {
                 return false;
             }
+            $canonical = $this->canonicalRecoveryCode($recovery);
+            if ('' !== $canonical) {
+                // Recovery remains available when the encryption key is lost
+                // and while the authenticator-code throttle is locked.
+                if (!$this->tokens->verify($uid, self::RECOVERY_SCOPE, $canonical, true)) {
+                    return false;
+                }
+                if (!$this->db->exec(sprintf(
+                    'UPDATE `%s` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = %d',
+                    $this->table(),
+                    $uid
+                ))) {
+                    throw new \RuntimeException('Two-factor throttle reset failed');
+                }
+            } else {
+                if ($row['locked_until'] > $now || self::METHOD_TOTP !== $row['method']) {
+                    return false;
+                }
+                $secret = $this->secretFromRow($row);
+                if (null === $secret) {
+                    throw new \RuntimeException('Two-factor verification unavailable');
+                }
+                $step = XoopsTotp::matchStep($secret, $code, $now, (int) $row['last_counter']);
+                if (false === $step || !$this->acceptTotp($uid, $step, $expectedGeneration, $now)) {
+                    return false;
+                }
+            }
+            $result = $action === 'disable' ? $this->disableLocked($uid) : $this->issueRecoveryCodes($uid);
+            if (false === $result) {
+                throw new \RuntimeException('Two-factor management write failed');
+            }
 
-            return $generation;
-        });
+            return $result;
+        }, true);
     }
 
     /**
      * @param int $uid account
      *
-     * @return list<string>|false ten new codes
+     * @return string[]|false ten new codes
+     * @throws \RuntimeException when the row lookup fails
+     * @throws \Random\RandomException when the secure random source fails
+     * @phpstan-return list<string>|false
      */
     public function regenerateRecoveryCodes(int $uid): array|false
     {
@@ -602,7 +718,8 @@ final class XoopsUser2faHandler
     /**
      * Revoke the previous codes, then issue ten fresh ones (inside the caller's transaction).
      *
-     * @return list<string>|false
+     * @return string[]|false
+     * @phpstan-return list<string>|false
      */
     private function issueRecoveryCodes(int $uid): array|false
     {
@@ -644,23 +761,55 @@ final class XoopsUser2faHandler
         $name = $root . DIRECTORY_SEPARATOR . '2fa-reset-' . $uid;
         $file = $name . '.txt';
         $used = $name . '.used';
-        if (file_exists($used) || is_link($file) || !is_file($file)) {
+        // file_exists() is false for a dangling symlink, which rename() would still replace
+        if (file_exists($used) || is_link($used) || is_link($file) || !is_file($file)) {
             return false;
         }
         $real = realpath($file);
         if (false === $real || !str_starts_with($real, $root . DIRECTORY_SEPARATOR)) {
             return false;
         }
-        $content = file_get_contents($real);
-        if (!is_string($content) || 'reset' !== trim($content)) {
+        // A file that vanishes or turns unreadable between the checks and these
+        // calls must not put its path into a warning on the page.
+        set_error_handler(static fn (): bool => true);
+        try {
+            $content  = file_get_contents($real);
+            $consumed = is_string($content) && 'reset' === trim($content) && rename($real, $used);
+        } finally {
+            restore_error_handler();
+        }
+        if (!$consumed) {
             return false;
         }
-        if (!rename($real, $used)) {
-            return false;
+        try {
+            trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+        } catch (\Throwable) {
+            // The marker is already renamed; a throwing diagnostic handler must not skip the reset and its restore path.
         }
-        trigger_error(sprintf('Two-factor escape hatch used for uid %d', $uid), E_USER_NOTICE);
+        $disabled = false;
+        try {
+            $disabled = false !== $this->disable($uid);
+        } finally {
+            // The reset did not happen: give the file back so the next attempt is not refused as used.
+            if (!$disabled) {
+                // rename() reports its failure with both paths in a warning; keep those out of the page
+                set_error_handler(static fn (): bool => true);
+                try {
+                    $restored = rename($used, $file);
+                } finally {
+                    restore_error_handler();
+                }
+                if (!$restored) {
+                    try {
+                        trigger_error(sprintf('Two-factor escape hatch for uid %d could not be restored; remove the used marker by hand', $uid), E_USER_WARNING);
+                    } catch (\Throwable) {
+                        // A throwing diagnostic handler must not replace the failure that brought us here.
+                    }
+                }
+            }
+        }
 
-        return false !== $this->disable($uid);
+        return $disabled;
     }
 
     /**
@@ -670,6 +819,7 @@ final class XoopsUser2faHandler
      * @param int $uid account
      *
      * @return bool
+     * @throws \RuntimeException on a connection whose rollback did not go through
      */
     public function deleteByUid(int $uid): bool
     {

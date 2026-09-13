@@ -119,6 +119,19 @@ class XoopsTotpTest extends KernelTestCase
     }
 
     #[Test]
+    public function matchStepRecordsTheHigherOfTwoStepsThatShareACode(): void
+    {
+        // Found by scanning the RFC secret: adjacent steps 910737 and 910738 both produce 911617.
+        $lower = 910737;
+        $code  = (string) XoopsTotp::codeAt(self::RFC_SECRET, $lower);
+        $this->assertSame($code, XoopsTotp::codeAt(self::RFC_SECRET, $lower + 1));
+
+        // the newest match wins, so the same code cannot be presented a second time for the later step
+        $this->assertSame($lower + 1, XoopsTotp::matchStep(self::RFC_SECRET, $code, $lower * XoopsTotp::PERIOD, 0));
+        $this->assertFalse(XoopsTotp::matchStep(self::RFC_SECRET, $code, $lower * XoopsTotp::PERIOD, $lower + 1));
+    }
+
+    #[Test]
     public function matchStepRefusesMalformedCodes(): void
     {
         $now = 1111111111;
