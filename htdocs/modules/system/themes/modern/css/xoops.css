@@ -113,11 +113,19 @@ body.dark-mode .confirmMsg {
 
 /* jGrowl redirect messages are appended to body, outside the admin layout.
    Keep the plugin's empty placeholder hidden; its animation reveals messages. */
-body > div.jGrowl {
+body > div.jGrowl,
+body > div.jGrowl.center,
+body > div.jGrowl.top-left,
+body > div.jGrowl.top-right,
+body > div.jGrowl.bottom-left,
+body > div.jGrowl.bottom-right {
     position: fixed;
     z-index: 9999;
     inset-block-start: 1rem;
-    inset-inline-end: 1rem;
+    /* jGrowl's named corners are physical positions, including in RTL. */
+    right: 1rem;
+    left: auto;
+    bottom: auto;
     width: min(32rem, calc(100% - 2rem));
     max-height: calc(100vh - 2rem);
     overflow-y: auto;
@@ -133,8 +141,8 @@ body > div.jGrowl.center {
 
 body > div.jGrowl.top-left,
 body > div.jGrowl.bottom-left {
-    inset-inline-start: 1rem;
-    inset-inline-end: auto;
+    left: 1rem;
+    right: auto;
 }
 
 body > div.jGrowl.bottom-left,
@@ -143,8 +151,8 @@ body > div.jGrowl.bottom-right {
     inset-block-end: 1rem;
 }
 
-div.jGrowl .jGrowl-notification,
-div.jGrowl .jGrowl-closer {
+div.jGrowl div.jGrowl-notification,
+div.jGrowl div.jGrowl-closer {
     display: none;
     padding: 1rem;
     margin-block-end: .5rem;
@@ -158,11 +166,11 @@ div.jGrowl .jGrowl-closer {
     pointer-events: auto;
 }
 
-div.jGrowl .jGrowl-header {
+div.jGrowl div.jGrowl-notification div.jGrowl-header {
     font-weight: 600;
 }
 
-div.jGrowl .jGrowl-close {
+div.jGrowl div.jGrowl-notification button.jGrowl-close {
     float: inline-end;
     min-width: 44px;
     min-height: 44px;

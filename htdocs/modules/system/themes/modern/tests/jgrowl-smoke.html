@@ -4,6 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Modern jGrowl regression check</title>
+    <!-- Add ?core=1 to exercise the core stylesheet before Modern's styles. -->
+    <script>
+        if (new URLSearchParams(location.search).has('core')) {
+            document.write('<link rel="stylesheet" href="../../../../../xoops.css">');
+        }
+    </script>
     <link rel="stylesheet" href="../css/modern.css">
     <link rel="stylesheet" href="../css/xoops.css">
     <link rel="stylesheet" href="../css/dark.css">
@@ -29,20 +35,35 @@
             const rect = notice().getBoundingClientRect();
             check(rect.top >= 0 && rect.bottom <= innerHeight, 'Notification is off screen');
             check(rect.left >= 0 && rect.right <= document.documentElement.clientWidth, 'Notification overflows horizontally');
-            check(getComputedStyle(container.firstElementChild).display === 'none', 'Empty plugin placeholder is visible');
+            const placeholder = container.querySelector(':scope > .jGrowl-notification:empty');
+            check(placeholder && getComputedStyle(placeholder).display === 'none', 'Empty plugin placeholder is visible');
+            check(getComputedStyle(notice()).display !== 'none', 'Notification is hidden');
             const light = getComputedStyle(notice()).backgroundColor;
             document.body.classList.add('dark-mode');
             check(getComputedStyle(notice()).backgroundColor !== light, 'Dark background did not change');
             check(getComputedStyle(notice()).color !== getComputedStyle(notice()).backgroundColor, 'Unreadable dark text');
             document.documentElement.dir = 'rtl';
             check(Math.abs(container.getBoundingClientRect().left - (document.documentElement.clientWidth - container.offsetWidth) / 2) < 2, 'RTL center alignment failed');
+            const close = notice().querySelector('.jGrowl-close');
+            check(close.getBoundingClientRect().left < notice().getBoundingClientRect().left + notice().offsetWidth / 2, 'RTL close button is on the wrong side');
+            for (const direction of ['ltr', 'rtl']) {
+                document.documentElement.dir = direction;
+                for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
+                    container.className = 'jGrowl ' + position;
+                    const bounds = container.getBoundingClientRect();
+                    const horizontalGap = position.endsWith('left') ? bounds.left : document.documentElement.clientWidth - bounds.right;
+                    const verticalGap = position.startsWith('top') ? bounds.top : innerHeight - bounds.bottom;
+                    check(horizontalGap >= 0 && horizontalGap < 32 && verticalGap >= 0 && verticalGap < 32, direction + ' ' + position + ' is misplaced');
+                }
+            }
+            container.className = 'jGrowl center';
             notice().querySelector('.jGrowl-close').click();
             await wait(750);
             check(!notice(), 'Close button failed');
             jQuery.jGrowl('Timed message', { life: 100, position: 'center', speed: 0 });
             await wait(1000);
             check(!notice(), 'Automatic dismissal failed');
-            document.getElementById('result').textContent = 'PASS: viewport position, width, placeholder, dark mode, RTL, close and automatic dismissal';
+            document.getElementById('result').textContent = 'PASS: viewport position, width, placeholder, dark mode, RTL close, physical corners, close and automatic dismissal';
             document.documentElement.dataset.testResult = 'pass';
         } catch (error) {
             document.getElementById('result').textContent = 'FAIL: ' + error.message;
