@@ -247,6 +247,22 @@ function xoops_2fa_posted_action(array $known): string
     return '';
 }
 
+/**
+ * Send the headers a page holding a factor secret or code needs, now and
+ * again when the response starts: footer.php replaces Cache-Control for a
+ * signed-in visitor, and only the last header() of a name is sent.
+ */
+function xoops_2fa_sensitive_headers(): void
+{
+    $send = static function (): void {
+        header('Cache-Control: no-store');
+        header('Referrer-Policy: no-referrer');
+        header('X-Frame-Options: DENY');
+    };
+    $send();
+    header_register_callback($send);
+}
+
 /** Validate the password-authorised setup session before using its encrypted secret. */
 function xoops_2fa_setup_valid(mixed $pending, int $uid, string $passwordHash, string $generation, int $now): bool
 {

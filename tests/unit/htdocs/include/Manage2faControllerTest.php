@@ -437,6 +437,7 @@ function xoops_login_set_session(XoopsUser $user, string $generation, bool $veri
     $_SESSION = ['xoopsUserId' => $user->getVar('uid'), 'xoops2faGeneration' => $generation, 'xoops2faVerified' => $verified];
 }
 function xoops_2fa_notice(...$args): void { $GLOBALS['manageLog'][] = 'notice'; }
+function xoops_2fa_sensitive_headers(): void { foreach (['Cache-Control: no-store', 'Referrer-Policy: no-referrer', 'X-Frame-Options: DENY'] as $h) { header($h); } }
 function xoops_2fa_manage_form(array $vars): object { return new class { public function render(): string { return 'FORM'; } }; }
 function xoops_2fa_send_form(string $url, array $hidden, string $label): object { return new class { public function render(): string { return 'SEND'; } }; }
 function xoops_2fa_posted_action(array $known): string { return \xoops_2fa_posted_action($known); }

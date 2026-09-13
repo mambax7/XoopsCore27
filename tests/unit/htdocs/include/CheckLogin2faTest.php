@@ -554,6 +554,7 @@ final class CheckLogin2faTest extends TestCase
         class RenderedException extends \RuntimeException { public function __construct(public array $vars) { parent::__construct('rendered'); } }
         class EstablishedException extends \RuntimeException { public function __construct(public array $args) { parent::__construct('established'); } }
         function xoops_2fa_render(array $vars): never { throw new RenderedException($vars); }
+        function xoops_2fa_sensitive_headers(): void { foreach (['Cache-Control: no-store', 'Referrer-Policy: no-referrer', 'X-Frame-Options: DENY'] as $h) { header($h); } }
         function xoops_2fa_deliver_code(object $handler, object $user): array { $GLOBALS['sandboxLog'][] = 'deliver:' . $user->getVar('uid'); return $GLOBALS['sandboxDeliver']; }
         function xoops_login_establish_session(object $user, bool $remember, string $redirect, ?string $verified = null): never {
             throw new EstablishedException([$user->getVar('uid'), $remember, $redirect, $verified]);

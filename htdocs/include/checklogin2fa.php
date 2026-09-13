@@ -100,9 +100,7 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
 
 // Set unconditionally: common.php already sent the site's own X-Frame-Options
 // value, or none, and only an unconditional header() replaces that.
-header('Cache-Control: no-store');
-header('Referrer-Policy: no-referrer');
-header('X-Frame-Options: DENY');
+xoops_2fa_sensitive_headers();
 
 $xo2faNow      = time();
 $xo2faLoginUrl = XOOPS_URL . '/user.php';

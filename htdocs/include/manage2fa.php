@@ -20,9 +20,7 @@ require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
 xoops_loadLanguage('user');
 xoops_2fa_loadLanguage('user2fa');
 xoops_2fa_loadLanguage('user2famanage');
-header('Cache-Control: no-store');
-header('Referrer-Policy: no-referrer');
-header('X-Frame-Options: DENY');
+xoops_2fa_sensitive_headers();
 
 $actor = $GLOBALS['xoopsUser'];
 if (!($actor instanceof XoopsUser)) {
