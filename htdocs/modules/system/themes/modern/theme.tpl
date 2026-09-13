@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="<{$xoops_langcode}>">
+<html lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'|escape}>">
 <head>
     <{include file="$theme_tpl/xo_metas.tpl"}>
     <{include file="$theme_tpl/xo_scripts.tpl"}>

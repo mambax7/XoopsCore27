@@ -187,7 +187,9 @@ div.jGrowl .jGrowl-close:focus-visible {
     outline-offset: 2px;
 }
 
-div.jGrowl .jGrowl-closer {
+div.jGrowl div.jGrowl-closer {
+    height: auto;
+    min-height: 44px;
     cursor: pointer;
     text-align: center;
 }

@@ -63,7 +63,16 @@
             jQuery.jGrowl('Timed message', { life: 100, position: 'center', speed: 0 });
             await wait(1000);
             check(!notice(), 'Automatic dismissal failed');
-            document.getElementById('result').textContent = 'PASS: viewport position, width, placeholder, dark mode, RTL close, physical corners, close and automatic dismissal';
+            jQuery.jGrowl('First message', { sticky: true, speed: 0 });
+            jQuery.jGrowl('Second message', { sticky: true, speed: 0 });
+            await wait(800);
+            const closer = container.querySelector('.jGrowl-closer');
+            check(closer && closer.getBoundingClientRect().height >= 44, 'Close-all control is too short');
+            check(closer.scrollHeight <= closer.clientHeight, 'Close-all label is clipped');
+            closer.click();
+            await wait(750);
+            check(!notice(), 'Close-all control failed');
+            document.getElementById('result').textContent = 'PASS: viewport, placeholder, dark mode, RTL close, corners, dismissal and close-all sizing';
             document.documentElement.dataset.testResult = 'pass';
         } catch (error) {
             document.getElementById('result').textContent = 'FAIL: ' + error.message;
