@@ -113,15 +113,15 @@ body.dark-mode .confirmMsg {
 
 /* jGrowl redirect messages are appended to body, outside the admin layout.
    Keep the plugin's empty placeholder hidden; its animation reveals messages. */
-body > div.jGrowl,
-body > div.jGrowl.center,
-body > div.jGrowl.top-left,
-body > div.jGrowl.top-right,
-body > div.jGrowl.bottom-left,
-body > div.jGrowl.bottom-right {
+html body > div.jGrowl,
+html body > div.jGrowl.center,
+html body > div.jGrowl.top-left,
+html body > div.jGrowl.top-right,
+html body > div.jGrowl.bottom-left,
+html body > div.jGrowl.bottom-right {
     position: fixed;
     z-index: 9999;
-    inset-block-start: 1rem;
+    top: 1rem;
     /* jGrowl's named corners are physical positions, including in RTL. */
     right: 1rem;
     left: auto;
@@ -131,28 +131,28 @@ body > div.jGrowl.bottom-right {
     overflow-y: auto;
     margin: 0;
     padding: 0;
-    pointer-events: none;
 }
 
-body > div.jGrowl.center {
-    inset-inline: 0;
+html body > div.jGrowl.center {
+    left: 0;
+    right: 0;
     margin-inline: auto;
 }
 
-body > div.jGrowl.top-left,
-body > div.jGrowl.bottom-left {
+html body > div.jGrowl.top-left,
+html body > div.jGrowl.bottom-left {
     left: 1rem;
     right: auto;
 }
 
-body > div.jGrowl.bottom-left,
-body > div.jGrowl.bottom-right {
-    inset-block-start: auto;
-    inset-block-end: 1rem;
+html body > div.jGrowl.bottom-left,
+html body > div.jGrowl.bottom-right {
+    top: auto;
+    bottom: 1rem;
 }
 
-div.jGrowl div.jGrowl-notification,
-div.jGrowl div.jGrowl-closer {
+body > div.jGrowl div.jGrowl-notification,
+body > div.jGrowl div.jGrowl-closer {
     display: none;
     padding: 1rem;
     margin-block-end: .5rem;
@@ -163,15 +163,14 @@ div.jGrowl div.jGrowl-closer {
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
     overflow-wrap: anywhere;
-    pointer-events: auto;
 }
 
-div.jGrowl div.jGrowl-notification div.jGrowl-header {
+body > div.jGrowl div.jGrowl-notification div.jGrowl-header {
     font-weight: 600;
 }
 
-div.jGrowl div.jGrowl-notification button.jGrowl-close {
-    float: inline-end;
+body > div.jGrowl div.jGrowl-notification button.jGrowl-close {
+    float: right;
     min-width: 44px;
     min-height: 44px;
     margin-inline-start: .5rem;
@@ -182,12 +181,16 @@ div.jGrowl div.jGrowl-notification button.jGrowl-close {
     cursor: pointer;
 }
 
-div.jGrowl .jGrowl-close:focus-visible {
+html[dir="rtl"] body > div.jGrowl div.jGrowl-notification button.jGrowl-close {
+    float: left;
+}
+
+body > div.jGrowl .jGrowl-close:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
 
-div.jGrowl div.jGrowl-closer {
+body > div.jGrowl div.jGrowl-closer {
     height: auto;
     min-height: 44px;
     cursor: pointer;
