@@ -101,6 +101,128 @@ final class TwoFactorManagementTest extends TestCase
         }
     }
 
+    /** The form token element asks the security object for a token; earlier tests may have replaced it. */
+    private function withSecurity(callable $fn): void
+    {
+        $previous = $GLOBALS['xoopsSecurity'] ?? null;
+        $GLOBALS['xoopsSecurity'] = new class {
+            public function createToken(int $timeout = 0, string $name = 'XOOPS_TOKEN'): string { return 'token-value'; }
+            public function getTokenHTML(string $name = 'XOOPS_TOKEN'): string { return ''; }
+        };
+        try {
+            $fn();
+        } finally {
+            $GLOBALS['xoopsSecurity'] = $previous;
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function manageVars(array $over = []): array
+    {
+        $labels = [];
+        foreach (['password', 'enable', 'enable_email', 'choose', 'email_help', 'confirm', 'confirm_email', 'manual', 'reset', 'reset_help',
+                  'regenerate', 'disable', 'enabled', 'enabled_email', 'email_step', 'step_app', 'step_add', 'step_code', 'scan', 'code_help', 'code_help_email', 'send'] as $name) {
+            $labels[$name] = 'Label ' . $name;
+        }
+
+        return $over + ['labels' => $labels, 'admin_reset' => false, 'enrolled' => false, 'confirm_setup' => false, 'by_email' => false,
+            'secret' => '', 'qr' => '', 'uid' => 9, 'action_url' => 'http://localhost/user.php', 'lang_code' => 'Code <b>', 'lang_recovery' => 'Recovery'];
+    }
+
+    public function testManagementFormOffersExactlyTheControlsOfEachState(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+        $this->withSecurity(function (): void {
+        $buttons = static fn (string $html): array => preg_match_all('/name=.action_([a-z_]+)/', $html, $m) ? $m[1] : [];
+
+        $html = xoops_2fa_manage_form($this->manageVars())->render();
+        self::assertSame(['begin', 'begin_email'], $buttons($html));
+        self::assertMatchesRegularExpression('/name=.password./', $html);
+        self::assertStringContainsString('required', $html);
+        self::assertDoesNotMatchRegularExpression('/name=.code./', $html);
+        self::assertStringContainsString('value="2fa_setup"', $html);
+        self::assertStringContainsString('XOOPS_TOKEN_REQUEST', $html);
+        self::assertStringContainsString('Label choose', $html);
+
+        $html = xoops_2fa_manage_form($this->manageVars(['confirm_setup' => true, 'secret' => '<img src=x onerror=alert(1)>', 'qr' => 'data:image/png;base64,QQ==']))->render();
+        self::assertSame(['confirm'], $buttons($html));
+        self::assertDoesNotMatchRegularExpression('/name=.password./', $html);
+        self::assertMatchesRegularExpression('/name=.code./', $html);
+        self::assertStringContainsString('Code &lt;b&gt;', $html, 'captions are escaped');
+        self::assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $html);
+        self::assertStringNotContainsString('<img src=x', $html);
+        self::assertStringContainsString('<img src="data:image/png;base64,QQ==" alt="Label scan"', $html);
+        self::assertStringContainsString('<li>Label step_app</li>', $html);
+        self::assertStringContainsString('Label code_help', $html);
+        self::assertDoesNotMatchRegularExpression('/name=.recovery./', $html);
+
+        $html = xoops_2fa_manage_form($this->manageVars(['confirm_setup' => true, 'by_email' => true]))->render();
+        self::assertSame(['confirm'], $buttons($html));
+        self::assertStringContainsString('Label confirm_email', $html);
+        self::assertStringContainsString('Label email_step', $html);
+        self::assertStringContainsString('Label code_help_email', $html);
+        self::assertStringNotContainsString('<img', $html);
+        self::assertStringNotContainsString('<ol>', $html);
+
+        $html = xoops_2fa_manage_form($this->manageVars(['enrolled' => true]))->render();
+        self::assertSame(['regenerate', 'disable'], $buttons($html));
+        self::assertMatchesRegularExpression('/name=.password./', $html);
+        self::assertMatchesRegularExpression('/name=.code./', $html);
+        self::assertMatchesRegularExpression('/name=.recovery./', $html);
+        self::assertStringContainsString('value="2fa_manage"', $html);
+        self::assertStringContainsString('Label enabled', $html);
+        self::assertStringNotContainsString('Label enabled_email', $html);
+
+        $html = xoops_2fa_manage_form($this->manageVars(['enrolled' => true, 'by_email' => true]))->render();
+        self::assertStringContainsString('Label enabled_email', $html);
+
+        $html = xoops_2fa_manage_form($this->manageVars(['admin_reset' => true, 'enrolled' => true, 'uid' => '9<x']))->render();
+        self::assertSame(['reset'], $buttons($html));
+        self::assertMatchesRegularExpression('/name=.password./', $html);
+        self::assertDoesNotMatchRegularExpression('/name=.code./', $html);
+        self::assertStringContainsString('name="uid" id="uid" value="9"', $html);
+        self::assertStringContainsString('value="users_2fa_reset"', $html);
+        self::assertStringContainsString('Label reset_help', $html);
+
+        $html = xoops_2fa_send_form('http://localhost/user.php', ['op' => '2fa_manage'], 'Send <me>')->render();
+        self::assertSame(['send'], $buttons($html));
+        self::assertStringContainsString('value="2fa_manage"', $html);
+        self::assertStringContainsString('Send &lt;me&gt;', $html);
+        self::assertDoesNotMatchRegularExpression('/name=.password./', $html);
+        self::assertStringContainsString('XOOPS_TOKEN_REQUEST', $html);
+        });
+    }
+
+    public function testChallengeFormCarriesTheLoginMarkersAndBothCodeFields(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+        $this->withSecurity(function (): void {
+        $html = xoops_2fa_challenge_form(['action_url' => 'http://localhost/user.php', 'lang_code' => 'Code', 'lang_recovery' => 'Recovery',
+            'lang_recovery_hint' => 'Hint <i>', 'lang_submit' => 'Continue'])->render();
+        self::assertMatchesRegularExpression('/name=.code./', $html);
+        self::assertStringContainsString('autofocus', $html);
+        self::assertMatchesRegularExpression('/name=.recovery./', $html);
+        self::assertStringContainsString('Hint &lt;i&gt;', $html);
+        self::assertStringContainsString('name="op" id="op" value="2fa"', $html);
+        self::assertStringContainsString('name="xoops_2fa" id="xoops_2fa" value="1"', $html);
+        self::assertStringContainsString('XOOPS_TOKEN_REQUEST', $html);
+        self::assertStringContainsString("value='Continue'", $html);
+        });
+    }
+
+    public function testThePostedActionComesFromTheButtonNameOrAPlainField(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+        $_POST = ['action_disable' => 'Disable two-factor authentication'];
+        self::assertSame('disable', xoops_2fa_posted_action(['begin', 'disable', 'regenerate']));
+        $_POST = ['action' => 'begin'];
+        self::assertSame('begin', xoops_2fa_posted_action(['begin', 'disable']));
+        $_POST = ['action_reset' => 'x'];
+        self::assertSame('', xoops_2fa_posted_action(['begin', 'disable']), 'an action the page does not accept is not returned');
+        $_POST = [];
+        self::assertSame('', xoops_2fa_posted_action(['begin']));
+    }
+
     public function testPendingSetupIsBoundToAccountPasswordGenerationAndExpiry(): void
     {
         require_once XOOPS_ROOT_PATH . '/include/twofactor.php';

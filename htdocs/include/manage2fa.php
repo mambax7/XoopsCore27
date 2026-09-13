@@ -83,7 +83,7 @@ try {
         if (!$GLOBALS['xoopsSecurity']->check()) {
             $error = _US_2FAM_STARTAGAIN;
         } else {
-            $action = \Xmf\Request::getCmd('action', '', 'POST');
+            $action = xoops_2fa_posted_action(['begin', 'begin_email', 'confirm', 'send', 'disable', 'regenerate', 'reset']);
             $code = \Xmf\Request::getString('code', '', 'POST');
             $recovery = \Xmf\Request::getString('recovery', '', 'POST');
             if ('confirm' === $action && !$adminReset && !$enrolled) {
@@ -272,16 +272,24 @@ foreach (get_defined_constants() as $name => $value) {
 $maskedEmail = xoops_2fa_mask_email((string) $user->getVar('email', 'n'));
 $labels['email_step'] = sprintf($labels['email_step'] ?? '%s', $maskedEmail);
 $labels['email_help'] = sprintf($labels['email_help'] ?? '%s', $maskedEmail);
+$byEmail = $confirmEmail || ($enrolled && XoopsUser2faHandler::METHOD_EMAIL === ($row['method'] ?? ''));
 $vars = ['labels' => $labels, 'admin_reset' => $adminReset, 'uid' => $uid,
     'account' => $user->getVar('uname', 'n'), 'enrolled' => $enrolled, 'confirm_setup' => $confirm,
-    'by_email' => $confirmEmail || ($enrolled && XoopsUser2faHandler::METHOD_EMAIL === ($row['method'] ?? '')),
+    'by_email' => $byEmail,
     'installed' => $installed, 'message' => $message, 'error' => $error, 'secret' => $setupSecret,
     'qr' => $qr, 'codes' => array_map(static fn (string $v): string => trim(chunk_split($v, 4, ' ')), $codes),
     'paused' => XoopsUser2faHandler::POLICY_OFF === XoopsUser2faHandler::policy($GLOBALS['xoopsConfig']),
-    'http_warning' => XOOPS_PROT !== 'https://', 'lang_code' => _US_2FA_CODE, 'lang_recovery' => _US_2FA_RECOVERY,
+    'http_warning' => XOOPS_PROT !== 'https://', 'lang_code' => $byEmail ? _US_2FA_CODE_EMAIL : _US_2FA_CODE, 'lang_recovery' => _US_2FA_RECOVERY,
     'action_url' => $adminReset ? XOOPS_URL . '/modules/system/admin.php?fct=users' : XOOPS_URL . '/user.php',
     'back_url' => $adminReset ? XOOPS_URL . '/modules/system/admin.php?fct=users' : XOOPS_URL . '/userinfo.php?uid=' . $uid,
     'token_html' => $GLOBALS['xoopsSecurity']->getTokenHTML()];
+// Built after the header: the theme installs its form renderer when it starts.
+$forms = static function () use (&$vars, $adminReset, $enrolled, $labels): void {
+    $vars['form']      = xoops_2fa_manage_form($vars)->render();
+    $vars['send_form'] = $vars['by_email'] && !$adminReset
+        ? xoops_2fa_send_form($vars['action_url'], ['op' => $enrolled ? '2fa_manage' : '2fa_setup'], $labels['send'] ?? 'send')->render()
+        : '';
+};
 // The row is registered by the System module update; until then the shipped file renders the page.
 $template = 'db:system_user2fa_manage.tpl';
 /** @var XoopsTplfileHandler $tplfiles */
@@ -291,6 +299,7 @@ if ([] === $tplfiles->find('default', null, null, null, 'system_user2fa_manage.t
 }
 if ($adminReset) {
     xoops_cp_header();
+    $forms();
     require_once XOOPS_ROOT_PATH . '/class/template.php';
     $tpl = new XoopsTpl();
     $tpl->caching = 0;
@@ -300,6 +309,7 @@ if ($adminReset) {
 } else {
     // The page is part of the account area: the theme wraps it like every other user.php view.
     include $GLOBALS['xoops']->path('header.php');
+    $forms();
     $GLOBALS['xoopsTpl']->assign($vars);
     $GLOBALS['xoopsTpl']->assign('xoops_pagetitle', $labels['title'] ?? '');
     $GLOBALS['xoopsTpl']->display($template);

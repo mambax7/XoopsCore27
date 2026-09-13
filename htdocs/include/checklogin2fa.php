@@ -57,8 +57,16 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
         if ([] === $xo2faTplfiles->find('default', null, null, null, 'system_user2fa.tpl', true)) {
             $template = XOOPS_ROOT_PATH . '/modules/system/templates/system_user2fa.tpl';
         }
+        // Built after the theme has started: that is when it installs its form renderer.
+        $forms = static function () use (&$vars): void {
+            $vars['form']      = $vars['start_again'] ? '' : xoops_2fa_challenge_form($vars)->render();
+            $vars['send_form'] = !$vars['start_again'] && !empty($vars['by_email'])
+                ? xoops_2fa_send_form($vars['action_url'], ['op' => '2fa', 'xoops_2fa_send' => '1'], $vars['lang_send'])->render()
+                : '';
+        };
         if (1 != $xoopsConfig['closesite']) {
             include $GLOBALS['xoops']->path('header.php');
+            $forms();
             $GLOBALS['xoopsTpl']->assign($vars);
             $GLOBALS['xoopsTpl']->assign(['standalone' => false, 'xoops_pagetitle' => $vars['title'] ?? '']);
             $GLOBALS['xoopsTpl']->display($template);
@@ -82,6 +90,7 @@ if (!function_exists(ltrim(__NAMESPACE__ . '\\xoops_2fa_render', '\\'))) {
             'xoops_langcode' => _LANGCODE,
             'standalone'     => true,
         ]);
+        $forms();
         $tpl->assign($vars);
         $tpl->caching = 0;
         $tpl->display($template);

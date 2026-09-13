@@ -303,6 +303,9 @@ final class Manage2faControllerTest extends TestCase
         $vars = $this->execute(['action' => 'send']);
         self::assertSame('sent-msg', $vars['message']);
         self::assertTrue($vars['by_email']);
+        self::assertSame('FORM', $vars['form']);
+        self::assertSame('SEND', $vars['send_form']);
+        self::assertSame(_US_2FA_CODE_EMAIL, $vars['lang_code']);
         self::assertContains('deliver:9', $GLOBALS['manageLog']);
         self::assertNotContains('reauth:9', $GLOBALS['manageLog']);
 
@@ -318,7 +321,14 @@ final class Manage2faControllerTest extends TestCase
         $GLOBALS['manageLog'] = [];
         $vars = $this->execute(['action' => 'send']);
         self::assertFalse($vars['by_email']);
+        self::assertSame('', $vars['send_form']);
         self::assertNotContains('deliver:9', $GLOBALS['manageLog']);
+
+        // The button posts under its own name; the plain field is still honoured.
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'method' => 'email', 'generation' => 'gen'];
+        $GLOBALS['manageLog'] = [];
+        $vars = $this->execute(['action_send' => 'Send me a code']);
+        self::assertContains('deliver:9', $GLOBALS['manageLog']);
     }
 
     #[Test]
@@ -427,6 +437,9 @@ function xoops_login_set_session(XoopsUser $user, string $generation, bool $veri
     $_SESSION = ['xoopsUserId' => $user->getVar('uid'), 'xoops2faGeneration' => $generation, 'xoops2faVerified' => $verified];
 }
 function xoops_2fa_notice(...$args): void { $GLOBALS['manageLog'][] = 'notice'; }
+function xoops_2fa_manage_form(array $vars): object { return new class { public function render(): string { return 'FORM'; } }; }
+function xoops_2fa_send_form(string $url, array $hidden, string $label): object { return new class { public function render(): string { return 'SEND'; } }; }
+function xoops_2fa_posted_action(array $known): string { return \xoops_2fa_posted_action($known); }
 function xoops_2fa_deliver_code(object $handler, object $user): array { $GLOBALS['manageLog'][] = 'deliver:' . $user->getVar('uid'); return $GLOBALS['manageDeliver'] ? ['sent' => true, 'message' => 'sent-msg'] : ['sent' => false, 'message' => 'send-fail']; }
 function xoops_cp_header(): void { $GLOBALS['xoopsTpl'] = new XoopsTpl(); }
 function xoops_cp_footer(): void {}
