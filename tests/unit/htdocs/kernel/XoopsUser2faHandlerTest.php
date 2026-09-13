@@ -694,8 +694,9 @@ class XoopsUser2faHandlerTest extends KernelTestCase
             $this->statements('UPDATE `xoops_user_2fa`')
         );
         $revokes = $this->statements('UPDATE `xoops_tokens`');
-        $this->assertCount(1, $revokes);
+        $this->assertCount(2, $revokes, 'recovery codes and mailed codes are both revoked');
         $this->assertStringEndsWith("WHERE `uid` = 10 AND `scope` = '2fa_recovery' AND `used_at` = 0", $revokes[0]);
+        $this->assertStringEndsWith("WHERE `uid` = 10 AND `scope` = '2fa_email' AND `used_at` = 0", $revokes[1]);
         $this->assertSame('COMMIT', end($this->sql));
 
         $this->sql  = [];
@@ -799,6 +800,100 @@ class XoopsUser2faHandlerTest extends KernelTestCase
         $this->assertSame('unavailable', $handler->stateOfRow($this->row(['secret' => 'v1:garbage'])));
         $this->assertSame('unavailable', $handler->stateOfRow($this->row(['method' => 'sms'])));
         $this->assertSame([], $this->sql);
+    }
+
+    #[Test]
+    public function anEmailRowIsEnrolledWithoutASecret(): void
+    {
+        $this->rows = [$this->row(['method' => 'email', 'secret' => null])];
+        $this->assertSame(XoopsUser2faHandler::STATE_ENROLLED, $this->handler()->stateFor(10));
+        $this->assertSame([], $this->statements('UPDATE'), 'reading the state writes nothing');
+    }
+
+    #[Test]
+    public function issueEmailCodeHonoursTheCooldownAndStoresOnlyAHash(): void
+    {
+        $this->rows = [['cnt' => 1]];
+        $this->assertNull($this->handler()->issueEmailCode(10), 'a code issued within the last minute blocks a new one');
+        $this->assertSame([], $this->statements('INSERT'));
+
+        $this->rows = [['cnt' => 0]];
+        $code       = $this->handler()->issueEmailCode(10);
+        $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $code);
+        $revokes = $this->statements('UPDATE `xoops_tokens`');
+        $this->assertCount(1, $revokes, 'the previous code is revoked first');
+        $this->assertStringContainsString("`scope` = '2fa_email'", $revokes[0]);
+        $inserts = $this->statements('INSERT INTO `xoops_tokens`');
+        $this->assertCount(1, $inserts);
+        $this->assertStringContainsString("'2fa_email', '" . hash('sha256', $code) . "'", $inserts[0]);
+        $this->assertStringNotContainsString("'{$code}'", $inserts[0], 'the code itself is never stored');
+    }
+
+    #[Test]
+    public function acceptEmailCodeConsumesTheTokenUnderTheRowLockAndClearsTheThrottle(): void
+    {
+        $this->rows     = [$this->row(['method' => 'email', 'secret' => null])];
+        $this->affected = 1;
+        $this->assertTrue($this->handler()->acceptEmailCode(10, '123456', self::GEN, self::NOW));
+        $this->assertSame('START TRANSACTION', $this->sql[0]);
+        $this->assertStringEndsWith('FOR UPDATE', $this->sql[1]);
+        $this->assertStringContainsString("`scope` = '2fa_email' AND `hash` = '" . hash('sha256', '123456') . "'", $this->sql[2]);
+        $this->assertSame('UPDATE `xoops_user_2fa` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = 10', $this->sql[3]);
+        $this->assertSame('COMMIT', $this->sql[4]);
+
+        foreach ([['12345', self::GEN], ['abcdef', self::GEN], ['123456', str_repeat('b', 32)]] as [$code, $generation]) {
+            $this->sql  = [];
+            $this->rows = [$this->row(['method' => 'email', 'secret' => null])];
+            $this->assertFalse($this->handler()->acceptEmailCode(10, $code, $generation, self::NOW), $code);
+            $this->assertSame([], $this->statements('UPDATE'), 'nothing is consumed for ' . $code);
+        }
+
+        $this->sql  = [];
+        $this->rows = [$this->row(['method' => 'email', 'secret' => null, 'locked_until' => self::NOW + 100])];
+        $this->assertFalse($this->handler()->acceptEmailCode(10, '123456', self::GEN, self::NOW), 'a locked row refuses even a valid code');
+        $this->assertSame([], $this->statements('UPDATE'));
+
+        $this->sql  = [];
+        $this->rows = [$this->row()];
+        $this->assertFalse($this->handler()->acceptEmailCode(10, '123456', self::GEN, self::NOW), 'a TOTP row does not take a mailed code');
+        $this->assertSame([], $this->statements('UPDATE `xoops_tokens`'));
+    }
+
+    #[Test]
+    public function enrolEmailVerifiesTheMailedCodeThenWritesARowWithoutASecret(): void
+    {
+        $this->rows     = [false];
+        $this->affected = 1;
+        $result         = $this->handler()->enrolEmail(10, '123456', self::NOW, '');
+        $this->assertIsArray($result);
+        $this->assertCount(10, $result['codes']);
+        $this->assertStringContainsString("`hash` = '" . hash('sha256', '123456') . "'", $this->sql[2], 'the mailed code is consumed before the row is written');
+        $inserts = $this->statements('INSERT INTO `xoops_user_2fa`');
+        $this->assertCount(1, $inserts);
+        $this->assertStringContainsString("'enrolled', 'email', NULL,", $inserts[0]);
+        $this->assertSame('COMMIT', end($this->sql));
+
+        $this->sql  = [];
+        $this->rows = [$this->row()];
+        $this->assertFalse($this->handler()->enrolEmail(10, '123456', self::NOW, self::GEN), 'an enrolled row is not replaced');
+        $this->assertSame('ROLLBACK', end($this->sql));
+
+        $this->sql      = [];
+        $this->rows     = [false];
+        $this->affected = 0;
+        $this->assertFalse($this->handler()->enrolEmail(10, '123456', self::NOW, ''), 'an unknown or expired code enrols nothing');
+        $this->assertSame([], $this->statements('INSERT INTO `xoops_user_2fa`'));
+    }
+
+    #[Test]
+    public function managementOfAnEmailRowTakesAMailedCode(): void
+    {
+        $this->rows     = [$this->row(['method' => 'email', 'secret' => null])];
+        $this->affected = 1;
+        $generation     = $this->handler()->manage(10, self::GEN, '123456', '', 'disable', self::NOW);
+        $this->assertIsString($generation);
+        $this->assertStringContainsString("`scope` = '2fa_email' AND `hash` = '" . hash('sha256', '123456') . "'", $this->sql[2]);
+        $this->assertCount(1, $this->statements("UPDATE `xoops_user_2fa` SET `state` = 'disabled'"));
     }
 
     private function hatchDir(): string

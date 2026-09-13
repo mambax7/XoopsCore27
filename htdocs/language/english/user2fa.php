@@ -24,6 +24,18 @@
 define('_US_2FA_TITLE', 'Second step');
 define('_US_2FA_PROMPT', 'Enter the code from your authenticator app');
 define('_US_2FA_CODE', 'Authenticator code');
+define('_US_2FA_PROMPT_EMAIL', 'We sent a six-digit code to %s. Enter it below.');
+define('_US_2FA_CODE_EMAIL', 'Code from your e-mail');
+define('_US_2FA_SEND', 'Send a new code');
+define('_US_2FA_SENT', 'A new code was sent to %s. It is valid for ten minutes.');
+define('_US_2FA_SEND_WAIT', 'A code was sent less than a minute ago. Check your inbox and spam folder before requesting another one.');
+define('_US_2FA_SEND_FAILED', 'The code could not be sent right now. Try again in a moment, or use a recovery code.');
+define('_US_2FA_EMAIL_SUBJECT', '%s: your sign-in code');
+define('_US_2FA_EMAIL_BODY', 'Your sign-in code for %s is:
+
+%s
+
+It is valid for %d minutes and works once. If you did not request it, ignore this message and consider changing your password.');
 define('_US_2FA_RECOVERY', 'Use a recovery code instead');
 define('_US_2FA_RECOVERY_HINT', 'Each recovery code works once. Using one sends you an e-mail.');
 define('_US_2FA_SUBMIT', 'Continue');

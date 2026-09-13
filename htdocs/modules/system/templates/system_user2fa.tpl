@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<{if $standalone}><!DOCTYPE html>
 <html lang="<{$xoops_langcode|escape}>">
 <head>
     <meta charset="<{$xoops_charset|escape}>"/>
@@ -8,8 +8,8 @@
     <link rel="stylesheet" type="text/css" media="screen" href="<{xoAppUrl 'browse.php?xoops.css'}>"/>
     <link rel="stylesheet" type="text/css" media="screen" href="<{$xoops_themecss|escape}>"/>
 </head>
-<body>
-<div class="width60 txtcenter" style="margin: 3em auto;">
+<body><{/if}>
+<div class="xo-2fa-challenge<{if $standalone}> width60 txtcenter" style="margin: 3em auto;<{/if}>">
     <h2><{$title|escape}></h2>
     <{if $start_again}>
         <p class="errorMsg"><{$message|escape}></p>
@@ -35,8 +35,16 @@
             <{$token_html}>
             <p><input type="submit" value="<{$lang_submit|escape}>"/></p>
         </form>
+        <{if $by_email}>
+        <form action="<{$action_url|escape}>" method="post">
+            <input type="hidden" name="op" value="2fa"/>
+            <input type="hidden" name="xoops_2fa_send" value="1"/>
+            <{$token_html}>
+            <p><input type="submit" value="<{$lang_send|escape}>"/></p>
+        </form>
+        <{/if}>
         <p><a href="<{$login_url|escape}>"><{$lang_startagain|escape}></a></p>
     <{/if}>
 </div>
-</body>
-</html>
+<{if $standalone}></body>
+</html><{/if}>

@@ -56,6 +56,10 @@ final class XoopsUser2faHandler
     public const ROW_ENROLLED      = 'enrolled';
     public const ROW_DISABLED      = 'disabled';
     public const METHOD_TOTP       = 'totp';
+    public const METHOD_EMAIL      = 'email';
+    public const EMAIL_SCOPE       = '2fa_email';
+    public const EMAIL_TTL         = 600;
+    public const EMAIL_COOLDOWN    = 60;
     public const RECOVERY_SCOPE    = '2fa_recovery';
     public const RECOVERY_CODES    = 10;
     public const LOCK_THRESHOLD    = 5;
@@ -277,11 +281,101 @@ final class XoopsUser2faHandler
         // "none" is reserved for an absent or disabled row: the login gate
         // reads it as "no factor". A state or method this code does not know
         // is a factor it cannot check, so it fails closed.
-        if (self::ROW_ENROLLED !== $row['state'] || self::METHOD_TOTP !== $row['method']) {
+        if (self::ROW_ENROLLED !== $row['state']) {
+            return self::STATE_UNAVAILABLE;
+        }
+        if (self::METHOD_EMAIL === $row['method']) {
+            return self::STATE_ENROLLED;
+        }
+        if (self::METHOD_TOTP !== $row['method']) {
             return self::STATE_UNAVAILABLE;
         }
 
         return null === $this->secretFromRow($row) ? self::STATE_UNAVAILABLE : self::STATE_ENROLLED;
+    }
+
+    /**
+     * Issue a fresh e-mail code, replacing any earlier one. The caller mails it.
+     *
+     * @param int $uid account
+     *
+     * @return string|null|false the six-digit code; null while the cooldown runs; false on a storage failure
+     * @throws \Random\RandomException when the secure random source fails
+     */
+    public function issueEmailCode(int $uid): string|null|false
+    {
+        if ($this->tokens->countRecent($uid, self::EMAIL_SCOPE, self::EMAIL_COOLDOWN) > 0) {
+            return null;
+        }
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        return $this->tokens->create($uid, self::EMAIL_SCOPE, self::EMAIL_TTL, true, $code);
+    }
+
+    /**
+     * Consume an e-mail code against an enrolled e-mail row, with the row locked.
+     *
+     * @param int    $uid                account
+     * @param string $code               code as typed
+     * @param string $verifiedGeneration the generation the challenge verified against
+     * @param int    $now                unix time
+     *
+     * @return bool
+     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
+     */
+    public function acceptEmailCode(int $uid, string $code, string $verifiedGeneration, int $now): bool
+    {
+        return (bool) $this->withTransaction(function () use ($uid, $code, $verifiedGeneration, $now): bool {
+            $row = $this->lockRow($uid);
+            if (null === $row || self::METHOD_EMAIL !== $row['method'] || !hash_equals((string) $row['generation'], $verifiedGeneration)) {
+                return false;
+            }
+
+            return $this->verifyCodeLocked($row, $code, $verifiedGeneration, $now);
+        }, true);
+    }
+
+    /**
+     * Verify a method-specific code against a locked, enrolled row and clear the throttle.
+     *
+     * @param array  $row                the row from lockRow()
+     * @param string $code               code as typed
+     * @param string $expectedGeneration the generation the caller verified against
+     * @param int    $now                unix time
+     *
+     * @return bool
+     * @throws \RuntimeException when the secret cannot be read or a write fails
+     */
+    private function verifyCodeLocked(array $row, string $code, string $expectedGeneration, int $now): bool
+    {
+        if (self::ROW_ENROLLED !== $row['state'] || $row['locked_until'] > $now) {
+            return false;
+        }
+        $uid = (int) $row['uid'];
+        if (self::METHOD_EMAIL === $row['method']) {
+            if (!preg_match('/^[0-9]{6}$/', $code) || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $code, true)) {
+                return false;
+            }
+            if (!$this->db->exec(sprintf(
+                'UPDATE `%s` SET `failed_attempts` = 0, `locked_until` = 0 WHERE `uid` = %d',
+                $this->table(),
+                $uid
+            ))) {
+                throw new \RuntimeException('Two-factor throttle reset failed');
+            }
+
+            return true;
+        }
+        if (self::METHOD_TOTP !== $row['method']) {
+            return false;
+        }
+        $secret = $this->secretFromRow($row);
+        if (null === $secret) {
+            throw new \RuntimeException('Two-factor verification unavailable');
+        }
+        $step = XoopsTotp::matchStep($secret, $code, $now, (int) $row['last_counter']);
+
+        return false !== $step && $this->acceptTotp($uid, $step, $expectedGeneration, $now);
     }
 
     /**
@@ -553,40 +647,90 @@ final class XoopsUser2faHandler
             if (null === $blob) {
                 return false;
             }
-            $generation = $this->newGeneration();
-            $table      = $this->table();
-            $sql        = null === $row
-                ? sprintf(
-                    'INSERT INTO `%s` (`uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation`)'
-                    . ' VALUES (%d, %s, %s, %s, %d, %d, 0, 0, %s)',
-                    $table,
-                    $uid,
-                    $this->db->quote(self::ROW_ENROLLED),
-                    $this->db->quote(self::METHOD_TOTP),
-                    $this->db->quote($blob),
-                    $now,
-                    $acceptedStep,
-                    $this->db->quote($generation)
-                )
-                : sprintf(
-                    'UPDATE `%s` SET `state` = %s, `method` = %s, `secret` = %s, `confirmed_at` = %d, `last_counter` = %d,'
-                    . ' `failed_attempts` = 0, `locked_until` = 0, `generation` = %s WHERE `uid` = %d',
-                    $table,
-                    $this->db->quote(self::ROW_ENROLLED),
-                    $this->db->quote(self::METHOD_TOTP),
-                    $this->db->quote($blob),
-                    $now,
-                    $acceptedStep,
-                    $this->db->quote($generation),
-                    $uid
-                );
-            if (!$this->db->exec($sql)) {
+
+            return $this->writeEnrolmentLocked($row, $uid, self::METHOD_TOTP, $blob, $now, $acceptedStep);
+        });
+    }
+
+    /**
+     * Enrol e-mail codes once the code mailed during setup has been entered.
+     *
+     * @param int         $uid                account
+     * @param string      $code               the mailed code as typed
+     * @param int         $now                unix time
+     * @param string|null $expectedGeneration the generation the setup began against
+     *
+     * @return array{generation: string, codes: string[]}|false
+     * @throws \RuntimeException when the transaction, the row lookup or the token consumption fails
+     * @throws \Random\RandomException when the secure random source fails
+     */
+    public function enrolEmail(int $uid, string $code, int $now, ?string $expectedGeneration = null): array|false
+    {
+        return $this->withTransaction(function () use ($uid, $code, $now, $expectedGeneration): array|false {
+            $row = $this->lockRow($uid);
+            if (null !== $expectedGeneration && !hash_equals((string) ($row['generation'] ?? ''), $expectedGeneration)) {
                 return false;
             }
-            $codes = $this->issueRecoveryCodes($uid);
+            if (null !== $row && self::ROW_DISABLED !== $row['state']) {
+                return false;
+            }
+            if (!preg_match('/^[0-9]{6}$/', $code) || !$this->tokens->verify($uid, self::EMAIL_SCOPE, $code, true)) {
+                return false;
+            }
 
-            return false === $codes ? false : ['generation' => $generation, 'codes' => $codes];
-        });
+            return $this->writeEnrolmentLocked($row, $uid, self::METHOD_EMAIL, null, $now, 0);
+        }, true);
+    }
+
+    /**
+     * Write the enrolled row and issue recovery codes, inside the caller's transaction.
+     *
+     * @param array|null  $row    the locked row, or null when absent
+     * @param int         $uid    account
+     * @param string      $method METHOD_* constant
+     * @param string|null $blob   sealed secret, or null for a method without one
+     * @param int         $now    unix time
+     * @param int         $step   the accepted TOTP step, 0 for other methods
+     *
+     * @return array{generation: string, codes: string[]}|false
+     * @throws \Random\RandomException when the secure random source fails
+     */
+    private function writeEnrolmentLocked(?array $row, int $uid, string $method, ?string $blob, int $now, int $step): array|false
+    {
+        $generation = $this->newGeneration();
+        $table      = $this->table();
+        $secret     = null === $blob ? 'NULL' : $this->db->quote($blob);
+        $sql        = null === $row
+            ? sprintf(
+                'INSERT INTO `%s` (`uid`, `state`, `method`, `secret`, `confirmed_at`, `last_counter`, `failed_attempts`, `locked_until`, `generation`)'
+                . ' VALUES (%d, %s, %s, %s, %d, %d, 0, 0, %s)',
+                $table,
+                $uid,
+                $this->db->quote(self::ROW_ENROLLED),
+                $this->db->quote($method),
+                $secret,
+                $now,
+                $step,
+                $this->db->quote($generation)
+            )
+            : sprintf(
+                'UPDATE `%s` SET `state` = %s, `method` = %s, `secret` = %s, `confirmed_at` = %d, `last_counter` = %d,'
+                . ' `failed_attempts` = 0, `locked_until` = 0, `generation` = %s WHERE `uid` = %d',
+                $table,
+                $this->db->quote(self::ROW_ENROLLED),
+                $this->db->quote($method),
+                $secret,
+                $now,
+                $step,
+                $this->db->quote($generation),
+                $uid
+            );
+        if (!$this->db->exec($sql)) {
+            return false;
+        }
+        $codes = $this->issueRecoveryCodes($uid);
+
+        return false === $codes ? false : ['generation' => $generation, 'codes' => $codes];
     }
 
     /**
@@ -620,7 +764,8 @@ final class XoopsUser2faHandler
             $this->db->quote($generation),
             $uid
         );
-        if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)) {
+        if (!$this->db->exec($sql) || !$this->tokens->revokeByScope($uid, self::RECOVERY_SCOPE)
+            || !$this->tokens->revokeByScope($uid, self::EMAIL_SCOPE)) {
             return false;
         }
 
@@ -673,18 +818,8 @@ final class XoopsUser2faHandler
                 ))) {
                     throw new \RuntimeException('Two-factor throttle reset failed');
                 }
-            } else {
-                if ($row['locked_until'] > $now || self::METHOD_TOTP !== $row['method']) {
-                    return false;
-                }
-                $secret = $this->secretFromRow($row);
-                if (null === $secret) {
-                    throw new \RuntimeException('Two-factor verification unavailable');
-                }
-                $step = XoopsTotp::matchStep($secret, $code, $now, (int) $row['last_counter']);
-                if (false === $step || !$this->acceptTotp($uid, $step, $expectedGeneration, $now)) {
-                    return false;
-                }
+            } elseif (!$this->verifyCodeLocked($row, $code, $expectedGeneration, $now)) {
+                return false;
             }
             $result = $action === 'disable' ? $this->disableLocked($uid) : $this->issueRecoveryCodes($uid);
             if (false === $result) {

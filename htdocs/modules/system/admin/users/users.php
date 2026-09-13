@@ -40,6 +40,41 @@ include_once XOOPS_ROOT_PATH . '/class/xoopsformloader.php';
  * @param        $add_or_edit
  * @param string $user
  */
+/**
+ * The member's second-factor status and the administrator's reset link, as a form row.
+ *
+ * @param int $uid the member being edited
+ *
+ * @return XoopsFormLabel
+ */
+function xoops_2fa_admin_status_row(int $uid): XoopsFormLabel
+{
+    require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
+    xoops_2fa_loadLanguage('user2famanage');
+    /** @var XoopsUser2faHandler $handler */
+    $handler = xoops_getHandler('user2fa');
+    try {
+        $row = $handler->getRow($uid);
+    } catch (\Throwable) {
+        $row = null;
+    }
+    $enrolled = is_array($row) && XoopsUser2faHandler::ROW_DISABLED !== $row['state'];
+    if (!$enrolled) {
+        $status = _US_2FAM_STATUS_NONE;
+    } elseif (XoopsUser2faHandler::METHOD_EMAIL === $row['method']) {
+        $status = _US_2FAM_STATUS_EMAIL;
+    } else {
+        $status = _US_2FAM_STATUS_TOTP;
+    }
+    $value = htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
+    if ($enrolled) {
+        $value .= ' &middot; <a href="admin.php?fct=users&amp;op=users_2fa_reset&amp;uid=' . $uid . '">'
+            . htmlspecialchars(_US_2FAM_RESET, ENT_QUOTES, 'UTF-8') . '</a>';
+    }
+
+    return new XoopsFormLabel(_US_2FAM_TITLE, $value);
+}
+
 function form_user($add_or_edit, $user = '')
 {
     global $xoopsConfig, $xoopsUser;
@@ -207,6 +242,9 @@ function form_user($add_or_edit, $user = '')
     foreach ($group_select as $group) {
         $form->addElement($group);
         unset($group);
+    }
+    if ($add_or_edit !== true && !empty($uid_value) && defined('XOOPS_2FA_INSTALLED') && XOOPS_2FA_INSTALLED) {
+        $form->addElement(xoops_2fa_admin_status_row((int) $uid_value));
     }
 
     $form->addElement(new XoopsFormHidden('fct', 'users'));

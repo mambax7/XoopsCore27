@@ -21,11 +21,24 @@ That step registers the challenge and management templates. Then select
 Open Edit Account → Two-factor authentication, or `user.php?op=2fa_manage`.
 The core page also works when the Profile module is disabled.
 
-Enter your current password, scan the locally generated QR code (or enter
-the manual key), and confirm a six-digit authenticator code. Setup expires
-after five minutes; five incorrect confirmation codes require setup to
-start again. Two browser tabs share one setup secret; only one confirmation
-can enrol the account. Plain HTTP displays a warning; use HTTPS in production.
+Enter your current password and choose a method.
+
+Authenticator app: scan the locally generated QR code (or enter the manual
+key), and confirm a six-digit authenticator code. Setup expires after five
+minutes; five incorrect confirmation codes require setup to start again.
+Two browser tabs share one setup secret; only one confirmation can enrol
+the account.
+
+E-mail codes: a six-digit code is mailed to the account address; confirm
+it within ten minutes. Each code works once, one is issued per minute, and
+a fresh one can be requested from the page. At login the challenge page
+mails a code when it opens and offers "Send a new code". This method is
+weaker than an app: whoever reads the mailbox passes the step, and the
+mailbox usually also resets the password. It needs no sodium extension and
+no encryption key. Both methods share recovery codes, the lockout and the
+administrator reset.
+
+Plain HTTP displays a warning; use HTTPS in production.
 
 Save the ten recovery codes immediately. They appear only in the successful
 POST response, grouped for reading, and each works once. If you lose that
@@ -34,7 +47,7 @@ code to generate a replacement set. Existing recovery codes are revoked.
 Do not share the key or the recovery codes with support staff.
 
 Disabling or replacing recovery codes requires your current password and
-an authenticator or recovery code. Recovery codes work during a TOTP lock
+an authenticator code, a mailed code, or a recovery code. Recovery codes work during a TOTP lock
 and when the encryption key or sodium is unavailable. Five incorrect factor
 attempts lock TOTP for fifteen minutes; the lock is not extended by retries.
 

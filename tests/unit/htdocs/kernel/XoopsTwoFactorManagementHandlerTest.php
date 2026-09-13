@@ -136,8 +136,9 @@ final class XoopsTwoFactorManagementHandlerTest extends KernelTestCase
         self::assertStringEndsWith('FOR UPDATE', $this->sql[1]);
         self::assertStringContainsString('SET `last_counter`', $this->sql[2]);
         self::assertStringContainsString("SET `state` = 'disabled', `secret` = NULL", $this->sql[3]);
-        self::assertStringContainsString('UPDATE `xoops_tokens` SET `used_at`', $this->sql[4]);
-        self::assertSame('COMMIT', $this->sql[5]);
+        self::assertStringContainsString("UPDATE `xoops_tokens` SET `used_at`", $this->sql[4]);
+        self::assertStringContainsString("`scope` = '2fa_email'", $this->sql[5]);
+        self::assertSame('COMMIT', $this->sql[6]);
     }
 
     public function testRecoveryRegenerationDoesNotNeedEncryptionKeyAndReturnsTenFreshCodes(): void

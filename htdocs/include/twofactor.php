@@ -40,6 +40,68 @@ function xoops_2fa_loadLanguage(string $name): void
     }
 }
 
+/**
+ * Mail a sign-in code to the account address.
+ *
+ * @param XoopsUser $user account
+ * @param string    $code the six-digit code
+ *
+ * @return bool whether the mailer accepted it
+ */
+function xoops_2fa_send_code(XoopsUser $user, string $code): bool
+{
+    try {
+        $mailer = xoops_getMailer();
+        $mailer->useMail();
+        $mailer->setToUsers($user);
+        $mailer->setFromEmail($GLOBALS['xoopsConfig']['adminmail']);
+        $mailer->setFromName($GLOBALS['xoopsConfig']['sitename']);
+        $mailer->setSubject(sprintf(_US_2FA_EMAIL_SUBJECT, $GLOBALS['xoopsConfig']['sitename']));
+        $mailer->setBody(sprintf(_US_2FA_EMAIL_BODY, $GLOBALS['xoopsConfig']['sitename'], $code, (int) (XoopsUser2faHandler::EMAIL_TTL / 60)));
+
+        return (bool) $mailer->send();
+    } catch (\Throwable) {
+        return false;
+    }
+}
+
+/**
+ * Issue and mail a fresh code; the strings tell the visitor what happened.
+ *
+ * @param XoopsUser2faHandler $handler factor handler
+ * @param XoopsUser           $user    account
+ *
+ * @return array{sent: bool, message: string} sent, and the status line to show
+ */
+function xoops_2fa_deliver_code(XoopsUser2faHandler $handler, XoopsUser $user): array
+{
+    $code = $handler->issueEmailCode((int) $user->getVar('uid'));
+    if (null === $code) {
+        return ['sent' => false, 'message' => _US_2FA_SEND_WAIT];
+    }
+    if (false === $code || !xoops_2fa_send_code($user, $code)) {
+        return ['sent' => false, 'message' => _US_2FA_SEND_FAILED];
+    }
+
+    return ['sent' => true, 'message' => sprintf(_US_2FA_SENT, xoops_2fa_mask_email((string) $user->getVar('email', 'n')))];
+}
+
+/**
+ * @param string $email address
+ *
+ * @return string the address with most of its local part hidden
+ */
+function xoops_2fa_mask_email(string $email): string
+{
+    $at = strrpos($email, '@');
+    if (false === $at) {
+        return '***';
+    }
+    $local = substr($email, 0, $at);
+
+    return mb_substr($local, 0, 1) . '***' . substr($email, $at);
+}
+
 /** Validate the password-authorised setup session before using its encrypted secret. */
 function xoops_2fa_setup_valid(mixed $pending, int $uid, string $passwordHash, string $generation, int $now): bool
 {
