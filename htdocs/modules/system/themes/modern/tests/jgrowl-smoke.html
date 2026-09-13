@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Modern jGrowl regression check</title>
+    <!-- Add ?core=1 or ?core=last to exercise both stylesheet orders. -->
+    <script>
+        if (new URLSearchParams(location.search).get('core') === '1') {
+            document.write('<link rel="stylesheet" href="../../../../../xoops.css">');
+        }
+    </script>
+    <link rel="stylesheet" href="../css/modern.css">
+    <link rel="stylesheet" href="../css/xoops.css">
+    <link rel="stylesheet" href="../css/dark.css">
+    <link rel="stylesheet" href="../css/fixes.css">
+    <script>
+        if (new URLSearchParams(location.search).get('core') === 'last') {
+            document.write('<link rel="stylesheet" href="../../../../../xoops.css">');
+        }
+    </script>
+    <script src="../../../../../browse.php?Frameworks/jquery/jquery.js"></script>
+    <script src="../../../../../browse.php?Frameworks/jquery/plugins/jquery.jgrowl.js"></script>
+</head>
+<body>
+    <!-- Open this file through the XOOPS web server. No login or database writes.
+         Repeat at a narrow viewport to check responsive positioning. -->
+    <main style="min-height: 1600px"><h1>Modern jGrowl regression check</h1><pre id="result">RUNNING</pre></main>
+    <script>
+    (async () => {
+        const check = (condition, message) => { if (!condition) throw new Error(message); };
+        const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const notice = () => document.querySelector('.jGrowl-message')?.closest('.jGrowl-notification');
+        try {
+            // Real plugin and core redirect options, with a long admin page.
+            jQuery.jGrowl('Settings saved', { life: 3000, position: 'center', speed: 'slow', sticky: true });
+            await wait(1100);
+            const container = document.getElementById('jGrowl');
+            check(getComputedStyle(container).position === 'fixed', 'Notification is not fixed to the viewport');
+            check(getComputedStyle(container).pointerEvents === 'auto', 'Notification scrollbar cannot receive pointer input');
+            const rect = notice().getBoundingClientRect();
+            check(rect.top >= 0 && rect.bottom <= innerHeight, 'Notification is off screen');
+            check(rect.left >= 0 && rect.right <= document.documentElement.clientWidth, 'Notification overflows horizontally');
+            const placeholder = container.querySelector(':scope > .jGrowl-notification:empty');
+            check(placeholder && getComputedStyle(placeholder).display === 'none', 'Empty plugin placeholder is visible');
+            check(getComputedStyle(notice()).display !== 'none', 'Notification is hidden');
+            const light = getComputedStyle(notice()).backgroundColor;
+            document.body.classList.add('dark-mode');
+            check(getComputedStyle(notice()).backgroundColor !== light, 'Dark background did not change');
+            check(getComputedStyle(notice()).color !== getComputedStyle(notice()).backgroundColor, 'Unreadable dark text');
+            document.documentElement.dir = 'rtl';
+            check(Math.abs(container.getBoundingClientRect().left - (document.documentElement.clientWidth - container.offsetWidth) / 2) < 2, 'RTL center alignment failed');
+            const close = notice().querySelector('.jGrowl-close');
+            check(close.getBoundingClientRect().left < notice().getBoundingClientRect().left + notice().offsetWidth / 2, 'RTL close button is on the wrong side');
+            for (const direction of ['ltr', 'rtl']) {
+                document.documentElement.dir = direction;
+                for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
+                    container.className = 'jGrowl ' + position;
+                    const bounds = container.getBoundingClientRect();
+                    const horizontalGap = position.endsWith('left') ? bounds.left : document.documentElement.clientWidth - bounds.right;
+                    const verticalGap = position.startsWith('top') ? bounds.top : innerHeight - bounds.bottom;
+                    check(horizontalGap >= 0 && horizontalGap < 32 && verticalGap >= 0 && verticalGap < 32, direction + ' ' + position + ' is misplaced');
+                }
+            }
+            container.className = 'jGrowl center';
+            notice().querySelector('.jGrowl-close').click();
+            await wait(750);
+            check(!notice(), 'Close button failed');
+            jQuery.jGrowl('Timed message', { life: 100, position: 'center', speed: 0 });
+            await wait(1000);
+            check(!notice(), 'Automatic dismissal failed');
+            jQuery.jGrowl('First message', { sticky: true, speed: 0 });
+            jQuery.jGrowl('Second message', { sticky: true, speed: 0 });
+            await wait(800);
+            const closer = container.querySelector('.jGrowl-closer');
+            check(closer && closer.getBoundingClientRect().height >= 44, 'Close-all control is too short');
+            check(closer.scrollHeight <= closer.clientHeight, 'Close-all label is clipped');
+            closer.click();
+            await wait(750);
+            check(!notice(), 'Close-all control failed');
+            document.getElementById('result').textContent = 'PASS: viewport, placeholder, dark mode, RTL close, corners, dismissal and close-all sizing';
+            document.documentElement.dataset.testResult = 'pass';
+        } catch (error) {
+            document.getElementById('result').textContent = 'FAIL: ' + error.message;
+            document.documentElement.dataset.testResult = 'fail';
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -24,6 +24,7 @@
 # Export ignores (not included in dist packages)
 /_archive/** export-ignore
 /tests/** export-ignore
+/htdocs/modules/system/themes/modern/tests/** export-ignore
 /tests_codex2/** export-ignore
 /extras/** export-ignore
 /docs/** export-ignore

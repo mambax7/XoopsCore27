@@ -111,6 +111,92 @@ body.dark-mode .confirmMsg {
 }
 
 
+/* jGrowl redirect messages are appended to body, outside the admin layout.
+   Keep the plugin's empty placeholder hidden; its animation reveals messages. */
+html body > div.jGrowl,
+html body > div.jGrowl.center,
+html body > div.jGrowl.top-left,
+html body > div.jGrowl.top-right,
+html body > div.jGrowl.bottom-left,
+html body > div.jGrowl.bottom-right {
+    position: fixed;
+    z-index: 9999;
+    top: 1rem;
+    /* jGrowl's named corners are physical positions, including in RTL. */
+    right: 1rem;
+    left: auto;
+    bottom: auto;
+    width: min(32rem, calc(100% - 2rem));
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+}
+
+html body > div.jGrowl.center {
+    left: 0;
+    right: 0;
+    margin-inline: auto;
+}
+
+html body > div.jGrowl.top-left,
+html body > div.jGrowl.bottom-left {
+    left: 1rem;
+    right: auto;
+}
+
+html body > div.jGrowl.bottom-left,
+html body > div.jGrowl.bottom-right {
+    top: auto;
+    bottom: 1rem;
+}
+
+body > div.jGrowl div.jGrowl-notification,
+body > div.jGrowl div.jGrowl-closer {
+    display: none;
+    padding: 1rem;
+    margin-block-end: .5rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-inline-start: 4px solid var(--primary);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow-wrap: anywhere;
+}
+
+body > div.jGrowl div.jGrowl-notification div.jGrowl-header {
+    font-weight: 600;
+}
+
+body > div.jGrowl div.jGrowl-notification button.jGrowl-close {
+    float: right;
+    min-width: 44px;
+    min-height: 44px;
+    margin-inline-start: .5rem;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+html[dir="rtl"] body > div.jGrowl div.jGrowl-notification button.jGrowl-close {
+    float: left;
+}
+
+body > div.jGrowl .jGrowl-close:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+body > div.jGrowl div.jGrowl-closer {
+    height: auto;
+    min-height: 44px;
+    cursor: pointer;
+    text-align: center;
+}
+
 /* ===================================
    XOOPS Admin Content Overrides
    Style the old XOOPS admin tables/forms
