@@ -55,6 +55,7 @@ final class Manage2faControllerTest extends TestCase
         $GLOBALS['manageCrypto'] = true;
         $GLOBALS['manageInstalled'] = true;
         $GLOBALS['manageAccept'] = true;
+        $GLOBALS['manageRefuse'] = false;
         $GLOBALS['manageSessionFails'] = false;
         $GLOBALS['xoopsConfig'] = ['sitename' => 'Test', 'usercookie' => 'remember', 'twofactor_mode' => 'optional'];
         $userClass = self::NS . '\\XoopsUser';
@@ -226,6 +227,39 @@ final class Manage2faControllerTest extends TestCase
     }
 
     #[Test]
+    public function aRefusedResetOrEnrolmentIsReportedAsUnavailableWithoutAnAuditTrail(): void
+    {
+        $GLOBALS['manageRefuse'] = true;
+        foreach ([['action' => 'reset', 'uid' => 12, 'admin' => true, 'row' => ['state' => 'enrolled', 'generation' => 'gen'], 'log' => 'disable:12'],
+                  ['action' => 'begin', 'uid' => 9, 'admin' => false, 'row' => null, 'log' => 'enrol']] as $case) {
+            $GLOBALS['manageRow'] = $case['row'];
+            $GLOBALS['manageLog'] = [];
+            $notices = [];
+            set_error_handler(static function (int $level, string $message) use (&$notices): bool {
+                $notices[] = $message;
+                return true;
+            });
+            try {
+                $post = ['action' => $case['action'], 'password' => 'correct', 'uid' => $case['uid']];
+                if ('begin' === $case['action']) {
+                    $vars = $this->execute($post);
+                    $post['code'] = (string) \XoopsTotp::codeAt($vars['secret'], \XoopsTotp::stepAt(time()));
+                    $post['action'] = 'confirm';
+                }
+                $vars = $this->execute($post, $case['admin']);
+            } finally {
+                restore_error_handler();
+            }
+            self::assertSame(_US_2FAM_UNAVAILABLE, $vars['error'], $case['action']);
+            self::assertSame('', $vars['message'], $case['action']);
+            self::assertContains($case['log'], $GLOBALS['manageLog'], $case['action']);
+            self::assertNotContains('notice', $GLOBALS['manageLog'], $case['action']);
+            self::assertSame([], $notices, $case['action']);
+            self::assertSame($case['row'], $GLOBALS['manageRow'], $case['action']);
+        }
+    }
+
+    #[Test]
     public function adminResetWithoutAnActiveFactorIsAnAuthenticatedNoOp(): void
     {
         foreach ([null, ['state' => 'disabled', 'generation' => 'oldgen']] as $row) {
@@ -281,15 +315,25 @@ class XoopsUser2faHandler {
     public function isInstalled(): bool { return $GLOBALS['manageInstalled']; }
     public function getRow(int $uid): ?array { return $GLOBALS['manageRow']; }
     public function hasEncryptedSecrets(): bool { return false; }
-    public function enrol(int $uid, string $secret, int $step, int $now, string $generation): array {
-        $GLOBALS['manageLog'][] = 'enrol'; $GLOBALS['manageRow'] = ['state' => 'enrolled', 'generation' => 'newgen'];
+    public function enrol(int $uid, string $secret, int $step, int $now, ?string $generation = null): array|false {
+        $GLOBALS['manageLog'][] = 'enrol';
+        if ($GLOBALS['manageRefuse']) { return false; }
+        $GLOBALS['manageRow'] = ['state' => 'enrolled', 'generation' => 'newgen'];
         return ['generation' => 'newgen', 'codes' => array_fill(0, 10, 'ABCDEFGHIJKLMNOP')];
     }
-    public function manage(int $uid, string $generation, string $code, string $recovery, string $action, int $now): array|false {
+    public function manage(int $uid, string $generation, string $code, string $recovery, string $action, int $now): array|string|false {
         $GLOBALS['manageLog'][] = "manage:$uid:$generation:$action"; return $GLOBALS['manageAccept'] ? array_fill(0, 10, 'ABCDEFGHIJKLMNOP') : false;
     }
-    public function recordFailure(int $uid, int $now, string $generation): array { $GLOBALS['manageLog'][] = "failure:$uid:$generation"; return ['locked' => false, 'transitioned' => false]; }
-    public function disable(int $uid): string { $GLOBALS['manageLog'][] = "disable:$uid"; $GLOBALS['manageRow'] = ['state' => 'disabled', 'generation' => 'disabledgen']; return 'disabledgen'; }
+    public function recordFailure(int $uid, int $now, ?string $generation = null): array|false {
+        $GLOBALS['manageLog'][] = "failure:$uid:$generation";
+        return $GLOBALS['manageRefuse'] ? false : ['locked' => false, 'transitioned' => false];
+    }
+    public function disable(int $uid): string|false {
+        $GLOBALS['manageLog'][] = "disable:$uid";
+        if ($GLOBALS['manageRefuse']) { return false; }
+        $GLOBALS['manageRow'] = ['state' => 'disabled', 'generation' => 'disabledgen'];
+        return 'disabledgen';
+    }
 }
 function xoops_getHandler(string $name): object {
     return match ($name) {

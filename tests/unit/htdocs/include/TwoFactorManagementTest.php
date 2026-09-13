@@ -18,6 +18,16 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Helpers in include/twofactor.php: notice delivery, setup binding and language fallback.
+ *
+ * @category  XoopsTest
+ * @package   XoopsCore27
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
 final class TwoFactorManagementTest extends TestCase
 {
     public function testMailFailuresAreReportedWithoutEscapingIntoTheCommittedAction(): void

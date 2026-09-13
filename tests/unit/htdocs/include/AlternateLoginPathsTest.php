@@ -1,5 +1,19 @@
 <?php
-
+/**
+ * Tests for the alternate login paths (XML-RPC and the popup) on a two-factor site
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @package   core
+ * @since     2.7.4
+ */
 declare(strict_types=1);
 
 namespace Tests\Unit\Include;
@@ -15,6 +29,16 @@ require_once dirname(__DIR__) . '/modules/system/SourceFileTestTrait.php';
  * must be presented: the upgrade wizard (unless the escape-hatch file is
  * present), XML-RPC and the SSL popup login. Pinned from source; none of
  * these files can be executed in a unit test.
+ *
+ * @category  XoopsTest
+ * @package   XoopsCore27
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
+/**
+ * Source-level contracts every alternate login path must keep.
  *
  * @category  XoopsTest
  * @package   XoopsCore27
