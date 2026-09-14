@@ -90,6 +90,11 @@
                     </thead>
                     <tbody>
                         <tr>
+                            <td><strong>XOOPS</strong></td>
+                            <td><{$lang_xoops_version|escape:'html'}></td>
+                            <td><span class="badge success"><{$smarty.const._MODERN_STATUS_ACTIVE}></span></td>
+                        </tr>
+                        <tr>
                             <td><strong>PHP</strong></td>
                             <td><{$lang_php_version|escape:'html'}></td>
                             <td><span class="badge success"><{$smarty.const._MODERN_STATUS_ACTIVE}></span></td>
