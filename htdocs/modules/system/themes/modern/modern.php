@@ -133,6 +133,7 @@ class XoopsGuiModern extends XoopsSystemGui
     {
         global $xoopsDB;
 
+        $tpl->assign('lang_xoops_version', XOOPS_VERSION);
         $tpl->assign('lang_php_version', PHP_VERSION);
         $tpl->assign('lang_smarty_version', $tpl::SMARTY_VERSION);
         $tpl->assign('lang_mysql_version', $xoopsDB->conn ? mysqli_get_server_info($xoopsDB->conn) : 'Unknown');
