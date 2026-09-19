@@ -88,6 +88,13 @@ global $xoopsUser;
 if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
     include_once __DIR__ . '/login.php';
 } else {
+    // Always clear compiled templates and caches when a webmaster opens the
+    // wizard. This used to be a patch task gated on $_SESSION['cache-cleaned'],
+    // which is absent at the start of every new session, so 2.5.10-to-2.5.11
+    // (and later 2.5.11-to-2.7.0) re-queued on every run.
+    if (empty($_SESSION['upgrade_cache_cleaned']) && $upgradeControl->cleanCaches()) {
+        $_SESSION['upgrade_cache_cleaned'] = true;
+    }
     // Self-contained CSRF token for the schema-mutating apply() path, mirroring
     // preflight.php's per-session token ($xoopsSecurity is unavailable this early
     // when upgrading a possibly pre-2.7 site). Read the action from POST only and

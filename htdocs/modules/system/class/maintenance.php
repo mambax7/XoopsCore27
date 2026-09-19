@@ -28,8 +28,8 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 // include/cp_functions.php here, which defines XOOPS_CPFUNC_LOADED;
 // include/functions.php keys off that constant to force redirect_header()
 // into the 'default' theme. SystemMaintenance is also instantiated from
-// upgrade/upd_2.5.10-to-2.5.11/index.php and upgrade/upd_2.5.11-to-2.7.0/
-// index.php, so loading cp_functions.php at class-file-load time was
+// the upgrade wizard (Xoops\Upgrade\UpgradeControl::cleanCaches()), so
+// loading cp_functions.php at class-file-load time was
 // silently overriding the configured theme during upgrades. Loading just
 // the helpers avoids that side effect; CP and admin callers still see
 // XOOPS_CPFUNC_LOADED via their own cp_header.php / page_moduleinstaller.php

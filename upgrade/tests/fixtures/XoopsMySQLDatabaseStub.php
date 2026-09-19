@@ -71,6 +71,11 @@ if (!class_exists('XoopsMySQLDatabase', false)) {
         {
             return '';
         }
+
+        public function getInsertId(): int|string
+        {
+            return 0;
+        }
     }
 }
 defined('_DB_QUERY_ERROR') || define('_DB_QUERY_ERROR', 'Query Failed! SQL: %s - Error: ');

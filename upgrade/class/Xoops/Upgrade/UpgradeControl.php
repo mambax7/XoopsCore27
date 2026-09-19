@@ -353,4 +353,34 @@ class UpgradeControl
         $this->needMainfileRewrite = $needMainfileRewrite;
         $this->mainfileKeys = $needMainfileRewrite ? $mainfileKeys : [];
     }
+
+    /**
+     * Clear Smarty cache, compiled templates and xoops_cache.
+     *
+     * Cache cleaning is not a patch task. A session flag cannot tell whether a
+     * previous upgrade already did it, so every new wizard session used to
+     * re-queue the oldest patch that checked that flag (2.5.10 to 2.5.11).
+     * The wizard calls this once per session at start instead.
+     *
+     * Uses SystemMaintenance::CleanCache() with folder IDs:
+     *   1 = Smarty cache, 2 = compiled templates, 3 = xoops_cache
+     *
+     * @return bool true when the three folders were cleared
+     */
+    public function cleanCaches(): bool
+    {
+        $maintenanceFile = XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
+        if (!is_readable($maintenanceFile)) {
+            return false;
+        }
+
+        require_once $maintenanceFile;
+        try {
+            $maintenance = new \SystemMaintenance();
+
+            return true === $maintenance->CleanCache([1, 2, 3]);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
 }
