@@ -17,6 +17,9 @@ if (!defined('XOOPS_ROOT_PATH')) {
 if (!defined('XOOPS_VAR_PATH')) {
     define('XOOPS_VAR_PATH', __DIR__ . '/tmp/var');
 }
+if (!defined('XOOPS_TRUST_PATH')) {
+    define('XOOPS_TRUST_PATH', XOOPS_VAR_PATH);
+}
 
 // PSR-4 autoloader for the real upgrade classes under ../class/Xoops/Upgrade.
 $classDir = dirname(__DIR__) . '/class/Xoops/Upgrade';

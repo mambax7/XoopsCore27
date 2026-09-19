@@ -57,9 +57,6 @@ final class Upgrade270HelpersTest extends TestCase
     #[Test]
     public function cacheCleaningIsNotAPatchTask(): void
     {
-        if (!defined('XOOPS_TRUST_PATH')) {
-            define('XOOPS_TRUST_PATH', XOOPS_VAR_PATH);
-        }
         require_once dirname(__DIR__) . '/fixtures/XoopsMySQLDatabaseStub.php';
         $patch = new Upgrade_270(
             $this->createMock(XoopsMySQLDatabase::class),

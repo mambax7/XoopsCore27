@@ -161,6 +161,23 @@ final class Upgrade2511NotificationTest extends TestCase
     }
 
     #[Test]
+    public function checkFailsWhenDuplicateCanonicalRowsStandInForMissingOnes(): void
+    {
+        // Two disable rows and one PM row: three rows, all matching the
+        // canonical predicate, but only two DISTINCT option names. A
+        // matched-row count would read this as applied with the email
+        // option missing from the dropdown.
+        $this->rows = [[135], [3, 2]];
+        self::assertFalse($this->patch()->check_notificationmethod());
+        // The stub cannot run SQL, so pin the shape that yields the 2:
+        // distinct canonical names, not matched rows.
+        self::assertStringContainsString('COUNT(DISTINCT CASE WHEN', $this->queries[1]);
+        // ... and binary comparison, so collation cannot admit case or
+        // trailing-space variants as canonical.
+        self::assertStringContainsString('`confop_name` = BINARY ', $this->queries[1]);
+    }
+
+    #[Test]
     public function checkFailsWhenThePreferenceHasNoOptionsAtAll(): void
     {
         // No rows: COUNT(*) is 0 and SUM() is NULL.

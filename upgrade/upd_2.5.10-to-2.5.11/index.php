@@ -933,8 +933,11 @@ class Upgrade_2511 extends XoopsUpgrade
             . implode(
                 ' OR ',
                 array_map(
+                    // BINARY: a case-insensitive or PAD SPACE collation on the
+                    // column would let '_mi_...' or trailing-space variants
+                    // count as canonical.
                     fn(string $name, string $value): string => sprintf(
-                        '(`confop_name` = %s AND `confop_value` = %s)',
+                        '(`confop_name` = BINARY %s AND `confop_value` = BINARY %s)',
                         $this->db->quote($name),
                         $this->db->quote($value)
                     ),
@@ -944,9 +947,12 @@ class Upgrade_2511 extends XoopsUpgrade
             )
             . ')';
         // Both counts, one round trip: the total tells us nothing extra is
-        // present, the matched count tells us the three canonical rows are.
-        $sql = 'SELECT COUNT(*), SUM(' . $matchesCanonical . ') FROM `'
-            . $this->db->prefix('configoption') . '`'
+        // present, the DISTINCT name count tells us each canonical row is --
+        // counting matched ROWS would let duplicates of one option stand in
+        // for the missing ones (three PM rows also sum to 3).
+        $sql = 'SELECT COUNT(*),'
+            . ' COUNT(DISTINCT CASE WHEN ' . $matchesCanonical . ' THEN `confop_name` END)'
+            . ' FROM `' . $this->db->prefix('configoption') . '`'
             . ' WHERE `conf_id` = ' . $configId;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
