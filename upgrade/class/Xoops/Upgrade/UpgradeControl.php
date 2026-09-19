@@ -370,16 +370,28 @@ class UpgradeControl
     public function cleanCaches(): bool
     {
         $maintenanceFile = XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
-        if (!is_readable($maintenanceFile)) {
-            return false;
-        }
-
-        require_once $maintenanceFile;
         try {
+            if (!is_readable($maintenanceFile)) {
+                trigger_error(
+                    sprintf('Cache cleaning skipped: %s is not readable', basename($maintenanceFile)),
+                    E_USER_WARNING
+                );
+
+                return false;
+            }
+            // Inside the try: mid-upgrade the file can come from a mixed old/new
+            // file set, and a load-time ParseError must not take down the wizard.
+            require_once $maintenanceFile;
             $maintenance = new \SystemMaintenance();
 
             return true === $maintenance->CleanCache([1, 2, 3]);
-        } catch (\Throwable) {
+        } catch (\Throwable $error) {
+            // Type and basename only; no exception message, no server paths.
+            trigger_error(
+                sprintf('Cache cleaning failed loading %s: %s', basename($maintenanceFile), get_debug_type($error)),
+                E_USER_WARNING
+            );
+
             return false;
         }
     }

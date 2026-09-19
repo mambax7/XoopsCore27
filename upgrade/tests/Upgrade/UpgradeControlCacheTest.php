@@ -38,6 +38,20 @@ final class UpgradeControlCacheTest extends TestCase
         $control = new UpgradeControl($this->createMock(XoopsMySQLDatabase::class));
         // The upgrade test bootstrap sets XOOPS_ROOT_PATH to upgrade/tests,
         // which has no modules/system/class/maintenance.php.
-        self::assertFalse($control->cleanCaches());
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+
+            return true;
+        }, E_USER_WARNING);
+        try {
+            self::assertFalse($control->cleanCaches());
+        } finally {
+            restore_error_handler();
+        }
+        self::assertCount(1, $warnings);
+        // Basename only: the warning must not reveal the server layout.
+        self::assertStringContainsString('maintenance.php', $warnings[0]);
+        self::assertStringNotContainsString(XOOPS_ROOT_PATH, $warnings[0]);
     }
 }
