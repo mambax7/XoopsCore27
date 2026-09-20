@@ -73,6 +73,19 @@ final class WizardWebmasterGateTest extends TestCase
     }
 
     #[Test]
+    public function theWizardClearsCachesOncePerSessionInsteadOfAsAPatchTask(): void
+    {
+        $source = $this->source('index.php');
+        self::assertStringContainsString('cleanCaches()', $source);
+        self::assertStringContainsString("\$_SESSION['upgrade_cache_cleaned']", $source);
+        $webmasterGate = strpos($source, 'xoops_upgrade_user_is_webmaster($xoopsUser)');
+        $cleanCall     = strpos($source, 'cleanCaches()');
+        self::assertNotFalse($webmasterGate);
+        self::assertNotFalse($cleanCall);
+        self::assertGreaterThan($webmasterGate, $cleanCall, 'caches are cleared only after the webmaster gate');
+    }
+
+    #[Test]
     public function everyEntryPointUsesTheSharedCheckAndNotIsAdmin(): void
     {
         foreach (['index.php', 'preflight.php', 'login.php'] as $file) {

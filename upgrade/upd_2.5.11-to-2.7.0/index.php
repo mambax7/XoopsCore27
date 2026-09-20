@@ -29,7 +29,6 @@ use Xoops\Upgrade\UpgradeControl;
  * 10. deleteflashsanitizer   — Delete obsolete Flash text sanitizer plugin
  * 11. normalizeprofilefieldname   — Normalize profile_field.field_name column + unique index (prefix 64)
  * 12. normalizeprofileregstepsort — Normalize profile_regstep.sort index (step_name prefix 100)
- * 13. cleancache             — Clear compiled templates and cache files
  *
  * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -43,9 +42,6 @@ class Upgrade_270 extends XoopsUpgrade
 {
     /** @var string[] Paths to verify as writable/accessible during pre-flight */
     public array $pathsToCheck = [];
-
-    /** @var string Session key to track cache cleanup completion */
-    protected string $cleanCacheKey = 'cache-cleaned-270';
 
     /**
      * @var string Session key set when apply_normalizeprofilefieldname has
@@ -77,7 +73,6 @@ class Upgrade_270 extends XoopsUpgrade
             'deleteflashsanitizer',
             'normalizeprofilefieldname',
             'normalizeprofileregstepsort',
-            'cleancache',
         ];
         $this->usedFiles = [];
         $this->pathsToCheck = [
@@ -1025,46 +1020,6 @@ class Upgrade_270 extends XoopsUpgrade
         $sql = "ALTER TABLE `{$table}` ADD KEY `sort` (`step_order`, `step_name`(100)) USING BTREE";
 
         return $this->execOrFail($sql);
-    }
-
-    // =========================================================================
-    // Task 13: cleancache — Clear compiled templates and cache files
-    // =========================================================================
-
-    /**
-     * Check if cache has already been cleaned during this upgrade session.
-     *
-     * @return bool true if cache was already cleaned (no action needed)
-     */
-    public function check_cleancache(): bool
-    {
-        return isset($_SESSION[$this->cleanCacheKey])
-            && true === $_SESSION[$this->cleanCacheKey];
-    }
-
-    /**
-     * Clear compiled Smarty templates and module caches.
-     *
-     * Uses SystemMaintenance::CleanCache() with folder IDs:
-     *   1 = Smarty cache, 2 = compiled templates, 3 = xoops_cache
-     *
-     * @return bool true on success
-     */
-    public function apply_cleancache(): bool
-    {
-        require_once XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
-        try {
-            $maintenance = new \SystemMaintenance();
-            $result = $maintenance->CleanCache([1, 2, 3]);
-            if (true === $result) {
-                $_SESSION[$this->cleanCacheKey] = true;
-            }
-            return $result;
-        } catch (\Throwable $e) {
-            $this->logs[] = 'Failed to clean cache: ' . $this->sanitizeLogMessage($e->getMessage());
-
-            return false;
-        }
     }
 
     // =========================================================================

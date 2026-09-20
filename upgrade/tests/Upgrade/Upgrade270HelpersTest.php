@@ -17,7 +17,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use Upgrade_270;
+use Xoops\Upgrade\UpgradeControl;
 use Xoops\Upgrade\XoopsUpgrade;
+use XoopsMySQLDatabase;
 
 require_once dirname(__DIR__, 2) . '/upd_2.5.11-to-2.7.0/index.php';
 
@@ -50,5 +52,16 @@ final class Upgrade270HelpersTest extends TestCase
                 'rmdir(/var/www/html/xoops_data/caches/smarty_cache): Directory not empty'
             )
         );
+    }
+
+    #[Test]
+    public function cacheCleaningIsNotAPatchTask(): void
+    {
+        require_once dirname(__DIR__) . '/fixtures/XoopsMySQLDatabaseStub.php';
+        $patch = new Upgrade_270(
+            $this->createMock(XoopsMySQLDatabase::class),
+            $this->createMock(UpgradeControl::class),
+        );
+        self::assertNotContains('cleancache', $patch->tasks);
     }
 }

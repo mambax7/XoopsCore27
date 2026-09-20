@@ -39,7 +39,6 @@ class Upgrade_2511 extends XoopsUpgrade
     {
         parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = [
-            'cleancache',
             'bannerintsize',
             'captchadata',
             'configkey',
@@ -81,37 +80,21 @@ class Upgrade_2511 extends XoopsUpgrade
         $this->usedFiles = array_merge($this->usedFiles, $this->pathsToCheck);
     }
 
-    protected $cleanCacheKey = 'cache-cleaned';
-
     /**
-     * We must remove stale template caches and compiles
+     * Language-constant names a fresh install stores for default_notification.
      *
-     * @return bool true if patch IS applied, false if NOT applied
-     */
-    public function check_cleancache(): bool
-    {
-        if (!array_key_exists($this->cleanCacheKey, $_SESSION)
-            || false === $_SESSION[$this->cleanCacheKey]) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Remove  all caches and compiles
+     * Older upgrades wrote the translated labels ("Temporarily disable") instead.
+     * The check looks for these names; apply_notificationmethod replaces any
+     * existing options for the preference so a later System-module update does
+     * not leave both sets in the table.
      *
-     * @return bool true if applied, false if failed
+     * @var array<string, string>
      */
-    public function apply_cleancache(): bool
-    {
-        require_once XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
-        $maintenance = new SystemMaintenance();
-        $result  = $maintenance->CleanCache([1, 2, 3]);
-        if (true === $result) {
-            $_SESSION[$this->cleanCacheKey] = true;
-        }
-        return $result;
-    }
+    private const NOTIFICATION_OPTIONS = [
+        '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE' => '0',
+        '_MI_DEFAULT_NOTIFICATION_METHOD_PM'      => '1',
+        '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL'   => '2',
+    ];
 
     /**
      * Determine if columns are declared mediumint, and if
@@ -923,8 +906,15 @@ class Upgrade_2511 extends XoopsUpgrade
     }
 
     /**
-     * Check if default notification method already exists
+     * Check that default_notification carries exactly the canonical options.
      *
+     * The preference must hold the three language-constant rows and nothing
+     * else. A site that ran the earlier version of apply_notificationmethod()
+     * has six rows -- the three constants INSERTed beside the three translated
+     * labels already there -- and counting only the matches would report that
+     * as applied, leaving the stale labels in the preferences dropdown for good.
+     *
+     * @return bool true if patch IS applied, false if NOT applied
      */
     public function check_notificationmethod(): bool
     {
@@ -939,34 +929,43 @@ class Upgrade_2511 extends XoopsUpgrade
         }
 
         $configId = (int) $row[0];
-        $expectedOptions = [
-            '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE' => '0',
-            '_MI_DEFAULT_NOTIFICATION_METHOD_PM'      => '1',
-            '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL'   => '2',
-        ];
-        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('configoption') . '`'
-            . ' WHERE `conf_id` = ' . $configId
-            . ' AND ('
+        $matchesCanonical = '('
             . implode(
                 ' OR ',
                 array_map(
+                    // BINARY: a case-insensitive or PAD SPACE collation on the
+                    // column would let '_mi_...' or trailing-space variants
+                    // count as canonical.
                     fn(string $name, string $value): string => sprintf(
-                        '(`confop_name` = %s AND `confop_value` = %s)',
+                        '(`confop_name` = BINARY %s AND `confop_value` = BINARY %s)',
                         $this->db->quote($name),
                         $this->db->quote($value)
                     ),
-                    array_keys($expectedOptions),
-                    $expectedOptions
+                    array_keys(self::NOTIFICATION_OPTIONS),
+                    self::NOTIFICATION_OPTIONS
                 )
             )
             . ')';
+        // Both counts, one round trip: the total tells us nothing extra is
+        // present, the DISTINCT name count tells us each canonical row is --
+        // counting matched ROWS would let duplicates of one option stand in
+        // for the missing ones (three PM rows also sum to 3).
+        $sql = 'SELECT COUNT(*),'
+            . ' COUNT(DISTINCT CASE WHEN ' . $matchesCanonical . ' THEN `confop_name` END)'
+            . ' FROM `' . $this->db->prefix('configoption') . '`'
+            . ' WHERE `conf_id` = ' . $configId;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
         $row = $this->db->fetchRow($result);
+        if (!$row) {
+            return false;
+        }
 
-        return $row && count($expectedOptions) === (int) $row[0];
+        $expected = count(self::NOTIFICATION_OPTIONS);
+
+        return $expected === (int) $row[0] && $expected === (int) $row[1];
     }
 
     /**
@@ -974,16 +973,14 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_notificationmethod(): bool
     {
-        $expectedOptions = [
-            '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE' => '0',
-            '_MI_DEFAULT_NOTIFICATION_METHOD_PM'      => '1',
-            '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL'   => '2',
-        ];
         $sql    = 'SELECT `conf_id` FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification' LIMIT 1";
         $result = $this->db->query($sql);
-        $row    = ($this->db->isResultSet($result) && ($result instanceof \mysqli_result))
-            ? $this->db->fetchRow($result)
-            : false;
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logEscaped('Unable to read the default_notification configuration row.');
+
+            return false;
+        }
+        $row = $this->db->fetchRow($result);
 
         if (!$row) {
             $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'default_notification', '_MD_AM_DEFAULT_NOTIFICATION_METHOD', '1', '_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'select', 'int', 3)";
@@ -992,27 +989,29 @@ class Upgrade_2511 extends XoopsUpgrade
                 return false;
             }
             $configId = (int) $this->db->getInsertId();
+            if ($configId <= 0) {
+                $this->logEscaped('Failed to resolve default_notification config id after insert.');
+
+                return false;
+            }
         } else {
             $configId = (int) $row[0];
         }
 
-        foreach ($expectedOptions as $name => $value) {
-            $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('configoption') . '`'
-                . ' WHERE `conf_id` = ' . $configId
-                . ' AND `confop_name` = ' . $this->db->quote($name)
-                . ' AND `confop_value` = ' . $this->db->quote($value);
-            $result = $this->db->query($sql);
-            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+        // Older upgrades stored the translated labels. Delete whatever is
+        // there, then insert the language-constant names a fresh install has,
+        // so this task is idempotent and check_notificationmethod can pass.
+        $sql = 'DELETE FROM `' . $this->db->prefix('configoption') . '` WHERE `conf_id` = ' . $configId;
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
+
+        foreach (self::NOTIFICATION_OPTIONS as $name => $value) {
+            $sql = 'INSERT INTO ' . $this->db->prefix('configoption')
+                . ' (confop_id, confop_name, confop_value, conf_id) VALUES'
+                . ' (NULL, ' . $this->db->quote($name) . ', ' . $this->db->quote($value) . ', ' . $configId . ')';
+            if (!$this->execOrFail($sql)) {
                 return false;
-            }
-            $row = $this->db->fetchRow($result);
-            if (!$row || 0 === (int) $row[0]) {
-                $sql = 'INSERT INTO ' . $this->db->prefix('configoption')
-                    . ' (confop_id, confop_name, confop_value, conf_id) VALUES'
-                    . ' (NULL, ' . $this->db->quote($name) . ', ' . $this->db->quote($value) . ', ' . $configId . ')';
-                if (!$this->execOrFail($sql)) {
-                    return false;
-                }
             }
         }
 
