@@ -45,6 +45,22 @@ Below are language differences from a version to next version.
 /htdocs/modules/system/themes/transition/language/english/admin.php
 - added define('_OXYGEN_EDITORS', 'Editors');
 
+/upgrade/language/english/upd_2.7.3-to-2.7.4.php (new file)
+- added define('_XOOPS_UPGRADE_274_2FA_TABLE_CHECK', 'Could not read information_schema to check for the user_2fa table');
+- added define('_XOOPS_UPGRADE_274_2FA_TABLE_NOT_CREATED', 'Could not read information_schema; the user_2fa table was not created');
+- added define('_XOOPS_UPGRADE_274_MODE_CHECK', 'Could not read the config table to check for the twofactor_mode preference');
+- added define('_XOOPS_UPGRADE_274_MODE_OPTIONS_CHECK', 'Could not read the configoption table to check the twofactor_mode options');
+- added define('_XOOPS_UPGRADE_274_MODE_NOT_INSERTED', 'Could not read the config table; the twofactor_mode preference was not inserted');
+- added define('_XOOPS_UPGRADE_274_MODE_NOT_FOUND', 'The twofactor_mode preference row was not found after it was inserted');
+- added define('_XOOPS_UPGRADE_274_MODE_OPTIONS_NOT_INSERTED', 'Could not read the configoption table; the twofactor_mode options were not inserted');
+- added define('_XOOPS_UPGRADE_274_EMOTICONS_CHECK', 'Could not read the smiles table to check the SCEditor emoticons');
+- added define('_XOOPS_UPGRADE_274_EDITORS_CHECK', 'The Editors preferences could not be checked');
+- added define('_XOOPS_UPGRADE_274_EDITORS_NOT_INSERTED', 'The Editors preferences were not inserted');
+- added define('_XOOPS_UPGRADE_274_EDITORS_OPTION_PARENT', 'Could not find the %s preference for its options');
+- added define('_XOOPS_UPGRADE_274_EDITORS_CATEGORY_TAKEN', 'Preference category %d is already used by another category; the Editors preferences need that ID');
+- added define('_XOOPS_UPGRADE_274_LOCK_ACQUIRE', 'Could not acquire the %s migration lock; retry the upgrade');
+- added define('_XOOPS_UPGRADE_274_LOCK_RELEASE', 'Could not release the %s migration lock');
+
 ================================
 2026/09: Version 2.7.4-Beta2
 ================================
