@@ -19,7 +19,7 @@ Core:
 - MyTextSanitizer renders the tags SCEditor's toolbar writes: [sub], [sup], [s], [justify], [hr], [ol] and [table]/[tr]/[th]/[td] (#218)
 - turn the mp3 sanitizer extension on by default so SCEditor's mp3 button is offered; an upgraded site keeps its own xoops_data/configs/textsanitizer/config.php, where 'mp3' => 1 has to be set by hand to get the button (class/textsanitizer/config.dist.php) (#218)
 - show the XOOPS version in the System Info panel of the Modern admin theme dashboard (#213)
-- move the 2.7.3 to 2.7.4 upgrade patch's messages into upgrade/language/english/upd_2.7.3-to-2.7.4.php, which the patch already asked the wizard to load, so the wizard can show them translated (new _XOOPS_UPGRADE_274_* constants, see docs/lang_diff.txt)
+- move the 2.7.3 to 2.7.4 upgrade patch's messages into upgrade/language/english/upd_2.7.3-to-2.7.4.php, which the patch already asked the wizard to load, so the wizard can show them translated (new _XOOPS_UPGRADE_274_* constants, see docs/lang_diff.txt) (#223)
 - normalize quoting in the English language files; no text changes (#222)
 
 Database:
