@@ -227,8 +227,13 @@ switch ($op) {
                 // A refused delete (tokens, memberships or the row) does not
                 // always leave an error on the object; say what failed.
                 $errors = $obj->getErrors();
-                // A translated pack that predates this constant leaves it undefined.
-                $failed = defined('_PROFILE_AM_DELETEFAILED') ? _PROFILE_AM_DELETEFAILED : 'Deleting %s failed; the account was not removed';
+                // A translated pack may predate this constant, or carry the
+                // _PROFILE_AM_DELETEFAILED name that 2.7.4-Beta2 shipped.
+                $failed = match (true) {
+                    defined('_PROFILE_AM_DELETE_FAILED') => _PROFILE_AM_DELETE_FAILED,
+                    defined('_PROFILE_AM_DELETEFAILED')  => constant('_PROFILE_AM_DELETEFAILED'),
+                    default                              => 'Deleting %s failed; the account was not removed',
+                };
                 xoops_error([] === $errors ? sprintf($failed, (string) $obj->getVar('uname')) : $errors);
             } elseif ($profile && !$profile->isNew() && !$profile_handler->delete($profile)) {
                 echo $profile->getHtmlErrors();

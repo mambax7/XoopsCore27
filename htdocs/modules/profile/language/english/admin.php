@@ -9,7 +9,6 @@ define('_PROFILE_AM_CATEGORY', 'Category');
 define('_PROFILE_AM_STEP', 'Step');
 define('_PROFILE_AM_SAVEDSUCCESS', '%s saved successfully');
 define('_PROFILE_AM_DELETEDSUCCESS', '%s deleted successfully');
-define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed; the account was not removed');
 define('_PROFILE_AM_RUSUREDEL', 'Are you sure you want to delete %s');
 define('_PROFILE_AM_FIELDNOTCONFIGURABLE', 'The field is not configurable.');
 define('_PROFILE_AM_ADD', 'Add %s');
@@ -106,3 +105,6 @@ define('_PROFILE_AM_SAVESTEP_TOGGLE_FAILED', "Changing 'Save After Step' Failed"
 define('_PROFILE_AM_CANNOTDEACTIVATEWEBMASTERS', 'You cannot deactivate Webmaster account');
 //XOOPS 2.5.11
 define('_PROFILE_AM_EDIT_OPTION_STRINGS', 'Edit option strings');
+
+// 2.7.4
+define('_PROFILE_AM_DELETE_FAILED', 'Deleting %s failed; the account was not removed');
