@@ -417,7 +417,7 @@ $modversion['config'][$i]['title']       = '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR'
 $modversion['config'][$i]['description'] = '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR_DSC';
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'text';
-$modversion['config'][$i]['default']     = 'dhtmltextarea';
+$modversion['config'][$i]['default']     = 'sceditor';
 $modversion['config'][$i]['options']     = $editors;
 $modversion['config'][$i]['category']    = 'global';
 ++$i;
@@ -426,7 +426,7 @@ $modversion['config'][$i]['title']       = '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITO
 $modversion['config'][$i]['description'] = '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITOR_DSC';
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'text';
-$modversion['config'][$i]['default']     = 'dhtmltextarea';
+$modversion['config'][$i]['default']     = 'sceditor';
 $modversion['config'][$i]['options']     = $editors;
 $modversion['config'][$i]['category']    = 'global';
 ++$i;
@@ -435,7 +435,7 @@ $modversion['config'][$i]['title']       = '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR
 $modversion['config'][$i]['description'] = '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR_DSC';
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'text';
-$modversion['config'][$i]['default']     = 'dhtmltextarea';
+$modversion['config'][$i]['default']     = 'sceditor';
 $modversion['config'][$i]['options']     = $editors;
 $modversion['config'][$i]['category']    = 'global';
 ++$i;

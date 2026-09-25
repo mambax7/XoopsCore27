@@ -200,14 +200,9 @@ switch ($op) {
 
         $xoopsTpl->assign('imgcat_itemlimit', ($xoopsUser instanceof \XoopsUser && $xoopsUser->isAdmin()) ? 0 : 2);
 
-        $payload = [
-            'aud' => 'ajaxfineupload.php',
-            'cat' => $imgcat_id,
-            'uid' => $xoopsUser instanceof \XoopsUser ? $xoopsUser->id() : 0,
-            'handler' => 'fineimuploadhandler',
-            'moddir' => 'system',
-        ];
-        $jwt = \Xmf\Jwt\TokenFactory::build('fineuploader', $payload, 60 * 30); // token good for 30 minutes
+        XoopsLoad::load('fineuploadhandler', 'system');
+        XoopsLoad::load('fineimuploadhandler', 'system');
+        $jwt = SystemFineImUploadHandler::uploadToken($imgcat_id, $xoopsUser instanceof \XoopsUser ? $xoopsUser->id() : 0);
         $xoopsTpl->assign('jwt', $jwt);
         $fineup_debug = 'false';
         if (($xoopsUser instanceof \XoopsUser ? $xoopsUser->isAdmin() : false)

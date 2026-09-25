@@ -6,6 +6,12 @@ Below are language differences from a version to next version.
 ================================
 2026/09: Version 2.7.4-Beta2
 ================================
+/htdocs/class/xoopseditor/sceditor/language/english.php
+- added define('_XOOPS_EDITOR_SCEDITOR_MP3', 'MP3 audio');
+- added define('_XOOPS_EDITOR_SCEDITOR_MP3_PROMPT', 'MP3 URL (https://.../file.mp3):');
+- added define('_XOOPS_EDITOR_SCEDITOR_UPLOAD_FAILED', 'The image could not be uploaded:');
+- added define('_XOOPS_EDITOR_SCEDITOR_UPLOAD_TOOBIG', 'The image is larger than this image category allows.');
+
 /htdocs/modules/profile/language/english/admin.php
 - added define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed; the account was not removed');
 
@@ -14,6 +20,34 @@ Below are language differences from a version to next version.
 - added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol an authenticator app or e-mail codes, and challenges members who have enrolled.');
 - added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
 - added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
+- added define('_MD_AM_EDITORS', 'Editors');
+- added define('_MD_AM_SCEDITOR_TOOLBAR', 'SCEditor toolbar buttons');
+- added define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it. The mp3 button only appears while the mp3 extension is on in the textsanitizer config.php (xoops_data/configs/textsanitizer/).');
+- added define('_MD_AM_SCEDITOR_PLUGINS', 'SCEditor plugins');
+- added define('_MD_AM_SCEDITOR_PLUGINSDSC', 'Optional SCEditor plugins to load: autosave (restores unsent text), autoyoutube (turns pasted YouTube links into videos), plaintext (paste as plain text), undo (undo/redo history).');
+- added define('_MD_AM_SCEDITOR_EMOTICONS', 'Enable emoticons in SCEditor?');
+- added define('_MD_AM_SCEDITOR_EMOTICONSDSC', 'Shows the emoticon button and turns smiley codes into images while typing. The smileys come from System > Smilies.');
+- added define('_MD_AM_SCEDITOR_RESIZE', 'Allow resizing SCEditor?');
+- added define('_MD_AM_SCEDITOR_RESIZEDSC', 'Lets users drag the lower edge to resize the editor.');
+- added define('_MD_AM_SCEDITOR_AUTOEXPAND', 'Grow SCEditor with its content?');
+- added define('_MD_AM_SCEDITOR_AUTOEXPANDDSC', 'Makes the editor taller automatically as the text grows.');
+- added define('_MD_AM_SCEDITOR_SPELLCHECK', 'Enable spellcheck in SCEditor?');
+- added define('_MD_AM_SCEDITOR_SPELLCHECKDSC', 'Uses the browser spellchecker while typing.');
+- added define('_MD_AM_SCEDITOR_WIDTH', 'SCEditor width');
+- added define('_MD_AM_SCEDITOR_WIDTHDSC', 'Default width, for example 100% or 600px. A module that sets its own width keeps it.');
+- added define('_MD_AM_SCEDITOR_HEIGHT', 'SCEditor height');
+- added define('_MD_AM_SCEDITOR_HEIGHTDSC', 'Default height, for example 400px. A module that sets its own height keeps it.');
+- added define('_MD_AM_SCEDITOR_DRAGDROPCAT', 'SCEditor image drop category');
+- added define('_MD_AM_SCEDITOR_DRAGDROPCATDSC', 'ID of the image category that receives images dropped or pasted into the editor (see System > Images). 0 turns this off. Only logged-in users who may upload to that category can drop images.');
+
+/htdocs/modules/system/themes/dark/language/english/admin.php
+- added define('_OXYGEN_EDITORS', 'Editors');
+
+/htdocs/modules/system/themes/default/language/english/admin.php
+- added define('_OXYGEN_EDITORS', 'Editors');
+
+/htdocs/modules/system/themes/transition/language/english/admin.php
+- added define('_OXYGEN_EDITORS', 'Editors');
 
 /htdocs/language/english/user2fa.php (new file)
 - added define('_US_2FA_HTTP_LOGIN', 'This popup cannot complete a two-factor login over HTTP because your password would be sent without encryption. Use the site login instead, or ask the administrator to enable HTTPS for the site.');

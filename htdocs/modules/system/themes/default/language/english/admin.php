@@ -36,6 +36,7 @@ define('_OXYGEN_CENSOR', 'Word Censoring Options');
 define('_OXYGEN_SEARCH', 'Search Options');
 define('_OXYGEN_MAILER', 'Email Setup');
 define('_OXYGEN_AUTHENTICATION', 'Authentication Options');
+define('_OXYGEN_EDITORS', 'Editors');
 define('_OXYGEN_MODULESETTINGS', 'System Module Settings');
 //Add for styles name
 define('_OXYGEN_SILVER', 'Silver');

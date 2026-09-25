@@ -39,3 +39,7 @@ define('_XOOPS_EDITOR_SCEDITOR_WIDTH_PROMPT', 'Width:');
 define('_XOOPS_EDITOR_SCEDITOR_HEIGHT_PROMPT', 'Height:');
 define('_XOOPS_EDITOR_SCEDITOR_WIKI', 'Wiki link');
 define('_XOOPS_EDITOR_SCEDITOR_WIKI_PROMPT', 'Wiki page:');
+define('_XOOPS_EDITOR_SCEDITOR_MP3', 'MP3 audio');
+define('_XOOPS_EDITOR_SCEDITOR_MP3_PROMPT', 'MP3 URL (https://.../file.mp3):');
+define('_XOOPS_EDITOR_SCEDITOR_UPLOAD_FAILED', 'The image could not be uploaded:');
+define('_XOOPS_EDITOR_SCEDITOR_UPLOAD_TOOBIG', 'The image is larger than this image category allows.');

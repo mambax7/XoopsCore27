@@ -59,12 +59,14 @@ switch ($op) {
         if (!is_object($confcat)) {
             redirect_header('admin.php?fct=preferences', 1);
         }
-        $xoBreadCrumb->addLink(constant($confcat->getVar('confcat_name')));
+        $confcatName  = (string) $confcat->getVar('confcat_name');
+        $confcatTitle = defined($confcatName) ? (string) constant($confcatName) : htmlspecialchars($confcatName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $xoBreadCrumb->addLink($confcatTitle);
         $xoBreadCrumb->addHelp(system_adminVersion('preferences', 'help'));
         $xoBreadCrumb->render();
         $xoopsTpl->assign('breadcrumb', 1);
 
-        $form           = new XoopsThemeForm(constant($confcat->getVar('confcat_name')), 'pref_form', 'admin.php?fct=preferences', 'post', true);
+        $form           = new XoopsThemeForm($confcatTitle, 'pref_form', 'admin.php?fct=preferences', 'post', true);
         /** @var XoopsConfigHandler $config_handler */
         $config_handler = xoops_getHandler('config');
         $criteria       = new CriteriaCompo();
@@ -570,7 +572,8 @@ switch ($op) {
         foreach (array_keys($confcats) as $i) {
             $preferences['id']    = $confcats[$i]->getVar('confcat_id');
             $preferences['image'] = system_AdminIcons('xoops/' . $image[$i]);
-            $preferences['name']  = constant($confcats[$i]->getVar('confcat_name'));
+            $confcatName          = (string) $confcats[$i]->getVar('confcat_name');
+            $preferences['name']  = defined($confcatName) ? constant($confcatName) : htmlspecialchars($confcatName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             ++$count_prefs;
             $preferences['newline'] = ($count_prefs % $nbcolonnes_pref == 1);// ? true : false;
             $xoopsTpl->assign('newline', $preferences['newline']);

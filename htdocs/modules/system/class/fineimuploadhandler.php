@@ -46,13 +46,98 @@ class SystemFineImUploadHandler extends SystemFineUploadHandler
         parent::__construct($claims);
         $this->allowedMimeTypes = ['image/gif', 'image/jpeg', 'image/png'];
         $this->allowedExtensions = ['gif', 'jpeg', 'jpg', 'png'];
+
+        // The category's byte limit used to reach only the client-side widget.
+        // Cap it at what PHP itself accepts, so a category limit above the
+        // php.ini limits does not make handleUpload() refuse every file.
+        $imgcat = $this->category();
+        $maxSize = (null === $imgcat) ? 0 : (int) $imgcat->getVar('imgcat_maxsize');
+        if ($maxSize > 0) {
+            foreach (['upload_max_filesize', 'post_max_size'] as $ini) {
+                $value = trim((string) ini_get($ini));
+                $bytes = ('' === $value) ? 0 : (int) $this->toBytes($value);
+                if ($bytes > 0) {
+                    $maxSize = min($maxSize, $bytes);
+                }
+            }
+            $this->sizeLimit = $maxSize;
+        }
+    }
+
+    /**
+     * Mint the ajaxfineupload.php token that routes an upload to this handler.
+     * Every caller uses this, so the claims cannot drift apart. The caller must
+     * already have checked imgcat_write for the category.
+     *
+     * @param int $imgcatId target image category
+     * @param int $uid      current user id, 0 for anonymous
+     * @return string JWT, valid for 30 minutes
+     *
+     * @throws \DomainException          propagated from TokenFactory::build()
+     * @throws \InvalidArgumentException propagated from TokenFactory::build()
+     * @throws \UnexpectedValueException propagated from TokenFactory::build()
+     */
+    public static function uploadToken(int $imgcatId, int $uid): string
+    {
+        $payload = [
+            'aud'     => 'ajaxfineupload.php',
+            'cat'     => $imgcatId,
+            'uid'     => $uid,
+            'handler' => 'fineimuploadhandler',
+            'moddir'  => 'system',
+        ];
+
+        return \Xmf\Jwt\TokenFactory::build('fineuploader', $payload, 60 * 30);
+    }
+
+    /**
+     * The image category named in the token claims.
+     *
+     * @return XoopsImagecategory|null null when the category does not exist
+     */
+    protected function category(): ?XoopsImagecategory
+    {
+        /** @var XoopsImagecategoryHandler $imgcatHandler */
+        $imgcatHandler = xoops_getHandler('imagecategory');
+        $imgcat = $imgcatHandler->get((int) ($this->claims->cat ?? 0));
+
+        return $imgcat ?: null;
+    }
+
+    /**
+     * Check an uploaded file against the category's pixel limits. A limit of 0
+     * means no limit.
+     *
+     * @param string             $file   path of the uploaded temp file
+     * @param XoopsImagecategory $imgcat target category
+     * @return string|null error message, or null when the image is acceptable
+     */
+    protected function dimensionError(string $file, XoopsImagecategory $imgcat): ?string
+    {
+        $size = getimagesize($file);
+        if (false === $size) {
+            return 'File is of an invalid type.';
+        }
+        $maxWidth  = (int) $imgcat->getVar('imgcat_maxwidth');
+        $maxHeight = (int) $imgcat->getVar('imgcat_maxheight');
+        if (($maxWidth > 0 && $size[0] > $maxWidth) || ($maxHeight > 0 && $size[1] > $maxHeight)) {
+            return sprintf('Image is too large. The limit is %d x %d pixels.', $maxWidth, $maxHeight);
+        }
+
+        return null;
     }
 
     protected function storeUploadedFile($target, $mimeType, $uuid)
     {
-        /** @var XoopsImagecategoryHandler */
-        $imgcatHandler = xoops_getHandler('imagecategory');
-        $imgcat = $imgcatHandler->get($this->claims->cat);
+        $imgcat = $this->category();
+        if (null === $imgcat) {
+            return ['error' => 'Invalid image category.', 'preventRetry' => true];
+        }
+
+        $dimensionError = $this->dimensionError((string) $_FILES[$this->inputName]['tmp_name'], $imgcat);
+        if (null !== $dimensionError) {
+            return ['error' => $dimensionError, 'preventRetry' => true];
+        }
 
         $pathParts = pathinfo((string) $this->getName());
 
@@ -89,6 +174,11 @@ class SystemFineImUploadHandler extends SystemFineUploadHandler
                 'error' => sprintf(_FAILSAVEIMG, $image->getVar('image_nicename')),
             ];
         }
-        return ['success' => true, "uuid" => $uuid];
+        return [
+            'success'  => true,
+            'uuid'     => $uuid,
+            'image_id' => (int) $image->getVar('image_id'),
+            'name'     => $imageNicename,
+        ];
     }
 }

@@ -63,12 +63,30 @@ class XoopsFormSelectEditor extends XoopsFormElementTray
         xoops_load('XoopsEditorHandler');
         $editor_handler                  = XoopsEditorHandler::getInstance();
         $editor_handler->allowed_editors = $this->allowed_editors;
-        $option_select                   = new XoopsFormSelect('', $this->name, $this->value);
+        $editors = $editor_handler->getList($this->nohtml);
+        $value = $this->value;
+        if (isset($editors['easymde'])) {
+            require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
+            foreach ($this->form->getElements(true) as $element) {
+                $editor = $element instanceof XoopsFormEditor ? $element->editor : $element;
+                if ($element instanceof XoopsFormDhtmlTextArea) {
+                    $editor = $element->htmlEditor;
+                }
+                if ($editor instanceof FormEasyMDE && XoopsMarkdown::source((string) $editor->getValue()) !== null) {
+                    // Switching editors is not a format conversion. Keep the
+                    // selector consistent with the source-protecting factory.
+                    $value = 'easymde';
+                    $editors = ['easymde' => $editors['easymde']];
+                    break;
+                }
+            }
+        }
+        $option_select = new XoopsFormSelect('', $this->name, $value);
         $extra                           = 'onchange="if (this.options[this.selectedIndex].value.length > 0) {
             window.document.forms.' . $this->form->getName() . '.submit();
             }"';
         $option_select->setExtra($extra);
-        $option_select->addOptionArray($editor_handler->getList($this->nohtml));
+        $option_select->addOptionArray($editors);
         $this->addElement($option_select);
 
         return parent::render();

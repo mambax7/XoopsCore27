@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2c62ffb9156618f97fa3f0ff81ea9597",
+    "content-hash": "52a73afb7f8b8c8deacc449f072c8ffe",
     "packages": [
         {
             "name": "boenrobot/money_format_polyfill",

@@ -24,7 +24,7 @@ return $config = [
         'image' => 1,
         'flash' => 0,
         'youtube' => 1,
-        'mp3' => 0,
+        'mp3' => 1, // on since 2.7.4: SCEditor's mp3 button needs it
         'wmp' => 0,
         // If other module is used, please modify the following detection and 'link' in /wiki/config.php
         'wiki' => is_dir(XOOPS_ROOT_PATH . '/modules/mediawiki/'),

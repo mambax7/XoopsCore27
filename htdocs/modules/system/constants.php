@@ -41,6 +41,7 @@ define('SYSTEM_CAT_WORD', 3);
 define('SYSTEM_CAT_SEARCH', 4);
 define('SYSTEM_CAT_MAIL', 5);
 define('SYSTEM_CAT_AUTH', 6);
+define('SYSTEM_CAT_EDITOR', 7);
 
 //2.7.0
 // Menus

@@ -39,3 +39,4 @@ $modversion['configcat'][SYSTEM_CAT_WORD]   = 'system_word.png';
 $modversion['configcat'][SYSTEM_CAT_SEARCH] = 'system_search.png';
 $modversion['configcat'][SYSTEM_CAT_MAIL]   = 'system_mail.png';
 $modversion['configcat'][SYSTEM_CAT_AUTH]   = 'system_auth.png';
+$modversion['configcat'][SYSTEM_CAT_EDITOR] = 'system_mods.png';

@@ -464,9 +464,9 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('config', $cfgCols . " VALUES (123, 1, 0, 'userranks_pager', '_MI_SYSTEM_PREFERENCE_USERRANKS_PAGER', '20', '', 'textbox', 'int', 270)");
     $dbm->insert('config', $cfgCols . " VALUES (124, 1, 0, 'users_pager', '_MI_SYSTEM_PREFERENCE_USERS_PAGER', '20', '', 'textbox', 'int', 280)");
     $dbm->insert('config', $cfgCols . " VALUES (125, 1, 0, 'break4', '_MI_SYSTEM_PREFERENCE_BREAK_EDITOR', 'head', '', 'line_break', 'textbox', 290)");
-    $dbm->insert('config', $cfgCols . " VALUES (126, 1, 0, 'blocks_editor', '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR', 'dhtmltextarea', '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR_DSC', 'select', 'text', 300)");
-    $dbm->insert('config', $cfgCols . " VALUES (127, 1, 0, 'comments_editor', '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITOR', 'dhtmltextarea', '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITOR_DSC', 'select', 'text', 310)");
-    $dbm->insert('config', $cfgCols . " VALUES (128, 1, 0, 'general_editor', '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR', 'dhtmltextarea', '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR_DSC', 'select', 'text', 320)");
+    $dbm->insert('config', $cfgCols . " VALUES (126, 1, 0, 'blocks_editor', '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR', 'sceditor', '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR_DSC', 'select', 'text', 300)");
+    $dbm->insert('config', $cfgCols . " VALUES (127, 1, 0, 'comments_editor', '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITOR', 'sceditor', '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITOR_DSC', 'select', 'text', 310)");
+    $dbm->insert('config', $cfgCols . " VALUES (128, 1, 0, 'general_editor', '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR', 'sceditor', '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR_DSC', 'select', 'text', 320)");
     $dbm->insert('config', $cfgCols . " VALUES (129, 1, 0, 'redirect', '_MI_SYSTEM_PREFERENCE_REDIRECT', 'admin.php?fct=preferences', '', 'hidden', 'text', 330)");
     $dbm->insert('config', $cfgCols . " VALUES (130, 1, 0, 'com_anonpost', '_MI_SYSTEM_PREFERENCE_ANONPOST', '', '', 'hidden', 'text', 340)");
     $dbm->insert('config', $cfgCols . " VALUES (131, 1, 0, 'jquery_theme', '_MI_SYSTEM_PREFERENCE_JQUERY_THEME', 'base', '', 'select', 'text', 35)");
@@ -530,6 +530,35 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     ++$conf;
     $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional', 140)");
     ++$conf;
+
+    // Editors preferences (category 8, conf_id 141+): SCEditorConfig is the single
+    // definition, shared with the 2.7.4 upgrade and the editor itself.
+    require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
+    $confId = 141;
+    foreach (SCEditorConfig::items() as $name => $item) {
+        if (false === $dbm->insert('config', $cfgCols . ' VALUES (' . $confId . ', 0, ' . SCEditorConfig::CATEGORY . ", '" . $name . "', '"
+            . $item['title'] . "', '" . addslashes($item['value']) . "', '" . $item['desc'] . "', '"
+            . $item['formtype'] . "', '" . $item['valuetype'] . "', " . $item['order'] . ')')) {
+            trigger_error(sprintf('Failed to seed editor preference "%s" during install.', $name), E_USER_WARNING);
+            return false;
+        }
+        foreach ($item['options'] as $option) {
+            if (false === $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '" . $option . "', '" . $option . "', $confId)")) {
+                trigger_error(sprintf('Failed to seed editor preference option "%s" during install.', $option), E_USER_WARNING);
+                return false;
+            }
+            ++$conf;
+        }
+        ++$confId;
+    }
+
+    // SCEditor's emoticons as regular smileys. Optional content: a failure (for
+    // example an unwritable uploads/smilies) is reported but does not stop the install.
+    require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+    $emoticonLogs = [];
+    if (!SCEditorEmoticons::install($dbm->db, $emoticonLogs)) {
+        trigger_error('SCEditor emoticons: ' . implode('; ', $emoticonLogs), E_USER_WARNING);
+    }
 
     return $groups;
 }

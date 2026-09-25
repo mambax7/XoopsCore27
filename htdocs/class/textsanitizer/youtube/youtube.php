@@ -68,7 +68,33 @@ EOH;
      */
     public static function myCallback($match)
     {
+        // A tag around something that is not a video stays as the author wrote it.
+        if (null === self::videoId($match[4])) {
+            return $match[0];
+        }
+
         return self::decode($match[4], $match[2], $match[3]);
+    }
+
+    /**
+     * @param string $url a YouTube URL or a bare 11-character video id
+     *
+     * @return string|null the video id, or null when $url is neither
+     */
+    private static function videoId($url): ?string
+    {
+        // match known youtube urls
+        // from: https://stackoverflow.com/questions/2936467/parse-youtube-video-id-using-preg-match/6382259#6382259
+        // Anchored to the URL start so the host is youtube itself (optionally one
+        // subdomain such as www. or m.), never a lookalike such as notyoutube.com.
+        $youtubeRegex = '%^(?:https?:)?(?://)?(?:[a-z0-9-]+\.)?(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)'
+            . '([A-Za-z0-9_-]{11})(?![\w-])%i'; // a 12th id character means it is not a video id
+
+        if (preg_match($youtubeRegex, (string) $url, $match)) {
+            return $match[1]; // extract just the video id from a URL
+        }
+
+        return preg_match('%^[A-Za-z0-9_-]{11}$%', (string) $url) ? (string) $url : null;
     }
 
     /**
@@ -76,7 +102,9 @@ EOH;
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->callbackPatterns[] = "/\[youtube=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/youtube\]/sU";
+        // The size is optional: SCEditor writes a bare [youtube]id[/youtube]
+        // for a pasted link, and decode() defaults empty dimensions.
+        $myts->callbackPatterns[] = "/\[youtube(?:=(['\"]?)([^\"']*),([^\"']*)\\1)?]([^\"]*)\[\/youtube\]/sU";
         $myts->callbacks[]        = self::class . '::myCallback';
     }
 
@@ -92,21 +120,18 @@ EOH;
         // modernized responsive YouTube handling suggested by XOOPS user xd9527 -- thanks!
         // https://xoops.org/modules/newbb/viewtopic.php?post_id=359913
 
-        // match known youtube urls
-        // from: https://stackoverflow.com/questions/2936467/parse-youtube-video-id-using-preg-match/6382259#6382259
-        $youtubeRegex = '%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)'
-            . '([^"&?/ ]{11})%i';
-
-        if (preg_match($youtubeRegex, $url, $match)) {
-            $videoId = $match[1]; // extract just the video id from a URL
-        } elseif (preg_match('%^[^"&?/ ]{11}$%', $url)) {
-            $videoId = $url; // have a bare video id
-        } else {
+        $videoId = self::videoId($url);
+        if (null === $videoId) {
             trigger_error("Not matched: {$url} {$width} {$height}", E_USER_WARNING);
             return '';
         }
 
-        $width = empty($width) ? 426 : (int) $width;
+        // Check the coerced number: a non-numeric size such as "x" becomes 0,
+        // which would divide by zero below.
+        $width = (int) $width;
+        if ($width <= 0) {
+            $width = 426;
+        }
         switch ($width) {
             case 4:
                 $height = 3;
@@ -115,7 +140,10 @@ EOH;
                 $height = 9;
                 break;
             default:
-                $height = empty($height) ? 240 : (int) $height;
+                $height = (int) $height;
+                if ($height <= 0) {
+                    $height = 240;
+                }
                 break;
         }
 

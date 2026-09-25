@@ -9,12 +9,10 @@
  * so a deployment that strips the library out leaves this editor inert (it
  * simply does not appear in the editor list) rather than broken.
  *
- * This plugin only ever runs SCEditor in BBCode source mode, never WYSIWYG:
- * in WYSIWYG mode any tag SCEditor's format table does not recognise is
- * silently stripped when content round-trips through HTML. Source mode never
- * performs that round-trip, so existing posts using XOOPS-specific or
- * unrecognised BBCode (including arbitrary smilie text codes) cannot be
- * corrupted.
+ * SCEditor runs in its normal visual mode and exposes its source-mode switch.
+ * The XOOPS BBCode dialect in js/xoops-bbcode.js covers the tags supported by
+ * the server renderer; users can still use source mode for tags not represented
+ * by the visual format table.
  *
  * You may not change or alter any portion of this comment or credits
  * of supporting developers from this source code or any supporting source code
@@ -49,6 +47,9 @@ class FormSCEditor extends XoopsEditor
 {
     public string $width  = '100%';
     public string $height = '400px';
+
+    /** @var array{toolbar: array<int, string>, plugins: array<int, string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int} */
+    private array $settings;
 
     /**
      * Normalize a configured width before it reaches the typed property.
@@ -120,7 +121,39 @@ class FormSCEditor extends XoopsEditor
     public function __construct(array $configs = [])
     {
         $this->rootPath = '/class/xoopseditor/sceditor';
+        require_once __DIR__ . '/class/SCEditorConfig.php';
+        $this->settings = SCEditorConfig::settings($this->savedPreferences());
+        // [mp3] is decoded only while its sanitizer extension is on (class/textsanitizer/
+        // config.php); otherwise the button would publish literal BBCode.
+        $extensions = class_exists('MyTextSanitizer') ? (MyTextSanitizer::getInstance()->config['extensions'] ?? []) : [];
+        if (empty($extensions['mp3'])) {
+            $this->settings['toolbar'] = array_values(array_diff($this->settings['toolbar'], ['mp3']));
+        }
+        // Site defaults first; a width/height the calling module passes still wins,
+        // because parent::__construct() routes it through setWidth()/setHeight().
+        $this->setWidth($this->settings['width']);
+        $this->setHeight($this->settings['height']);
         parent::__construct($configs);
+    }
+
+    /**
+     * The saved System > Preferences > Editors values; empty (defaults apply) before
+     * the 2.7.4 upgrade has added the category, or without a database.
+     *
+     * @return array<string, mixed>
+     */
+    private function savedPreferences(): array
+    {
+        if (!defined('XOOPS_CONF_EDITOR') || !function_exists('xoops_getHandler')) {
+            return [];
+        }
+        try {
+            /** @var XoopsConfigHandler $configHandler */
+            $configHandler = xoops_getHandler('config');
+            return $configHandler->getConfigsByCat(XOOPS_CONF_EDITOR);
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 
     /**
@@ -181,12 +214,24 @@ class FormSCEditor extends XoopsEditor
         $width   = htmlspecialchars($this->width, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $htmlName     = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        // XOOPS form builders commonly pass the edit value through one
+        // htmlspecialchars() layer before constructing the editor. Remove exactly
+        // that layer, as the core renderers do (XoopsFormRendererValueEscapeTrait);
+        // the textarea escaping below adds it back. html_entity_decode() would also
+        // turn literal text such as &eacute; or &colon; into characters.
+        $value = htmlspecialchars_decode((string) $value, ENT_QUOTES | ENT_HTML5);
         $escapedValue = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $jsId         = json_encode($name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
+        $emoticons    = $this->emoticonsConfig();
 
         $editorPath = XOOPS_URL . $this->rootPath;
-
         $html = '';
+
+        $plugins  = $this->settings['plugins'];
+        $dragdrop = $this->dragdropConfig($this->settings['dragdrop_cat']);
+        if (null !== $dragdrop) {
+            $plugins[] = 'dragdrop';
+        }
 
         // Include CSS/JS assets only once per page
         if (!$assetsIncluded) {
@@ -194,12 +239,22 @@ class FormSCEditor extends XoopsEditor
             // js/xoops-bbcode.js redefines tags on sceditor.formats.bbcode, so the stock
             // format must already exist when it runs.
             $html .= '<link rel="stylesheet" href="' . $editorPath . '/minified/themes/default.min.css">' . "\n";
+            // Icons for the XOOPS-only buttons, which the stock sprite does not have.
+            $html .= '<link rel="stylesheet" href="' . $editorPath . '/css/xoops-icons.css">' . "\n";
             $html .= '<script src="' . $editorPath . '/minified/sceditor.min.js"></script>' . "\n";
             $html .= '<script src="' . $editorPath . '/minified/formats/bbcode.js"></script>' . "\n";
             // Localized labels/prompts for the toolbar commands; must be published before
             // xoops-bbcode.js loads because that file reads them at registration time.
             $html .= '<script>window.xoopsSCEditorLang = ' . json_encode($this->commandLanguage(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ';</script>' . "\n";
             $html .= '<script src="' . $editorPath . '/js/xoops-bbcode.js"></script>' . "\n";
+            // Plugins enabled in System > Preferences > Editors; names come from the
+            // SCEditorConfig::PLUGINS allowlist, never from request data.
+            foreach ($plugins as $plugin) {
+                $html .= '<script src="' . $editorPath . '/minified/plugins/' . $plugin . '.js"></script>' . "\n";
+            }
+            if (null !== $dragdrop) {
+                $html .= '<script src="' . $editorPath . '/js/xoops-dragdrop.js"></script>' . "\n";
+            }
             $assetsIncluded = true;
         }
 
@@ -210,12 +265,8 @@ class FormSCEditor extends XoopsEditor
                . $escapedValue
                . '</textarea>' . "\n";
 
-        // Initialize SCEditor: BBCode format, permanently in source mode.
-        // startInSourceMode matters for correctness, not just preference: creating the
-        // instance in the default WYSIWYG mode would parse the existing BBCode into HTML
-        // and re-serialise it on the way back to source — exactly the round-trip that can
-        // rewrite or drop XOOPS-specific tags. Starting in source mode means the content
-        // never enters that conversion path.
+        // Initialize SCEditor in its normal visual mode. The toolbar includes the
+        // built-in source command, so users can inspect/edit the exact BBCode at any time.
         // Defensive: a missing or failed library must leave a plain, fully
         // usable textarea rather than a dead control.
         $html .= '<script>' . "\n";
@@ -225,7 +276,7 @@ class FormSCEditor extends XoopsEditor
         $html .= '  if (!el) { return; }' . "\n";
         $html .= '  sceditor.create(el, {' . "\n";
         $html .= '    format: "bbcode",' . "\n";
-        $html .= '    startInSourceMode: true,' . "\n";
+        $html .= '    startInSourceMode: false,' . "\n";
         // autoUpdate keeps the original textarea's value continuously in sync. SCEditor
         // does sync on form submit by itself, but XOOPS validation runs from the form's
         // inline onsubmit attribute, which can fire before SCEditor's own submit listener
@@ -233,34 +284,104 @@ class FormSCEditor extends XoopsEditor
         $html .= '    autoUpdate: true,' . "\n";
         // Content stylesheet for the editing area, per the upstream usage docs.
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
-        $html .= '    toolbar: (typeof xoopsBBCodeToolbar !== "undefined") ? xoopsBBCodeToolbar : "bold,italic,underline,strike",' . "\n";
-        $html .= '    emoticonsEnabled: false,' . "\n";
-        $html .= '    resizeEnabled: true,' . "\n";
+        $html .= '    toolbar: ' . json_encode(SCEditorConfig::toolbar($this->settings)) . ',' . "\n";
+        $html .= '    plugins: ' . json_encode(implode(',', $plugins)) . ',' . "\n";
+        if (null !== $dragdrop) {
+            $html .= '    dragdrop: xoopsSCEditorDragdrop(' . json_encode($dragdrop, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . '),' . "\n";
+        }
+        $html .= '    emoticonsEnabled: ' . ($this->settings['emoticons'] && ($emoticons['dropdown'] !== [] || $emoticons['more'] !== []) ? 'true' : 'false') . ",\n";
+        $html .= '    emoticons: ' . json_encode($emoticons, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ",\n";
+        $html .= '    resizeEnabled: ' . ($this->settings['resize'] ? 'true' : 'false') . ',' . "\n";
+        $html .= '    autoExpand: ' . ($this->settings['autoexpand'] ? 'true' : 'false') . ',' . "\n";
+        $html .= '    spellcheck: ' . ($this->settings['spellcheck'] ? 'true' : 'false') . ',' . "\n";
         $html .= '    width: ' . json_encode($this->width, JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    height: ' . json_encode($this->height, JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
         $html .= '  });' . "\n";
-        // Belt and braces for the source-mode-only promise: the toolbar exposes no source
-        // toggle, but any stray script calling sourceMode(false) OR toggleSourceMode() (the
-        // method SCEditor's own source command uses) would trigger the exact BBCode->HTML
-        // conversion this integration exists to prevent. Keep the getter and sourceMode(true)
-        // working; swallow only the switch to WYSIWYG.
-        $html .= '  var instance = sceditor.instance(el);' . "\n";
-        $html .= '  if (instance && typeof instance.sourceMode === "function") {' . "\n";
-        $html .= '    var xoopsOrigSourceMode = instance.sourceMode.bind(instance);' . "\n";
-        $html .= '    instance.sourceMode = function (enable) {' . "\n";
-        $html .= '      if (false === enable) { return; }' . "\n";
-        $html .= '      return xoopsOrigSourceMode.apply(null, arguments);' . "\n";
-        $html .= '    };' . "\n";
-        $html .= '    if (typeof instance.toggleSourceMode === "function") {' . "\n";
-        $html .= '      instance.toggleSourceMode = function () {' . "\n";
-        $html .= '        if (!xoopsOrigSourceMode()) { xoopsOrigSourceMode(true); }' . "\n";
-        $html .= '      };' . "\n";
-        $html .= '    }' . "\n";
-        $html .= '  }' . "\n";
         $html .= '});' . "\n";
         $html .= '</script>' . "\n";
 
         return $html;
+    }
+
+    /**
+     * Upload settings for the dragdrop plugin, or null when it must stay off: no
+     * category chosen, a guest, an unknown category, or no imgcat_write right on it.
+     * Guests never get it, even where the category grants anonymous uploads.
+     *
+     * @param int $imgcatId sceditor_dragdrop_cat preference
+     *
+     * @return array{endpoint: string, token: string, maxSize: int}|null
+     */
+    protected function dragdropConfig(int $imgcatId): ?array
+    {
+        $user = $GLOBALS['xoopsUser'] ?? null;
+        if ($imgcatId < 1 || !($user instanceof XoopsUser) || !function_exists('xoops_getHandler')) {
+            return null;
+        }
+        try {
+            $imgcat = $this->handler('imagecategory')->get($imgcatId);
+            if (!($imgcat instanceof XoopsImagecategory)
+                || !$this->handler('groupperm')->checkRight('imgcat_write', $imgcatId, $user->getGroups())) {
+                return null;
+            }
+            XoopsLoad::load('fineuploadhandler', 'system');
+            XoopsLoad::load('fineimuploadhandler', 'system');
+            $token = SystemFineImUploadHandler::uploadToken($imgcatId, (int) $user->id());
+        } catch (Throwable $e) {
+            return null;
+        }
+
+        return [
+            'endpoint' => XOOPS_URL . '/ajaxfineupload.php',
+            'token'    => $token,
+            'maxSize'  => (int) $imgcat->getVar('imgcat_maxsize'),
+        ];
+    }
+
+    /**
+     * Kernel handler lookup; tests override it to stub the category and
+     * permission checks.
+     *
+     * @param string $name handler name
+     *
+     * @return object
+     *
+     * @throws RuntimeException when the handler does not exist
+     */
+    protected function handler(string $name): object
+    {
+        return xoops_getHandler($name, true) ?: throw new RuntimeException('No handler: ' . $name);
+    }
+
+    /**
+     * Build the SCEditor emoticon map from the site's configured XOOPS smileys.
+     * SCEditor otherwise falls back to its demo paths, which are not shipped by XOOPS.
+     *
+     * @return array{dropdown: array<string, string>, more: array<string, string>, hidden: array<string, string>}
+     */
+    protected function emoticonsConfig(): array
+    {
+        $config = ['dropdown' => [], 'more' => [], 'hidden' => []];
+        if (!class_exists('MyTextSanitizer') || !defined('XOOPS_UPLOAD_URL')) {
+            return $config;
+        }
+        try {
+            $smileys = MyTextSanitizer::getInstance()->getSmileys(true);
+        } catch (Throwable $e) {
+            return $config;
+        }
+        foreach ($smileys as $smiley) {
+            $code = trim((string) ($smiley['code'] ?? ''));
+            $file = ltrim((string) ($smiley['smile_url'] ?? ''), '/');
+            if ($code === '' || $file === '') {
+                continue;
+            }
+            $bucket = !empty($smiley['display']) ? 'dropdown' : 'more';
+            $config[$bucket][$code] = XOOPS_UPLOAD_URL . '/' . $file;
+        }
+        // SCEditor's own emoticons are ordinary smileys (SCEditorEmoticons, installed
+        // by the installer and the 2.7.4 upgrade), so posts store codes, not images.
+        return $config;
     }
 
     /**
@@ -294,6 +415,10 @@ class FormSCEditor extends XoopsEditor
             'heightPrompt'  => '_XOOPS_EDITOR_SCEDITOR_HEIGHT_PROMPT',
             'wiki'          => '_XOOPS_EDITOR_SCEDITOR_WIKI',
             'wikiPrompt'    => '_XOOPS_EDITOR_SCEDITOR_WIKI_PROMPT',
+            'mp3'           => '_XOOPS_EDITOR_SCEDITOR_MP3',
+            'mp3Prompt'     => '_XOOPS_EDITOR_SCEDITOR_MP3_PROMPT',
+            'uploadFailed'  => '_XOOPS_EDITOR_SCEDITOR_UPLOAD_FAILED',
+            'uploadTooBig'  => '_XOOPS_EDITOR_SCEDITOR_UPLOAD_TOOBIG',
         ];
 
         $lang = [];

@@ -227,6 +227,11 @@ class XoopsGuiDefault extends XoopsSystemGui
             'absolute' => 1,
             'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
         $OPT[] = [
+            'link'     => 'admin.php?fct=preferences&amp;op=show&amp;confcat_id=8',
+            'title'    => defined('_OXYGEN_EDITORS') ? _OXYGEN_EDITORS : 'Editors',
+            'absolute' => 1,
+            'icon'     => XOOPS_ADMINTHEME_URL . '/default/icons/prefs_small.png'];
+        $OPT[] = [
             'link'     => 'admin.php?fct=preferences&amp;op=showmod&amp;mod=1',
             'title'    => _OXYGEN_MODULESETTINGS,
             'absolute' => 1,

@@ -739,14 +739,9 @@ switch ($op) {
         $xoopsTpl->assign('imgcat_maxwidth', $imagecategory->getVar('imgcat_maxwidth'));
         $xoopsTpl->assign('imgcat_maxheight', $imagecategory->getVar('imgcat_maxheight'));
         $xoopsTpl->assign('imgcat_name', $imagecategory->getVar('imgcat_name'));
-        $payload = [
-            'aud' => 'ajaxfineupload.php',
-            'cat' => $imgcat_id,
-            'uid' => $xoopsUser instanceof \XoopsUser ? $xoopsUser->id() : 0,
-            'handler' => 'fineimuploadhandler',
-            'moddir' => 'system',
-        ];
-        $jwt = \Xmf\Jwt\TokenFactory::build('fineuploader', $payload, 60 * 30); // token good for 30 minutes
+        XoopsLoad::load('fineuploadhandler', 'system');
+        XoopsLoad::load('fineimuploadhandler', 'system');
+        $jwt = SystemFineImUploadHandler::uploadToken($imgcat_id, $xoopsUser instanceof \XoopsUser ? $xoopsUser->id() : 0);
         $xoopsTpl->assign('jwt', $jwt);
         $fineup_debug = 'false';
         if (($xoopsUser instanceof \XoopsUser ? $xoopsUser->isAdmin() : false)

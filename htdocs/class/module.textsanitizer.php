@@ -284,12 +284,22 @@ class MyTextSanitizer
      */
     public function smiley($message)
     {
-        $smileys = $this->getSmileys();
-        foreach ($smileys as $smile) {
-            $message = str_replace($smile['code'], '<img class="imgsmile" src="' . XOOPS_UPLOAD_URL . '/' . htmlspecialchars($smile['smile_url'], ENT_QUOTES | ENT_HTML5) . '" alt="" />', $message);
+        $map = [];
+        foreach ($this->getSmileys() as $smile) {
+            $code = (string) $smile['code'];
+            if ($code === '') {
+                continue;
+            }
+            $img = '<img class="imgsmile" src="' . XOOPS_UPLOAD_URL . '/' . htmlspecialchars($smile['smile_url'], ENT_QUOTES | ENT_HTML5) . '" alt="" />';
+            // displayTarea() escapes before this runs, so <3 arrives as &lt;3.
+            $map[$code] = $img;
+            $map[htmlspecialchars($code, ENT_COMPAT)] = $img;
+            $map[htmlspecialchars($code, ENT_QUOTES)] = $img;
         }
 
-        return $message;
+        // One pass, longest code first: no code matches part of another code, or
+        // markup inserted for an earlier smiley.
+        return $map === [] ? $message : strtr($message, $map);
     }
 
     /**
@@ -407,7 +417,10 @@ class MyTextSanitizer
         $replacements[] = '<a href="\\2" rel="external" title="">\\3</a>';
         $patterns[]     = "/\[url=(['\"]?)([^'\"<>]*)\\1](.*)\[\/url\]/sU";
         $replacements[] = '<a href="http://\\2" rel="noopener external" title="">\\3</a>';
-        $patterns[]     = "/\[color=(['\"]?)([a-zA-Z0-9#]+)\\1?](.*)\[\/color\]/sU";
+        $patterns[]     = "/\[color=(['\"]?)(rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))\\1?](.*)\[\/color\]/sU";
+        $replacements[] = '<span style="color: \\2;">\\3</span>';
+        // The '#' is added here; one written by an editor is dropped, not doubled.
+        $patterns[]     = "/\[color=(['\"]?)#?([a-zA-Z0-9]+)\\1?](.*)\[\/color\]/sU";
         $replacements[] = '<span style="color: #\\2;">\\3</span>';
         $patterns[]     = "/\[size=(['\"]?)([a-zA-Z0-9-]+)\\1?](.*)\[\/size\]/sU";
         $replacements[] = '<span style="font-size: \\2;">\\3</span>';
@@ -430,6 +443,31 @@ class MyTextSanitizer
         $replacements[] = '<div style="text-align: left;">\\1</div>';
         $patterns[]     = '/\[right](.*)\[\/right\]/sU';
         $replacements[] = '<div style="text-align: right;">\\1</div>';
+        // Tags written by SCEditor's toolbar. Paired tags only, so an unclosed
+        // [table] or [ol] stays text instead of leaving an open element. List
+        // items are [li], decoded by the li extension.
+        $patterns[]     = '/\[justify](.*)\[\/justify\]/sU';
+        $replacements[] = '<div style="text-align: justify;">\\1</div>';
+        $patterns[]     = '/\[(ltr|rtl)](.*)\[\/\\1\]/sU';
+        $replacements[] = '<div dir="\\1">\\2</div>';
+        $patterns[]     = '/\[sub](.*)\[\/sub\]/sU';
+        $replacements[] = '<sub>\\1</sub>';
+        $patterns[]     = '/\[sup](.*)\[\/sup\]/sU';
+        $replacements[] = '<sup>\\1</sup>';
+        $patterns[]     = '/\[s](.*)\[\/s\]/sU';
+        $replacements[] = '<s>\\1</s>';
+        $patterns[]     = '/\[hr]/';
+        $replacements[] = '<hr>';
+        $patterns[]     = '/\[ol](.*)\[\/ol\]/sU';
+        $replacements[] = '<ol>\\1</ol>';
+        $patterns[]     = '/\[table](.*)\[\/table\]/sU';
+        $replacements[] = '<table class="table">\\1</table>';
+        $patterns[]     = '/\[tr](.*)\[\/tr\]/sU';
+        $replacements[] = '<tr>\\1</tr>';
+        $patterns[]     = '/\[th](.*)\[\/th\]/sU';
+        $replacements[] = '<th>\\1</th>';
+        $patterns[]     = '/\[td](.*)\[\/td\]/sU';
+        $replacements[] = '<td>\\1</td>';
 
         $this->text         = $text;
         $this->patterns     = $patterns;
@@ -593,6 +631,16 @@ class MyTextSanitizer
     public function &displayTarea($text, $html = 0, $smiley = 1, $xcode = 1, $image = 1, $br = 1)
     {
         $text = (string) $text;
+        $markdown = [];
+        if (str_contains($text, '[xoops:markdown=')) {
+            require_once __DIR__ . '/xoopsmarkdown.php';
+            $source = XoopsMarkdown::source($text);
+            if ($source !== null) {
+                $text = XoopsMarkdown::render($source, (bool) $image);
+                return $text;
+            }
+            $markdown = XoopsMarkdown::protect($text, (bool) $image);
+        }
         $charset = (defined('_CHARSET') ? _CHARSET : 'UTF-8');
         if (function_exists('mb_convert_encoding')) {
             $text = mb_convert_encoding($text, $charset, mb_detect_encoding($text, mb_detect_order(), true));
@@ -607,6 +655,18 @@ class MyTextSanitizer
         if ($html != 1) {
             // html not allowed
             $text = $this->htmlSpecialChars($text, ENT_COMPAT, $charset);
+        }
+        if ($xcode != 0 && $html != 1) {
+            // Visual editors quote attributes ([size="x-large"]), and storage or
+            // htmlSpecialChars() may have encoded those quotes. Only with HTML
+            // off: then no raw tag exists, so a restored quote cannot close an
+            // HTML attribute (title="[a=&quot; onerror=...&quot;]"). Restore only a
+            // quote pair around a plain value inside a tag; never <, > or an
+            // encoded quote ('&' stays: URL query strings need it).
+            // Every attribute pattern in xoopsCodeDecode() excludes '"'.
+            $text = preg_replace_callback('/\[[a-z][^\]\r\n]*\]/i', static function (array $match): string {
+                return preg_replace('/=(?:&amp;)?&quot;((?:(?!(?:&amp;)?&quot;)[^"<>])*)(?:&amp;)?&quot;/', '="$1"', $match[0]) ?? $match[0];
+            }, $text) ?? $text;
         }
         $text = $this->codePreConv($text, $xcode); // Ryuji_edit(2003-11-18)
         if ($smiley != 0) {
@@ -625,12 +685,27 @@ class MyTextSanitizer
         }
         if ($br != 0) {
             $text = $this->nl2Br($text);
+            // Newlines used to format XOOPS [ul]/[li] and [table] source are not
+            // content between list items or table cells. Do not turn them into
+            // visible empty rows (a <br> inside a table is moved above it).
+            // Only after nl2Br(): without it, every <br> here was authored.
+            $text = preg_replace([
+                '/(<(?:ul|ol)>)\s*<br\s*\/?>(?=<li>)/i',
+                '/<br\s*\/?>(?=\s*<\/\s*(?:ul|ol)>)/i',
+                '/<\/li>\s*<br\s*\/?>\s*(?=<li>)/i',
+                '/(<table class="table">|<\/?tr>|<\/t[hd]>|<hr>)\s*<br\s*\/?>/i',
+                '/<br\s*\/?>\s*(?=<\/(?:table|tr)>)/i',
+            ], ['$1', '', '</li>', '$1', ''], $text);
         }
         $text = $this->codeConv($text, $xcode);
         $text = $this->trimBlockBreaks($text);
         $text = $this->makeClickable($text);
         if (!empty($this->config['filterxss_on_display'])) {
             $text = $this->filterXss($text);
+        }
+
+        if ($markdown !== []) {
+            $text = XoopsMarkdown::restore($text, $markdown);
         }
 
         return $text;
@@ -649,6 +724,9 @@ class MyTextSanitizer
      */
     public function &previewTarea($text, $html = 0, $smiley = 1, $xcode = 1, $image = 1, $br = 1)
     {
+        if (class_exists('XoopsMarkdown', false)) {
+            $text = XoopsMarkdown::previewSource((string) $text);
+        }
         $text = & $this->displayTarea($text, $html, $smiley, $xcode, $image, $br);
 
         return $text;

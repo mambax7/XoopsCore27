@@ -126,10 +126,24 @@ class XoopsEditorHandler
      * @param string $OnFailure a pre-validated editor that will be used if the required editor is failed to create
      * @param bool   $noHtml    dohtml disabled
      *
-     * @return null
+     * @return XoopsEditor|XoopsFormTextArea|null the editor; a plain textarea for Markdown
+     *                                            content when EasyMDE is unavailable
      */
     public function get($name = '', $options = null, $noHtml = false, $OnFailure = '')
     {
+        require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
+        if (is_string($options['value'] ?? null) && XoopsMarkdown::source($options['value']) !== null) {
+            // Stored format outranks a remembered editor. An HTML editor would
+            // flatten Markdown newlines before the user can even switch back.
+            if (isset($this->getList($noHtml)['easymde']) && $editor = $this->_loadEditor('easymde', $options)) {
+                return $editor;
+            }
+            // Never fall through to a WYSIWYG editor when EasyMDE is unavailable.
+            // The textarea keeps the stored wrapper: without EasyMDE's hidden fields
+            // the save could not restore the Markdown marker, so the post would
+            // silently turn into BBCode.
+            return new XoopsFormTextArea($options['caption'] ?? '', $options['name'] ?? '', $options['value'], $options['rows'] ?? 5, $options['cols'] ?? 50);
+        }
         if (array_key_exists($name, $this->getList($noHtml)) && $editor = $this->_loadEditor($name, $options)) {
             return $editor;
         }
