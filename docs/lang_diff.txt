@@ -4,7 +4,7 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
-2026/09: Version 2.7.4-Beta2
+2026/09: Version 2.7.4-RC1
 ================================
 /htdocs/class/xoopseditor/sceditor/language/english.php
 - added define('_XOOPS_EDITOR_SCEDITOR_MP3', 'MP3 audio');
@@ -16,10 +16,6 @@ Below are language differences from a version to next version.
 - renamed _PROFILE_AM_DELETEFAILED -> _PROFILE_AM_DELETE_FAILED ('Deleting %s failed; the account was not removed'); 2.7.4-Beta2 shipped the old name; it is still read as a fallback, but rename it in translated packs - the value is unchanged
 
 /htdocs/modules/system/language/english/admin/preferences.php
-- added define('_MD_AM_TWOFACTORMODE', 'Two-factor authentication');
-- added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol an authenticator app or e-mail codes, and challenges members who have enrolled.');
-- added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
-- added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
 - added define('_MD_AM_EDITORS', 'Editors');
 - added define('_MD_AM_SCEDITOR_TOOLBAR', 'SCEditor toolbar buttons');
 - added define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it. The mp3 button only appears while the mp3 extension is on in the textsanitizer config.php (xoops_data/configs/textsanitizer/).');
@@ -48,6 +44,31 @@ Below are language differences from a version to next version.
 
 /htdocs/modules/system/themes/transition/language/english/admin.php
 - added define('_OXYGEN_EDITORS', 'Editors');
+
+/upgrade/language/english/upd_2.7.3-to-2.7.4.php (new file)
+- added define('_XOOPS_UPGRADE_274_2FA_TABLE_CHECK', 'Could not read information_schema to check for the user_2fa table');
+- added define('_XOOPS_UPGRADE_274_2FA_TABLE_NOT_CREATED', 'Could not read information_schema; the user_2fa table was not created');
+- added define('_XOOPS_UPGRADE_274_MODE_CHECK', 'Could not read the config table to check for the twofactor_mode preference');
+- added define('_XOOPS_UPGRADE_274_MODE_OPTIONS_CHECK', 'Could not read the configoption table to check the twofactor_mode options');
+- added define('_XOOPS_UPGRADE_274_MODE_NOT_INSERTED', 'Could not read the config table; the twofactor_mode preference was not inserted');
+- added define('_XOOPS_UPGRADE_274_MODE_NOT_FOUND', 'The twofactor_mode preference row was not found after it was inserted');
+- added define('_XOOPS_UPGRADE_274_MODE_OPTIONS_NOT_INSERTED', 'Could not read the configoption table; the twofactor_mode options were not inserted');
+- added define('_XOOPS_UPGRADE_274_EMOTICONS_CHECK', 'Could not read the smiles table to check the SCEditor emoticons');
+- added define('_XOOPS_UPGRADE_274_EDITORS_CHECK', 'The Editors preferences could not be checked');
+- added define('_XOOPS_UPGRADE_274_EDITORS_NOT_INSERTED', 'The Editors preferences were not inserted');
+- added define('_XOOPS_UPGRADE_274_EDITORS_OPTION_PARENT', 'Could not find the %s preference for its options');
+- added define('_XOOPS_UPGRADE_274_EDITORS_CATEGORY_TAKEN', 'Preference category %d is already used by another category; the Editors preferences need that ID');
+- added define('_XOOPS_UPGRADE_274_LOCK_ACQUIRE', 'Could not acquire the %s migration lock; retry the upgrade');
+- added define('_XOOPS_UPGRADE_274_LOCK_RELEASE', 'Could not release the %s migration lock');
+
+================================
+2026/09: Version 2.7.4-Beta2
+================================
+/htdocs/modules/system/language/english/admin/preferences.php
+- added define('_MD_AM_TWOFACTORMODE', 'Two-factor authentication');
+- added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol an authenticator app or e-mail codes, and challenges members who have enrolled.');
+- added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
+- added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
 
 /htdocs/language/english/user2fa.php (new file)
 - added define('_US_2FA_HTTP_LOGIN', 'This popup cannot complete a two-factor login over HTTP because your password would be sent without encryption. Use the site login instead, or ask the administrator to enable HTTPS for the site.');

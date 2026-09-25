@@ -85,7 +85,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $exists = $this->tableExists($this->db->prefix('user_2fa'));
         if (null === $exists) {
-            $this->logs[] = 'Could not read information_schema to check for the user_2fa table';
+            $this->logs[] = _XOOPS_UPGRADE_274_2FA_TABLE_CHECK;
         }
 
         return true === $exists;
@@ -107,7 +107,7 @@ class Upgrade_274 extends XoopsUpgrade
             return true;
         }
         if (null === $exists) {
-            $this->logs[] = 'Could not read information_schema; the user_2fa table was not created';
+            $this->logs[] = _XOOPS_UPGRADE_274_2FA_TABLE_NOT_CREATED;
 
             return false;
         }
@@ -141,7 +141,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $confId = $this->modeConfId();
         if (null === $confId) {
-            $this->logs[] = 'Could not read the config table to check for the twofactor_mode preference';
+            $this->logs[] = _XOOPS_UPGRADE_274_MODE_CHECK;
 
             return false;
         }
@@ -150,7 +150,7 @@ class Upgrade_274 extends XoopsUpgrade
         }
         $missing = $this->missingModeOptions($confId);
         if (null === $missing) {
-            $this->logs[] = 'Could not read the configoption table to check the twofactor_mode options';
+            $this->logs[] = _XOOPS_UPGRADE_274_MODE_OPTIONS_CHECK;
 
             return false;
         }
@@ -187,7 +187,7 @@ class Upgrade_274 extends XoopsUpgrade
         $result = $this->db->query('SELECT GET_LOCK(' . $lock . ', 10)');
         $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
         if (!is_array($row) || 1 !== (int) $row[0]) {
-            $this->logs[] = 'Could not acquire the ' . $purpose . ' migration lock; retry the upgrade';
+            $this->logs[] = sprintf(_XOOPS_UPGRADE_274_LOCK_ACQUIRE, $purpose);
 
             return false;
         }
@@ -198,7 +198,7 @@ class Upgrade_274 extends XoopsUpgrade
             $result = $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
             $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
             if (!is_array($row) || 1 !== (int) $row[0]) {
-                $this->logs[] = 'Could not release the ' . $purpose . ' migration lock';
+                $this->logs[] = sprintf(_XOOPS_UPGRADE_274_LOCK_RELEASE, $purpose);
                 $success = false;
             }
         }
@@ -211,7 +211,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $confId = $this->modeConfId();
         if (null === $confId) {
-            $this->logs[] = 'Could not read the config table; the twofactor_mode preference was not inserted';
+            $this->logs[] = _XOOPS_UPGRADE_274_MODE_NOT_INSERTED;
 
             return false;
         }
@@ -226,7 +226,7 @@ class Upgrade_274 extends XoopsUpgrade
             }
             $confId = $this->modeConfId();
             if (null === $confId || 0 === $confId) {
-                $this->logs[] = 'The twofactor_mode preference row was not found after it was inserted';
+                $this->logs[] = _XOOPS_UPGRADE_274_MODE_NOT_FOUND;
 
                 return false;
             }
@@ -234,7 +234,7 @@ class Upgrade_274 extends XoopsUpgrade
 
         $missing = $this->missingModeOptions($confId);
         if (null === $missing) {
-            $this->logs[] = 'Could not read the configoption table; the twofactor_mode options were not inserted';
+            $this->logs[] = _XOOPS_UPGRADE_274_MODE_OPTIONS_NOT_INSERTED;
 
             return false;
         }
@@ -361,7 +361,7 @@ class Upgrade_274 extends XoopsUpgrade
         class_exists('SCEditorEmoticons', false) || require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
         $missing = \SCEditorEmoticons::missing($this->db);
         if (null === $missing) {
-            $this->logs[] = 'Could not read the smiles table to check the SCEditor emoticons';
+            $this->logs[] = _XOOPS_UPGRADE_274_EMOTICONS_CHECK;
 
             return false;
         }
@@ -398,7 +398,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $missing = $this->missingEditorRows();
         if (null === $missing) {
-            $this->logs[] = 'The Editors preferences could not be checked';
+            $this->logs[] = _XOOPS_UPGRADE_274_EDITORS_CHECK;
 
             return false;
         }
@@ -424,7 +424,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $missing = $this->missingEditorRows();
         if (null === $missing) {
-            $this->logs[] = 'The Editors preferences were not inserted';
+            $this->logs[] = _XOOPS_UPGRADE_274_EDITORS_NOT_INSERTED;
 
             return false;
         }
@@ -444,7 +444,7 @@ class Upgrade_274 extends XoopsUpgrade
                 // An option's conf_id exists only after its preference row: look it up now.
                 $confId = $this->editorConfId($item['name']);
                 if (null === $confId || 0 === $confId) {
-                    $this->logs[] = sprintf('Could not find the %s preference for its options', $item['name']);
+                    $this->logs[] = sprintf(_XOOPS_UPGRADE_274_EDITORS_OPTION_PARENT, $item['name']);
 
                     return false;
                 }
@@ -471,7 +471,7 @@ class Upgrade_274 extends XoopsUpgrade
         $missing  = [];
         $foreign  = $this->countRows('configcategory', 'confcat_id = ' . \SCEditorConfig::CATEGORY . " AND confcat_name <> '_MD_AM_EDITORS'");
         if (0 < $foreign) {
-            $this->logs[] = sprintf('Preference category %d is already used by another category; the Editors preferences need that ID', \SCEditorConfig::CATEGORY);
+            $this->logs[] = sprintf(_XOOPS_UPGRADE_274_EDITORS_CATEGORY_TAKEN, \SCEditorConfig::CATEGORY);
 
             return null;
         }

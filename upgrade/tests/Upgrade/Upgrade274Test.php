@@ -71,6 +71,8 @@ final class Upgrade274Test extends TestCase
             self::fail('upd_2.7.3-to-2.7.4/index.php does not exist');
         }
         require_once $file;
+        // A mocked UpgradeControl skips loadLanguage(), so load the patch's messages here.
+        require_once dirname(__DIR__, 2) . '/language/english/upd_2.7.3-to-2.7.4.php';
         $this->exec       = [];
         $this->rows       = [];
         $this->arrays     = [];
@@ -390,6 +392,17 @@ final class Upgrade274Test extends TestCase
         self::assertTrue($patch->apply_editorprefs());
         self::assertSame([], $this->exec);
         self::assertNotSame([], preg_grep("/confop_name = 'autosave' AND confop_value = 'autosave'/", $this->queries));
+    }
+
+    #[Test]
+    public function everyMessageConstantThePatchUsesIsDefined(): void
+    {
+        $source = (string) file_get_contents(dirname(__DIR__, 2) . '/upd_2.7.3-to-2.7.4/index.php');
+        preg_match_all('/\b_XOOPS_UPGRADE_274_[A-Z0-9_]+\b/', $source, $m);
+        self::assertNotEmpty($m[0]);
+        foreach (array_unique($m[0]) as $name) {
+            self::assertTrue(defined($name), $name . ' is not defined in language/english/upd_2.7.3-to-2.7.4.php');
+        }
     }
 
     #[Test]
