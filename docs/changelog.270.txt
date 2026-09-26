@@ -29,6 +29,7 @@ Core:
 - show the XOOPS version in the System Info panel of the Modern admin theme dashboard (#213)
 - move the 2.7.3 to 2.7.4 upgrade patch's messages into upgrade/language/english/upd_2.7.3-to-2.7.4.php, which the patch already asked the wizard to load, so the wizard can show them translated (new _XOOPS_UPGRADE_274_* constants, see docs/lang_diff.txt) (#223)
 - normalize quoting in the English language files; no text changes (#222)
+- bump the System module to 2.1.13-Stable for the manifest changes since Beta 2 (SCEditor as the default block, comment and general editor for new installs, and the default_notification option names from #217), so Modules Administration offers the update on a site that took an earlier 2.7.4 build; the upgrade wizard runs that update at its end either way (htdocs/modules/system/xoops_version.php)
 
 Database:
 - the 2.7.3 to 2.7.4 upgrade registers the SCEditor emoticons as smileys (images copied to uploads/smilies, existing codes left alone) and adds the Editors preference category (8) with its SCEditor preferences; a fresh install gets both (upgrade/upd_2.7.3-to-2.7.4, install/include/makedata.php) (#218)
