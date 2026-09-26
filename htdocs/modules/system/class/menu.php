@@ -73,11 +73,11 @@ class SystemMenuHandler
         if (is_array($options)) {
             if ($multi === true) {
                 foreach ($options as $k => $v) {
-                    $this->addOptionTop($k, $v);
+                    $this->addMenuTop($k, $v);
                 }
             } else {
                 foreach ($options as $k) {
-                    $this->addOptiontop($k, $k);
+                    $this->addMenuTop($k, $k);
                 }
             }
         }
@@ -105,11 +105,11 @@ class SystemMenuHandler
         if (is_array($options)) {
             if ($multi === true) {
                 foreach ($options as $k => $v) {
-                    $this->addMenuTabsTop($k, $v);
+                    $this->addMenuTabs($k, $v);
                 }
             } else {
                 foreach ($options as $k) {
-                    $this->addMenuTabsTop($k, $k);
+                    $this->addMenuTabs($k, $k);
                 }
             }
         }
