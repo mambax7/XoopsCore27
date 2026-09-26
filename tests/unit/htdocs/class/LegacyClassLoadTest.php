@@ -11,9 +11,10 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Legacy classes that PHP 8 refused to load, and helpers that called methods
- * which do not exist. Each file is loaded in its own process because an
- * incompatible override is a fatal error at declaration time.
+ * Legacy classes that PHP 8 refused to load, helpers that called methods
+ * which do not exist, and the comment nav bar's post mode. Each class file is
+ * loaded in its own process because an incompatible override is a fatal error
+ * at declaration time.
  *
  * @category  XoopsTest
  * @package   XoopsCore27
@@ -67,6 +68,42 @@ class LegacyClassLoadTest extends TestCase
 
         self::assertSame(['a.php' => 'A', 'b.php' => 'b.php'], $menu->_menutop);
         self::assertSame(['c.php' => 'C', 'd.php' => 'd.php'], $menu->_menutabs);
+    }
+
+    /**
+     * @return array<string, array{?string, string}>
+     */
+    public static function commentModes(): array
+    {
+        return [
+            'flat'       => ['flat', 'flat'],
+            'thread'     => ['thread', 'thread'],
+            'nocomments' => ['nocomments', 'nocomments'],
+            'empty'      => ['', 'thread'],
+            'null'       => [null, 'thread'],
+            'unknown'    => ['x"><script>', 'flat'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('commentModes')]
+    #[RunInSeparateProcess]
+    public function commentNavBarPostsTheModeItShows(?string $mode, string $posted): void
+    {
+        $GLOBALS['xoopsConfig']['anonpost'] = 1;
+        $GLOBALS['xoopsUser']               = null;
+        $GLOBALS['xoopsLogger'] ??= \XoopsLogger::getInstance();
+        require_once XOOPS_ROOT_PATH . '/language/english/global.php';
+        require_once XOOPS_ROOT_PATH . '/class/xoopscomments.php';
+        // printNavBar() does not use the instance; the constructor would open a database connection.
+        $comments = (new \ReflectionClass(\XoopsComments::class))->newInstanceWithoutConstructor();
+
+        ob_start();
+        $comments->printNavBar(7, $mode, 1);
+        $html = (string) ob_get_clean();
+
+        self::assertStringContainsString('&amp;mode=' . $posted . '"', $html);
+        self::assertStringNotContainsString('<script>', $html);
     }
 
     #[Test]

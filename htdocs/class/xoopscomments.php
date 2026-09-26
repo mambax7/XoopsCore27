@@ -287,7 +287,9 @@ class XoopsComments extends XoopsObject
         }
         echo '>' . _NEWESTFIRST . "</option></select><input type='hidden' name='item_id' value='" . (int) $item_id . "' /><input type='submit' value='" . _CM_REFRESH . "' />";
         if ($xoopsConfig['anonpost'] == 1 || $xoopsUser) {
-            if (!in_array($mode, ['flat', 'nocomments', 'thread'], true)) {
+            if ($mode === null || $mode === '') {
+                $mode = 'thread'; // the selector above shows an empty mode as threaded
+            } elseif (!in_array($mode, ['flat', 'nocomments', 'thread'], true)) {
                 $mode = 'flat';
             }
             echo "&nbsp;<input type='button' onclick='location=\"newcomment.php?item_id=" . (int) $item_id . '&amp;order=' . (int) $order . '&amp;mode=' . $mode . "\"' value='" . _CM_POSTCOMMENT . "' />";
