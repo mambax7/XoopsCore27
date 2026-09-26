@@ -2,6 +2,24 @@
 
 declare(strict_types=1);
 
+/**
+ * Legacy class loading guards: downloaders, XML-RPC parser and related helpers on PHP 8.
+ *
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * @category        Tests
+ * @package         class
+ * @author          XOOPS Development Team
+ * @copyright       (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license         GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link            https://xoops.org
+ */
+
 namespace xoopsclass;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
@@ -133,8 +151,13 @@ class LegacyClassLoadTest extends TestCase
     {
         require_once XOOPS_ROOT_PATH . '/class/cache/xoopscache.php';
         $engine   = new class extends \XoopsCacheEngine {
-            public function clear($check) {}
-            public function delete($key) {}
+            public function clear($check)
+            {
+            }
+
+            public function delete($key)
+            {
+            }
         };
         $messages = [];
         set_error_handler(static function (int $no, string $msg) use (&$messages): bool {
