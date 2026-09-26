@@ -174,7 +174,7 @@ class XoopsTopic
                 }
             }
             if (!empty($this->s_groups) && \is_array($this->s_groups)) {
-                foreach ($s_groups as $s_g) {
+                foreach ($this->s_groups as $s_g) {
                     $submit_topics = XoopsPerms::getPermitted($this->mid, 'SubmitInTopic', $s_g);
                     $add           = true;
                     foreach ($parent_topics as $p_topic) {
@@ -194,7 +194,7 @@ class XoopsTopic
                 }
             }
             if (!empty($this->r_groups) && \is_array($this->r_groups)) {
-                foreach ($r_groups as $r_g) {
+                foreach ($this->r_groups as $r_g) {
                     $read_topics = XoopsPerms::getPermitted($this->mid, 'ReadInTopic', $r_g);
                     $add         = true;
                     foreach ($parent_topics as $p_topic) {

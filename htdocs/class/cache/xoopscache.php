@@ -705,7 +705,7 @@ abstract class XoopsCacheEngine implements XoopsCacheEngineInterface
      */
     public function write($key, $value, $duration = null)
     {
-        trigger_error(sprintf(__('Method write() not implemented in %s', true), get_class($this)), E_USER_ERROR);
+        trigger_error(sprintf('Method write() not implemented in %s', get_class($this)), E_USER_ERROR);
     }
 
     /**
@@ -717,7 +717,7 @@ abstract class XoopsCacheEngine implements XoopsCacheEngineInterface
      */
     public function read($key)
     {
-        trigger_error(sprintf(__('Method read() not implemented in %s', true), get_class($this)), E_USER_ERROR);
+        trigger_error(sprintf('Method read() not implemented in %s', get_class($this)), E_USER_ERROR);
     }
 
     /**
