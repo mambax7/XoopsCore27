@@ -146,7 +146,7 @@ Below are language differences from a version to next version.
 - added define('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_OK', 'Sodium is available for two-factor authentication.');
 - added define('_XOOPS_UPGRADE_TWOFACTOR_SODIUM_MISSING', 'Two-factor authentication requires the PHP sodium extension. Enable it for the web server and reload this page. Without it, setup and authenticator-code verification are unavailable; enrolled users need a recovery code or an administrator reset. Upgrading can continue with two-factor authentication off.');
 
-/htdocs/install/language/english/twofactor.php
+/htdocs/install/language/english/twofactor.php (new file)
 - added define('TWOFACTOR_SODIUM', 'Sodium extension: required for two-factor authentication');
 - added define('TWOFACTOR_SODIUM_MSG', 'Enable the PHP sodium extension for the web server and reload this page before enabling two-factor authentication. Without it, setup and authenticator-code verification are unavailable. Installation can continue with two-factor authentication off.');
 
