@@ -12,9 +12,9 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Legacy classes that PHP 8 refused to load, helpers that called methods
- * which do not exist, and the comment nav bar's post mode. Each class file is
- * loaded in its own process because an incompatible override is a fatal error
- * at declaration time.
+ * which do not exist, the comment nav bar's post mode, and
+ * XoopsTpl::fetchFromData(). Each class file is loaded in its own process
+ * because an incompatible override is a fatal error at declaration time.
  *
  * @category  XoopsTest
  * @package   XoopsCore27
@@ -104,6 +104,28 @@ class LegacyClassLoadTest extends TestCase
 
         self::assertStringContainsString('&amp;mode=' . $posted . '"', $html);
         self::assertStringNotContainsString('<script>', $html);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    public function fetchFromDataRendersTheSourceWithScopedVars(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/template.php';
+        // Smarty's own constructor only; XoopsTpl's reads site configuration.
+        $tpl = (new \ReflectionClass(\XoopsTpl::class))->newInstanceWithoutConstructor();
+        (new \ReflectionMethod(\Smarty::class, '__construct'))->invoke($tpl);
+        $tpl->setCompileDir(sys_get_temp_dir());
+        $tpl->left_delimiter  = '<{';
+        $tpl->right_delimiter = '}>';
+        $tpl->assign('site', 'XOOPS');
+
+        self::assertSame('Hi Bob at XOOPS', $tpl->fetchFromData('Hi <{$name}> at <{$site}>', false, ['name' => 'Bob']));
+        self::assertNull($tpl->getTemplateVars('name'), '$vars must not leak into the template engine');
+
+        ob_start();
+        $returned = $tpl->fetchFromData('<{$site}>', true);
+        self::assertSame('XOOPS', ob_get_clean());
+        self::assertSame('', $returned);
     }
 
     #[Test]

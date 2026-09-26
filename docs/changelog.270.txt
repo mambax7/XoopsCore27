@@ -16,6 +16,10 @@ Bug fixes:
 - SystemMenuHandler::addMenuTopArray() and addMenuTabsArray() called methods that do not exist; they now call addMenuTop() and addMenuTabs() (modules/system/class/menu.php) (#224)
 - a cache engine that does not implement read() or write() reports that instead of failing on the undefined function __() (class/cache/xoopscache.php) (#224)
 - the legacy XoopsComments post button keeps a valid display mode instead of always using flat, and XoopsTopic applies inherited submit and read permissions from the topic's own group lists instead of undefined variables (class/xoopscomments.php, class/xoopstopic.php) (#224)
+- XoopsTpl::fetchFromData() renders through Smarty's eval: resource; it required a Smarty 2 plugin file that Smarty 4 does not ship, a fatal error on the first call, and it now outputs instead of returning when $display is true, as documented (class/template.php) (#224)
+- the XML-RPC MetaWeblog and MovableType APIs no longer assign _getXoopsApi()'s return value by reference, which raised a notice on every call (class/xml/rpc/metaweblogapi.php, class/xml/rpc/movabletypeapi.php) (#224)
+- Protector's main page no longer warns about an undefined $page when opened without ?page= (xoops_lib/modules/protector/main.php) (#224)
+- the comment poster's website check rejects a non-http(s) URL as intended; preg_match() returns 0, not false, on no match (Request::getUrl() already refused those schemes) (include/comment_post.php) (#224)
 
 Core:
 - add central Markdown support: EasyMDE stores Markdown between [xoops:markdown] markers in existing text columns, MyTextSanitizer renders it with Parsedown in safe mode, and the editor factory keeps Markdown content in EasyMDE; the EasyMDE preview uses the same renderer (class/xoopsmarkdown.php, class/xoopseditor/easymde) (#218)

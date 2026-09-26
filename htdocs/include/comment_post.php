@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $com_url = Request::getUrl('com_url', '', 'POST');
         if ('' !== $com_url) {
             $com_url = filter_var($com_url, FILTER_VALIDATE_URL);
-            if (is_string($com_url) && (false === preg_match("#^https?://#", $com_url))) {
+            if (is_string($com_url) && !preg_match("#^https?://#i", $com_url)) {
                 $com_url = false;
             }
             if (false === $com_url) {
