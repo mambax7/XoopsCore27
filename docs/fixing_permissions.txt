@@ -1,8 +1,8 @@
-Please read this if you experience a problem with saving changed Permissions in module's Admin, and would like to fix it yourself.
+Please read this if you experience a problem with saving changed Permissions in the module Admin area, and would like to fix it yourself.
 
-However, before you do it, we recommend to check first the XOOPS Website for an updated version of the module.
+However, before you do it, we recommend checking first the XOOPS Website for an updated version of the module.
 
-1) as stated in Changelog, XOOPS 2.5.6 addresses some security issues.
+1) As stated in Changelog, XOOPS 2.5.6 addresses some security issues.
 
 2) These issues have been addressed in the Core, and as a result we've made minor changes in the file grouppermform.php. These changes should have no impact on standard modules
 
@@ -16,7 +16,7 @@ replace it with this:
 
 include_once XOOPS_ROOT_PATH . '/class/xoopsform/grouppermform.php';
 
-4) Otherwise, if there are custom changes to the file grouppermform.php and you want to keep using it, then change that file as follow:
+4) Otherwise, if there are custom changes to the file grouppermform.php and you want to keep using it, then change that file as follows:
 
 a) around Line 28, after the line
 
