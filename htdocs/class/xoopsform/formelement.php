@@ -243,7 +243,7 @@ class XoopsFormElement
     /**
      * get the caption for the element
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getCaption($encode = false)
@@ -254,7 +254,7 @@ class XoopsFormElement
     /**
      * get the caption for the element
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getTitle($encode = true)
@@ -282,7 +282,7 @@ class XoopsFormElement
     /**
      * get the element's description
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getDescription($encode = false)
@@ -342,7 +342,7 @@ class XoopsFormElement
     /**
      * Get the extra attributes for the element
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getExtra($encode = false)

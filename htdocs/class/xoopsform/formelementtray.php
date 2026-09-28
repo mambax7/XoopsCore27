@@ -163,7 +163,7 @@ class XoopsFormElementTray extends XoopsFormElement implements XoopsFormContaine
     /**
      * Get the delimiter of this group
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string The delimiter
      */
     public function getDelimeter($encode = false)
@@ -197,12 +197,12 @@ class XoopsFormElementTray extends XoopsFormElement implements XoopsFormContaine
      * as implying ORIENTATION_VERTICAL for bc
      *
      * @return string either \XoopsFormElementTray::ORIENTATION_HORIZONTAL
-     *                    or \XoopsFormElementTray::ORIENTATION_VERTICAL\
+     *                    or \XoopsFormElementTray::ORIENTATION_VERTICAL
     */
     public function getOrientation()
     {
         if (!isset($this->orientation)) {
-            if(false !== stripos($this->_delimeter, '<br')) {
+            if (false !== stripos($this->_delimeter, '<br')) {
                 $this->orientation = self::ORIENTATION_VERTICAL;
                 // strip tag as renderer should supply the relevant html
             } else {

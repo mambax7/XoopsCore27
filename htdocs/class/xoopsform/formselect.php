@@ -109,7 +109,7 @@ class XoopsFormSelect extends XoopsFormElement
     /**
      * Get an array of pre-selected values
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return array
      */
     public function getValue($encode = false)
@@ -175,7 +175,7 @@ class XoopsFormSelect extends XoopsFormElement
      *
      * Note: both name and value should be sanitized. However, for backward compatibility, only value is sanitized for now.
      *
-     * @param bool|int $encode To sanitizer the text? potential values: 0 - skip; 1 - only for value; 2 - for both value and name
+     * @param bool|int $encode To sanitize the text? potential values: 0 - skip; 1 - only for value; 2 - for both value and name
      *
      * @return array Associative array of value->name pairs
      */
