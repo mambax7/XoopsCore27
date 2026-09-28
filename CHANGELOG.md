@@ -5,6 +5,36 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.4-RC1] - 2026-09-26
+
+### Bug Fixes
+- **core**: Load the downloaders and XML-RPC parser on PHP 8 (#224)
+- **upgrade**: Translate the 2.7.4 patch messages; open the RC 1 logs (#223)
+- **upgrade**: Contain and report cache-loader failures in cleanCaches()
+- **upgrade**: Require the three distinct canonical notification options
+- **upgrade**: Stop the wizard re-queueing the 2.5.11 patch on every run
+- Fix isadmin display problem
+- **theme/modern**: Make jgrowl overrides independent of load order
+- **theme/modern**: Size close-all and propagate text direction
+- **theme/modern**: Preserve jGrowl corners and CSS precedence
+- **theme/modern**: Restore visible jGrowl notifications
+
+### Documentation
+- Update README for 2.7.4 RC 1; mark a new file in lang_diff
+
+### Features
+- **editor**: Central editor support with Markdown and SCEditor (#218)
+
+### Miscellaneous
+- **language**: Normalize quoting in English language files (#222)
+
+### Other
+- Suggestions AI
+- Re-added XOOPS Version to System Info
+
+### Styling
+- **theme/modern**: Add standard header to regression test
+
 ## [v2.7.4-Beta2] - 2026-09-13
 
 ### Bug Fixes
