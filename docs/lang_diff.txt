@@ -1,7 +1,7 @@
 LANGUAGE DIFFERENCES
 =====================
 
-Below are language differences from a version to next version.
+Below are language differences from one version to the next.
 
 ================================
 2026/09: Version 2.7.4-RC1
@@ -502,7 +502,7 @@ htdocs/xoops_lib/modules/protector/language/english/modinfo.php
 - added define($constpref . '_BANIP_TIME0DSC', 'Suspension time in seconds for automatic IP bans');
 
 htdocs/language/english/uploader.php
-- added define('_ER_UP_INDEXNOTSET', 'Attempt to fetch multiple file, index must be set.');
+- added define('_ER_UP_INDEXNOTSET', 'Attempt to fetch multiple files, index must be set.');
 
 htdocs/language/english/admin.php
 - added define('_AD_WARNING_OLD_PHP', 'WARNING: Consider upgrading to a newer version of PHP. Version %s or newer is recommended and will be required in future XOOPS versions.');
@@ -790,7 +790,7 @@ delete define('_PM_READ', 'Already Read');
 - deleted define("_AM_SYSTEM_PREFERENCES_NAV_MD_AM_CENSOR","Word Censoring Options");
 - deleted define("_AM_SYSTEM_PREFERENCES_NAV_MD_AM_SEARCH","Search Options");
 - deleted define("_AM_SYSTEM_PREFERENCES_NAV_MD_AM_MAILER","Email Setup");
-- deleted define("_AM_SYSTEM_PREFERENCES_NAV_MD_AM_AUTHENTICATION","Authentication Options");*/
+- deleted define("_AM_SYSTEM_PREFERENCES_NAV_MD_AM_AUTHENTICATION","Authentication Options");
 - deleted define("_AM_SYSTEM_PREFERENCES_NAV_TIPS_MD_AM_GENERAL","A faire");
 - deleted define("_AM_SYSTEM_PREFERENCES_NAV_TIPS_MD_AM_USERSETTINGS","A faire");
 - deleted define("_AM_SYSTEM_PREFERENCES_NAV_TIPS_MD_AM_METAFOOTER","A faire");
