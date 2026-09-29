@@ -26,7 +26,7 @@ $sample_form->setExtra('enctype="multipart/form-data"');
 // Not required but for user-friendly concern
 $editor = \Xmf\Request::getString('editor', '', 'GET') ?: \Xmf\Request::getString('editor', '', 'POST');
 if (!empty($editor)) {
-    setcookie('editor', $editor); // save to cookie
+    xoops_setcookie('editor', $editor); // save to cookie
 } else {
     // Or use user pre-selected editor through profile
     if (is_object($xoopsUser)) {
