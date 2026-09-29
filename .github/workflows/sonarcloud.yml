@@ -12,6 +12,9 @@ concurrency:
 jobs:
   sonarcloud:
     name: SonarCloud Analysis
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     if: github.repository == 'XOOPS/XoopsCore27'

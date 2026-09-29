@@ -62,6 +62,8 @@ jobs:
 
   tests:
     name: PHP ${{ matrix.php }}${{ matrix.deps && format(' / {0}', matrix.deps) || '' }}${{ matrix.coverage && ' / Coverage' || '' }}
+    permissions:
+      contents: read
     runs-on: ubuntu-22.04
     timeout-minutes: 15
 
