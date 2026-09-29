@@ -186,11 +186,14 @@ if [ -n "$added" ]; then
     # xoops_setcookie() sets all three. Flagged on xoops.org by an external
     # scanner via a module cookie (newbb, 2026-09). The only legitimate raw
     # call is the helper's own, in include/xoopssetcookie.php, so that file
-    # is excluded. Case-insensitive because PHP function names are. Quoted
-    # strings are blanked and `//` comments dropped first, so text that only
-    # mentions setcookie( does not fire; a real call keeps its `setcookie(`.
+    # is excluded. Case-insensitive because PHP function names are. Before
+    # matching, in this order: quoted strings are blanked (escape-aware, so
+    # 'it\'s' stays one string), same-line /* */ comments are removed, then
+    # `//` comments are dropped. Text that only mentions setcookie( does not
+    # fire; a real call keeps its `setcookie(`. Line-based like every sniff
+    # here, so a comment that opens on an earlier line is not tracked.
     cookie_added=$(diff_added '*.php' ':(exclude)htdocs/include/xoopssetcookie.php' \
-        | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g; s|//.*$||")
+        | sed -E "s/'([^'\\\\]|\\\\.)*'/''/g; s/\"([^\"\\\\]|\\\\.)*\"/\"\"/g; s#/\\*([^*]|\\*+[^*/])*\\*+/##g; s#//.*\$##")
     hits=$(printf '%s\n' "$cookie_added" | grep -iE '(^|[^_a-zA-Z0-9>:$])setcookie[[:space:]]*\(' | grep -vE '^\+[[:space:]]*(\*|#)' || true)
     [ -n "$hits" ] && report "raw setcookie() — use xoops_setcookie() (Secure over HTTPS, HttpOnly, SameSite)" "$hits"
 
