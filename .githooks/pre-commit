@@ -185,8 +185,13 @@ if [ -n "$added" ]; then
     # Raw setcookie(): no Secure flag over HTTPS, no HttpOnly, no SameSite.
     # xoops_setcookie() sets all three. Flagged on xoops.org by an external
     # scanner via a module cookie (newbb, 2026-09). The only legitimate raw
-    # call is the helper's own, in include/xoopssetcookie.php.
-    hits=$(printf '%s\n' "$added" | grep -E '(^|[^_a-zA-Z0-9>:$])setcookie[[:space:]]*\(' | grep -vE '^\+[[:space:]]*(\*|//|#)' || true)
+    # call is the helper's own, in include/xoopssetcookie.php, so that file
+    # is excluded. Case-insensitive because PHP function names are. Quoted
+    # strings are blanked and `//` comments dropped first, so text that only
+    # mentions setcookie( does not fire; a real call keeps its `setcookie(`.
+    cookie_added=$(diff_added '*.php' ':(exclude)htdocs/include/xoopssetcookie.php' \
+        | sed -E "s/'[^']*'/''/g; s/\"[^\"]*\"/\"\"/g; s|//.*$||")
+    hits=$(printf '%s\n' "$cookie_added" | grep -iE '(^|[^_a-zA-Z0-9>:$])setcookie[[:space:]]*\(' | grep -vE '^\+[[:space:]]*(\*|#)' || true)
     [ -n "$hits" ] && report "raw setcookie() — use xoops_setcookie() (Secure over HTTPS, HttpOnly, SameSite)" "$hits"
 
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
