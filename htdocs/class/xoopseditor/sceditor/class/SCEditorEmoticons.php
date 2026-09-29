@@ -156,7 +156,7 @@ final class SCEditorEmoticons
             }
             $sql = 'INSERT INTO ' . $db->prefix('smiles') . ' (code, smile_url, emotion, display) VALUES ('
                  . $db->quote($row['code']) . ', ' . $db->quote($row['smile_url']) . ', '
-                 . $db->quote($row['emotion']) . ', ' . $row['display'] . ')';
+                 . $db->quote($row['emotion']) . ', ' . (int) $row['display'] . ')';
             if (!$db->exec($sql)) {
                 $logs[] = sprintf('Could not insert smiley %s: %s', $row['code'], $db->error());
                 $ok     = false;
