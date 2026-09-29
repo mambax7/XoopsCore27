@@ -18,7 +18,7 @@
 //           expandEasing   - easing function to use on expand (optional)
 //           collapseEasing - easing function to use on collapse (optional)
 //           multiFolder    - whether or not to limit the browser to one subfolder at a time
-//           loadMessage    - Message to display while initial tree loads (can be HTML)
+//           loadMessage    - Message to display while initial tree loads (plain text)
 //
 // History:
 //
@@ -96,8 +96,13 @@ if (jQuery) (function ($) {
                     });
                 }
 
-                // Loading message
-                $(this).html('<ul class="jqueryFileTree start"><li class="wait">' + o.loadMessage + '<li></ul>');
+                // Loading message - inserted as text so a caller-supplied
+                // string can never inject markup into the page.
+                $(this).empty().append(
+                    $('<ul class="jqueryFileTree start"></ul>').append(
+                        $('<li class="wait"></li>').text(o.loadMessage)
+                    )
+                );
                 // Get the initial file list
                 showTree($(this), o.root); // no escape() - see note above
             });
