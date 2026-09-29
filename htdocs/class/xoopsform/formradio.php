@@ -1,7 +1,7 @@
 <?php
 
 /**
- * XOOPS form radio compo
+ * XOOPS form radio component
  *
  * You may not change or alter any portion of this comment or credits
  * of supporting developers from this source code or any supporting source code
@@ -16,7 +16,6 @@
  * @since            2.0
  * @author           Kazumi Ono (AKA onokazu) http://www.myweb.ne.jp/, http://jp.xoops.org/
  * @author           Taiwen Jiang <phppp@users.sourceforge.net>
- * @package          kernel
  * @subpackage       form
  * @todo             template
  */
@@ -78,7 +77,7 @@ class XoopsFormRadio extends XoopsFormElement
     /**
      * Get the "value" attribute
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getValue($encode = false)
@@ -128,7 +127,7 @@ class XoopsFormRadio extends XoopsFormElement
     /**
      * Get an array with all the options
      *
-     * @param bool|int $encode To sanitizer the text? potential values: 0 - skip; 1 - only for value; 2 - for both value and name
+     * @param bool|int $encode To sanitize the text? potential values: 0 - skip; 1 - only for value; 2 - for both value and name
      *
      * @return array Associative array of value->name pairs
      */
@@ -148,7 +147,7 @@ class XoopsFormRadio extends XoopsFormElement
     /**
      * Get the delimiter of this group
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string The delimiter
      */
     public function getDelimeter($encode = false)

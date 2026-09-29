@@ -237,7 +237,7 @@ class XoopsForm
     /**
      * return the summary of the form
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getSummary($encode = false)
@@ -248,7 +248,7 @@ class XoopsForm
     /**
      * return the title of the form
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getTitle($encode = false)
@@ -261,7 +261,7 @@ class XoopsForm
      *
      * Deprecated, to be refactored
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getName($encode = true)
@@ -272,7 +272,7 @@ class XoopsForm
     /**
      * get the "action" attribute for the <form> tag
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getAction($encode = true)
@@ -434,7 +434,7 @@ class XoopsForm
      * Gets the "value" attribute of a form element
      *
      * @param  string $name   the "name" attribute of a form element
-     * @param  bool   $encode To sanitizer the text?
+     * @param  bool   $encode To sanitize the text?
      * @return string the "value" attribute assigned to a form element, null if not set
      */
     public function getElementValue($name, $encode = false)
@@ -450,7 +450,7 @@ class XoopsForm
     /**
      * gets the "value" attribute of all form elements
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return array array of name/value pairs assigned to form elements
      */
     public function getElementValues($encode = false)

@@ -19,7 +19,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 /**
  * Return a list of file Mimetypes
  *
- * This should really be replaced with a more accurate way of determining the actually mimetype
+ * This should really be replaced with a more accurate way of determining the actual mimetype
  */
 return [
     'hqx'   => 'application/mac-binhex40',

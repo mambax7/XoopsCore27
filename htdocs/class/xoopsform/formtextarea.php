@@ -91,7 +91,7 @@ class XoopsFormTextArea extends XoopsFormElement
     /**
      * Get initial content
      *
-     * @param  bool $encode To sanitizer the text? Default value should be "true"; however we have to set "false" for backward compatibility
+     * @param  bool $encode To sanitize the text? Default value should be "true"; however we have to set "false" for backward compatibility
      * @return string
      */
     public function getValue($encode = false)

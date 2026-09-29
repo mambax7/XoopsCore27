@@ -76,7 +76,7 @@ class XoopsFormButton extends XoopsFormElement
     /**
      * Get the initial value
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getValue($encode = false)

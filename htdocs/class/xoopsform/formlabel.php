@@ -49,7 +49,7 @@ class XoopsFormLabel extends XoopsFormElement
     /**
      * Get the "value" attribute
      *
-     * @param  bool $encode To sanitizer the text?
+     * @param  bool $encode To sanitize the text?
      * @return string
      */
     public function getValue($encode = false)
