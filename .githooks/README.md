@@ -31,7 +31,17 @@ Sniffs staged PHP and `.tpl` changes for known-bad shapes:
 | 7 | `->queryF(` | Deprecated in 2.7 — bypassed Protector |
 | 8 | `->quoteString(` | Deprecated in 2.7 — use `quote()` |
 | 9 | `// removed` | BC-shim antipattern — delete the code instead |
-| 10 | Standard Smarty `{$var}` in `.tpl` | XOOPS uses `<{$var}>` delimiters |
+| 10 | Loose `in_array()` on `theme_set_allowed` | Theme directory names such as `"0"` must not coerce in a loose comparison; pass `true` as the third argument (issue #45) |
+| 11 | Raw assignment to `->allowedThemes` / `->defaultTheme` from `$xoopsConfig` | Go through `xoops_resolveThemeConfig()` so the validated theme set is kept (issue #45) |
+| 12 | Variable variables (`$$x`, `${$x}`) | Opaque and injection-prone — access keys and properties explicitly |
+| 13 | Direct `$_GET` / `$_POST` / `$_REQUEST` / `$_COOKIE` access | Use `Xmf\Request` with an explicit hash (`'GET'` / `'POST'`) |
+| 14 | Legacy Criteria IN format (a preformatted `"(1,2,3)"` string) | Pass an array so Criteria casts and quotes each element |
+| 15 | Error-suppressed call `@foo()` | Handle the failure explicitly instead of hiding it |
+| 16 | New PHP file under `tests/` without the standard XOOPS file header | New tests carry the same header as the rest of the project; copy it from `tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php` |
+| tpl | Standard Smarty `{$var}` in `.tpl` | XOOPS uses `<{$var}>` delimiters |
+
+The numbers match the numbered comments in `.githooks/pre-commit`; the
+`.tpl` check runs as its own pass and is not numbered there.
 
 The diff is scanned with `--diff-filter=ACMR` so edits to renamed
 files (`git mv`) and copies that Git's copy-detection finds are also
@@ -39,6 +49,16 @@ covered. Vendored trees (`htdocs/xoops_lib/vendor/**`,
 `htdocs/class/libraries/vendor/**`) and the `tests/**` tree are
 excluded from the scan so dependency updates and test fixtures
 containing pattern literals do not false-fire.
+
+Rule 16 is the one check that looks at `tests/`: it reads the staged
+content of newly added `tests/**/*.php` files (every `fixtures/`
+directory under `tests/` excluded, at any depth) and requires the
+standard header at the top: `<?php` on line 1, a `/*` or `/**` comment
+opening on line 2, and the header's first sentence ("You may not change
+or alter any portion of this comment ...") inside that comment, within
+the first 12 lines; on each line the sentence must come before any
+`*/`. Only added files are checked, so existing tests without the
+header do not fire when they are edited.
 
 ### `commit-msg`
 
