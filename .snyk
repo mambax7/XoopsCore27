@@ -1,0 +1,23 @@
+# Snyk (https://snyk.io) policy file
+#
+# Snyk Code cannot ignore individual findings through this file; it only
+# excludes paths from analysis. `code` limits the rules to Snyk Code, so
+# Snyk Secrets still scans these directories.
+#
+# Rules:
+# - paths are relative to this file, without a leading "./";
+# - indent with spaces, never tabs;
+# - exclude third-party packages only. htdocs/xoops_lib/vendor/xoops/*
+#   (xmf, helpers, smartyextensions, regdom) is XOOPS code and must stay
+#   scanned, so never exclude htdocs/xoops_lib/vendor/** as a whole;
+# - add another package only when it produces findings.
+exclude:
+  code:
+    # Smarty: HHVM-only eval() in the compiled-template and cache resources
+    - htdocs/xoops_lib/vendor/smarty/**
+    # TCPDF: font-cache paths and output streaming
+    - htdocs/xoops_lib/vendor/tecnickcom/**
+    # PHPMailer: also hides get_oauth_token.php; its removal is tracked separately
+    - htdocs/xoops_lib/vendor/phpmailer/**
+    # Holds only composer and firebase (no XOOPS packages)
+    - htdocs/class/libraries/vendor/**
