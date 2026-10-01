@@ -237,91 +237,25 @@ class xos_kernel_Xoops2
     /**
      * Validate a theme selector redirect against a XOOPS base URL.
      *
+     * Delegates to the shared same-site redirect policy in
+     * include/file_safety.php so the theme selector, user.php and
+     * modules/profile/user.php cannot drift apart.
+     *
      * @param string $redirect Untrusted redirect target submitted by the form.
      * @param string $baseUrl  Authoritative XOOPS base URL (typically XOOPS_URL).
      * @return string The validated redirect URL, or '' if the input is unsafe.
      */
     protected function validateThemeRedirectUrl(string $redirect, string $baseUrl): string
     {
-        $redirect = trim($redirect);
-        if (
-            $redirect === ''
-            || preg_match('/[\r\n\\\\]/', $redirect) === 1
-            || str_starts_with($redirect, '//')
-        ) {
-            return '';
-        }
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
 
-        $parts = parse_url($redirect);
-        if ($parts === false) {
-            return '';
-        }
-
-        // Reject percent-encoded slashes and backslashes in the path component.
-        // Query strings legitimately use %2F as data; paths never need it, and
-        // either form can be normalized by proxies/clients to escape basepath
-        // (e.g. /xoops/%2e%2e%2fadmin → /admin) or invent a scheme-relative
-        // redirect (e.g. /%5C%5Cevil.com → //evil.com).
-        $rawPath = (string) ($parts['path'] ?? '');
-        if (preg_match('/%(?:2f|5c)/i', $rawPath) === 1) {
-            return '';
-        }
-
-        // Reject userinfo in absolute URLs. It serves no purpose for a same-site
-        // theme-switch return URL and browsers handle it inconsistently on
-        // redirects (some strip, some prompt, some forward silently), which can
-        // be used to dress up a phishing-style URL even when host matches.
-        if (isset($parts['user']) || isset($parts['pass'])) {
-            return '';
-        }
-
-        $baseScheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
-        $baseHost   = (string) parse_url($baseUrl, PHP_URL_HOST);
-        $basePort   = $this->normalizeThemeRedirectPort($baseScheme, parse_url($baseUrl, PHP_URL_PORT));
-        $basePath   = rtrim((string) parse_url($baseUrl, PHP_URL_PATH), '/');
-        if ($baseScheme === '' || $baseHost === '') {
-            return '';
-        }
-
-        if (isset($parts['scheme']) || isset($parts['host'])) {
-            $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-            $host   = (string) ($parts['host'] ?? '');
-            if ($scheme !== $baseScheme) {
-                return '';
-            }
-            if ($host === '' || strcasecmp($host, $baseHost) !== 0) {
-                return '';
-            }
-            if ($this->normalizeThemeRedirectPort($scheme, $parts['port'] ?? null) !== $basePort) {
-                return '';
-            }
-            $path = (string) ($parts['path'] ?? '/');
-            if ($this->hasThemeRedirectParentPathSegment($path)) {
-                return '';
-            }
-            if (!$this->themeRedirectPathMatchesBase($path, $basePath)) {
-                return '';
-            }
-
-            return $redirect;
-        }
-
-        if (!str_starts_with($redirect, '/')) {
-            return '';
-        }
-        $path = (string) ($parts['path'] ?? '/');
-        if ($this->hasThemeRedirectParentPathSegment($path)) {
-            return '';
-        }
-        if (!$this->themeRedirectPathMatchesBase($path, $basePath)) {
-            return '';
-        }
-
-        return $redirect;
+        return xoops_validateLocalRedirect($redirect, $baseUrl);
     }
 
     /**
      * Return the effective port for comparing same-site redirect URLs.
+     *
+     * @deprecated 2.7.4 No longer used by core; the policy lives in xoops_validateLocalRedirect().
      *
      * @param string $scheme Lowercase URL scheme ('http' or 'https' expected).
      * @param mixed  $port   Port from parse_url(); null/empty means scheme default.
@@ -345,6 +279,8 @@ class xos_kernel_Xoops2
     /**
      * Detect parent-directory path segments before browser URL normalization.
      *
+     * @deprecated 2.7.4 No longer used by core; the policy lives in xoops_validateLocalRedirect().
+     *
      * @param string $path URL path component (literal or percent-encoded).
      * @return bool True if the path contains a '..' segment after decoding.
      */
@@ -367,6 +303,8 @@ class xos_kernel_Xoops2
 
     /**
      * Ensure a redirect path stays inside the XOOPS base path.
+     *
+     * @deprecated 2.7.4 No longer used by core; the policy lives in xoops_validateLocalRedirect().
      *
      * @param string $path     Candidate URL path component.
      * @param string $basePath Trimmed XOOPS base path ('' for root install).

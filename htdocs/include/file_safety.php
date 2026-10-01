@@ -10,6 +10,7 @@
  *  - xoops_chmod_quietly()     — scoped-suppressed chmod() with single warning
  *  - xoops_remove_file_quietly() — scoped-suppressed unlink() with single warning
  *  - xoops_isLocalUrl()        — strict same-origin check (scheme/host/port) for redirects
+ *  - xoops_validateLocalRedirect() — full same-site redirect policy (origin + base path)
  *  - xoops_rebuildQueryString() — parse-and-re-emit a query string for safe reflection
  *
  * They originally lived in include/cp_functions.php, but that file
@@ -268,7 +269,13 @@ if (!function_exists('xoops_isLocalUrl')) {
         $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         if (preg_match('/[\x00-\x1F\x7F]/', $decoded)) {
-            return false; // control characters / CR-LF
+            // control characters / CR-LF; browsers also drop TAB/LF/CR
+            // while parsing, so "/<TAB>/host" would become "//host"
+            return false;
+        }
+
+        if (xoops_urlHeadIsAmbiguous($decoded)) {
+            return false;
         }
 
         $parts = parse_url($decoded);
@@ -308,6 +315,115 @@ if (!function_exists('xoops_isLocalUrl')) {
         $samePort   = $targetPort === $basePort;
 
         return $sameHost && $sameScheme && $samePort;
+    }
+}
+
+if (!function_exists('xoops_urlHeadIsAmbiguous')) {
+    /**
+     * Detect URL forms that parse_url() and browsers read differently.
+     *
+     * Browsers treat "\" as "/" in the scheme, authority and path of http(s)
+     * URLs (WHATWG URL Standard, special schemes), so "/\host" or
+     * "http://site\@host" can leave the site while parse_url() reports a
+     * local path or a user name. Percent-encoded "/" and "\" in that same
+     * part can be normalised by clients or proxies into the same shapes.
+     * The query and fragment are data, so separators there stay allowed.
+     *
+     * @param string $url candidate URL, already entity-decoded
+     * @return bool true when the scheme/authority/path part is ambiguous
+     */
+    function xoops_urlHeadIsAmbiguous($url)
+    {
+        $head = preg_split('/[?#]/', (string) $url, 2)[0];
+
+        return str_contains($head, '\\') || 1 === preg_match('/%(?:2f|5c)/i', $head);
+    }
+}
+
+if (!function_exists('xoops_validateLocalRedirect')) {
+    /**
+     * Validate an untrusted redirect target against the XOOPS base URL.
+     *
+     * The single same-site redirect policy shared by user.php,
+     * modules/profile/user.php and the theme selector. A target is accepted
+     * only when it is either
+     *  - a root-relative path ("/...") inside the base path, or
+     *  - an absolute http(s) URL with the base scheme, host and effective port,
+     *    no userinfo, and a path inside the base path.
+     * Rejected outright: control characters, scheme-relative "//host",
+     * backslash and encoded-separator forms (see xoops_urlHeadIsAmbiguous()),
+     * ".." path segments (literal or encoded) and bare relative paths.
+     *
+     * The checks run on the entity-decoded form, because redirect_header()
+     * and other HTML sinks decode entities before the browser acts on the URL.
+     *
+     * @param string      $redirect untrusted redirect target
+     * @param string|null $baseUrl  authoritative base URL; defaults to XOOPS_URL
+     * @return string the trimmed target when it is safe, '' otherwise
+     */
+    function xoops_validateLocalRedirect($redirect, $baseUrl = null)
+    {
+        $redirect = trim((string) $redirect);
+        $baseUrl  = (string) ($baseUrl ?? (defined('XOOPS_URL') ? XOOPS_URL : ''));
+        if ('' === $redirect || '' === $baseUrl) {
+            return '';
+        }
+
+        $probe = html_entity_decode($redirect, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if (1 === preg_match('/[\x00-\x1F\x7F]/', $probe)
+            || str_starts_with($probe, '//')
+            || xoops_urlHeadIsAmbiguous($probe)
+        ) {
+            return '';
+        }
+
+        $parts = parse_url($probe);
+        if (false === $parts || isset($parts['user']) || isset($parts['pass'])) {
+            return '';
+        }
+
+        $base       = parse_url($baseUrl) ?: [];
+        $baseScheme = strtolower((string) ($base['scheme'] ?? ''));
+        $baseHost   = (string) ($base['host'] ?? '');
+        $basePath   = rtrim((string) ($base['path'] ?? ''), '/');
+        if ('' === $baseScheme || '' === $baseHost) {
+            return '';
+        }
+
+        $effectivePort = static function (string $scheme, $port): ?int {
+            if (null !== $port) {
+                return (int) $port;
+            }
+
+            return ['http' => 80, 'https' => 443][$scheme] ?? null;
+        };
+
+        if (isset($parts['scheme']) || isset($parts['host'])) {
+            $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+            $host   = (string) ($parts['host'] ?? '');
+            if ($scheme !== $baseScheme
+                || '' === $host
+                || 0 !== strcasecmp($host, $baseHost)
+                || $effectivePort($scheme, $parts['port'] ?? null) !== $effectivePort($baseScheme, $base['port'] ?? null)
+            ) {
+                return '';
+            }
+            $path = (string) ($parts['path'] ?? '/');
+        } elseif (str_starts_with($probe, '/')) {
+            $path = (string) ($parts['path'] ?? '/');
+        } else {
+            return ''; // bare relative paths resolve against the current page, not the site
+        }
+
+        // Decode before splitting so "%2e%2e" is seen as a ".." segment.
+        if (in_array('..', explode('/', rawurldecode($path)), true)) {
+            return '';
+        }
+        if ('' !== $basePath && $path !== $basePath && !str_starts_with($path, $basePath . '/')) {
+            return '';
+        }
+
+        return $redirect;
     }
 }
 
