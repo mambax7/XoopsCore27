@@ -44,6 +44,8 @@ if (Request::hasVar('delete_cancel', 'POST')) {
     $op = 'cancel';
 }
 
+include_once $GLOBALS['xoops']->path('include/notification_functions.php'); // xoops_notification_selection()
+
 switch ($op) {
     case 'cancel':
         // FIXME: does this always go back to correct location??
@@ -178,37 +180,34 @@ switch ($op) {
         break;
 
     case 'delete_ok':
-        $del_not = Request::getArray('del_not', [], 'POST');
+        // Optional confirmation step: the core list form posts "delete"
+        // directly, a theme may post "delete_ok" to ask first.
+        $del_not = xoops_notification_selection(Request::getArray('del_not', [], 'POST'));
         if (empty($del_not)) {
             redirect_header('notifications.php', 2, _NOT_NOTHINGTODELETE);
         }
         include $GLOBALS['xoops']->path('header.php');
-        $hidden_vars = [
-            'uid'       => $uid,
-            'delete_ok' => 1,
-            'del_not'   => $del_not,
-        ];
+        // del_not[<module id>][<n>] hidden fields carry the selection through the
+        // confirmation form unchanged; "delete" sends it to the delete step.
+        $hidden_vars = ['delete' => 1] + xoops_notification_confirm_fields($del_not);
         echo '<h4>' . _NOT_DELETINGNOTIFICATIONS . '</h4>';
         xoops_confirm($hidden_vars, xoops_getenv('PHP_SELF'), _NOT_RUSUREDEL);
         include $GLOBALS['xoops']->path('footer.php');
-        // FIXME: There is a problem here... in xoops_confirm it treats arrays as
-        // optional radio arguments on the confirmation page... change this or
-        // write new function...
         break;
 
     case 'delete':
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header('notifications.php', 2, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
-        $del_not = Request::getArray('del_not', [], 'POST');
+        $del_not = xoops_notification_selection(Request::getArray('del_not', [], 'POST'));
         if (empty($del_not)) {
             redirect_header('notifications.php', 2, _NOT_NOTHINGTODELETE);
         }
         $notification_handler = xoops_getHandler('notification');
-        foreach ($del_not as $n_array) {
-            foreach ($n_array as $n) {
-                $notification = $notification_handler->get($n);
-                if ($notification->getVar('not_uid') == $uid) {
+        foreach ($del_not as $notificationIds) {
+            foreach ($notificationIds as $notificationId) {
+                $notification = $notification_handler->get($notificationId);
+                if (is_object($notification) && (int) $notification->getVar('not_uid') === (int) $uid) {
                     $notification_handler->delete($notification);
                 }
             }

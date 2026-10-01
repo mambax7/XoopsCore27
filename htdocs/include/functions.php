@@ -419,7 +419,17 @@ function xoops_result($msg, $title = '')
 /**
  * xoops_confirm()
  *
- * @param mixed  $hiddens
+ * $msg is output as HTML; callers must escape any untrusted text in it.
+ * Field names, values and radio captions in $hiddens are escaped here
+ * (see xoops_confirm_fields()), and so is the submit label (see
+ * xoops_confirm_submit_label()).
+ *
+ * Template contract (system_confirm.tpl and theme copies): <{$hiddens}>
+ * is ready-made HTML, and <{$submit}> and <{$action}> arrive escaped for an
+ * HTML attribute. Print them unmodified; an |escape modifier would encode
+ * them a second time.
+ *
+ * @param array  $hiddens  field name => scalar (hidden input) or caption => value array (radio group)
  * @param mixed  $action
  * @param mixed  $msg
  * @param string $submit
@@ -433,44 +443,27 @@ function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
         $GLOBALS['xoTheme'] = new \xos_opal_Theme();
     }
     require_once $GLOBALS['xoops']->path('/class/template.php');
+    require_once __DIR__ . '/html_safety.php';
+    $tempHiddens = xoops_confirm_fields((array) $hiddens);
     $confirmTpl = new \XoopsTpl();
     $confirmTpl->assign('msg', $msg);
     $confirmTpl->assign('action', htmlspecialchars($action, ENT_QUOTES | ENT_HTML5));
-    $tempHiddens = '';
-    foreach ($hiddens as $name => $value) {
-        if (is_array($value)) {
-            foreach ($value as $caption => $newvalue) {
-                $tempHiddens .= '<input type="radio" name="' . $name . '" value="' . htmlspecialchars($newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
-            }
-            $tempHiddens .= '<br>';
-        } else {
-            $tempHiddens .= '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '" />';
-        }
-    }
     $confirmTpl->assign('hiddens', $tempHiddens);
     $confirmTpl->assign('addtoken', $addtoken);
     if ($addtoken != false) {
         $confirmTpl->assign('token', $GLOBALS['xoopsSecurity']->getTokenHTML());
     }
-    $submit = ($submit != '') ? trim($submit) : _SUBMIT;
+    // Escaped once for both outputs: the template and the fallback put the
+    // label into value="" and title="" attributes.
+    $submit = xoops_confirm_submit_label($submit, _SUBMIT);
     $confirmTpl->assign('submit', $submit);
     $html = $confirmTpl->fetch("db:system_confirm.tpl");
     if (!empty($html)) {
         echo $html;
     } else {
-        $submit = ($submit != '') ? trim($submit) : _SUBMIT;
         echo '<div class="confirmMsg">' . $msg . '<br>
 			  <form method="post" action="' . htmlspecialchars($action, ENT_QUOTES | ENT_HTML5) . '">';
-        foreach ($hiddens as $name => $value) {
-            if (is_array($value)) {
-                foreach ($value as $caption => $newvalue) {
-                    echo '<input type="radio" name="' . $name . '" value="' . htmlspecialchars($newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
-                }
-                echo '<br>';
-            } else {
-                echo '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '" />';
-            }
-        }
+        echo $tempHiddens;
         if ($addtoken != false) {
             echo $GLOBALS['xoopsSecurity']->getTokenHTML();
         }
