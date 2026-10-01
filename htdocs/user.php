@@ -62,25 +62,14 @@ if ($op === 'main') {
     }
 
     $redirect = Request::getUrl('xoops_redirect', '', 'GET');
-    if (!empty($redirect)) {
-        $urlParts = parse_url($redirect);
-        $xoopsUrlParts = parse_url(XOOPS_URL);
-        if (false !== $urlParts) {
-            // make sure $redirect is somewhere inside XOOPS_URL
-            // catch https:example.com (no //)
-            $badScheme = (isset($urlParts['path']) && !isset($urlParts['host']) && isset($urlParts['scheme']));
-            // no host or matching host
-            $hostMatch = (!isset($urlParts['host'])) || (0 === strcasecmp($urlParts['host'], $xoopsUrlParts['host']));
-            // path only, or path matches
-            $pathMatch = (isset($urlParts['path']) && !isset($urlParts['host']) && !isset($urlParts['scheme']))
-                || ($hostMatch && isset($urlParts['path']) && isset($xoopsUrlParts['path'])
-                    && 0 === strncmp($urlParts['path'], $xoopsUrlParts['path'], strlen($xoopsUrlParts['path'])));
-            if ($badScheme || !($hostMatch && $pathMatch)) {
-                $redirect = XOOPS_URL;
-            }
-            header('Location: ' . $redirect);
-            exit();
-        }
+    if ('' !== $redirect) {
+        // Shared same-site policy: off-site hosts, "//host", backslash and
+        // encoded-separator forms, ".." segments and paths outside XOOPS_URL
+        // all fall back to the home page.
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+        $redirect = xoops_validateLocalRedirect($redirect, XOOPS_URL);
+        header('Location: ' . ('' !== $redirect ? $redirect : XOOPS_URL));
+        exit();
     }
 
     header('Location: ./userinfo.php?uid=' . $GLOBALS['xoopsUser']->getVar('uid'));

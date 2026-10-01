@@ -814,10 +814,13 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
         require_once __DIR__ . '/file_safety.php';
         $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         // Validate any scheme-bearing (http:, data:, mailto:, ...) or
-        // scheme-relative target against XOOPS_URL (full scheme/host/port match,
-        // not a prefix). Bare relative paths carry no scheme and are left
-        // untouched, matching the previous behaviour.
-        if ((null !== parse_url($decoded, PHP_URL_SCHEME) || 0 === strncmp(ltrim($decoded), '//', 2))
+        // root-relative target against XOOPS_URL (full scheme/host/port match,
+        // not a prefix). The probe mirrors browser parsing: "\" reads as "/"
+        // and TAB/LF/CR are dropped, so "/\host" and "/<TAB>/host" are
+        // recognised as scheme-relative. Bare relative paths carry no scheme
+        // and are left untouched, matching the previous behaviour.
+        $probe = ltrim(str_replace('\\', '/', (string) preg_replace('/[\t\n\r]+/', '', $decoded)));
+        if ((null !== parse_url($probe, PHP_URL_SCHEME) || str_starts_with($probe, '/'))
             && !xoops_isLocalUrl($url)) {
             $url = XOOPS_URL;
         }
