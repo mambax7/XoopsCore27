@@ -410,7 +410,7 @@ class XoopsTopic
      */
     public function topicExists($pid, $title)
     {
-        $sql = 'SELECT COUNT(*) from ' . $this->table . ' WHERE topic_pid = ' . (int) $pid . " AND topic_title = '" . trim($title) . "'";
+        $sql = 'SELECT COUNT(*) from ' . $this->table . ' WHERE topic_pid = ' . (int) $pid . ' AND topic_title = ' . $this->db->quote(trim((string) $title));
         $result  = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
