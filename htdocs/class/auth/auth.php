@@ -90,12 +90,18 @@ class XoopsAuth
         if ($xoopsConfig['debug_mode'] == 1 || $xoopsConfig['debug_mode'] == 2) {
             if (!empty($this->_errors)) {
                 foreach ($this->_errors as $errstr) {
-                    $ret .= $errstr . '<br>';
+                    // Errors can embed the submitted login name, so escape them;
+                    // keep entities already in language constants and restore the
+                    // bare <br> line breaks some of those constants contain.
+                    $safe = htmlspecialchars((string) $errstr, ENT_QUOTES | ENT_HTML5 | ENT_SUBSTITUTE, 'UTF-8', false);
+                    $ret .= preg_replace('#&lt;br\s*/?&gt;#i', '<br>', $safe) . '<br>';
                 }
             } else {
                 $ret .= _NONE . '<br>';
             }
-            $ret .= sprintf(_AUTH_MSG_AUTH_METHOD, $this->auth_method);
+            // The method name is configuration, but escape it like every other
+            // value in this output; the language constant itself is trusted.
+            $ret .= sprintf(_AUTH_MSG_AUTH_METHOD, htmlspecialchars((string) $this->auth_method, ENT_QUOTES | ENT_HTML5 | ENT_SUBSTITUTE, 'UTF-8'));
         } else {
             $ret .= _US_INCORRECTLOGIN;
         }

@@ -425,3 +425,74 @@ function notificationGenerateConfig($category, $event, $type)
             break;
     }
 }
+
+if (!function_exists('xoops_notification_selection')) {
+    /**
+     * Reduce a posted notification selection to positive integer ids.
+     *
+     * The notification list posts del_not[<module id>][] = <notification id>.
+     * A module key or notification id is kept only when it is a positive int
+     * or a canonical positive-integer string (digits only, no sign, leading
+     * zero, padding, decimal point or exponent, at most 18 digits). Anything
+     * else is dropped rather than cast: (int) would turn "12junk" into 12,
+     * "1.9" into 1 and "1e3" into 1000.
+     *
+     * @param mixed $raw posted del_not value
+     * @return array<int, array<int, int>> notification ids grouped by module id
+     */
+    function xoops_notification_selection($raw): array
+    {
+        $positiveId = static function ($value): int {
+            if (is_int($value)) {
+                return $value > 0 ? $value : 0;
+            }
+            if (is_string($value) && 1 === preg_match('/^[1-9][0-9]{0,17}\z/', $value)) {
+                return (int) $value;
+            }
+
+            return 0;
+        };
+
+        $selection = [];
+        if (!is_array($raw)) {
+            return $selection;
+        }
+        foreach ($raw as $moduleId => $list) {
+            $moduleId = $positiveId($moduleId);
+            if (0 === $moduleId || !is_array($list)) {
+                continue;
+            }
+            foreach ($list as $notificationId) {
+                $notificationId = $positiveId($notificationId);
+                if (0 !== $notificationId) {
+                    $selection[$moduleId][] = $notificationId;
+                }
+            }
+        }
+
+        return $selection;
+    }
+}
+
+if (!function_exists('xoops_notification_confirm_fields')) {
+    /**
+     * Flatten a notification selection into confirmation-form hidden fields.
+     *
+     * Each id becomes a del_not[<module id>][<n>] field, so the posted form
+     * decodes back into the same selection for xoops_notification_selection().
+     *
+     * @param array<int, array<int, int>> $selection output of xoops_notification_selection()
+     * @return array<string, int> hidden field name => notification id
+     */
+    function xoops_notification_confirm_fields(array $selection): array
+    {
+        $fields = [];
+        foreach ($selection as $moduleId => $notificationIds) {
+            foreach (array_values($notificationIds) as $n => $notificationId) {
+                $fields['del_not[' . (int) $moduleId . '][' . $n . ']'] = (int) $notificationId;
+            }
+        }
+
+        return $fields;
+    }
+}

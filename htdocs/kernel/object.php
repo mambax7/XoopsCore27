@@ -1046,6 +1046,9 @@ class XoopsObject
     /**
      * return the errors for this object as html
      *
+     * Each error is plain text and is escaped here; entities that a language
+     * constant already carries are kept.
+     *
      * @return string html listing the errors
      * @access public
      */
@@ -1054,7 +1057,7 @@ class XoopsObject
         $ret = '<h4>Errors</h4>';
         if (!empty($this->_errors)) {
             foreach ($this->_errors as $error) {
-                $ret .= $error . '<br>';
+                $ret .= htmlspecialchars((string) $error, ENT_QUOTES | ENT_HTML5 | ENT_SUBSTITUTE, 'UTF-8', false) . '<br>';
             }
         } else {
             $ret .= 'None<br>';

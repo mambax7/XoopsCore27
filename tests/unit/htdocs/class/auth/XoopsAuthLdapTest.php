@@ -540,6 +540,75 @@ class XoopsAuthLdapTest extends TestCase
         unset($GLOBALS['xoopsConfig']);
     }
 
+    /**
+     * Debug-mode errors can embed the submitted login name (for example
+     * _AUTH_LDAP_XOOPS_USER_NOTFOUND, which also carries a literal <br>).
+     */
+    public function testGetHtmlErrorsEscapesLoginNameAndKeepsLineBreaks(): void
+    {
+        $html = $this->htmlErrorsInDebugMode(
+            'No user information found for connection: <img src=x onerror=alert(1)> <br>Please verify'
+        );
+
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $html);
+        $this->assertStringContainsString('<br>Please verify', $html);
+    }
+
+    public function testGetHtmlErrorsDoesNotRestoreLineBreakAttributes(): void
+    {
+        $html = $this->htmlErrorsInDebugMode('x<br onclick="alert(1)">y');
+
+        $this->assertStringNotContainsString('<br onclick', $html);
+    }
+
+    public function testGetHtmlErrorsKeepsEntitiesFromLanguageConstants(): void
+    {
+        $html = $this->htmlErrorsInDebugMode('Say &quot;hi&quot;');
+
+        $this->assertStringContainsString('Say &quot;hi&quot;<br>', $html);
+    }
+
+    public function testGetHtmlErrorsKeepsTextWithInvalidUtf8(): void
+    {
+        // Without ENT_SUBSTITUTE, htmlspecialchars() returns '' for the whole error.
+        $html = $this->htmlErrorsInDebugMode("No user found for: \xFF<br>Please verify");
+
+        $this->assertStringContainsString("No user found for: \u{FFFD}<br>Please verify<br>", $html);
+    }
+
+    public function testGetHtmlErrorsEscapesTheAuthMethodName(): void
+    {
+        $saved                   = $this->ldap->auth_method;
+        $this->ldap->auth_method = '<b>ldap</b>';
+        try {
+            $html = $this->htmlErrorsInDebugMode('x');
+        } finally {
+            $this->ldap->auth_method = $saved;
+        }
+
+        $this->assertStringNotContainsString('<b>', $html);
+        $this->assertStringContainsString('&lt;b&gt;ldap&lt;/b&gt;', $html);
+    }
+
+    private function htmlErrorsInDebugMode(string $error): string
+    {
+        $hadConfig = array_key_exists('xoopsConfig', $GLOBALS);
+        $saved     = $GLOBALS['xoopsConfig'] ?? null;
+        $GLOBALS['xoopsConfig'] = ['debug_mode' => 1];
+        try {
+            $this->ldap->setErrors(0, $error);
+
+            return $this->ldap->getHtmlErrors();
+        } finally {
+            if ($hadConfig) {
+                $GLOBALS['xoopsConfig'] = $saved;
+            } else {
+                unset($GLOBALS['xoopsConfig']);
+            }
+        }
+    }
+
     // =========================================================================
     // Type safety tests
     // =========================================================================
