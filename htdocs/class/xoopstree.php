@@ -56,6 +56,81 @@ class XoopsTree
         $this->pid   = $pid_name;
     }
 
+    /**
+     * Whether $name can name a column in an ORDER BY term: plain,
+     * table-qualified or backtick-quoted.
+     *
+     * A backtick-quoted part may hold any character MySQL allows in a
+     * quoted identifier (e.g. `display-name`) except a backtick, so it can
+     * never close the quotes early, and except whitespace, control
+     * characters and commas, which orderByClause() uses to split terms.
+     *
+     * @param mixed $name
+     * @return bool
+     */
+    private static function isOrderColumn($name): bool
+    {
+        $part = '(?:`[^`\x00-\x20\x7F,]+`|[A-Za-z_][A-Za-z0-9_$]*)';
+
+        return is_string($name) && 1 === preg_match('/^' . $part . '(?:\.' . $part . ')?\z/', $name);
+    }
+
+    /**
+     * Build the ORDER BY clause for $order.
+     *
+     * $order is kept only when it is a string holding a comma-separated list
+     * of column names, each optionally followed by ASC or DESC. Anything else
+     * (a non-string, expressions, functions, numeric positions, subqueries,
+     * comments, a second statement) is dropped with an E_USER_WARNING, so the
+     * query still runs, unordered. '' and null mean "no order".
+     *
+     * @param mixed $order
+     * @return string ' ORDER BY ...' or ''
+     */
+    private static function orderByClause($order): string
+    {
+        if (null === $order || '' === $order) {
+            return '';
+        }
+        if (!is_string($order)) {
+            trigger_error('XoopsTree: ignored an ORDER BY clause that is not a list of column names', E_USER_WARNING);
+
+            return '';
+        }
+        $order = trim($order);
+        if ('' === $order) {
+            return '';
+        }
+        foreach (explode(',', $order) as $term) {
+            if (1 !== preg_match('/^\s*(\S+)(?:\s+(?:ASC|DESC))?\s*\z/i', $term, $m) || !self::isOrderColumn($m[1])) {
+                trigger_error('XoopsTree: ignored an ORDER BY clause that is not a list of column names', E_USER_WARNING);
+
+                return '';
+            }
+        }
+
+        return ' ORDER BY ' . $order;
+    }
+
+    /**
+     * Whether $title can be used as the column in a SELECT list; warns if not.
+     *
+     * Only a plain column name is accepted: makeMySelBox() reads the fetched
+     * row by $title, and a row is keyed by the bare column name.
+     *
+     * @param mixed $title
+     * @return bool
+     */
+    private static function acceptTitle($title): bool
+    {
+        if (is_string($title) && 1 === preg_match('/^[A-Za-z_][A-Za-z0-9_]*\z/', $title)) {
+            return true;
+        }
+        trigger_error('XoopsTree: refused a title that is not a plain column name', E_USER_WARNING);
+
+        return false;
+    }
+
     // returns an array of first child objects for a given id($sel_id)
     /**
      * @param        $sel_id
@@ -68,9 +143,8 @@ class XoopsTree
         $sel_id = (int) $sel_id;
         $arr    = [];
         $sql    = 'SELECT * FROM ' . $this->table . ' WHERE ' . $this->pid . '=' . $sel_id . '';
-        if ($order != '') {
-            $sql .= " ORDER BY $order";
-        }
+        $orderBy = self::orderByClause($order);
+        $sql .= $orderBy;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -131,9 +205,8 @@ class XoopsTree
     {
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT ' . $this->id . ' FROM ' . $this->table . ' WHERE ' . $this->pid . '=' . $sel_id . '';
-        if ($order != '') {
-            $sql .= " ORDER BY $order";
-        }
+        $orderBy = self::orderByClause($order);
+        $sql .= $orderBy;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -148,7 +221,7 @@ class XoopsTree
         while (false !== ($row = $this->db->fetchRow($result))) {
             [$r_id] = $row;
             $idarray[] = $r_id;
-            $idarray   = $this->getAllChildId($r_id, $order, $idarray);
+            $idarray   = $this->getAllChildId($r_id, '' === $orderBy ? '' : $order, $idarray);
         }
 
         return $idarray;
@@ -167,9 +240,8 @@ class XoopsTree
     {
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT ' . $this->pid . ' FROM ' . $this->table . ' WHERE ' . $this->id . '=' . $sel_id . '';
-        if ($order != '') {
-            $sql .= " ORDER BY $order";
-        }
+        $orderBy = self::orderByClause($order);
+        $sql .= $orderBy;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -183,7 +255,7 @@ class XoopsTree
             return $idarray;
         }
         $idarray[] = $r_id;
-        $idarray   = $this->getAllParentId($r_id, $order, $idarray);
+        $idarray   = $this->getAllParentId($r_id, '' === $orderBy ? '' : $order, $idarray);
 
         return $idarray;
     }
@@ -199,6 +271,9 @@ class XoopsTree
      */
     public function getPathFromId($sel_id, $title, $path = '')
     {
+        if (!self::acceptTitle($title)) {
+            return $path;
+        }
         $sel_id = (int) $sel_id;
         $sql = 'SELECT ' . $this->pid . ', ' . $title . ' FROM ' . $this->table . ' WHERE ' . $this->id . "=$sel_id";
         $result = $this->db->query($sql);
@@ -237,6 +312,9 @@ class XoopsTree
      */
     public function makeMySelBox($title, $order = '', $preset_id = 0, $none = 0, $sel_name = '', $onchange = '')
     {
+        if (!self::acceptTitle($title)) {
+            return;
+        }
         if ($sel_name == '') {
             $sel_name = $this->id;
         }
@@ -247,9 +325,8 @@ class XoopsTree
         }
         echo ">\n";
         $sql = 'SELECT ' . $this->id . ', ' . $title . ' FROM ' . $this->table . ' WHERE ' . $this->pid . '=0';
-        if ($order != '') {
-            $sql .= " ORDER BY $order";
-        }
+        $orderBy = self::orderByClause($order);
+        $sql .= $orderBy;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -268,7 +345,7 @@ class XoopsTree
             }
             echo "<option value='$catid'$sel>$name</option>\n";
             $sel = '';
-            $arr = $this->getChildTreeArray($catid, $order);
+            $arr = $this->getChildTreeArray($catid, '' === $orderBy ? '' : $order);
             foreach ($arr as $option) {
                 $option['prefix'] = str_replace('.', '--', $option['prefix']);
                 $catpath          = $option['prefix'] . '&nbsp;' . $myts->htmlSpecialChars($option[$title]);
@@ -294,6 +371,9 @@ class XoopsTree
     public function getNicePathFromId($sel_id, $title, $funcURL, $path = '')
     {
         $path   = !empty($path) ? '&nbsp;:&nbsp;' . $path : $path;
+        if (!self::acceptTitle($title)) {
+            return $path;
+        }
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT ' . $this->pid . ', ' . $title . ' FROM ' . $this->table . ' WHERE ' . $this->id . "=$sel_id";
         $result  = $this->db->query($sql);
@@ -365,9 +445,8 @@ class XoopsTree
     {
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT * FROM ' . $this->table . ' WHERE ' . $this->pid . '=' . $sel_id . '';
-        if ($order != '') {
-            $sql .= " ORDER BY $order";
-        }
+        $orderBy = self::orderByClause($order);
+        $sql .= $orderBy;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -381,7 +460,7 @@ class XoopsTree
         }
         while (false !== ($row = $this->db->fetchArray($result))) {
             $parray[] = $row;
-            $parray   = $this->getAllChild($row[$this->id], $order, $parray);
+            $parray   = $this->getAllChild($row[$this->id], '' === $orderBy ? '' : $order, $parray);
         }
 
         return $parray;
@@ -400,9 +479,8 @@ class XoopsTree
     {
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT * FROM ' . $this->table . ' WHERE ' . $this->pid . '=' . $sel_id . '';
-        if ($order != '') {
-            $sql .= " ORDER BY $order";
-        }
+        $orderBy = self::orderByClause($order);
+        $sql .= $orderBy;
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -417,7 +495,7 @@ class XoopsTree
         while (false !== ($row = $this->db->fetchArray($result))) {
             $row['prefix'] = $r_prefix . '.';
             $parray[]      = $row;
-            $parray        = $this->getChildTreeArray($row[$this->id], $order, $parray, $row['prefix']);
+            $parray        = $this->getChildTreeArray($row[$this->id], '' === $orderBy ? '' : $order, $parray, $row['prefix']);
         }
 
         return $parray;

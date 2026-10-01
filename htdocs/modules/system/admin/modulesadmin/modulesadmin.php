@@ -1133,7 +1133,7 @@ function xoops_module_update($dirname)
                     if (!empty($block['options'])) {
                         $options = $block['options'];
                     }
-                    $sql     = 'SELECT bid, name FROM ' . $xoopsDB->prefix('newblocks') . ' WHERE mid=' . $module->getVar('mid') . ' AND func_num=' . $i . " AND show_func='" . addslashes((string) $block['show_func']) . "' AND func_file='" . addslashes((string) $block['file']) . "'";
+                    $sql     = 'SELECT bid, name FROM ' . $xoopsDB->prefix('newblocks') . ' WHERE mid=' . (int) $module->getVar('mid') . ' AND func_num=' . (int) $i . ' AND show_func=' . $xoopsDB->quote((string) $block['show_func']) . ' AND func_file=' . $xoopsDB->quote((string) $block['file']);
                     $fresult = $xoopsDB->query($sql);
                     if (!$xoopsDB->isResultSet($fresult)) {
                         throw new \RuntimeException(
@@ -1144,7 +1144,7 @@ function xoops_module_update($dirname)
                     $fcount  = 0;
                     while (false !== ($fblock = $xoopsDB->fetchArray($fresult))) {
                         ++$fcount;
-                        $sql    = 'UPDATE ' . $xoopsDB->prefix('newblocks') . " SET name='" . addslashes((string) $block['name']) . "', edit_func='" . addslashes((string) $editfunc) . "', content='', template='" . $template . "', last_modified=" . time() . ' WHERE bid=' . $fblock['bid'];
+                        $sql    = 'UPDATE ' . $xoopsDB->prefix('newblocks') . ' SET name=' . $xoopsDB->quote((string) $block['name']) . ', edit_func=' . $xoopsDB->quote((string) $editfunc) . ", content='', template=" . $xoopsDB->quote((string) $template) . ', last_modified=' . time() . ' WHERE bid=' . (int) $fblock['bid'];
                         $result = $xoopsDB->exec($sql);
                         if (!$result) {
                             $msgs[] = '&nbsp;&nbsp;' . sprintf(_AM_SYSTEM_MODULES_UPDATE_ERROR, $fblock['name']);
@@ -1184,13 +1184,16 @@ function xoops_module_update($dirname)
                     }
                     if ($fcount == 0) {
                         $newbid     = $xoopsDB->genId($xoopsDB->prefix('newblocks') . '_bid_seq');
-                        $block_name = addslashes((string) $block['name']);
+                        $block_name = $xoopsDB->quote((string) $block['name']);
                         $block_type = ($module->getVar('dirname') === 'system') ? 'S' : 'M';
-                        $sql        = 'INSERT INTO ' . $xoopsDB->prefix('newblocks') . ' (bid, mid, func_num, options, name, title, content, side, weight, visible, block_type, isactive, dirname, func_file, show_func, edit_func, template, last_modified) VALUES (' . $newbid . ', ' . $module->getVar('mid') . ', ' . $i . ",'" . addslashes((string) $options) . "','" . $block_name . "', '" . $block_name . "', '', 0, 0, 0, '{$block_type}', 1, '" . addslashes($dirname) . "', '" . addslashes((string) $block['file']) . "', '" . addslashes((string) $block['show_func']) . "', '" . addslashes((string) $editfunc) . "', '" . $template . "', " . time() . ')';
+                        $sql        = 'INSERT INTO ' . $xoopsDB->prefix('newblocks') . ' (bid, mid, func_num, options, name, title, content, side, weight, visible, block_type, isactive, dirname, func_file, show_func, edit_func, template, last_modified) VALUES ('
+                            . (int) $newbid . ', ' . (int) $module->getVar('mid') . ', ' . (int) $i . ', '
+                            . $xoopsDB->quote((string) $options) . ', ' . $block_name . ', ' . $block_name . ", '', 0, 0, 0, '{$block_type}', 1, "
+                            . $xoopsDB->quote((string) $dirname) . ', ' . $xoopsDB->quote((string) $block['file']) . ', ' . $xoopsDB->quote((string) $block['show_func']) . ', '
+                            . $xoopsDB->quote((string) $editfunc) . ', ' . $xoopsDB->quote((string) $template) . ', ' . time() . ')';
                         $result     = $xoopsDB->exec($sql);
                         if (!$result) {
                             $msgs[] = '&nbsp;&nbsp;' . sprintf(_AM_SYSTEM_MODULES_SQL_NOT_CREATE, $block['name']);
-                            echo $sql;
                         } else {
                             if (empty($newbid)) {
                                 $newbid = $xoopsDB->getInsertId();
