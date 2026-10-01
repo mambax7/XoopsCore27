@@ -531,6 +531,34 @@ class XoopsObjectTest extends KernelTestCase
         $this->assertStringContainsString('None<br>', $html);
     }
 
+    public function testGetHtmlErrorsEscapesMarkup(): void
+    {
+        $this->object->setErrors('Name "<script>alert(1)</script>" is taken');
+
+        $html = $this->object->getHtmlErrors();
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringContainsString('&quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot;', $html);
+        $this->assertStringStartsWith('<h4>Errors</h4>', $html);
+    }
+
+    public function testGetHtmlErrorsKeepsEntitiesFromLanguageConstants(): void
+    {
+        $this->object->setErrors('Field &quot;title&quot; is required');
+
+        $this->assertStringContainsString(
+            'Field &quot;title&quot; is required<br>',
+            $this->object->getHtmlErrors()
+        );
+    }
+
+    public function testGetHtmlErrorsKeepsTextWithInvalidUtf8(): void
+    {
+        // Without ENT_SUBSTITUTE, htmlspecialchars() returns '' for the whole error.
+        $this->object->setErrors("Invalid value: \xFF end");
+
+        $this->assertStringContainsString("Invalid value: \u{FFFD} end<br>", $this->object->getHtmlErrors());
+    }
+
     // =========================================================================
     // xoopsClone
     // =========================================================================
