@@ -40,8 +40,17 @@ diff_added() {
 added=$(diff_added '*.php')
 tpl_added=$(diff_added '*.tpl')
 
-# Exit fast only when there is nothing for either pass to look at.
-if [ -z "$added" ] && [ -z "$tpl_added" ]; then
+# New PHP files under tests/ (any fixtures/ directory excluded). Only newly
+# added files are listed, so existing tests without the standard header
+# never fire. In a plain pathspec `*` also matches `/`, so nested test
+# directories count; the glob exclude drops tests/fixtures/** and nested
+# ones such as tests/unit/htdocs/include/fixtures/** (`**/` matches zero
+# or more directories).
+new_tests=$(git diff --cached --name-only --diff-filter=A -- 'tests/*.php' \
+    ':(exclude,glob)tests/**/fixtures/**' 2>/dev/null || true)
+
+# Exit fast only when there is nothing for any pass to look at.
+if [ -z "$added" ] && [ -z "$tpl_added" ] && [ -z "$new_tests" ]; then
     exit 0
 fi
 
@@ -212,6 +221,37 @@ if [ -n "$tpl_added" ]; then
     # also lets the violation match at the very start of the line.
     hits=$(printf '%s\n' "$tpl_added" | grep -E '(^|[^<])\{\$[a-zA-Z_]' || true)
     [ -n "$hits" ] && report "standard Smarty delimiter in .tpl — XOOPS uses <{ }> not { }" "$hits"
+fi
+
+# --- New test files -------------------------------------------------
+# 16. A new test must open with the standard XOOPS file header, in the
+#     form tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php
+#     uses: `<?php` on line 1, a `/*` or `/**` comment opening on line 2,
+#     and the header's first sentence inside that comment, within the
+#     first 12 lines. On each line the sentence must come before any `*/`,
+#     so text after the comment closes never counts. The staged content
+#     (":path") is checked, not the working-tree file.
+if [ -n "$new_tests" ]; then
+    missing=''
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        if ! git show ":$f" 2>/dev/null | head -n 12 | awk '
+            NR == 1 { if ($0 !~ /^<\?php[[:space:]]*$/) { bad = 1; exit } next }
+            NR == 2 { if ($0 !~ /^\/\*\*?([[:space:]]|$)/) { bad = 1; exit } }
+            {
+                p = index($0, "You may not change or alter any portion of this comment")
+                c = index($0, "*/")
+                if (p > 0 && (c == 0 || p < c)) { found = 1; exit }
+                if (c > 0) { exit }
+            }
+            END { exit (bad || !found) ? 1 : 0 }
+        '; then
+            missing="${missing}${f}"$'\n'
+        fi
+    done <<EOF
+$new_tests
+EOF
+    [ -n "$missing" ] && report "new test file without the standard XOOPS file header (copy it from tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php)" "$missing"
 fi
 
 if [ "$violations" -gt 0 ]; then
