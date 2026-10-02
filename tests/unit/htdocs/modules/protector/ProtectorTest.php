@@ -27,9 +27,33 @@ class ProtectorTest extends TestCase
         }
     }
 
+    /** @var array<string, mixed> Protector properties the tests assign, as found before each test */
+    private array $savedProtectorState = [];
+
+    /** @var array<string, array<mixed>> superglobals the tests assign, as found before each test */
+    private array $savedSuperglobals = [];
+
+    private const ASSIGNED_PROPERTIES = ['_conn', '_done_badext', '_done_intval', '_safe_badext', '_safe_contami', 'last_error_type', 'message'];
+
     protected function setUp(): void
     {
         $this->protector = \Protector::getInstance();
+        // The singleton and the superglobals outlive each test: record what the
+        // tests below change so tearDown() can put it back, whatever the order.
+        foreach (self::ASSIGNED_PROPERTIES as $property) {
+            $this->savedProtectorState[$property] = $this->protector->{$property};
+        }
+        $this->savedSuperglobals = ['_FILES' => $_FILES, '_GET' => $_GET, '_REQUEST' => $_REQUEST];
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->savedProtectorState as $property => $value) {
+            $this->protector->{$property} = $value;
+        }
+        $_FILES   = $this->savedSuperglobals['_FILES'];
+        $_GET     = $this->savedSuperglobals['_GET'];
+        $_REQUEST = $this->savedSuperglobals['_REQUEST'];
     }
 
     // ---------------------------------------------------------------
@@ -531,6 +555,134 @@ class ProtectorTest extends TestCase
         $_FILES = [];
         $this->protector->_safe_badext = true;
         $this->protector->message = '';
+    }
+
+    /**
+     * Run check_uploaded_files() for one upload, restoring every value it
+     * touches afterwards: $_FILES and the shared Protector instance's
+     * _done_badext, _safe_badext, message and last_error_type.
+     *
+     * @param array<string, mixed> $file one $_FILES entry
+     * @return array{0: bool, 1: string} check result and Protector's log message
+     */
+    private function checkOneUpload(array $file): array
+    {
+        $savedFiles = $_FILES;
+        $saved      = [
+            '_done_badext'    => $this->protector->_done_badext,
+            '_safe_badext'    => $this->protector->_safe_badext,
+            'message'         => $this->protector->message,
+            'last_error_type' => $this->protector->last_error_type,
+        ];
+        $this->protector->_done_badext = false;
+        $this->protector->_safe_badext = true;
+        $this->protector->message      = '';
+        $_FILES = ['upload' => $file];
+        try {
+            return [$this->protector->check_uploaded_files(), $this->protector->message];
+        } finally {
+            $_FILES = $savedFiles;
+            foreach ($saved as $property => $value) {
+                $this->protector->{$property} = $value;
+            }
+        }
+    }
+
+    private function writePixelPng(): string
+    {
+        $path = (string) tempnam(sys_get_temp_dir(), 'protector-png-');
+        // 1x1 transparent PNG
+        file_put_contents($path, (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='));
+
+        return $path;
+    }
+
+    #[Test]
+    public function checkOneUploadLeavesTheSharedStateAsItFoundIt(): void
+    {
+        $original = [$_FILES, $this->protector->_done_badext, $this->protector->_safe_badext, $this->protector->message, $this->protector->last_error_type];
+        $before = ['sentinel' => ['name' => 'x.txt', 'tmp_name' => '', 'error' => 4, 'size' => 0, 'type' => '']];
+        $_FILES = $before;
+        $this->protector->_done_badext    = true;
+        $this->protector->_safe_badext    = false;
+        $this->protector->message         = 'earlier message';
+        $this->protector->last_error_type = 'EARLIER';
+        try {
+            $this->checkOneUpload(['name' => 'photo.jpg', 'tmp_name' => '/no/such/file', 'error' => 0, 'size' => 1, 'type' => 'image/jpeg']);
+
+            $this->assertSame($before, $_FILES);
+            $this->assertTrue($this->protector->_done_badext);
+            $this->assertFalse($this->protector->_safe_badext);
+            $this->assertSame('earlier message', $this->protector->message);
+            $this->assertSame('EARLIER', $this->protector->last_error_type);
+        } finally {
+            [$_FILES, $this->protector->_done_badext, $this->protector->_safe_badext, $this->protector->message, $this->protector->last_error_type] = $original;
+        }
+    }
+
+    #[Test]
+    public function checkUploadedFilesRejectsAnImageThatCannotBeInspectedAndSaysWhy(): void
+    {
+        [$result, $message] = $this->checkOneUpload([
+            'name'     => 'photo.jpg',
+            'tmp_name' => sys_get_temp_dir() . '/protector-missing-' . bin2hex(random_bytes(4)),
+            'error'    => 0,
+            'size'     => 100,
+            'type'     => 'image/jpeg',
+        ]);
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('photo.jpg', $message);
+        $this->assertStringContainsString('could not be inspected', $message);
+    }
+
+    #[Test]
+    public function checkUploadedFilesAcceptsARealImageWithItsOwnExtension(): void
+    {
+        $png = $this->writePixelPng();
+        try {
+            [$result, $message] = $this->checkOneUpload(['name' => 'pixel.png', 'tmp_name' => $png, 'error' => 0, 'size' => (int) filesize($png), 'type' => 'image/png']);
+        } finally {
+            unlink($png);
+        }
+
+        $this->assertTrue($result);
+        $this->assertSame('', $message);
+    }
+
+    #[Test]
+    public function checkUploadedFilesStillReportsACamouflagedImage(): void
+    {
+        $png = $this->writePixelPng();
+        try {
+            [$result, $message] = $this->checkOneUpload(['name' => 'pixel.gif', 'tmp_name' => $png, 'error' => 0, 'size' => (int) filesize($png), 'type' => 'image/gif']);
+        } finally {
+            unlink($png);
+        }
+
+        $this->assertFalse($result);
+        $this->assertStringContainsString('camouflaged image file pixel.gif', $message);
+    }
+
+    /**
+     * Option B: an image that cannot be inspected is rejected. The old
+     * open_basedir fallback moved the upload into the public uploads/
+     * directory under a predictable name (md5(time())) to look at it, and
+     * left it there whenever the unlink failed. move_uploaded_file() cannot
+     * run under the CLI test runner, so this is pinned on the source.
+     */
+    #[Test]
+    public function checkUploadedFilesNeverMovesAnUploadToInspectIt(): void
+    {
+        $src = (string) file_get_contents(XOOPS_PATH . '/modules/protector/class/protector.php');
+        $start = strpos($src, 'public function check_uploaded_files(');
+        $this->assertNotFalse($start);
+        $end  = strpos($src, 'public function ', $start + 1);
+        $body = substr($src, $start, false === $end ? null : $end - $start);
+
+        $this->assertStringNotContainsString('move_uploaded_file(', $body);
+        $this->assertStringNotContainsString('protector_upload_temporary', $body);
+        $this->assertStringNotContainsString('@unlink(', $body);
     }
 
     // ---------------------------------------------------------------
