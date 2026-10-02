@@ -9,6 +9,7 @@
  *  - xoops_safe_basename()     — null-byte-safe basename() with placeholder
  *  - xoops_chmod_quietly()     — scoped-suppressed chmod() with single warning
  *  - xoops_remove_file_quietly() — scoped-suppressed unlink() with single warning
+ *  - xoops_resolveFileWithin() — canonical path of a stored file name, only inside a root
  *  - xoops_isLocalUrl()        — strict same-origin check (scheme/host/port) for redirects
  *  - xoops_validateLocalRedirect() — full same-site redirect policy (origin + base path)
  *  - xoops_postLoginRedirectUrl()  — the absolute URL to send a user to after login
@@ -42,6 +43,47 @@
  */
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+
+if (!function_exists('xoops_resolveFileWithin')) {
+    /**
+     * Resolve a stored file name against the directory it must live in.
+     *
+     * Use before any file operation driven by a name read from the database
+     * or a request (an image, smiley or rank file under XOOPS_UPLOAD_PATH,
+     * say), so a name such as "../mainfile.php" or a symlink pointing out of
+     * the directory can never reach a file outside it.
+     *
+     * @param string $root     directory the file must be inside
+     * @param string $relative stored file name, relative to $root
+     * @return string the canonical path when it names a regular file strictly
+     *                inside $root, '' otherwise (missing root or file, a
+     *                directory, a path outside $root, a null byte)
+     *
+     * Containment is verified at resolution time; it is not a lock. A rename or
+     * symlink swap inside $root between this call and the caller's file
+     * operation could change what the path points to, which requires write
+     * access inside $root.
+     */
+    function xoops_resolveFileWithin($root, $relative)
+    {
+        try {
+            $rootReal = realpath((string) $root);
+            $fileReal = realpath(rtrim((string) $root, '/\\') . '/' . ltrim((string) $relative, '/\\'));
+        } catch (\Throwable $e) {
+            return ''; // realpath() throws a ValueError on a null byte
+        }
+        // Normalised so a filesystem root ("/" or "C:\") does not become a
+        // doubled separator that no child path can start with.
+        if (false === $rootReal || false === $fileReal
+            || !str_starts_with($fileReal, rtrim($rootReal, '/\\') . DIRECTORY_SEPARATOR)
+            || !is_file($fileReal)
+        ) {
+            return '';
+        }
+
+        return $fileReal;
+    }
+}
 
 if (!function_exists('xoops_file_label')) {
     /**

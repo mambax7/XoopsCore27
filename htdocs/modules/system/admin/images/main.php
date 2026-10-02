@@ -387,7 +387,13 @@ switch ($op) {
             xoops_cp_footer();
             exit();
         }
-        @unlink(XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name'));
+        // Only a file strictly inside the upload directory is removed: the
+        // stored name must not drive a delete anywhere else.
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+        $imageFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, (string) $image->getVar('image_name', 'n'));
+        if ('' !== $imageFile) {
+            xoops_remove_file_quietly($imageFile, 'image');
+        }
         redirect_header('admin.php?fct=images&op=listimg&imgcat_id=' . $image->getVar('imgcat_id'), 2, _AM_SYSTEM_DBUPDATED);
         break;
 
@@ -459,11 +465,24 @@ switch ($op) {
                     $image->setVar('image_weight', Request::getInt('image_weight', 0));
                     $image->setVar('imgcat_id', $imgcat_id);
                     if ($imagecategory->getVar('imgcat_storetype') === 'db') {
-                        $fp      = @fopen($uploader->getSavedDestination(), 'rb');
-                        $fbinary = @fread($fp, filesize($uploader->getSavedDestination()));
-                        @fclose($fp);
+                        // The upload is only a carrier for the database copy: read it in
+                        // one checked call, then remove it whatever happened. The scoped
+                        // handler keeps PHP's warning, which names the full upload path,
+                        // off the page; the failure is reported below instead.
+                        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                        $savedFile = $uploader->getSavedDestination();
+                        set_error_handler(static fn (): bool => true);
+                        try {
+                            $fbinary = is_file($savedFile) ? file_get_contents($savedFile) : false;
+                        } finally {
+                            restore_error_handler();
+                        }
+                        xoops_remove_file_quietly($savedFile, 'uploaded image');
+                        if (false === $fbinary) {
+                            $err[] = sprintf(_FAILSAVEIMG, $image->getVar('image_nicename'));
+                            continue;
+                        }
                         $image->setVar('image_body', $fbinary, true);
-                        @unlink($uploader->getSavedDestination());
                     }
                     if (!$image_handler->insert($image)) {
                         $err[] = sprintf(_FAILSAVEIMG, $image->getVar('image_nicename'));
@@ -678,12 +697,20 @@ switch ($op) {
         $image_handler = xoops_getHandler('image');
         $images        = $image_handler->getObjects(new Criteria('imgcat_id', $imgcat_id), true, false);
         $errors        = [];
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         foreach (array_keys($images) as $i) {
             if (!$image_handler->delete($images[$i])) {
                 $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $i);
             } else {
-                if (file_exists(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name')) && !unlink(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name'))) {
-                    $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILUNLINK, $i);
+                // As for a single image: only a file strictly inside the upload
+                // directory is removed, and one that stays is reported.
+                $imageFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, (string) $images[$i]->getVar('image_name', 'n'));
+                if ('' !== $imageFile) {
+                    xoops_remove_file_quietly($imageFile, 'image');
+                    clearstatcache(true, $imageFile);
+                    if (is_file($imageFile)) {
+                        $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILUNLINK, $i);
+                    }
                 }
             }
         }
