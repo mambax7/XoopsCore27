@@ -1024,15 +1024,15 @@ class Protector
                 // anti camouflaged image file
                 if (in_array($ext, $image_extensions)) {
                     $image_attributes = @getimagesize($_file['tmp_name']);
-                    if (false === $image_attributes && is_uploaded_file($_file['tmp_name'])) {
-                        // open_basedir restriction
-                        $temp_file = XOOPS_ROOT_PATH . '/uploads/protector_upload_temporary' . md5(time());
-                        move_uploaded_file($_file['tmp_name'], $temp_file);
-                        $image_attributes = @getimagesize($temp_file);
-                        @unlink($temp_file);
-                    }
-
-                    if (false === $image_attributes || $image_extensions[(int)$image_attributes[2]] != $ext) {
+                    if (false === $image_attributes) {
+                        // Not an image, or the upload cannot be read for inspection
+                        // (e.g. an open_basedir that excludes the PHP upload directory).
+                        // Either way it is rejected: it is never moved somewhere
+                        // readable just to look at it.
+                        $this->message .= "Rejected image file {$_file['name']}: it could not be inspected as an image (not a valid image, or the upload is not readable by PHP).\n";
+                        $this->_safe_badext    = false;
+                        $this->last_error_type = 'UPLOAD';
+                    } elseif (($image_extensions[(int) $image_attributes[2]] ?? null) !== $ext) {
                         $this->message .= "Attempt to upload camouflaged image file {$_file['name']}.\n";
                         $this->_safe_badext    = false;
                         $this->last_error_type = 'UPLOAD';
