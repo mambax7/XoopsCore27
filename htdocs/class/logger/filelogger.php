@@ -737,9 +737,13 @@ class XoopsFileLogger
         // to keep unreachable, and on shared hosting the file mode is the last control
         // standing once xoops_data has been moved out of the web root as the docs advise.
         // Left best-effort deliberately: the file exists either way by this point, so
-        // refusing to write would not make a mode we failed to tighten any safer.
+        // refusing to write would not make a mode we failed to tighten any safer. A
+        // failure is reported once, as a warning without the path; that warning comes
+        // back through this logger, finds the file already there and does not chmod
+        // again, so the re-entry is bounded.
         if ($isNew) {
-            @chmod($this->file, 0640);
+            require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+            xoops_chmod_quietly($this->file, 0640, 'debug log');
         }
         // Non-blocking: a lock held by a stalled process must not park this request in a
         // queue behind it. Losing one debug line beats holding a worker.

@@ -182,7 +182,8 @@ if ($op === 'avatarupload') {
                 $avatar->setVar('avatar_display', 1);
                 $avatar->setVar('avatar_type', 'C');
                 if (!$avt_handler->insert($avatar)) {
-                    @unlink($uploader->getSavedDestination());
+                    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                    xoops_remove_file_quietly($uploader->getSavedDestination(), 'avatar upload');
                 } else {
                     // Order matters: persist the user's new avatar via the
                     // member handler FIRST, then clean up the previous
@@ -204,7 +205,8 @@ if ($op === 'avatarupload') {
                         // because cleanup is deferred to the success path.
                         $GLOBALS['xoopsUser']->setVar('user_avatar', $oldavatar);
                         $avt_handler->delete($avatar);
-                        @unlink($uploader->getSavedDestination());
+                        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                        xoops_remove_file_quietly($uploader->getSavedDestination(), 'avatar upload');
                         redirect_header($avatarFormUrl, 3, _PROFILE_MA_ERRORDURINGSAVE);
                         // redirect_header() calls exit() internally, but a
                         // custom preload could intercept it; the explicit

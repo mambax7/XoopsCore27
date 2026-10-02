@@ -236,29 +236,39 @@ class PathController
      */
     public function makeWritable($path, $group = false, $create = true)
     {
-        if (!file_exists($path)) {
-            if (!$create) {
-                return false;
-            } else {
+        // The mkdir()/chmod()/chgrp() calls below are trial-and-error attempts
+        // whose expected failures are not errors: each is checked by the
+        // is_dir()/is_writable() test that follows it. A scoped handler keeps
+        // their warnings off the upgrade page.
+        set_error_handler(static fn (): bool => true);
+        try {
+            if (!file_exists($path)) {
+                if (!$create) {
+                    return false;
+                }
                 $perm = 6;
-                @mkdir($path, octdec('0' . $perm . '00'));
+                if (!mkdir($path, octdec('0' . $perm . '00')) && !is_dir($path)) {
+                    return false;
+                }
+            } else {
+                $perm = is_dir($path) ? 6 : 7;
             }
-        } else {
-            $perm = is_dir($path) ? 6 : 7;
-        }
-        if (!is_writable($path)) {
-            // First try using owner bit
-            @chmod($path, octdec('0' . $perm . '00'));
-            clearstatcache();
-            if (!is_writable($path) && $group !== false) {
-                // If group has been specified, try using the group bit
-                @chgrp($path, $group);
-                @chmod($path, octdec('0' . $perm . $perm . '0'));
-            }
-            clearstatcache();
             if (!is_writable($path)) {
-                @chmod($path, octdec('0' . $perm . $perm . $perm));
+                // First try using owner bit
+                chmod($path, octdec('0' . $perm . '00'));
+                clearstatcache();
+                if (!is_writable($path) && $group !== false) {
+                    // If group has been specified, try using the group bit
+                    chgrp($path, $group);
+                    chmod($path, octdec('0' . $perm . $perm . '0'));
+                }
+                clearstatcache();
+                if (!is_writable($path)) {
+                    chmod($path, octdec('0' . $perm . $perm . $perm));
+                }
             }
+        } finally {
+            restore_error_handler();
         }
         clearstatcache();
         if (is_writable($path)) {

@@ -303,7 +303,8 @@ if ($op === 'avatarupload') {
                 $avatar->setVar('avatar_display', 1);
                 $avatar->setVar('avatar_type', 'C');
                 if (!$avt_handler->insert($avatar)) {
-                    @unlink($uploader->getSavedDestination());
+                    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                    xoops_remove_file_quietly($uploader->getSavedDestination(), 'avatar upload');
                 } else {
                     $oldavatar = $xoopsUser->getVar('user_avatar');
                     if (!empty($oldavatar) && false !== strpos(strtolower($oldavatar), 'cavt')) {

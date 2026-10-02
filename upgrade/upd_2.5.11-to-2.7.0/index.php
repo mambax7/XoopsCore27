@@ -536,13 +536,13 @@ class Upgrade_270 extends XoopsUpgrade
             }
         }
 
-        // Remove the now-empty vendor/ and class/libraries/ directories
+        // Remove the now-empty vendor/ and class/libraries/ directories. A directory
+        // that still holds files (a site's own additions) is reported, not forced.
         if ($success) {
-            if (is_dir($vendorPath)) {
-                @rmdir($vendorPath);
-            }
-            if (is_dir($basePath)) {
-                @rmdir($basePath);
+            foreach ([$vendorPath, $basePath] as $emptyDir) {
+                if (!$this->removeLeftover($emptyDir)) {
+                    $this->logs[] = sprintf('Could not remove directory (it may still contain files): %s', $this->relativePath($emptyDir));
+                }
             }
         }
 

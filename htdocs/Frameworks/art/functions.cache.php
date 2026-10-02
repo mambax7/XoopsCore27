@@ -163,9 +163,10 @@ function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PAT
         $nameQuoted = preg_quote((string) $name, '/');
         $pattern = "[^_]+_{$nameQuoted}.*\.php";
         if ($handle = opendir($root_path)) {
+            require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
             while (false !== ($file = readdir($handle))) {
                 if (is_file($root_path . '/' . $file) && preg_match("/{$pattern}$/", $file)) {
-                    @unlink($root_path . '/' . $file);
+                    xoops_remove_file_quietly($root_path . '/' . $file, 'cache');
                 }
             }
             closedir($handle);
@@ -176,8 +177,9 @@ function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PAT
         $safeDir  = str_replace(['*', '?', '[', ']'], '', basename((string) $dirname));
         $safeName = str_replace(['*', '?', '[', ']'], '', basename((string) $name));
         $files = (array) glob($root_path . "/*{$safeDir}_{$safeName}*.php");
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         foreach ($files as $file) {
-            @unlink($file);
+            xoops_remove_file_quietly($file, 'cache');
         }
     }
 
@@ -209,9 +211,10 @@ function mod_clearSmartyCache($pattern = '')
         $pattern = "/(^{$dirname}\^.*\.html$|blk_{$dirname}_.*[^\.]*\.html$)/";
     }
     if ($handle = opendir(XOOPS_CACHE_PATH)) {
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         while (false !== ($file = readdir($handle))) {
             if (is_file(XOOPS_CACHE_PATH . '/' . $file) && preg_match($pattern, $file)) {
-                @unlink(XOOPS_CACHE_PATH . '/' . $file);
+                xoops_remove_file_quietly(XOOPS_CACHE_PATH . '/' . $file, 'cache');
             }
         }
         closedir($handle);
