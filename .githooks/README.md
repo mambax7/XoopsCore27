@@ -38,6 +38,7 @@ Sniffs staged PHP and `.tpl` changes for known-bad shapes:
 | 14 | Legacy Criteria IN format (a preformatted `"(1,2,3)"` string) | Pass an array so Criteria casts and quotes each element |
 | 15 | Error-suppressed call `@foo()` | Handle the failure explicitly instead of hiding it |
 | 16 | New PHP file under `tests/` without the standard XOOPS file header | New tests carry the same header as the rest of the project; copy it from `tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php` |
+| 17 | New PHP file (renames and copies count as new) without `@copyright` / `@license` in a PHP comment, found with PHP's tokenizer; vendor trees, `language/` and `fixtures/` inside a `tests/` tree are excluded, as are symlinks and submodules. Skipped with a notice when `php` is not on `PATH`; a failed git listing or unreadable staged file fails the commit | Caught post-hoc by review on new files across the 2FA PRs (#205-#207); test files are included |
 | tpl | Standard Smarty `{$var}` in `.tpl` | XOOPS uses `<{$var}>` delimiters |
 
 The numbers match the numbered comments in `.githooks/pre-commit`; the
@@ -50,7 +51,7 @@ covered. Vendored trees (`htdocs/xoops_lib/vendor/**`,
 excluded from the scan so dependency updates and test fixtures
 containing pattern literals do not false-fire.
 
-Rule 16 is the one check that looks at `tests/`: it reads the staged
+Rules 16 and 17 also look at `tests/`. Rule 16 reads the staged
 content of newly added `tests/**/*.php` files (every `fixtures/`
 directory under `tests/` excluded, at any depth) and requires the
 standard header at the top: `<?php` on line 1, a `/*` or `/**` comment

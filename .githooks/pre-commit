@@ -49,8 +49,13 @@ tpl_added=$(diff_added '*.tpl')
 new_tests=$(git diff --cached --name-only --diff-filter=A -- 'tests/*.php' \
     ':(exclude,glob)tests/**/fixtures/**' 2>/dev/null || true)
 
+# Whether any PHP file is added, so the early exit cannot skip rule 17. A
+# failed git call counts as "maybe": the rule then runs and reports it.
+new_php_any=$(git diff --cached --no-renames --name-only --diff-filter=A -- '*.php' 2>/dev/null) \
+    || new_php_any=unknown
+
 # Exit fast only when there is nothing for any pass to look at.
-if [ -z "$added" ] && [ -z "$tpl_added" ] && [ -z "$new_tests" ]; then
+if [ -z "$added" ] && [ -z "$tpl_added" ] && [ -z "$new_tests" ] && [ -z "$new_php_any" ]; then
     exit 0
 fi
 
@@ -252,6 +257,81 @@ if [ -n "$new_tests" ]; then
 $new_tests
 EOF
     [ -n "$missing" ] && report "new test file without the standard XOOPS file header (copy it from tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php)" "$missing"
+fi
+
+# --- New-file pass --------------------------------------------------
+# Caught post-hoc by review across three consecutive 2FA PRs (#205-#207,
+# 2026-09): about ten "add the XOOPS copyright header / PHPDoc" findings
+# on new files.
+
+# 17. New PHP file, test files included, without @copyright or @license in
+#    a PHP comment. Only files ADDED in this commit (renames and copies
+#    count as added, so a moved file cannot slip through); existing legacy
+#    files are untouched. Test files are NOT excluded: review asked for the
+#    header on new test files and harness scripts in five consecutive rounds
+#    of PR #207. Vendor trees, language/ and fixtures/ inside a tests/ tree
+#    are excluded, as are symlinks and submodules (not PHP source).
+#  - The staged blob is scanned with PHP's tokenizer, so a tag inside a
+#    string, heredoc or nowdoc does not count. Without php on PATH the rule
+#    is skipped with a notice.
+#  - Paths are read NUL-separated, so spaces, quotes, newlines and non-ASCII
+#    characters stay intact; a failed git listing, a staged file that cannot
+#    be read, or a PHP scanner failure fails the commit with its own message
+#    instead of passing it or reporting a missing header.
+if ! (
+    set -o pipefail
+    git diff --cached --no-renames --raw -z --diff-filter=A -- '*.php' \
+        ':(exclude,glob)**/vendor/**' \
+        ':(exclude,glob)**/language/**' \
+        ':(exclude,glob)**/tests/**/fixtures/**' |
+    {
+        bad=0
+        php_state=unknown
+        while IFS= read -r -d '' entry && IFS= read -r -d '' f; do
+            case "$entry" in
+                ':000000 100644 '*|':000000 100755 '*) ;;
+                *) continue ;; # symlink or submodule, not a PHP source file
+            esac
+
+            if [ "$php_state" = unknown ]; then
+                if command -v php >/dev/null 2>&1; then
+                    php_state=ready
+                else
+                    php_state=missing
+                    printf '\n[pre-commit] rule 17 skipped: php is not on PATH\n' >&2
+                fi
+            fi
+            [ "$php_state" = missing ] && continue
+
+            git show ":$f" | php -d memory_limit=128M -r '
+                $source = stream_get_contents(STDIN);
+                if ($source === false || !function_exists("token_get_all")) exit(2);
+                foreach (token_get_all($source) as $t) {
+                    if (is_array($t)
+                        && ($t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT)
+                        && preg_match("/@(copyright|license)\\b/", $t[1])) {
+                        exit(0);
+                    }
+                }
+                exit(42);
+            '
+            status=( "${PIPESTATUS[@]}" )
+            printf -v name '%q' "$f"
+            if [ "${status[0]}" -ne 0 ]; then
+                printf '\n[pre-commit] rule 17: cannot read staged %s\n' "$name" >&2
+                bad=1
+            elif [ "${status[1]}" -eq 42 ]; then
+                printf '\n[pre-commit] new PHP file without @copyright or @license in a PHP comment: %s\n' "$name" >&2
+                bad=1
+            elif [ "${status[1]}" -ne 0 ]; then
+                printf '\n[pre-commit] rule 17: PHP scanner failed for %s\n' "$name" >&2
+                bad=1
+            fi
+        done
+        exit "$bad"
+    }
+); then
+    violations=$((violations + 1))
 fi
 
 if [ "$violations" -gt 0 ]; then
