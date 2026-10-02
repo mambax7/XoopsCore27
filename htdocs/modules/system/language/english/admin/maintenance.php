@@ -55,6 +55,8 @@ define('_AM_SYSTEM_MAINTENANCE_DUMP_STRUCTURES', 'Structures');
 define('_AM_SYSTEM_MAINTENANCE_DUMP_NB_RECORDS', 'Numbers of records');
 define('_AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED', 'File created');
 define('_AM_SYSTEM_MAINTENANCE_DUMP_RESULT', 'Result');
+define('_AM_SYSTEM_MAINTENANCE_DUMP_DIR_UNSAFE', 'The dump directory could not be created or protected, so no dump was written.');
+define('_AM_SYSTEM_MAINTENANCE_DUMP_CHMOD_FAILED', 'The dump was written, but its permissions could not be restricted to the owner (0600). Check the file before leaving it on the server.');
 define('_AM_SYSTEM_MAINTENANCE_DUMP_RECORDS', 'record(s)');
 // Tips
 define('_AM_SYSTEM_MAINTENANCE_TIPS', '<ul>
