@@ -203,31 +203,11 @@ function xoops_login_establish_session(XoopsUser $user, bool $remember, string $
         }
     }
 
-    if (!empty($redirect) && !strpos($redirect, 'register')) {
-        $xoops_redirect = rawurldecode($redirect);
-        $parsed         = parse_url(XOOPS_URL);
-        $url            = isset($parsed['scheme']) ? $parsed['scheme'] . '://' : 'http://';
-        if (isset($parsed['host'])) {
-            $url .= $parsed['host'];
-            if (isset($parsed['port'])) {
-                $url .= ':' . $parsed['port'];
-            }
-        } else {
-            $host = parse_url(XOOPS_URL, PHP_URL_HOST);
-            if (!is_string($host)) {
-                $host = ''; // Or a safe default/fallback
-            }
-            $url .= $host;
-        }
-        if (isset($parsed['path']) && $parsed['path']) {
-            if (strncmp($parsed['path'], $xoops_redirect, strlen($parsed['path']))) {
-                $url .= $parsed['path'];
-            }
-        }
-        $url .= $xoops_redirect;
-    } else {
-        $url = XOOPS_URL . '/index.php';
-    }
+    // One same-site policy for every redirect target (include/file_safety.php).
+    // XOOPS_ROOT_PATH rather than __DIR__, so the include also resolves when
+    // the unit tests evaluate this file in a sandbox.
+    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+    $url = xoops_postLoginRedirectUrl($redirect);
 
     // RMV-NOTIFY
     // Perform some maintenance of notification records

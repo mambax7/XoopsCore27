@@ -11,6 +11,7 @@
  *  - xoops_remove_file_quietly() — scoped-suppressed unlink() with single warning
  *  - xoops_isLocalUrl()        — strict same-origin check (scheme/host/port) for redirects
  *  - xoops_validateLocalRedirect() — full same-site redirect policy (origin + base path)
+ *  - xoops_postLoginRedirectUrl()  — the absolute URL to send a user to after login
  *  - xoops_rebuildQueryString() — parse-and-re-emit a query string for safe reflection
  *
  * They originally lived in include/cp_functions.php, but that file
@@ -424,6 +425,79 @@ if (!function_exists('xoops_validateLocalRedirect')) {
         }
 
         return $redirect;
+    }
+}
+
+if (!function_exists('xoops_postLoginRedirectUrl')) {
+    /**
+     * Build the absolute URL to send a user to after login.
+     *
+     * $redirect is the posted xoops_redirect value, normally the URL-encoded
+     * REQUEST_URI of the page that showed the login form. It is decoded once;
+     * a root-relative path given without the base path of a subdirectory
+     * install gets the base path prepended, as before; the result must then
+     * pass xoops_validateLocalRedirect(). An empty value, a registration page
+     * (judged on the path with HTML entities and percent-encoding removed,
+     * case-insensitively) or anything the validator refuses falls back to
+     * the site's index.php.
+     *
+     * @param string      $redirect posted xoops_redirect value, URL-encoded
+     * @param string|null $baseUrl  authoritative base URL; defaults to XOOPS_URL
+     * @return string absolute URL on this site
+     */
+    function xoops_postLoginRedirectUrl($redirect, $baseUrl = null)
+    {
+        $baseUrl  = rtrim((string) ($baseUrl ?? (defined('XOOPS_URL') ? XOOPS_URL : '')), '/');
+        $fallback = $baseUrl . '/index.php';
+        $redirect = (string) $redirect;
+        if ('' === $redirect) {
+            return $fallback;
+        }
+
+        $target = rawurldecode($redirect);
+        $path   = preg_split('/[?#]/', $target, 2)[0];
+
+        // Never send a user who just logged in back to a registration page.
+        // Judge the path the browser will end up requesting: up to three
+        // layers of HTML entities and percent-encoding are removed first
+        // (redirect_header() emits the URL into HTML, so "/&#x72;egister.php"
+        // reaches the browser as /register.php, and "/%2572egister.php" as
+        // "/%72egister.php", which the web server serves as /register.php),
+        // and the path is split off only afterwards, because an entity such
+        // as "&#x72;" itself contains a "#".
+        $probe = $target;
+        for ($i = 0; $i < 3; $i++) {
+            $next = rawurldecode(html_entity_decode($probe, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($next === $probe) {
+                break;
+            }
+            $probe = $next;
+        }
+        if (str_contains(strtolower(preg_split('/[?#]/', $probe, 2)[0]), 'register')) {
+            return $fallback;
+        }
+
+        $base     = parse_url($baseUrl) ?: [];
+        $basePath = rtrim((string) ($base['path'] ?? ''), '/');
+        if ('' !== $basePath
+            && str_starts_with($path, '/')
+            && !str_starts_with($path, '//')
+            && $path !== $basePath
+            && !str_starts_with($path, $basePath . '/')
+        ) {
+            $target = $basePath . $target;
+        }
+
+        $target = xoops_validateLocalRedirect($target, $baseUrl);
+        if ('' === $target) {
+            return $fallback;
+        }
+        if (!str_starts_with($target, '/')) {
+            return $target; // already an absolute URL on this site
+        }
+
+        return strtolower((string) ($base['scheme'] ?? 'http')) . '://' . (string) ($base['host'] ?? '')
+            . (isset($base['port']) ? ':' . (int) $base['port'] : '') . $target;
     }
 }
 
