@@ -3,6 +3,7 @@
 3.63-dev (2026/05/04)
 - General hardening pass on admin output and module entry-point checks (mamba)
 - an uploaded image that cannot be inspected is rejected and logged instead of being moved into uploads/ to look at it (mamba)
+- ban-list, bandwidth and .htaccess files are replaced atomically where the directory allows a temporary file (never read empty or half-written; a failed write keeps the old content), and written in place under a lock where only the file is writable (not atomic: a failed write there can leave the file partial); a failed .htaccess write no longer ends in a fatal error (mamba)
 
 3.63 (2025/01/19)
 - updated HTML Purifier to 4.18.0 (mamba)
