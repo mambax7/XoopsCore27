@@ -431,6 +431,26 @@ final class LoginSessionBehaviourTest extends TestCase
     }
 
     /**
+     * The function itself refuses off-site forms; it no longer leaves that to
+     * redirect_header() (the bootstrap's stub does not re-check the URL).
+     */
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function anOffSiteRedirectTargetFallsBackToTheIndexPage(): void
+    {
+        $fn = self::NS . '\\xoops_login_establish_session';
+        foreach (['%2F%5Cevil.test', '\\@evil.test', '%2F%2Fevil.test', '/modules/../../admin.php'] as $posted) {
+            try {
+                $fn($this->user(), false, $posted);
+                self::fail('expected a redirect');
+            } catch (RedirectHeaderException $e) {
+                self::assertSame(XOOPS_URL . '/index.php', $e->url, $posted);
+            }
+        }
+    }
+
+    /**
      * @param int[] $groups
      */
     private function user(int $level = 1, array $groups = [2]): object
