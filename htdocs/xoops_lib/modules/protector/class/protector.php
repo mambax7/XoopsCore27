@@ -354,16 +354,95 @@ class Protector
     {
         $expire = min((int) $expire, time() + 300);
 
-        $fp = @fopen(static::get_filepath4bwlimit(), 'w');
-        if ($fp) {
-            @flock($fp, LOCK_EX);
-            fwrite($fp, $expire . "\n");
-            @flock($fp, LOCK_UN);
-            fclose($fp);
+        return static::writeFileAtomic(static::get_filepath4bwlimit(), $expire . "\n");
+    }
 
-            return true;
-        } else {
+    /**
+     * Replace a file's contents in place under an exclusive lock.
+     *
+     * The fallback for a directory that refuses new files, such as a document
+     * root PHP may not write to that holds a writable .htaccess: the ban still
+     * applies, but a reader that takes no lock can briefly see a partial file,
+     * and a write that fails after truncation can leave the file empty or
+     * partial instead of keeping the old content. Every step is checked; the
+     * caller holds the error handler.
+     *
+     * @param string $path    existing, writable file
+     * @param string $content new contents
+     * @return bool true when the whole content was written
+     */
+    private static function writeFileInPlace(string $path, string $content): bool
+    {
+        $fp = fopen($path, 'c');
+        if (false === $fp) {
             return false;
+        }
+        $locked   = flock($fp, LOCK_EX);
+        $complete = $locked
+            && ftruncate($fp, 0)
+            && strlen($content) === fwrite($fp, $content)
+            && fflush($fp);
+        if ($locked) {
+            flock($fp, LOCK_UN);
+        }
+
+        return fclose($fp) && $complete;
+    }
+
+    /**
+     * Replace a file's contents atomically.
+     *
+     * The new content is written in full to a temporary file next to the
+     * target (same directory, so the rename cannot cross filesystems),
+     * flushed, given the target's current permissions, and then renamed over
+     * the target. Readers do not lock, so this is what keeps them from ever
+     * seeing an emptied or half-written ban list, bandwidth file or
+     * .htaccess: they see the old file or the new one. A failed write leaves
+     * the old content in place and removes the temporary file. A scoped error
+     * handler keeps PHP's warnings, which name the full server path, out of
+     * the page.
+     *
+     * @param string $path    file to write
+     * @param string $content new contents
+     * @return bool true when the target now holds the whole new content
+     */
+    protected static function writeFileAtomic(string $path, string $content): bool
+    {
+        $tmp = '';
+        set_error_handler(static fn (): bool => true);
+        try {
+            if (is_dir($path)) {
+                return false;
+            }
+            $tmp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
+            $fp  = fopen($tmp, 'x');
+            if (false === $fp) {
+                $tmp = '';
+
+                // The directory refuses new files: replace an existing, writable
+                // file in place instead, so the ban still applies.
+                return is_file($path) && is_writable($path) && self::writeFileInPlace($path, $content);
+            }
+            $complete = strlen($content) === fwrite($fp, $content) && fflush($fp);
+            $complete = fclose($fp) && $complete;
+            if ($complete && is_file($path)) {
+                $mode     = fileperms($path);
+                $complete = false !== $mode && chmod($tmp, $mode & 0777);
+            }
+            if ($complete && rename($tmp, $path)) {
+                $tmp = '';
+
+                return true;
+            }
+
+            return false;
+        } catch (\Throwable $e) {
+            return false;
+        } finally {
+            if ('' !== $tmp && is_file($tmp)) {
+                unlink($tmp);
+            }
+            restore_error_handler();
         }
     }
 
@@ -395,17 +474,7 @@ class Protector
     {
         asort($bad_ips);
 
-        $fp = @fopen(static::get_filepath4badips(), 'w');
-        if ($fp) {
-            @flock($fp, LOCK_EX);
-            fwrite($fp, serialize($bad_ips) . "\n");
-            @flock($fp, LOCK_UN);
-            fclose($fp);
-
-            return true;
-        } else {
-            return false;
-        }
+        return static::writeFileAtomic(static::get_filepath4badips(), serialize($bad_ips) . "\n");
     }
 
     /**
@@ -609,11 +678,10 @@ class Protector
 
         $ht_body = file_get_contents($target_htaccess);
 
-        // make backup as uploads/.htaccess.bak automatically
+        // make backup as uploads/.htaccess.bak automatically (best effort: a
+        // missing backup must not block the ban itself)
         if ($ht_body && !file_exists($backup_htaccess)) {
-            $fw = fopen($backup_htaccess, 'w');
-            fwrite($fw, $ht_body);
-            fclose($fw);
+            static::writeFileAtomic($backup_htaccess, $ht_body);
         }
 
         // if .htaccess is broken, restore from backup
@@ -637,13 +705,7 @@ class Protector
 
         // error_log( "$new_ht_body\n" , 3 , "/tmp/error_log" ) ;
 
-        $fw = fopen($target_htaccess, 'w');
-        @flock($fw, LOCK_EX);
-        fwrite($fw, $new_ht_body);
-        @flock($fw, LOCK_UN);
-        fclose($fw);
-
-        return true;
+        return static::writeFileAtomic($target_htaccess, $new_ht_body);
     }
 
     /**
@@ -732,7 +794,7 @@ class Protector
         }
 
         if (!empty($this->_dblayertrap_doubtfuls) || $force_override) {
-            @define('XOOPS_DB_ALTERNATIVE', 'ProtectorMysqlDatabase');
+            defined('XOOPS_DB_ALTERNATIVE') || define('XOOPS_DB_ALTERNATIVE', 'ProtectorMysqlDatabase');
             require_once dirname(__DIR__) . '/class/ProtectorMysqlDatabase.class.php';
         }
     }
