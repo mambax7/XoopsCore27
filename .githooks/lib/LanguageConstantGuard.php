@@ -30,6 +30,12 @@ declare(strict_types=1);
  *
  * `\defined()` and `\_X` are accepted wherever `defined()` and `_X` are.
  *
+ * Reads inside `language/` are not scanned: a translated pack replaces a
+ * language file as a whole, so a read there (`define('_B', _A . 'x')`) never
+ * runs against a pack that lacks that file's own constants, and a guard
+ * would be noise. A read of another file's new constant from a language
+ * file is the one shape this leaves out.
+ *
  * @category  Xoops
  * @package   XoopsCore27
  * @author    XOOPS Development Team
@@ -603,10 +609,10 @@ final class LanguageConstantGuard
         while (in_array($tokens[$q][0] ?? null, self::TYPE_JOIN, true)) {
             $q++;
         }
-        if (in_array($tokens[$q][0] ?? null, [T_VARIABLE, T_ELLIPSIS], true)
-            && '|' !== $tokens[$q - 1][0] && !in_array($tokens[$q - 1][0], self::AMPERSANDS, true)
-        ) {
-            return true;
+        if (in_array($tokens[$q][0] ?? null, [T_VARIABLE, T_ELLIPSIS], true) && '|' !== $tokens[$q - 1][0]) {
+            // `_X &$v` is a by-reference parameter inside a signature and a
+            // bitwise and anywhere else; `_X $v` and `_X ...$v` always declare.
+            return !in_array($tokens[$q - 1][0], self::AMPERSANDS, true) || self::inParameterList($tokens, $i);
         }
         // Backward over the rest of a type to what introduces it.
         $p = $i - 1;
@@ -621,6 +627,43 @@ final class LanguageConstantGuard
         }
 
         return self::isAttributeName($tokens, $i);
+    }
+
+    /**
+     * Whether $i lies directly inside the parameter list of a function,
+     * closure or arrow function: the innermost unbalanced '(' before it is
+     * preceded by `function [&][name]` or `fn [&]`.
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function inParameterList(array $tokens, int $i): bool
+    {
+        $depth = 0;
+        for ($j = $i - 1; $j >= 0; $j--) {
+            $t = $tokens[$j][0];
+            if (')' === $t || ']' === $t) {
+                $depth++;
+            } elseif ('(' === $t || '[' === $t) {
+                if ($depth > 0) {
+                    $depth--;
+                    continue;
+                }
+                if ('[' === $t) {
+                    return false;
+                }
+                $k = $j - 1;
+                if ($k >= 0 && T_STRING === $tokens[$k][0]) {
+                    $k--; // the function's name
+                }
+                if ($k >= 0 && in_array($tokens[$k][0], self::AMPERSANDS, true)) {
+                    $k--; // by-reference return
+                }
+
+                return $k >= 0 && in_array($tokens[$k][0], [T_FUNCTION, T_FN], true);
+            }
+        }
+
+        return false;
     }
 
     /**
