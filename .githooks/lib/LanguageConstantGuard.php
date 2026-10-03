@@ -43,7 +43,8 @@ final class LanguageConstantGuard
     private const NOT_A_READ_AFTER = [
         T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION,
         T_CONST, T_NEW, T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM, T_EXTENDS,
-        T_IMPLEMENTS, T_INSTANCEOF, T_USE, T_NAMESPACE, T_GOTO, T_AS, T_INSTEADOF,
+        T_IMPLEMENTS, T_INSTANCEOF, T_USE, T_NAMESPACE, T_GOTO,
+        T_AS, T_INSTEADOF, T_PUBLIC, T_PROTECTED, T_PRIVATE, // aliases, `foo as protected _X`
     ];
 
     /**
@@ -359,8 +360,8 @@ final class LanguageConstantGuard
         }
     }
 
-    /** @var array<string, list<array{0: int|string, 1: string, 2: int}>> tokens per source, keyed by hash */
-    private static array $tokenCache = [];
+    /** @var array{0: string, 1: list<array{0: int|string, 1: string, 2: int}>}|null the last source's hash and tokens */
+    private static ?array $tokenCache = null;
 
     /**
      * Code tokens as [type, text, line]: no whitespace, comments, inline HTML
@@ -372,11 +373,8 @@ final class LanguageConstantGuard
     private static function codeTokens(string $source): array
     {
         $key = md5($source);
-        if (isset(self::$tokenCache[$key])) {
-            return self::$tokenCache[$key];
-        }
-        if (count(self::$tokenCache) >= 64) {
-            self::$tokenCache = [];
+        if (null !== self::$tokenCache && self::$tokenCache[0] === $key) {
+            return self::$tokenCache[1]; // one entry: a run scans each file for every constant in turn
         }
         $tokens = [];
         $line   = 1;
@@ -393,7 +391,9 @@ final class LanguageConstantGuard
             }
         }
 
-        return self::$tokenCache[$key] = $tokens;
+        self::$tokenCache = [$key, $tokens];
+
+        return $tokens;
     }
 
     /**
@@ -514,11 +514,16 @@ final class LanguageConstantGuard
         if ((T_STRING === $type && $constant === $text) || (T_NAME_FULLY_QUALIFIED === $type && '\\' . $constant === $text)) {
             $prev = $tokens[$i - 1][0] ?? null;
             $next = $tokens[$i + 1][0] ?? null;
-            if (':' === $next && !in_array($prev, ['?', T_CASE], true)) {
-                return null; // a label: named argument `f(_X: 1)` or goto target `_X:`
+            if (':' === $next && in_array($prev, ['(', ',', null, ';', '{', '}'], true)) {
+                // A label: named argument `f(_X: 1)` or goto target `_X:`. Any other
+                // ':' may end a ternary branch or a case value, `$a ? 'x' . _X :`.
+                return null;
             }
-            if ('=' === $next || (T_CASE === $prev && ';' === $next)) {
-                return null; // a declaration: `const A = 1, _X = 2`, `case _X = 1`, enum `case _X;`
+            if ('=' === $next || (T_CASE === $prev && ';' === $next && self::inEnumBody($tokens, $i))) {
+                // A declared name: `const A = 1, _X = 2;`, `case _X = 'v';` or an
+                // enum's `case _X;`. A read is never assigned to. A switch may
+                // end a case with ';' too, so that one needs the enum body.
+                return null;
             }
 
             return !in_array($prev, self::NOT_A_READ_AFTER, true) && !in_array($next, ['(', '{', T_DOUBLE_COLON], true)
@@ -537,6 +542,40 @@ final class LanguageConstantGuard
         $close = ',' === ($tokens[$arg + 1][0] ?? null) ? $arg + 2 : $arg + 1; // optional trailing comma
 
         return $constant === self::literal($tokens, $arg) && ')' === ($tokens[$close][0] ?? null) ? $arg : null;
+    }
+
+    /**
+     * Whether the innermost '{' enclosing $i opens an enum body:
+     * `enum Name [: type] [implements A, B] {`.
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function inEnumBody(array $tokens, int $i): bool
+    {
+        $depth = 0;
+        for ($b = $i - 1; $b >= 0; $b--) {
+            $t = $tokens[$b][0];
+            if ('}' === $t) {
+                $depth++;
+            } elseif ('{' === $t || T_CURLY_OPEN === $t || T_DOLLAR_OPEN_CURLY_BRACES === $t) {
+                if ($depth > 0) {
+                    $depth--;
+                    continue;
+                }
+                for ($p = $b - 1; $p >= 0; $p--) {
+                    if (T_ENUM === $tokens[$p][0]) {
+                        return true;
+                    }
+                    if (!in_array($tokens[$p][0], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, ':', ',', T_IMPLEMENTS], true)) {
+                        return false;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        return false;
     }
 
     /** The '&' token in each of PHP 8.1's spellings. */
