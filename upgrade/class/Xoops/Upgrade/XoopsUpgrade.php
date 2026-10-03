@@ -289,8 +289,9 @@ abstract class XoopsUpgrade
      *
      * A scoped error handler keeps PHP's own warning, which names the full
      * server path, off the upgrade page; the caller logs a failure with
-     * relativePath() instead. Existence is checked again afterwards, so a
-     * concurrent removal does not count as a failure.
+     * relativePath() instead. The result is the state afterwards, so a
+     * concurrent removal is not a failure and a concurrent recreation is not
+     * a success.
      *
      * @param  string $path absolute filesystem path
      * @return bool true when nothing is left at $path
@@ -304,10 +305,12 @@ abstract class XoopsUpgrade
                 // "missing" is trusted only when it can be confirmed.
                 return self::isConfirmedAbsent($path);
             }
-            $removed = (is_dir($path) && !is_link($path)) ? rmdir($path) : unlink($path);
+            (is_dir($path) && !is_link($path)) ? rmdir($path) : unlink($path);
             clearstatcache(true, $path);
 
-            return $removed || (!file_exists($path) && !is_link($path) && self::isConfirmedAbsent($path));
+            // The state afterwards decides, whatever the call returned: a
+            // concurrent removal is not a failure, a recreation not a success.
+            return !file_exists($path) && !is_link($path) && self::isConfirmedAbsent($path);
         } catch (\Throwable $e) {
             return false;
         } finally {

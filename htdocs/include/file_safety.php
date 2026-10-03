@@ -197,14 +197,42 @@ if (!function_exists('xoops_chmod_quietly')) {
     }
 }
 
+if (!function_exists('xoops_path_confirmed_absent')) {
+    /**
+     * Whether nothing exists at $path, confirmed by listing the nearest
+     * existing ancestor. file_exists() is also false when a parent cannot be
+     * read, so a missing file is trusted only when its directory can be
+     * listed; an unreadable directory confirms nothing.
+     *
+     * @param string $path absolute filesystem path
+     *
+     * @return bool
+     */
+    function xoops_path_confirmed_absent(string $path): bool
+    {
+        $name = basename($path);
+        $dir  = dirname($path);
+        while (!is_dir($dir)) {
+            if (dirname($dir) === $dir) {
+                return false;
+            }
+            $name = basename($dir);
+            $dir  = dirname($dir);
+        }
+        $listing = scandir($dir);
+
+        return false !== $listing && !in_array($name, $listing, true);
+    }
+}
 if (!function_exists('xoops_remove_file_quietly')) {
     /**
      * Best-effort file removal used by atomic-write cleanup paths and similar
-     * fire-and-forget cleanup. Skips non-existent paths so already-deleted
+     * fire-and-forget cleanup. Skips paths confirmed absent so already-deleted
      * files don't trigger warnings, suppresses the unlink() warning via a
      * scoped error_reporting() toggle (no `@` operator), and re-checks
-     * existence after a failed unlink — only logging when the file is still
-     * present, so TOCTOU races resolve silently.
+     * absence after a failed unlink — logging when the file is still present
+     * or cannot be confirmed gone (an unreadable parent), so TOCTOU races
+     * resolve silently and an inaccessible path is not mistaken for a removed one.
      *
      * @param string $path    Absolute path to the file to remove.
      * @param string $context Short label used in the warning message
@@ -227,6 +255,13 @@ if (!function_exists('xoops_remove_file_quietly')) {
         // cleanup helper would abort the caller's unrelated work.
         try {
             if (!file_exists($path) && !is_link($path)) {
+                if (!xoops_path_confirmed_absent($path)) {
+                    trigger_error(
+                        sprintf('Could not confirm removal of %s file: %s', $context, xoops_safe_basename($path)),
+                        E_USER_WARNING
+                    );
+                }
+
                 return;
             }
         } catch (\Throwable $e) {
@@ -247,7 +282,7 @@ if (!function_exists('xoops_remove_file_quietly')) {
         // Same try/catch shape around the post-unlink probe: if the path
         // contained a null byte we have nothing useful to report anyway.
         try {
-            $stillPresent = file_exists($path) || is_link($path);
+            $stillPresent = !xoops_path_confirmed_absent($path);
         } catch (\Throwable $e) {
             $stillPresent = false;
         }
