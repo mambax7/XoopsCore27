@@ -210,18 +210,30 @@ final class LanguageConstantGuard
         $stack     = []; // 'guard', 'block' or 'string' per open brace
         $fallback  = false;
         $stmtStart = 0;
-        $arrow     = null;  // brace depth at which an arrow function's statement began
+        $arrow     = null;  // [delimiter depth, brace depth] where an arrow function began
         $signature = false; // inside a function or closure signature, before its body
         $paren     = 0;     // open parentheses: a ';' inside a for header ends no statement
+        $nest      = 0;     // open parentheses and brackets
         $found     = [];
 
         foreach ($tokens as $i => [$type]) {
-            if ('(' === $type) {
-                $paren++;
+            if ('(' === $type || '[' === $type) {
+                $paren += '(' === $type ? 1 : 0;
+                $nest++;
                 continue;
             }
-            if (')' === $type) {
-                $paren = max(0, $paren - 1);
+            if (')' === $type || ']' === $type) {
+                if (')' === $type) {
+                    $paren = max(0, $paren - 1);
+                }
+                $nest  = max(0, $nest - 1);
+                if (null !== $arrow && $nest < $arrow[0]) {
+                    $arrow = null; // the delimiter holding the arrow function closed
+                }
+                continue;
+            }
+            if (',' === $type && null !== $arrow && $nest === $arrow[0] && count($stack) === $arrow[1]) {
+                $arrow = null; // a sibling argument or element: the arrow body ended
                 continue;
             }
             if ('{' === $type) {
@@ -257,18 +269,18 @@ final class LanguageConstantGuard
                 if (0 === $paren) {
                     $stmtStart = $i + 1;
                     $signature = false;
-                    if (null !== $arrow && count($stack) <= $arrow) {
+                    if (null !== $arrow && count($stack) <= $arrow[1]) {
                         $arrow = null; // the statement holding the arrow function ended
                     }
                 }
                 continue;
             }
             if (T_FN === $type) {
-                // An arrow function's body runs to the end of its expression;
-                // the rest of the statement (a ';' inside a nested anonymous
-                // class does not end it) is treated as inside it, so the
-                // file-level fallback never covers a read there.
-                $arrow ??= count($stack);
+                // An arrow function's body runs to the end of its expression: a
+                // sibling comma or closing delimiter at its own depth, or the
+                // statement's ';' (one inside a nested anonymous class does not
+                // count). The file-level fallback never covers a read there.
+                $arrow ??= [$nest, count($stack)];
                 continue;
             }
             if (T_FUNCTION === $type) {

@@ -81,6 +81,7 @@ final class LanguageConstantGuardTest extends TestCase
             'block, fully qualified call'   => ["if (\\defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}"],
             'file-level fallback'           => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\necho _ZZ_PROBE;"],
             'fallback, then a later block'  => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', \"text\");\n\$x = 1;\necho _ZZ_PROBE;"],
+            'fallback, read beside an arrow function' => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n\$v = [fn (\$a, \$b) => 1, _ZZ_PROBE];\nf(fn () => 1, _ZZ_PROBE);\n\$w = (fn () => 1) . _ZZ_PROBE;"],
             'quoted name, comments, PHPDoc' => ["\$k = '_ZZ_PROBE'; // _ZZ_PROBE\n/** @see _ZZ_PROBE */\n/* _ZZ_PROBE */"],
             'property, method, class const' => ["\$o->_ZZ_PROBE;\n\$o->_ZZ_PROBE();\nFoo::_ZZ_PROBE;\n_ZZ_PROBE();"],
         ];
