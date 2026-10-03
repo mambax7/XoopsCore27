@@ -57,6 +57,15 @@ final class DumpWriteProbe extends \SystemMaintenance
     }
 }
 
+/** A site without a configured data directory. */
+final class NoVarPathProbe extends \SystemMaintenance
+{
+    protected static function dumpBasePath(): string
+    {
+        return '';
+    }
+}
+
 /**
  * The SQL-dump directory fails closed.
  *
@@ -312,6 +321,53 @@ final class DumpDirectoryGuardTest extends TestCase
         self::assertFalse($this->prepare($dir));
     }
 
+    #[Test]
+    public function theDumpPathIsUnderTheDataDirectoryAndEmptyWithoutOne(): void
+    {
+        self::assertSame(XOOPS_VAR_PATH . '/dumps', \SystemMaintenance::dumpDirectoryPath());
+        self::assertSame('', NoVarPathProbe::dumpDirectoryPath(), 'No data directory: no path, rather than a shared temp dir.');
+        self::assertFalse($this->prepare(''), 'An empty path is refused before any disk access.');
+    }
+
+    #[Test]
+    public function theSystemTempDirectoryIsNotAFallback(): void
+    {
+        $src = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php');
+
+        self::assertStringNotContainsString('sys_get_temp_dir', $src, 'Anyone on the host can own a dumps entry in the temp dir.');
+    }
+
+    #[Test]
+    public function anExistingDirectoryOpenToOtherUsersIsTightened(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            self::markTestSkipped('POSIX modes do not apply on Windows.');
+        }
+        $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
+        mkdir($dir, 0755);
+        clearstatcache(true, $dir);
+        self::assertSame(0755, fileperms($dir) & 0777, 'Precondition: the directory starts out readable by others.');
+
+        self::assertTrue($this->prepare($dir));
+
+        clearstatcache(true, $dir);
+        self::assertSame(0700, fileperms($dir) & 0777, 'Group and world bits are removed.');
+    }
+
+    #[Test]
+    public function aNewDirectoryIsPrivateToTheOwner(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            self::markTestSkipped('POSIX modes do not apply on Windows.');
+        }
+        $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
+
+        self::assertTrue($this->prepare($dir));
+
+        clearstatcache(true, $dir);
+        self::assertSame(0700, fileperms($dir) & 0777);
+    }
+
     // ---------------------------------------------------------------------
     // dump_write()
     // ---------------------------------------------------------------------
@@ -338,6 +394,19 @@ final class DumpDirectoryGuardTest extends TestCase
         [, $html] = $this->dumpWrite();
 
         self::assertSame(['blocker'], array_values(array_diff(scandir($this->base) ?: [], ['.', '..'])), 'Nothing but the blocking file may exist.');
+        self::assertStringContainsString('no dump was written', $html);
+        self::assertStringContainsString('icon:cancel.png', $html);
+        self::assertStringNotContainsString('op=dump_download', $html);
+    }
+
+    #[Test]
+    public function dumpWriteRefusesWithoutAConfiguredDataDirectory(): void
+    {
+        DumpWriteProbe::$dir = '';
+
+        [, $html] = $this->dumpWrite();
+
+        self::assertSame([], array_values(array_diff(scandir($this->base) ?: [], ['.', '..'])), 'Nothing is written anywhere.');
         self::assertStringContainsString('no dump was written', $html);
         self::assertStringContainsString('icon:cancel.png', $html);
         self::assertStringNotContainsString('op=dump_download', $html);
@@ -374,7 +443,9 @@ final class DumpDirectoryGuardTest extends TestCase
             self::markTestSkipped('A read-only directory cannot refuse the write here (Windows, or running as root).');
         }
         self::assertTrue($this->prepare(DumpWriteProbe::$dir));
-        chmod(DumpWriteProbe::$dir, 0555);
+        // Owner-read-only. No group or world bits, so the privacy check leaves
+        // the mode alone and the directory stays unwritable for the dump.
+        chmod(DumpWriteProbe::$dir, 0500);
         $leaked = [];
         set_error_handler(static function (int $errno, string $message) use (&$leaked): bool {
             $leaked[] = $message;

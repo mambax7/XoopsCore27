@@ -717,18 +717,29 @@ class SystemMaintenance
      * Dumps hold password hashes, e-mail addresses and the full configuration,
      * so they are written under XOOPS_VAR_PATH (outside the web root) and served
      * only through the admin-authenticated download action — never as a
-     * directly fetchable file under the web root. If XOOPS_VAR_PATH is not
-     * defined the system temp dir (also outside the web root) is used rather
-     * than uploads/, so a dump can't land somewhere fetchable on non-Apache
-     * setups.
+     * directly fetchable file under the web root. There is no fallback: without
+     * a configured XOOPS_VAR_PATH the path is '' and no dump is written. The
+     * system temp dir is not an option, as anyone on the host can own a
+     * 'dumps' entry there and read what is written into it, and the empty
+     * placeholder in mainfile.dist.php would otherwise resolve to '/dumps'.
      *
-     * @return string
+     * @return string '' when XOOPS_VAR_PATH is not configured
      */
     public static function dumpDirectoryPath(): string
     {
-        $base = defined('XOOPS_VAR_PATH') ? XOOPS_VAR_PATH : \sys_get_temp_dir();
+        $base = static::dumpBasePath();
 
-        return $base . '/dumps';
+        return '' === $base ? '' : $base . '/dumps';
+    }
+
+    /**
+     * The configured data directory, '' when there is none.
+     *
+     * @return string
+     */
+    protected static function dumpBasePath(): string
+    {
+        return defined('XOOPS_VAR_PATH') ? (string) XOOPS_VAR_PATH : '';
     }
 
     /**
@@ -759,18 +770,24 @@ class SystemMaintenance
      * keeps PHP's own warnings, which name the full server path, out of the
      * page.
      *
-     * @param string $dir dump directory
-     * @return bool true when the directory exists and both guards are in place
+     * @param string $dir dump directory; '' (no XOOPS_VAR_PATH) is refused
+     * @return bool true when the directory exists, is private and both guards are in place
      *
      * The checks are made by path, not on an open directory handle (PHP has no
-     * no-follow directory API), so they cannot be atomic: someone able to swap
-     * the directory for a symlink between the check and the write could
-     * redirect it. That needs write access to the data directory itself,
-     * which already allows changing secure.php and the caches, so the guard
-     * does not try to defend against it.
+     * openat() or no-follow directory API), so they cannot be atomic: someone
+     * able to swap the directory for a symlink between a check and a write
+     * could redirect it. The parent, XOOPS_VAR_PATH, therefore has to be
+     * trusted; write access to it already allows changing secure.php and the
+     * caches. What can be checked is checked: the directory is never taken
+     * from a shared location, a symlink is refused, and an existing directory
+     * is accepted only when it is owned by this process and closed to other
+     * users (0700, tightened here when it is looser).
      */
     public static function prepareDumpDirectory(string $dir): bool
     {
+        if ('' === $dir) {
+            return false; // no configured data directory, nowhere safe to write
+        }
         set_error_handler(static fn (): bool => true);
         try {
             if (is_link($dir)) {
@@ -778,6 +795,9 @@ class SystemMaintenance
             }
             if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
                 return false;
+            }
+            if (!self::dumpDirectoryIsPrivate($dir)) {
+                return false; // another user could read, or has planted, the directory
             }
 
             return self::ensureDumpGuard($dir . '/.htaccess', self::DUMP_HTACCESS, true)
@@ -787,6 +807,42 @@ class SystemMaintenance
         } finally {
             restore_error_handler();
         }
+    }
+
+    /**
+     * Whether the dump directory is owned by this process and closed to others.
+     *
+     * A directory that another user created (or can read) would hand them the
+     * dump without any race. Group and world bits are removed first, so a
+     * directory created under a loose umask heals; one that stays open or
+     * belongs to someone else is refused. Windows has no POSIX modes, so the
+     * check is skipped there; NTFS inheritance keeps the data dir's ACL.
+     *
+     * @param string $dir existing dump directory
+     * @return bool
+     */
+    private static function dumpDirectoryIsPrivate(string $dir): bool
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            return true;
+        }
+        $mode = fileperms($dir);
+        if (false === $mode) {
+            return false;
+        }
+        if (0 !== ($mode & 0077)) {
+            chmod($dir, 0700);
+            clearstatcache(true, $dir);
+            $mode = fileperms($dir);
+            if (false === $mode || 0 !== ($mode & 0077)) {
+                return false;
+            }
+        }
+        if (function_exists('posix_geteuid') && fileowner($dir) !== posix_geteuid()) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
