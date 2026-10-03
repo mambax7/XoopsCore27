@@ -210,18 +210,28 @@ if (!function_exists('xoops_path_confirmed_absent')) {
      */
     function xoops_path_confirmed_absent(string $path): bool
     {
-        $name = basename($path);
-        $dir  = dirname($path);
-        while (!is_dir($dir)) {
-            if (dirname($dir) === $dir) {
-                return false;
+        // scandir() on an unreadable directory warns with the full path; the
+        // scoped handler keeps that off the page (the caller reports with a
+        // basename), and a throwing handler or ValueError confirms nothing.
+        set_error_handler(static fn (): bool => true);
+        try {
+            $name = basename($path);
+            $dir  = dirname($path);
+            while (!is_dir($dir)) {
+                if (dirname($dir) === $dir) {
+                    return false;
+                }
+                $name = basename($dir);
+                $dir  = dirname($dir);
             }
-            $name = basename($dir);
-            $dir  = dirname($dir);
-        }
-        $listing = scandir($dir);
+            $listing = scandir($dir);
 
-        return false !== $listing && !in_array($name, $listing, true);
+            return false !== $listing && !in_array($name, $listing, true);
+        } catch (\Throwable $e) {
+            return false;
+        } finally {
+            restore_error_handler();
+        }
     }
 }
 if (!function_exists('xoops_remove_file_quietly')) {

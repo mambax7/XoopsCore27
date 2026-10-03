@@ -103,9 +103,12 @@ class FileSafetyTest extends TestCase
         file_put_contents($path, 'x');
         chmod($parent, 0000);
         $captured = [];
-        set_error_handler(static function (int $level, string $msg) use (&$captured): bool {
+        $native   = [];
+        set_error_handler(static function (int $level, string $msg) use (&$captured, &$native): bool {
             if (E_USER_WARNING === $level) {
                 $captured[] = $msg;
+            } else {
+                $native[] = $msg;
             }
 
             return true;
@@ -119,8 +122,10 @@ class FileSafetyTest extends TestCase
             chmod($parent, 0700);
         }
         try {
+            $this->assertSame([], $native, 'no native warning (which names the full path) may escape');
             $this->assertCount(1, $captured, 'an unconfirmable removal must be reported once');
             $this->assertStringContainsString('leftover.tmp', $captured[0]);
+            $this->assertStringNotContainsString($parent, $captured[0], 'the report carries the basename only');
             $this->assertFileExists($path, 'nothing was removed');
         } finally {
             unlink($path);
