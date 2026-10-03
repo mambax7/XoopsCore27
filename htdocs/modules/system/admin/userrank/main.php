@@ -215,15 +215,13 @@ switch ($op) {
                 redirect_header('admin.php?fct=userrank', 3, implode(',', $GLOBALS['xoopsSecurity']->getErrors()));
             }
             if ($userrank_Handler->delete($obj)) {
-                // Contain the unlink to the uploads directory: a stored
-                // rank_image containing ../ must not drive a delete outside it.
-                $uploadReal = realpath(XOOPS_UPLOAD_PATH);
-                $fileReal   = realpath(XOOPS_UPLOAD_PATH . '/' . $obj->getVar('rank_image'));
-                if (false !== $uploadReal && false !== $fileReal
-                    && str_starts_with($fileReal, $uploadReal . DIRECTORY_SEPARATOR)
-                    && is_file($fileReal)) {
-                    chmod($fileReal, 0777);
-                    unlink($fileReal);
+                // Remove the image only when the stored name resolves to a file
+                // inside the upload directory; a rank_image containing ../ must
+                // not drive a delete outside it.
+                require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                $rankFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, (string) $obj->getVar('rank_image', 'n'));
+                if ('' !== $rankFile) {
+                    xoops_remove_file_quietly($rankFile, 'rank image');
                 }
                 redirect_header('admin.php?fct=userrank', 2, _AM_SYSTEM_USERRANK_SAVE);
             } else {
