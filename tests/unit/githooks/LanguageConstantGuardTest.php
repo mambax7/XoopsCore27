@@ -78,6 +78,8 @@ final class LanguageConstantGuardTest extends TestCase
             'block'                         => ["if (defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}"],
             'block, nested inner block'     => ["if (defined('_ZZ_PROBE')) {\n    if (\$a) {\n        echo _ZZ_PROBE;\n    }\n    echo _ZZ_PROBE;\n}"],
             'block, constant()'             => ["if (defined('_ZZ_PROBE')) {\n    echo constant('_ZZ_PROBE');\n}"],
+            'block, constant() with a trailing comma' => ["if (defined('_ZZ_PROBE')) {\n    echo constant('_ZZ_PROBE',);\n}"],
+            'constant() with two arguments is not a read' => ["echo constant('_ZZ_PROBE', 1);"],
             'block, fully qualified call'   => ["if (\\defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}"],
             'file-level fallback'           => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\necho _ZZ_PROBE;"],
             'fallback, then a later block'  => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', \"text\");\n\$x = 1;\necho _ZZ_PROBE;"],
@@ -102,6 +104,9 @@ final class LanguageConstantGuardTest extends TestCase
             'bare read'                              => ['echo _ZZ_PROBE;', [1]],
             'fully qualified bare read'              => ['echo \\_ZZ_PROBE;', [1]],
             'constant() outside a guard'             => ["echo constant('_ZZ_PROBE');", [1]],
+            'constant() with a trailing comma'       => ["echo constant('_ZZ_PROBE',);", [1]],
+            'constant(name:) with a trailing comma'  => ["echo constant(name: '_ZZ_PROBE',);", [1]],
+            'constant() over three lines, trailing comma' => ["echo constant(\n    '_ZZ_PROBE',\n);", [2]],
             'inline, wrong branch'                   => ["\$v = defined('_ZZ_PROBE') ? 'x' : _ZZ_PROBE;", [1]],
             'inline, negated'                        => ["\$v = !defined('_ZZ_PROBE') ? 'x' : _ZZ_PROBE;", [1]],
             'inline, compound condition'             => ["\$v = defined('_ZZ_PROBE') && \$a ? _ZZ_PROBE : '';", [1]],
@@ -148,6 +153,13 @@ final class LanguageConstantGuardTest extends TestCase
     public function everyOtherShapeIsReported(string $code, array $expected): void
     {
         self::assertSame($expected, self::reported($code));
+    }
+
+    #[Test]
+    public function aSplitConstantCallIsReportedOnItsLiteralLine(): void
+    {
+        // Renaming '_OLD' inside constant(\n    '_OLD'\n) changes only the literal's line.
+        self::assertSame([2], self::reported("echo constant(\n    '_ZZ_PROBE'\n);", [2]));
     }
 
     #[Test]

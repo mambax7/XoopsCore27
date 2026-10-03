@@ -293,10 +293,11 @@ final class LanguageConstantGuard
                 $fallback = true;
                 continue;
             }
-            if (!self::isRead($tokens, $i, $constant)) {
+            $at = self::readAt($tokens, $i, $constant);
+            if (null === $at) {
                 continue;
             }
-            $line = $tokens[$i][2];
+            $line = $tokens[$at][2]; // the name's line: a constant() call can span lines
             if (!isset($addedLines[$line])) {
                 continue;
             }
@@ -487,33 +488,37 @@ final class LanguageConstantGuard
 
     /**
      * Whether the token at $i reads $constant: `_X`, `\_X`, `constant('_X')`
-     * or `constant(name: '_X')`.
+     * or `constant(name: '_X')`, with or without a trailing comma. Returns the
+     * index of the token naming the constant (the literal for constant()), or
+     * null when $i is not a read.
      *
      * @param list<array{0: int|string, 1: string, 2: int}> $tokens
      */
-    private static function isRead(array $tokens, int $i, string $constant): bool
+    private static function readAt(array $tokens, int $i, string $constant): ?int
     {
         [$type, $text] = $tokens[$i];
         if ((T_STRING === $type && $constant === $text) || (T_NAME_FULLY_QUALIFIED === $type && '\\' . $constant === $text)) {
             $prev = $tokens[$i - 1][0] ?? null;
             $next = $tokens[$i + 1][0] ?? null;
             if (':' === $next && in_array($prev, ['(', ','], true)) {
-                return false; // a named-argument label, `f(_X: 1)`
+                return null; // a named-argument label, `f(_X: 1)`
             }
 
-            return !in_array($prev, self::NOT_A_READ_AFTER, true)
-                && '(' !== $next && T_DOUBLE_COLON !== $next;
+            return !in_array($prev, self::NOT_A_READ_AFTER, true) && '(' !== $next && T_DOUBLE_COLON !== $next
+                ? $i
+                : null;
         }
 
         if (!self::isNamed($tokens, $i, 'constant') || '(' !== ($tokens[$i + 1][0] ?? null)) {
-            return false;
+            return null;
         }
         $arg = $i + 2;
         if (T_STRING === ($tokens[$arg][0] ?? null) && 'name' === $tokens[$arg][1] && ':' === ($tokens[$arg + 1][0] ?? null)) {
             $arg += 2; // named argument
         }
+        $close = ',' === ($tokens[$arg + 1][0] ?? null) ? $arg + 2 : $arg + 1; // optional trailing comma
 
-        return $constant === self::literal($tokens, $arg) && ')' === ($tokens[$arg + 1][0] ?? null);
+        return $constant === self::literal($tokens, $arg) && ')' === ($tokens[$close][0] ?? null) ? $arg : null;
     }
 
     /**
