@@ -822,6 +822,31 @@ class ProtectorTest extends TestCase
     }
 
     #[Test]
+    public function writeFileAtomicRefusesAnExistingFileItCannotWrite(): void
+    {
+        if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
+            $this->markTestSkipped('root can write any file.');
+        }
+        // A writable directory holding a .htaccess PHP may neither read nor
+        // write: fopen('w') refused it, and so must the rename.
+        $parent = sys_get_temp_dir() . '/protector-rofile-' . bin2hex(random_bytes(6));
+        $path   = $parent . '/.htaccess';
+        mkdir($parent);
+        file_put_contents($path, "RewriteEngine On\n");
+        chmod($path, 0444);
+        try {
+            $this->assertFalse($this->writeAtomic($path, "deny from 192.0.2.1\n"));
+            chmod($path, 0644);
+            $this->assertSame("RewriteEngine On\n", file_get_contents($path), 'The file it cannot write must keep its rules.');
+            $this->assertSame(['.htaccess'], array_values(array_diff(scandir($parent) ?: [], ['.', '..'])), 'No temporary file may be left.');
+        } finally {
+            chmod($path, 0644);
+            unlink($path);
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
     public function writeFileAtomicKeepsTheOldFileAndCleansUpWhenTheRenameFails(): void
     {
         $parent = sys_get_temp_dir() . '/protector-renamefail-' . bin2hex(random_bytes(6));

@@ -398,7 +398,8 @@ class Protector
      * the target. Readers do not lock, so this is what keeps them from ever
      * seeing an emptied or half-written ban list, bandwidth file or
      * .htaccess: they see the old file or the new one. A failed write leaves
-     * the old content in place and removes the temporary file. A scoped error
+     * the old content in place and removes the temporary file, and an existing
+     * file this process cannot write is left alone. A scoped error
      * handler keeps PHP's warnings, which name the full server path, out of
      * the page.
      *
@@ -411,7 +412,10 @@ class Protector
         $tmp = '';
         set_error_handler(static fn (): bool => true);
         try {
-            if (is_dir($path)) {
+            // An existing file PHP cannot write (another owner's .htaccess, say)
+            // is refused, as fopen('w') refused it: a rename would replace it
+            // although its content could not be read and carried over.
+            if (is_dir($path) || (is_file($path) && !is_writable($path))) {
                 return false;
             }
             $tmp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
@@ -424,7 +428,6 @@ class Protector
                 // fails this open, and there the old content must stay.
                 return !is_writable(dirname($path))
                     && is_file($path)
-                    && is_writable($path)
                     && self::writeFileInPlace($path, $content);
             }
             $complete = strlen($content) === fwrite($fp, $content) && fflush($fp);
