@@ -337,6 +337,32 @@ if ! (
     violations=$((violations + 1))
 fi
 
+# 18. WARNING ONLY. A language constant added to an existing English file is
+#    undefined on every translated pack that predates it (G-2026-109), so
+#    each new read must use a canonical guard form. Reads in any other shape
+#    are listed; the commit is never refused for them. The rule is a
+#    whitelist (see .githooks/lib/LanguageConstantGuard.php and
+#    tests/unit/githooks/), skipped with a notice without PHP 8.2 or later.
+if ! command -v php >/dev/null 2>&1; then
+    printf '\n[pre-commit] rule 18 skipped: php is not on PATH\n' >&2
+elif ! php -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' >/dev/null 2>&1; then
+    printf '\n[pre-commit] rule 18 skipped: it needs PHP 8.2 or later\n' >&2
+else
+    rule18_out=$(php "$(git rev-parse --show-toplevel)/.githooks/language-constant-guard.php" 2>&1)
+    rule18_status=$?
+    if [ "$rule18_status" -eq 1 ]; then
+        printf '\n[pre-commit] warning (rule 18): new language constant read outside a canonical guard; undefined on translated packs that predate it (G-2026-109)\n%s\n' "$rule18_out" >&2
+        cat >&2 <<'EOF'
+  Canonical forms (the commit is not refused for this warning):
+    $v = defined('_X') ? _X : 'English text';
+    if (defined('_X')) { ... _X ... }
+    defined('_X') || define('_X', 'English text');   // at file scope; covers later file-scope reads
+EOF
+    elif [ "$rule18_status" -ne 0 ]; then
+        printf '\n[pre-commit] rule 18 skipped: %s\n' "$rule18_out" >&2
+    fi
+fi
+
 if [ "$violations" -gt 0 ]; then
     printf '\n[pre-commit] %d antipattern(s) found in staged changes.\n' "$violations" >&2
     printf '            Fix the code, or bypass with `git commit --no-verify` (and document why in the commit body).\n' >&2
