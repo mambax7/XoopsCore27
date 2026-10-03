@@ -419,7 +419,14 @@ class Protector
                 return false;
             }
             $tmp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
-            $fp  = fopen($tmp, 'x');
+            // Created private: another local user who opened a umask-wide
+            // temporary file would keep reading it after any later chmod().
+            $umask = umask(0077);
+            try {
+                $fp = fopen($tmp, 'x');
+            } finally {
+                umask($umask);
+            }
             if (false === $fp) {
                 $tmp = '';
 
@@ -432,8 +439,9 @@ class Protector
             }
             $complete = strlen($content) === fwrite($fp, $content) && fflush($fp);
             $complete = fclose($fp) && $complete;
-            if ($complete && is_file($path)) {
-                $mode     = fileperms($path);
+            if ($complete) {
+                // The target's mode, or the mode a new file would get anyway.
+                $mode     = is_file($path) ? fileperms($path) : 0666 & ~$umask;
                 $complete = false !== $mode && chmod($tmp, $mode & 0777);
             }
             if ($complete && static::moveIntoPlace($tmp, $path)) {

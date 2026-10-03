@@ -719,9 +719,23 @@ class ProtectorTest extends TestCase
         try {
             $this->assertTrue($this->writeAtomic($path, "1700000000\n"));
             $this->assertSame("1700000000\n", file_get_contents($path));
+            if ('\\' !== DIRECTORY_SEPARATOR) {
+                clearstatcache();
+                $this->assertSame(0666 & ~umask(), fileperms($path) & 0777, 'A new file gets the mode a plain create would, so the web server can still read it.');
+            }
         } finally {
             is_file($path) && unlink($path);
         }
+    }
+
+    #[Test]
+    public function writeFileAtomicCreatesTheTemporaryFilePrivate(): void
+    {
+        // A 0600 target must never pass through a 0644 temporary file: a
+        // descriptor opened in that window survives the later chmod().
+        $body = self::methodBody(self::protectorSource('class/protector.php'), 'writeFileAtomic');
+
+        $this->assertSame(1, preg_match('/umask\(0077\);\s*try\s*\{\s*\$fp\s*=\s*fopen\(\s*\$tmp\s*,\s*.x.\s*\);\s*\}\s*finally\s*\{\s*umask\(\$umask\);/', $body), 'The temporary file must be created under a 0077 umask that is restored right after.');
     }
 
     #[Test]
