@@ -122,6 +122,8 @@ final class LanguageConstantGuardTest extends TestCase
             'fallback with a non-literal value'      => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', \$text);\necho _ZZ_PROBE;", [2]],
             'fallback for another constant'          => ["defined('_ZZ_PROBE') || define('_ZZ_OTHER', 'text');\necho _ZZ_PROBE;", [2]],
             'fallback behind a condition'            => ["\$a && (defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text'));\necho _ZZ_PROBE;", [2]],
+            'fallback inside a conditional for header' => ["if (\$flag) for (; defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'x'); ) {}\necho _ZZ_PROBE;", [2]],
+            'fallback as a braceless if body'        => ["if (\$flag) defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'x');\necho _ZZ_PROBE;", [2]],
             'guard text inside a string'             => ["echo \"defined('_ZZ_PROBE')\", _ZZ_PROBE;", [1]],
         ];
     }

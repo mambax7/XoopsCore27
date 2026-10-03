@@ -211,9 +211,18 @@ final class LanguageConstantGuard
         $fallback  = false;
         $stmtStart = 0;
         $arrow     = false; // a `fn` was seen in the current statement
+        $paren     = 0;     // open parentheses: a ';' inside a for header ends no statement
         $found     = [];
 
         foreach ($tokens as $i => [$type]) {
+            if ('(' === $type) {
+                $paren++;
+                continue;
+            }
+            if (')' === $type) {
+                $paren = max(0, $paren - 1);
+                continue;
+            }
             if ('{' === $type) {
                 $stack[]   = self::opensGuard($tokens, $i, $constant) ? 'guard' : 'block';
                 $stmtStart = $i + 1;
@@ -243,8 +252,10 @@ final class LanguageConstantGuard
                 continue;
             }
             if (';' === $type) {
-                $stmtStart = $i + 1;
-                $arrow     = false;
+                if (0 === $paren) {
+                    $stmtStart = $i + 1;
+                    $arrow     = false;
+                }
                 continue;
             }
             if (T_FN === $type) {
