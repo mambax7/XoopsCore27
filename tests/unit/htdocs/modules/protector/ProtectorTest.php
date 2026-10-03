@@ -23,6 +23,7 @@ class ProtectorTest extends TestCase
             }
             // Ensure protector var directory constant path exists conceptually
             require_once XOOPS_PATH . '/modules/protector/class/protector.php';
+            require_once __DIR__ . '/ProtectorRenameFails.php';
             self::$loaded = true;
         }
     }
@@ -693,7 +694,7 @@ class ProtectorTest extends TestCase
      * Call Protector::writeFileAtomic() and fail the test if any PHP warning
      * escapes it (PHP's file warnings name the full server path).
      */
-    private function writeAtomic(string $path, string $content): bool
+    private function writeAtomic(string $path, string $content, string $class = \Protector::class): bool
     {
         $leaked = [];
         set_error_handler(static function (int $errno, string $message) use (&$leaked): bool {
@@ -702,7 +703,7 @@ class ProtectorTest extends TestCase
             return true;
         });
         try {
-            $result = (new \ReflectionMethod(\Protector::class, 'writeFileAtomic'))->invoke(null, $path, $content);
+            $result = (new \ReflectionMethod($class, 'writeFileAtomic'))->invoke(null, $path, $content);
         } finally {
             restore_error_handler();
         }
@@ -821,11 +822,40 @@ class ProtectorTest extends TestCase
     }
 
     #[Test]
-    public function writeFileAtomicRenamesACompleteFileIntoPlace(): void
+    public function writeFileAtomicKeepsTheOldFileAndCleansUpWhenTheRenameFails(): void
     {
+        $parent = sys_get_temp_dir() . '/protector-renamefail-' . bin2hex(random_bytes(6));
+        $path   = $parent . '/badips.serial';
+        mkdir($parent);
+        file_put_contents($path, "old\n");
+        try {
+            $this->assertFalse($this->writeAtomic($path, "new\n", ProtectorRenameFails::class));
+            $this->assertSame("old\n", file_get_contents($path), 'A failure after the temporary file exists must leave the target untouched.');
+            $this->assertSame(['badips.serial'], array_values(array_diff(scandir($parent) ?: [], ['.', '..'])), 'The temporary file must be removed.');
+        } finally {
+            unlink($path);
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicDoesNotTruncateTheTargetWhenTheDirectoryIsWritable(): void
+    {
+        // A temporary file that cannot be opened in a writable directory (disk
+        // full, quota) must not fall through to the truncating in-place write.
         $body = self::methodBody(self::protectorSource('class/protector.php'), 'writeFileAtomic');
 
-        $this->assertSame(1, preg_match('/\brename\(\s*\$tmp\s*,\s*\$path\s*\)/', $body), 'The complete temporary file must be renamed over the target.');
+        $this->assertSame(1, preg_match('/!is_writable\(\s*dirname\(\s*\$path\s*\)\s*\)\s*&&[\s\S]*?writeFileInPlace\(/', $body), 'The in-place fallback must require a directory that refuses new files.');
+    }
+
+    #[Test]
+    public function writeFileAtomicRenamesACompleteFileIntoPlace(): void
+    {
+        $src  = self::protectorSource('class/protector.php');
+        $body = self::methodBody($src, 'writeFileAtomic');
+
+        $this->assertSame(1, preg_match('/static::moveIntoPlace\(\s*\$tmp\s*,\s*\$path\s*\)/', $body), 'The complete temporary file must be moved over the target.');
+        $this->assertSame(1, preg_match('/\brename\(\s*\$tmp\s*,\s*\$path\s*\)/', self::methodBody($src, 'moveIntoPlace')), 'moveIntoPlace() must be a rename().');
         $this->assertSame(1, preg_match('/\$complete\s*=\s*fclose\(\s*\$fp\s*\)\s*&&\s*\$complete/', $body), 'A failure reported by fclose() must keep the old file in place.');
         $this->assertSame(0, preg_match('/\bftruncate\(|fopen\(\s*\$path\b/', $body), 'The live file must never be opened or truncated in place.');
     }

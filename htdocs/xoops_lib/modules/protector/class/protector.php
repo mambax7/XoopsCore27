@@ -419,9 +419,13 @@ class Protector
             if (false === $fp) {
                 $tmp = '';
 
-                // The directory refuses new files: replace an existing, writable
-                // file in place instead, so the ban still applies.
-                return is_file($path) && is_writable($path) && self::writeFileInPlace($path, $content);
+                // Only a directory that refuses new files justifies the in-place
+                // fallback (the ban must still apply). A full disk or quota also
+                // fails this open, and there the old content must stay.
+                return !is_writable(dirname($path))
+                    && is_file($path)
+                    && is_writable($path)
+                    && self::writeFileInPlace($path, $content);
             }
             $complete = strlen($content) === fwrite($fp, $content) && fflush($fp);
             $complete = fclose($fp) && $complete;
@@ -429,7 +433,7 @@ class Protector
                 $mode     = fileperms($path);
                 $complete = false !== $mode && chmod($tmp, $mode & 0777);
             }
-            if ($complete && rename($tmp, $path)) {
+            if ($complete && static::moveIntoPlace($tmp, $path)) {
                 $tmp = '';
 
                 return true;
@@ -444,6 +448,20 @@ class Protector
             }
             restore_error_handler();
         }
+    }
+
+    /**
+     * Rename the complete temporary file over the target.
+     *
+     * The one step of writeFileAtomic() a test can make fail.
+     *
+     * @param string $tmp  complete temporary file
+     * @param string $path target
+     * @return bool
+     */
+    protected static function moveIntoPlace(string $tmp, string $path): bool
+    {
+        return rename($tmp, $path);
     }
 
     /**
