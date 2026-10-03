@@ -29,6 +29,23 @@ use PHPUnit\Framework\TestCase;
  * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
  * @link      https://xoops.org
  */
+if (class_exists(\mysqli_result::class)) {
+    /**
+     * A mysqli_result the tests can hold without a live connection; it is
+     * created without its constructor and never read from.
+     *
+     * @category  Xoops
+     * @package   core
+     * @author    XOOPS Development Team
+     * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+     * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+     * @link      https://xoops.org
+     */
+    final class RecordedLegacyTreeResult extends \mysqli_result
+    {
+    }
+}
+
 final class RecordingLegacyTreeDatabase extends \XoopsTestStubDatabase
 {
     /** @var list<string> */
@@ -40,30 +57,50 @@ final class RecordingLegacyTreeDatabase extends \XoopsTestStubDatabase
     /** @var list<array<string, mixed>> */
     public array $arrayQueue = [];
 
+    /**
+     * When false, query() returns a value that is not a mysqli_result but
+     * that isResultSet() still accepts, as a non-mysqli driver might.
+     */
+    public bool $mysqliResults = true;
+
+    /** Calls to getRowsNum() and the fetch methods. */
+    public int $reads = 0;
+
+    private ?\mysqli_result $result = null;
+
     public function query(string $sql, ?int $limit = null, ?int $start = null)
     {
         $this->queries[] = $sql;
+        if (!$this->mysqliResults) {
+            return 'not-a-mysqli-result';
+        }
 
-        return 'recorded-result';
+        return $this->result ??= (new \ReflectionClass(RecordedLegacyTreeResult::class))->newInstanceWithoutConstructor();
     }
 
     public function isResultSet($result)
     {
-        return 'recorded-result' === $result;
+        return $result instanceof RecordedLegacyTreeResult || 'not-a-mysqli-result' === $result;
     }
 
     public function fetchRow($result)
     {
+        ++$this->reads;
+
         return array_shift($this->rowQueue) ?? false;
     }
 
     public function fetchArray($result)
     {
+        ++$this->reads;
+
         return array_shift($this->arrayQueue) ?? false;
     }
 
     public function getRowsNum($result)
     {
+        ++$this->reads;
+
         return count($this->rowQueue) + count($this->arrayQueue);
     }
 }
@@ -486,5 +523,54 @@ final class XoopsLegacyTreeSqlTest extends TestCase
         self::assertSame([], $this->db->queries);
         self::assertSame($expected, $result);
         self::assertCount(1, $this->warnings);
+    }
+
+    /** @return array<string, array{\Closure}> */
+    public static function everyTreeMethod(): array
+    {
+        return [
+            'getFirstChild'     => [static fn (\XoopsTree $t): mixed => $t->getFirstChild(1)],
+            'getFirstChildId'   => [static fn (\XoopsTree $t): mixed => $t->getFirstChildId(1)],
+            'getAllChildId'     => [static fn (\XoopsTree $t): mixed => $t->getAllChildId(1)],
+            'getAllParentId'    => [static fn (\XoopsTree $t): mixed => $t->getAllParentId(1)],
+            'getPathFromId'     => [static fn (\XoopsTree $t): mixed => $t->getPathFromId(1, 'topic_title')],
+            'makeMySelBox'      => [static function (\XoopsTree $t): mixed {
+                ob_start();
+                try {
+                    $t->makeMySelBox('topic_title');
+
+                    return ob_get_contents();
+                } finally {
+                    ob_end_clean();
+                }
+            }],
+            'getNicePathFromId' => [static fn (\XoopsTree $t): mixed => $t->getNicePathFromId(1, 'topic_title', 'index.php?')],
+            'getIdPathFromId'   => [static fn (\XoopsTree $t): mixed => $t->getIdPathFromId(1)],
+            'getAllChild'       => [static fn (\XoopsTree $t): mixed => $t->getAllChild(1)],
+            'getChildTreeArray' => [static fn (\XoopsTree $t): mixed => $t->getChildTreeArray(1)],
+        ];
+    }
+
+    /**
+     * A query result that isResultSet() accepts but that is not a
+     * mysqli_result (as a non-mysqli driver might return) is handled like a
+     * failed query: the method throws its usual query error, nothing is
+     * counted or fetched from the result, and no recursive query follows.
+     */
+    #[DataProvider('everyTreeMethod')]
+    public function testNonMysqliResultIsTreatedAsAFailedQuery(\Closure $call): void
+    {
+        $this->db->mysqliResults = false;
+        $this->db->rowQueue      = [[7, 'Seeded']];
+        $this->db->arrayQueue    = [['topic_id' => 7, 'topic_pid' => 1, 'topic_title' => 'Seeded']];
+
+        try {
+            $call($this->tree());
+            self::fail('A result that is not a mysqli_result must be reported like a failed query.');
+        } catch (\RuntimeException $e) {
+            self::assertStringContainsString('SELECT', $e->getMessage());
+        }
+        self::assertSame(0, $this->db->reads, 'A result that is not a mysqli_result must not be counted or fetched.');
+        self::assertCount(1, $this->db->queries, 'No recursive query may follow rows that were never read.');
     }
 }

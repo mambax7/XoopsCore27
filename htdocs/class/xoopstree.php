@@ -146,7 +146,7 @@ class XoopsTree
         $orderBy = self::orderByClause($order);
         $sql .= $orderBy;
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -175,7 +175,7 @@ class XoopsTree
         $idarray = [];
         $sql  = 'SELECT ' . $this->id . ' FROM ' . $this->table . ' WHERE ' . $this->pid . '=' . $sel_id . '';
         $result  = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -208,7 +208,7 @@ class XoopsTree
         $orderBy = self::orderByClause($order);
         $sql .= $orderBy;
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -243,7 +243,7 @@ class XoopsTree
         $orderBy = self::orderByClause($order);
         $sql .= $orderBy;
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -277,7 +277,7 @@ class XoopsTree
         $sel_id = (int) $sel_id;
         $sql = 'SELECT ' . $this->pid . ', ' . $title . ' FROM ' . $this->table . ' WHERE ' . $this->id . "=$sel_id";
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -328,7 +328,7 @@ class XoopsTree
         $orderBy = self::orderByClause($order);
         $sql .= $orderBy;
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -377,7 +377,7 @@ class XoopsTree
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT ' . $this->pid . ', ' . $title . ' FROM ' . $this->table . ' WHERE ' . $this->id . "=$sel_id";
         $result  = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -412,7 +412,7 @@ class XoopsTree
         $sel_id = (int) $sel_id;
         $sql    = 'SELECT ' . $this->pid . ' FROM ' . $this->table . ' WHERE ' . $this->id . "=$sel_id";
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -448,7 +448,7 @@ class XoopsTree
         $orderBy = self::orderByClause($order);
         $sql .= $orderBy;
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
@@ -482,7 +482,7 @@ class XoopsTree
         $orderBy = self::orderByClause($order);
         $sql .= $orderBy;
         $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result)) {
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
                 E_USER_ERROR,
