@@ -93,7 +93,9 @@ class Upgrade_241 extends XoopsUpgrade
 
         $fver = fopen($tmpFile, 'wb');
         if (false === $fver) {
-            @unlink($tmpFile);
+            if (!$this->removeLeftover($tmpFile)) {
+                $this->logs[] = 'Could not remove the temporary license file';
+            }
 
             return false;
         }
@@ -101,7 +103,9 @@ class Upgrade_241 extends XoopsUpgrade
         $written = fwrite($fver, $content);
         if ($written !== strlen($content)) {
             fclose($fver);
-            @unlink($tmpFile);
+            if (!$this->removeLeftover($tmpFile)) {
+                $this->logs[] = 'Could not remove the temporary license file';
+            }
 
             return false;
         }
@@ -109,7 +113,9 @@ class Upgrade_241 extends XoopsUpgrade
         fclose($fver);
 
         if (!@rename($tmpFile, $licensefile)) {
-            @unlink($tmpFile);
+            if (!$this->removeLeftover($tmpFile)) {
+                $this->logs[] = 'Could not remove the temporary license file';
+            }
 
             return false;
         }
@@ -145,7 +151,9 @@ class Upgrade_241 extends XoopsUpgrade
 
         $fver = fopen($tmpFile, 'wb');
         if (false === $fver) {
-            @unlink($tmpFile);
+            if (!$this->removeLeftover($tmpFile)) {
+                $this->logs[] = 'Could not remove the temporary license file';
+            }
 
             return false;
         }
@@ -153,7 +161,9 @@ class Upgrade_241 extends XoopsUpgrade
         $written = fwrite($fver, $content);
         if ($written !== strlen($content)) {
             fclose($fver);
-            @unlink($tmpFile);
+            if (!$this->removeLeftover($tmpFile)) {
+                $this->logs[] = 'Could not remove the temporary license file';
+            }
 
             return false;
         }
@@ -161,7 +171,9 @@ class Upgrade_241 extends XoopsUpgrade
         fclose($fver);
 
         if (!@rename($tmpFile, $licensefile)) {
-            @unlink($tmpFile);
+            if (!$this->removeLeftover($tmpFile)) {
+                $this->logs[] = 'Could not remove the temporary license file';
+            }
 
             return false;
         }

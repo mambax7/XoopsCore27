@@ -867,7 +867,8 @@ if (!function_exists('xoops_writeDebugRuntimeOverride')) {
         if (is_string($json) && false !== file_put_contents($temporary, $json . "\n")) {
             $written = rename($temporary, $file);
             if (!$written) {
-                @unlink($temporary);
+                require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                xoops_remove_file_quietly($temporary, 'temporary');
             }
         }
 

@@ -285,6 +285,63 @@ abstract class XoopsUpgrade
     }
 
     /**
+     * Remove a file, a link or an empty directory an upgrade step left behind.
+     *
+     * A scoped error handler keeps PHP's own warning, which names the full
+     * server path, off the upgrade page; the caller logs a failure with
+     * relativePath() instead. The result is the state afterwards, so a
+     * concurrent removal is not a failure and a concurrent recreation is not
+     * a success.
+     *
+     * @param  string $path absolute filesystem path
+     * @return bool true when nothing is left at $path
+     */
+    protected function removeLeftover(string $path): bool
+    {
+        set_error_handler(static fn (): bool => true);
+        try {
+            if (!file_exists($path) && !is_link($path)) {
+                // file_exists() is also false when a parent cannot be read, so
+                // "missing" is trusted only when it can be confirmed.
+                return self::isConfirmedAbsent($path);
+            }
+            (is_dir($path) && !is_link($path)) ? rmdir($path) : unlink($path);
+            clearstatcache(true, $path);
+
+            // The state afterwards decides, whatever the call returned: a
+            // concurrent removal is not a failure, a recreation not a success.
+            return !file_exists($path) && !is_link($path) && self::isConfirmedAbsent($path);
+        } catch (\Throwable $e) {
+            return false;
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    /**
+     * Whether nothing exists at $path, confirmed by listing the nearest
+     * existing ancestor: an unreadable directory confirms nothing.
+     *
+     * @param  string $path absolute filesystem path
+     * @return bool
+     */
+    private static function isConfirmedAbsent(string $path): bool
+    {
+        $name = basename($path);
+        $dir  = dirname($path);
+        while (!is_dir($dir)) {
+            if (dirname($dir) === $dir) {
+                return false;
+            }
+            $name = basename($dir);
+            $dir  = dirname($dir);
+        }
+        $listing = scandir($dir);
+
+        return false !== $listing && !in_array($name, $listing, true);
+    }
+
+    /**
      * Retrieve a single field value from the database.
      *
      * Uses $this->db so callers do not need to pass the database object.

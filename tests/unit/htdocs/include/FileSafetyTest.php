@@ -90,6 +90,83 @@ class FileSafetyTest extends TestCase
         xoops_remove_file_quietly("bad\0path");
     }
 
+    public function testXoopsRemoveFileQuietlyReportsAPathItCannotConfirmAbsent(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR || (function_exists('posix_geteuid') && 0 === posix_geteuid())) {
+            $this->markTestSkipped('Directory permissions cannot hide a file here (Windows, or running as root).');
+        }
+        // file_exists() is false behind an unreadable parent exactly as for a
+        // missing file; the helper must report it rather than skip it.
+        $parent = sys_get_temp_dir() . '/xoops-locked-' . bin2hex(random_bytes(6));
+        $path   = $parent . '/leftover.tmp';
+        mkdir($parent);
+        file_put_contents($path, 'x');
+        chmod($parent, 0000);
+        $captured = [];
+        $native   = [];
+        set_error_handler(static function (int $level, string $msg) use (&$captured, &$native): bool {
+            if (E_USER_WARNING === $level) {
+                $captured[] = $msg;
+            } else {
+                $native[] = $msg;
+            }
+
+            return true;
+        });
+        try {
+            clearstatcache();
+            $this->assertFalse(file_exists($path), 'precondition: the file is hidden');
+            xoops_remove_file_quietly($path, 'test');
+        } finally {
+            restore_error_handler();
+            chmod($parent, 0700);
+        }
+        try {
+            $this->assertSame([], $native, 'no native warning (which names the full path) may escape');
+            $this->assertCount(1, $captured, 'an unconfirmable removal must be reported once');
+            $this->assertStringContainsString('leftover.tmp', $captured[0]);
+            $this->assertStringNotContainsString($parent, $captured[0], 'the report carries the basename only');
+            $this->assertFileExists($path, 'nothing was removed');
+        } finally {
+            unlink($path);
+            rmdir($parent);
+        }
+    }
+
+    public function testXoopsRemoveFileQuietlyReportsAFileStillPresentUnderAnotherCasing(): void
+    {
+        if ('\\' !== DIRECTORY_SEPARATOR) {
+            $this->markTestSkipped('Needs a case-insensitive filesystem and an open handle that blocks unlink() (Windows).');
+        }
+        // The directory listing carries the stored casing (Foo.tmp); a failed
+        // unlink() of foo.tmp must still be reported, not read as absent.
+        $parent = sys_get_temp_dir() . '/xoops-case-' . bin2hex(random_bytes(6));
+        mkdir($parent);
+        file_put_contents($parent . '/Foo.tmp', 'x');
+        chmod($parent . '/Foo.tmp', 0444); // the read-only attribute makes unlink() fail on Windows
+        $captured = [];
+        set_error_handler(static function (int $level, string $msg) use (&$captured): bool {
+            if (E_USER_WARNING === $level) {
+                $captured[] = $msg;
+            }
+
+            return true;
+        });
+        try {
+            xoops_remove_file_quietly($parent . '/foo.tmp', 'test');
+        } finally {
+            restore_error_handler();
+        }
+        try {
+            $this->assertFileExists($parent . '/Foo.tmp', 'precondition: the read-only attribute kept unlink() from removing the file');
+            $this->assertCount(1, $captured, 'a file still present under another casing must be reported');
+        } finally {
+            chmod($parent . '/Foo.tmp', 0644);
+            unlink($parent . '/Foo.tmp');
+            rmdir($parent);
+        }
+    }
+
     public function testXoopsRemoveFileQuietlyIsNoOpForMissingPath(): void
     {
         // A non-existent path must NOT emit a warning — only paths that

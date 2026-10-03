@@ -329,18 +329,30 @@ if ($xoopsConfig['use_ssl'] && $sslSessionId !== '' && preg_match('/^[a-zA-Z0-9,
 } elseif ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '' && $xoopsConfig['session_expire'] > 0) {
     session_name($xoopsConfig['session_name']);
     session_cache_expire($xoopsConfig['session_expire']);
-    @ini_set('session.gc_maxlifetime', $xoopsConfig['session_expire'] * 60);
+    // gc_maxlifetime can only be changed before the session starts.
+    if (
+        PHP_SESSION_ACTIVE !== session_status()
+        && false === ini_set('session.gc_maxlifetime', (string) ($xoopsConfig['session_expire'] * 60))
+    ) {
+        trigger_error('The session lifetime setting could not be applied.', E_USER_WARNING);
+    }
 }
 
 session_set_save_handler($sess_handler, true);
 
-if (function_exists('session_status')) {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
+if (PHP_SESSION_ACTIVE !== session_status()) {
+    // PHP's own warning can name the session save path; report one warning
+    // without it instead.
+    set_error_handler(static fn (): bool => true);
+    try {
+        $sessionStarted = session_start();
+    } finally {
+        restore_error_handler();
     }
-} else {
-    // this should silently fail if session has already started (for PHP 5.3)
-    @session_start();
+    if (!$sessionStarted) {
+        trigger_error('The PHP session could not be started.', E_USER_WARNING);
+    }
+    unset($sessionStarted);
 }
 $xoopsPreload->triggerEvent('core.behavior.session.start');
 /**
