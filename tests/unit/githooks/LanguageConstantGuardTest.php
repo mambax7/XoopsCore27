@@ -69,6 +69,8 @@ final class LanguageConstantGuardTest extends TestCase
             'inline, short echo tag'        => ["?><?= defined('_ZZ_PROBE') ? _ZZ_PROBE : '' ?><?php"],
             'inline, array value and key'   => ["\$a = ['k' => defined('_ZZ_PROBE') ? _ZZ_PROBE : '', defined('_ZZ_PROBE') ? _ZZ_PROBE : ''];"],
             'inline, function argument'     => ["f(defined('_ZZ_PROBE') ? _ZZ_PROBE : 'x');"],
+            'inline, named argument'        => ["f(value: defined('_ZZ_PROBE') ? _ZZ_PROBE : 'x');"],
+            'named-argument label'          => ["f(_ZZ_PROBE: 1);\ng(\$a, _ZZ_PROBE: 2);"],
             'inline, compound assignment'   => ["\$s .= defined('_ZZ_PROBE') ? _ZZ_PROBE : '';"],
             'inline, fully qualified'       => ["\$v = \\defined('_ZZ_PROBE') ? \\_ZZ_PROBE : 'x';"],
             'inline over three lines'       => ["\$v = defined('_ZZ_PROBE')\n    ? _ZZ_PROBE\n    : 'x';"],
@@ -116,6 +118,7 @@ final class LanguageConstantGuardTest extends TestCase
             'read before the fallback'               => ["echo _ZZ_PROBE;\ndefined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');", [1]],
             'read in a function after the fallback'  => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\nfunction f() {\n    return _ZZ_PROBE;\n}", [3]],
             'fallback inside a function'             => ["function f() {\n    defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n}\necho _ZZ_PROBE;", [4]],
+            'read in an arrow function after the fallback' => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n\$f = fn () => _ZZ_PROBE;\necho _ZZ_PROBE;", [2]],
             'fallback with a non-literal value'      => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', \$text);\necho _ZZ_PROBE;", [2]],
             'fallback for another constant'          => ["defined('_ZZ_PROBE') || define('_ZZ_OTHER', 'text');\necho _ZZ_PROBE;", [2]],
             'fallback behind a condition'            => ["\$a && (defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text'));\necho _ZZ_PROBE;", [2]],
@@ -156,12 +159,13 @@ final class LanguageConstantGuardTest extends TestCase
             . "define('_ZZ_A', 'a');\n"
             . "define('THEME_ZZ_B', 'b');\n"
             . "define(constant_name: '_ZZ_NAMED', value: 'c');\n"
+            . "define(value: f(1, 'x'), constant_name: '_ZZ_REORDERED');\n"
             . "// define('_ZZ_COMMENTED', 'x');\n"
             . "\$help = \"define('_ZZ_STRING', 'x')\";\n"
             . "define('_ZZ_PART' . '_SUFFIX', 'x');\n"
             . "define('lowercase_zz', 'x');\n";
 
-        self::assertSame(['_ZZ_A', 'THEME_ZZ_B', '_ZZ_NAMED'], LanguageConstantGuard::definedConstants($source));
+        self::assertSame(['_ZZ_A', 'THEME_ZZ_B', '_ZZ_NAMED', '_ZZ_REORDERED'], LanguageConstantGuard::definedConstants($source));
     }
 
     #[Test]

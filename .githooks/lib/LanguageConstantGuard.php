@@ -48,10 +48,13 @@ final class LanguageConstantGuard
 
     /**
      * Tokens before an inline `defined('_X') ? ...` that leave the call as the
-     * whole ternary condition. '.' is not one: concatenation binds first.
+     * whole ternary condition. '.' is not one: concatenation binds first. ':'
+     * is one: it ends a named-argument label, a case label or an
+     * alternative-syntax condition (a nested ternary without parentheses
+     * does not compile on PHP 8).
      */
     private const INLINE_BEFORE = [
-        '=', ',', '[', '(', ';', '{', '}', T_RETURN, T_ECHO, T_PRINT, T_YIELD, T_DOUBLE_ARROW,
+        '=', ',', '[', '(', ';', '{', '}', ':', T_RETURN, T_ECHO, T_PRINT, T_YIELD, T_DOUBLE_ARROW,
         T_OPEN_TAG_WITH_ECHO, T_CONCAT_EQUAL, T_PLUS_EQUAL, T_MINUS_EQUAL, T_MUL_EQUAL,
         T_DIV_EQUAL, T_MOD_EQUAL, T_POW_EQUAL, T_COALESCE_EQUAL, T_AND_EQUAL, T_OR_EQUAL,
         T_XOR_EQUAL, T_SL_EQUAL, T_SR_EQUAL,
@@ -72,11 +75,8 @@ final class LanguageConstantGuard
             if (!self::isNamed($tokens, $i, 'define') || '(' !== ($tokens[$i + 1][0] ?? null)) {
                 continue;
             }
-            $arg = $i + 2;
-            if (T_STRING === ($tokens[$arg][0] ?? null) && 'constant_name' === $tokens[$arg][1] && ':' === ($tokens[$arg + 1][0] ?? null)) {
-                $arg += 2; // named argument
-            }
-            if (',' === ($tokens[$arg + 1][0] ?? null)) {
+            $arg = self::defineNameArgument($tokens, $i + 2);
+            if (null !== $arg && in_array($tokens[$arg + 1][0] ?? null, [',', ')'], true)) {
                 $name = self::literal($tokens, $arg);
                 if (null !== $name && 1 === preg_match('/^[A-Z_][A-Z0-9_]*$/', $name)) {
                     $names[$name] = true;
@@ -85,6 +85,42 @@ final class LanguageConstantGuard
         }
 
         return array_keys($names);
+    }
+
+    /**
+     * Index of the name argument of a define() whose first argument token is
+     * at $i: the first positional argument, or the one labelled
+     * `constant_name:` wherever it stands. Null when neither exists.
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function defineNameArgument(array $tokens, int $i): ?int
+    {
+        $depth = 0;
+        $first = true;
+        for ($j = $i; isset($tokens[$j]); $j++) {
+            $type = $tokens[$j][0];
+            if (0 === $depth && ($first || ',' === $tokens[$j - 1][0])) {
+                $labelled = T_STRING === $type && ':' === ($tokens[$j + 1][0] ?? null);
+                if ($labelled && 'constant_name' === $tokens[$j][1]) {
+                    return $j + 2;
+                }
+                if ($first && !$labelled) {
+                    return $j;
+                }
+                $first = false;
+            }
+            if (in_array($type, ['(', '[', T_CURLY_OPEN, '{'], true)) {
+                $depth++;
+            } elseif (in_array($type, [')', ']', '}'], true)) {
+                if (0 === $depth) {
+                    return null;
+                }
+                $depth--;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -174,6 +210,7 @@ final class LanguageConstantGuard
         $stack     = []; // 'guard', 'block' or 'string' per open brace
         $fallback  = false;
         $stmtStart = 0;
+        $arrow     = false; // a `fn` was seen in the current statement
         $found     = [];
 
         foreach ($tokens as $i => [$type]) {
@@ -207,9 +244,17 @@ final class LanguageConstantGuard
             }
             if (';' === $type) {
                 $stmtStart = $i + 1;
+                $arrow     = false;
                 continue;
             }
-            $atFileScope = !in_array('guard', $stack, true) && !in_array('block', $stack, true);
+            if (T_FN === $type) {
+                // An arrow function's body runs to the end of its expression;
+                // the rest of the statement is treated as inside it, so the
+                // file-level fallback never covers a read there.
+                $arrow = true;
+                continue;
+            }
+            $atFileScope = !$arrow && !in_array('guard', $stack, true) && !in_array('block', $stack, true);
             if ($atFileScope && $i === $stmtStart && self::isFileFallback($tokens, $i, $constant)) {
                 $fallback = true;
                 continue;
@@ -416,9 +461,13 @@ final class LanguageConstantGuard
     {
         [$type, $text] = $tokens[$i];
         if ((T_STRING === $type && $constant === $text) || (T_NAME_FULLY_QUALIFIED === $type && '\\' . $constant === $text)) {
+            $prev = $tokens[$i - 1][0] ?? null;
             $next = $tokens[$i + 1][0] ?? null;
+            if (':' === $next && in_array($prev, ['(', ','], true)) {
+                return false; // a named-argument label, `f(_X: 1)`
+            }
 
-            return !in_array($tokens[$i - 1][0] ?? null, self::NOT_A_READ_AFTER, true)
+            return !in_array($prev, self::NOT_A_READ_AFTER, true)
                 && '(' !== $next && T_DOUBLE_COLON !== $next;
         }
 
