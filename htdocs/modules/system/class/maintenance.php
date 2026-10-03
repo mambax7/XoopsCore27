@@ -825,9 +825,10 @@ class SystemMaintenance
      * A directory that another user created (or can read) would hand them the
      * dump without any race. Group and world bits are removed first, so a
      * directory created under a loose umask heals; one that stays open or
-     * belongs to someone else is refused, with or without ext-posix. Windows
-     * has no POSIX modes, so the check is skipped there; NTFS inheritance
-     * keeps the data dir's ACL.
+     * belongs to someone else is refused, with or without ext-posix. On
+     * Windows PHP can read neither the owner nor the NTFS ACL of a directory,
+     * so nothing is verified there: an existing directory is accepted as it
+     * is, and the dump is only as private as the data directory's own ACL.
      *
      * @param string $dir existing dump directory
      * @return bool
