@@ -712,36 +712,333 @@ class SystemMaintenance
     }
 
     /**
-     * Absolute path of the SQL-dump directory, created on demand.
+     * Absolute path of the SQL-dump directory, without touching the disk.
      *
      * Dumps hold password hashes, e-mail addresses and the full configuration,
-     * so they are written under XOOPS_VAR_PATH (outside the web root) and served
-     * only through the admin-authenticated download action — never as a
-     * directly fetchable file under the web root. A deny-all guard is dropped in
-     * as belt-and-braces in case the data path is misconfigured to be public.
+     * so they are written under XOOPS_VAR_PATH and served through the
+     * admin-authenticated download action. The installer allows XOOPS_VAR_PATH
+     * inside the document root; there the deny-all .htaccess written by
+     * prepareDumpDirectory() and the unguessable file name are the only things
+     * between a dump and a direct request, and a server that ignores .htaccess
+     * relies on the name alone. Keep the data directory outside the web root.
+     * There is no fallback: without
+     * a configured XOOPS_VAR_PATH the path is '' and no dump is written. The
+     * system temp dir is not an option, as anyone on the host can own a
+     * 'dumps' entry there and read what is written into it, and the empty
+     * placeholder in mainfile.dist.php would otherwise resolve to '/dumps'.
+     *
+     * @return string '' when XOOPS_VAR_PATH is not configured
+     */
+    public static function dumpDirectoryPath(): string
+    {
+        $base = static::dumpBasePath();
+
+        return '' === $base ? '' : $base . '/dumps';
+    }
+
+    /**
+     * The configured data directory, '' when there is none.
+     *
+     * @return string
+     */
+    protected static function dumpBasePath(): string
+    {
+        return defined('XOOPS_VAR_PATH') ? (string) XOOPS_VAR_PATH : '';
+    }
+
+    /**
+     * Absolute path of the SQL-dump directory, created and guarded on demand.
+     *
+     * Best effort, for serving dumps that already exist; dump_write() checks
+     * prepareDumpDirectory() itself and refuses to write when it fails.
      *
      * @return string
      */
     public static function dumpDirectory(): string
     {
-        // Never fall back to a web-accessible directory: if XOOPS_VAR_PATH is not
-        // defined use the system temp dir (outside the web root) rather than
-        // uploads/, so a dump can't land somewhere fetchable on non-Apache setups.
-        $base = defined('XOOPS_VAR_PATH') ? XOOPS_VAR_PATH : \sys_get_temp_dir();
-        $dir  = $base . '/dumps';
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0700, true);
-        }
-        $htaccess = $dir . '/.htaccess';
-        if (!file_exists($htaccess)) {
-            @file_put_contents($htaccess, "Require all denied\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n");
-        }
-        $indexHtml = $dir . '/index.html';
-        if (!file_exists($indexHtml)) {
-            @file_put_contents($indexHtml, '');
-        }
+        $dir = static::dumpDirectoryPath();
+        static::prepareDumpDirectory($dir);
 
         return $dir;
+    }
+
+    /**
+     * Deny-all rules for the dump directory, for Apache 2.4 and for 2.2.
+     *
+     * Each version's directive sits inside its own <IfModule>, as in
+     * xoops_data/logs/.htaccess: a bare `Require` is an unknown directive on
+     * 2.2 and makes every request to the directory a 500 instead of a 403.
+     */
+    private const DUMP_HTACCESS = "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n";
+
+    /**
+     * Create the dump directory and its guard files where missing.
+     *
+     * The guards (a deny-all .htaccess and an empty index.html) are
+     * belt-and-braces in case the data path is misconfigured to be public.
+     * Every step is checked through its return value; a scoped error handler
+     * keeps PHP's own warnings, which name the full server path, out of the
+     * page.
+     *
+     * @param string $dir dump directory; '' (no XOOPS_VAR_PATH) is refused
+     * @return bool true when the directory exists, is private and both guards are in place
+     *
+     * The checks are made by path, not on an open directory handle (PHP has no
+     * openat() or no-follow directory API), so they cannot be atomic: someone
+     * able to swap the directory for a symlink between a check and a write
+     * could redirect it. The parent, XOOPS_VAR_PATH, therefore has to be
+     * trusted; write access to it already allows changing secure.php and the
+     * caches. What can be checked is checked: the directory is never taken
+     * from a shared location, a symlink is refused, and an existing directory
+     * is accepted only when it is owned by this process and closed to other
+     * users (0700; a looser one is refused).
+     */
+    public static function prepareDumpDirectory(string $dir): bool
+    {
+        if ('' === $dir) {
+            return false; // no configured data directory, nowhere safe to write
+        }
+        set_error_handler(static fn (): bool => true);
+        try {
+            if (is_link($dir)) {
+                return false; // a symlink can redirect where dumps are written
+            }
+            if (!is_dir($dir) && !mkdir($dir, 0700, true) && !is_dir($dir)) {
+                return false;
+            }
+            if (!self::dumpDirectoryIsPrivate($dir)) {
+                return false; // another user could read, or has planted, the directory
+            }
+
+            return self::ensureDumpGuard($dir . '/.htaccess', self::DUMP_HTACCESS, true)
+                && self::ensureDumpGuard($dir . '/index.html', '', false);
+        } catch (\Throwable $e) {
+            return false;
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    /**
+     * Whether the dump directory is owned by this process and closed to others.
+     *
+     * A directory that another user created (or can read) would hand them the
+     * dump without any race. A directory with any group or world bit is
+     * refused rather than tightened: whoever could already open or write it
+     * may hold a directory handle, a watch, or a hard link to a guard file,
+     * and a chmod() revokes none of those. Ownership is checked with or
+     * without ext-posix. On
+     * Windows PHP can read neither the owner nor the NTFS ACL of a directory,
+     * so nothing is verified there: an existing directory is accepted as it
+     * is, and the dump is only as private as the data directory's own ACL.
+     *
+     * @param string $dir existing dump directory
+     * @return bool
+     */
+    private static function dumpDirectoryIsPrivate(string $dir): bool
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            return true;
+        }
+        $mode = fileperms($dir);
+        if (false === $mode) {
+            return false;
+        }
+        if (0 !== ($mode & 0077)) {
+            return false;
+        }
+        $owner = fileowner($dir);
+        if (false === $owner) {
+            return false;
+        }
+        $uid = static::effectiveUid();
+        if (null !== $uid) {
+            return $owner === $uid;
+        }
+        // Without ext-posix the effective uid cannot be asked for directly. A
+        // file this process creates carries it, so compare the directory's
+        // owner with a probe's. A directory this process cannot write into
+        // fails here, which is right: nothing could be dumped into it anyway.
+        $probe = $dir . '/.owner-' . bin2hex(random_bytes(6));
+        if (false === file_put_contents($probe, '')) {
+            return false;
+        }
+        clearstatcache(true, $probe);
+        $probeOwner = fileowner($probe);
+        unlink($probe);
+
+        return false !== $probeOwner && $owner === $probeOwner;
+    }
+
+    /**
+     * Effective uid of this process, null when ext-posix is not loaded.
+     *
+     * @return int|null
+     */
+    protected static function effectiveUid(): ?int
+    {
+        return function_exists('posix_geteuid') ? posix_geteuid() : null;
+    }
+
+    /**
+     * Make sure one guard file is in place.
+     *
+     * An existing .htaccess counts only when it contains a deny-all rule
+     * (site-specific additions are kept); an empty one, such as an interrupted
+     * earlier write leaves, is rewritten; any other content fails closed and is
+     * left as it is. Any existing index.html is enough to stop a listing.
+     *
+     * @param string $file    guard file
+     * @param string $content content to write when the file is missing or empty
+     * @param bool   $denyAll whether the file must contain a deny-all rule
+     * @return bool true when the guard is in place
+     */
+    private static function ensureDumpGuard(string $file, string $content, bool $denyAll): bool
+    {
+        if (is_link($file)) {
+            return false; // a symlink can redirect guard reads and writes
+        }
+        if (is_file($file)) {
+            $existing = file_get_contents($file);
+            if (false === $existing) {
+                return false; // unreadable: what it allows cannot be told
+            }
+            if (!$denyAll || self::deniesAll($existing)) {
+                return true;
+            }
+            if ('' !== trim($existing)) {
+                return false; // unrecognised rules: fail closed, do not overwrite them
+            }
+        } elseif (file_exists($file)) {
+            return false; // a directory or another non-file is in the way
+        }
+
+        return strlen($content) === file_put_contents($file, $content);
+    }
+
+    /**
+     * Whether .htaccess rules deny the whole directory.
+     *
+     * A `Require all denied` or `Deny from all` line counts outside every
+     * container, or as the complementary pair `<IfModule mod_authz_core.c>`
+     * plus `<IfModule !mod_authz_core.c>` (exactly one of the two applies on
+     * any Apache). A deny in any other container does not count, since
+     * Apache may skip the block (a deny scoped to <Files> or wrapped in
+     * <RequireAny>), and any grant fails the check: another `Require` line,
+     * `Allow from`, `Satisfy any`, or an `AuthMerging` other than Off (it can
+     * merge the deny with a grant inherited from a parent). A legacy `Order`,
+     * `Deny` or `Allow` inside a section other than <IfModule> fails too:
+     * mod_access_compat does not merge, so the section replaces the deny for
+     * the files it matches. Rules that cannot be established as a
+     * directory-wide deny fail closed.
+     *
+     * The text is read the way Apache reads it first: a line ending in a
+     * backslash continues on the next one, and quotes around an argument
+     * (`Satisfy "any"`) are not part of it.
+     *
+     * @param string $rules .htaccess contents
+     * @return bool
+     */
+    private static function deniesAll(string $rules): bool
+    {
+        $containers = []; // open containers, innermost last: [tag, argument]
+        $bare       = false;
+        $with24     = false; // deny inside <IfModule mod_authz_core.c>
+        $with22     = false; // deny inside <IfModule !mod_authz_core.c>
+        // Apache drops the backslash and the newline and inserts nothing, so
+        // `Al\` + newline + `low from all` is `Allow from all`.
+        $rules      = (string) preg_replace('/\\\\\r?\n/', '', $rules);
+        foreach (preg_split('/\R/', $rules) ?: [] as $line) {
+            $line = trim(str_replace(['"', "'"], '', $line));
+            if ('' === $line || '#' === $line[0]) {
+                continue;
+            }
+            if (1 === preg_match('/^<\/\s*([A-Za-z]+)/', $line, $m)) {
+                // A closing tag must close the innermost open container;
+                // anything else leaves the scope unknown, so fail closed.
+                $open = array_pop($containers);
+                if (null === $open || $open[0] !== strtolower($m[1])) {
+                    return false;
+                }
+                continue;
+            }
+            if (1 === preg_match('/^<\s*([A-Za-z]+)\s*([^>]*)>/', $line, $m)) {
+                $containers[] = [strtolower($m[1]), strtolower(trim($m[2]))];
+                continue;
+            }
+            // A grant anywhere can open the directory, and AuthMerging (other
+            // than Off) lets a deny be OR-ed with an inherited grant.
+            if (1 === preg_match('/^(Require\s+(?!all\s+denied\s*$)|Allow\s+from\b|Satisfy\s+any\b|AuthMerging\s+(?!Off\s*$))/i', $line)) {
+                return false;
+            }
+            // mod_access_compat does not merge sections: a <Files>, <FilesMatch>
+            // or similar block holding its own Order, Deny or Allow replaces the
+            // inherited deny for what it matches, and the default order
+            // (Deny,Allow) allows. Only <IfModule> leaves the scope alone.
+            if (1 === preg_match('/^(Order|Deny|Allow)\b/i', $line)
+                && [] !== array_filter($containers, static fn (array $c): bool => 'ifmodule' !== $c[0])) {
+                return false;
+            }
+            $require = 1 === preg_match('/^Require\s+all\s+denied$/i', $line);
+            $deny    = 1 === preg_match('/^Deny\s+from\s+all$/i', $line);
+            if (!$require && !$deny) {
+                continue;
+            }
+            // Each block counts only with its own version's directive: the
+            // other one is unknown there (a 500, not a deny) or never applies.
+            if ([] === $containers) {
+                $bare = true;
+            } elseif ($require && [['ifmodule', 'mod_authz_core.c']] === $containers) {
+                $with24 = true;
+            } elseif ($deny && [['ifmodule', '!mod_authz_core.c']] === $containers) {
+                $with22 = true;
+            }
+        }
+
+        return ($bare || ($with24 && $with22)) && [] === $containers;
+    }
+
+    /**
+     * Restrict a freshly written dump to its owner (0600).
+     *
+     * xoops_chmod_quietly() reports a failure through trigger_error(). An
+     * error handler that turns warnings into exceptions must not abort the
+     * result page once the dump is on disk, so that counts as a failed
+     * change too, and dump_write() reports it.
+     *
+     * @param string $file dump file
+     * @return bool true when the permissions were restricted
+     */
+    protected static function restrictDumpPermissions(string $file): bool
+    {
+        try {
+            return xoops_chmod_quietly($file, 0600, 'database dump');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Write the dump bytes to a file.
+     *
+     * @param string $file    stage file
+     * @param string $content dump
+     * @return int|false bytes written, as file_put_contents() reports them
+     */
+    protected static function writeDump(string $file, string $content): int|false
+    {
+        return file_put_contents($file, $content);
+    }
+
+    /**
+     * URL of an admin result icon (the icon set is a module option).
+     *
+     * @param string $image icon file name
+     * @return string
+     */
+    protected static function resultIcon(string $image): string
+    {
+        return system_AdminIcons($image);
     }
 
     /**
@@ -752,18 +1049,53 @@ class SystemMaintenance
      */
     public function dump_write($ret)
     {
-        $dir       = self::dumpDirectory();
+        // Fail closed: the dump holds the whole database, so it is written only
+        // into a directory whose guards are in place.
+        $dir = static::dumpDirectoryPath();
+        if (!static::prepareDumpDirectory($dir)) {
+            $unsafe = defined('_AM_SYSTEM_MAINTENANCE_DUMP_DIR_UNSAFE')
+                ? _AM_SYSTEM_MAINTENANCE_DUMP_DIR_UNSAFE
+                : 'The dump directory could not be created or protected, so no dump was written.';
+            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" class="xo-actions txtcenter">' . htmlspecialchars($unsafe, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td><td  class="xo-actions txtcenter"><img src="' . static::resultIcon('cancel.png') . '" /></td></tr></table>';
+
+            return $ret;
+        }
         // date component for readability + a CSPRNG suffix so the name cannot be
         // guessed from the creation time alone.
         $file_name = 'dump_' . date('Y.m.d_H.i.s') . '_' . bin2hex(random_bytes(8)) . '.sql';
         $path_file = $dir . '/' . $file_name;
-        if (false !== file_put_contents($path_file, $ret[0])) {
-            @chmod($path_file, 0600);
+        // The dump is staged under a name the download action never accepts
+        // (its pattern ends in .sql) and renamed only once every byte is on
+        // disk, so a short write (a full disk, say) can never be offered for
+        // download, even when removing the stage file fails as well.
+        $stage = $path_file . '.part';
+        // PHP's warning for a failed write names the full dump path; keep it off
+        // the page and report the failure below instead.
+        set_error_handler(static fn (): bool => true);
+        try {
+            $written = strlen($ret[0]) === static::writeDump($stage, $ret[0])
+                && rename($stage, $path_file);
+            if (!$written && is_file($stage)) {
+                unlink($stage);
+            }
+        } catch (\Throwable $e) {
+            $written = false;
+        } finally {
+            restore_error_handler();
+        }
+        if ($written) {
+            $permissionNote = '';
+            if (!static::restrictDumpPermissions($path_file)) {
+                $chmodFailed = defined('_AM_SYSTEM_MAINTENANCE_DUMP_CHMOD_FAILED')
+                    ? _AM_SYSTEM_MAINTENANCE_DUMP_CHMOD_FAILED
+                    : 'The dump was written, but its permissions could not be restricted to the owner (0600). Check the file before leaving it on the server.';
+                $permissionNote = '<tr><td colspan="3" class="xo-actions txtcenter">' . htmlspecialchars($chmodFailed, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td></tr>';
+            }
             $downloadUrl = XOOPS_URL . '/modules/system/admin.php?fct=maintenance&amp;op=dump_download&amp;file=' . urlencode($file_name);
             $safeName    = htmlspecialchars($file_name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" align="center"><a href="' . $downloadUrl . '">' . $safeName . '</a></td><td  class="xo-actions txtcenter"><img src="' . system_AdminIcons('success.png') . '" /></td><tr></table>';
+            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" align="center"><a href="' . $downloadUrl . '">' . $safeName . '</a></td><td  class="xo-actions txtcenter"><img src="' . static::resultIcon('success.png') . '" /></td></tr>' . $permissionNote . '</table>';
         } else {
-            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" class="xo-actions txtcenter">' . htmlspecialchars($file_name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td><td  class="xo-actions txtcenter"><img src="' . system_AdminIcons('cancel.png') . '" /></td><tr></table>';
+            $ret[1] .= '<table class="outer"><tr><th colspan="2" align="center">' . _AM_SYSTEM_MAINTENANCE_DUMP_FILE_CREATED . '</th><th>' . _AM_SYSTEM_MAINTENANCE_DUMP_RESULT . '</th></tr><tr><td colspan="2" class="xo-actions txtcenter">' . htmlspecialchars($file_name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</td><td  class="xo-actions txtcenter"><img src="' . static::resultIcon('cancel.png') . '" /></td></tr></table>';
         }
 
         return $ret;
