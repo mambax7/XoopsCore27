@@ -215,6 +215,12 @@ if (!function_exists('xoops_path_confirmed_absent')) {
         // basename), and a throwing handler or ValueError confirms nothing.
         set_error_handler(static fn (): bool => true);
         try {
+            // The direct probe first: on a case-insensitive filesystem the
+            // listing holds the stored casing, so a path spelt differently
+            // would otherwise read as absent while the file is still there.
+            if (file_exists($path) || is_link($path)) {
+                return false;
+            }
             $name = basename($path);
             $dir  = dirname($path);
             while (!is_dir($dir)) {

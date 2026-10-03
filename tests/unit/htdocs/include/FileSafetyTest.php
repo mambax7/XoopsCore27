@@ -133,6 +133,40 @@ class FileSafetyTest extends TestCase
         }
     }
 
+    public function testXoopsRemoveFileQuietlyReportsAFileStillPresentUnderAnotherCasing(): void
+    {
+        if ('\\' !== DIRECTORY_SEPARATOR) {
+            $this->markTestSkipped('Needs a case-insensitive filesystem and an open handle that blocks unlink() (Windows).');
+        }
+        // The directory listing carries the stored casing (Foo.tmp); a failed
+        // unlink() of foo.tmp must still be reported, not read as absent.
+        $parent = sys_get_temp_dir() . '/xoops-case-' . bin2hex(random_bytes(6));
+        mkdir($parent);
+        file_put_contents($parent . '/Foo.tmp', 'x');
+        chmod($parent . '/Foo.tmp', 0444); // the read-only attribute makes unlink() fail on Windows
+        $captured = [];
+        set_error_handler(static function (int $level, string $msg) use (&$captured): bool {
+            if (E_USER_WARNING === $level) {
+                $captured[] = $msg;
+            }
+
+            return true;
+        });
+        try {
+            xoops_remove_file_quietly($parent . '/foo.tmp', 'test');
+        } finally {
+            restore_error_handler();
+        }
+        try {
+            $this->assertFileExists($parent . '/Foo.tmp', 'precondition: the read-only attribute kept unlink() from removing the file');
+            $this->assertCount(1, $captured, 'a file still present under another casing must be reported');
+        } finally {
+            chmod($parent . '/Foo.tmp', 0644);
+            unlink($parent . '/Foo.tmp');
+            rmdir($parent);
+        }
+    }
+
     public function testXoopsRemoveFileQuietlyIsNoOpForMissingPath(): void
     {
         // A non-existent path must NOT emit a warning — only paths that
