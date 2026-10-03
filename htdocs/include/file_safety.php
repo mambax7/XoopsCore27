@@ -292,7 +292,7 @@ if (!function_exists('xoops_remove_file_quietly')) {
         // Same try/catch shape around the post-unlink probe: if the path
         // contained a null byte we have nothing useful to report anyway.
         try {
-            $stillPresent = !xoops_path_confirmed_absent($path);
+            $stillPresent = !$ok && !xoops_path_confirmed_absent($path); // the listing only when unlink() failed
         } catch (\Throwable $e) {
             $stillPresent = false;
         }
