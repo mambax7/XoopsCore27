@@ -119,8 +119,10 @@ final class LanguageConstantGuard
 
     /**
      * Added line numbers per file from a zero-context diff made with
-     * `--src-prefix=a/ --dst-prefix=b/`. A "+++ " line is a header only right
-     * after a "--- " line (an added "++$n;" also starts with "+++").
+     * `--src-prefix=a/ --dst-prefix=b/`. A "+++ " line is a header only in the
+     * header section of a `diff --git` record, before its first hunk: a
+     * changed pair "-- $x;" / "++ $x;" prints as "--- $x;" / "+++ $x;" inside
+     * a hunk, and an added "++$n;" also starts with "+++".
      *
      * @return array<string, array<int, true>>
      */
@@ -128,24 +130,26 @@ final class LanguageConstantGuard
     {
         $files    = [];
         $current  = null;
-        $previous = '';
+        $inHeader = false;
         foreach (preg_split('/\R/', $diff) ?: [] as $line) {
             if (str_starts_with($line, 'diff --git ')) {
-                $current = null;
-            } elseif (str_starts_with($line, '+++ ') && str_starts_with($previous, '--- ')) {
+                $current  = null;
+                $inHeader = true;
+            } elseif ($inHeader && str_starts_with($line, '+++ ')) {
                 // git ends a header path that contains a space with a tab.
                 $path    = rtrim(substr($line, 4), "\t");
                 $path    = str_starts_with($path, '"') ? stripcslashes(substr($path, 1, -1)) : $path;
                 $current = str_starts_with($path, 'b/') ? substr($path, 2) : null;
-            } elseif (null !== $current
-                && 1 === preg_match('/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/', $line, $m)
-            ) {
+            } elseif (1 === preg_match('/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/', $line, $m)) {
+                $inHeader = false;
+                if (null === $current) {
+                    continue;
+                }
                 $count = isset($m[2]) && '' !== $m[2] ? (int) $m[2] : 1;
                 for ($n = (int) $m[1]; $n < (int) $m[1] + $count; $n++) {
                     $files[$current][$n] = true;
                 }
             }
-            $previous = $line;
         }
 
         return $files;
@@ -179,6 +183,19 @@ final class LanguageConstantGuard
             if ('}' === $type) {
                 if ('string' !== array_pop($stack)) {
                     $stmtStart = $i + 1;
+                }
+                continue;
+            }
+            // Alternative syntax: `if (...):` ... `endif;` is a block too, so a
+            // fallback inside it is not at file scope.
+            if (':' === $type && self::opensAlternativeBlock($tokens, $i)) {
+                $stack[]   = 'block';
+                $stmtStart = $i + 1;
+                continue;
+            }
+            if (in_array($type, [T_ENDIF, T_ENDWHILE, T_ENDFOR, T_ENDFOREACH, T_ENDSWITCH, T_ENDDECLARE], true)) {
+                if ('block' === end($stack)) {
+                    array_pop($stack);
                 }
                 continue;
             }
@@ -335,7 +352,33 @@ final class LanguageConstantGuard
             && ')' === $tokens[$i - 1][0]
             && self::isDefinedCall($tokens, $i - 5, $constant)
             && '(' === $tokens[$i - 6][0]
-            && T_IF === $tokens[$i - 7][0];
+            && T_IF === $tokens[$i - 7][0]
+            && T_ELSE !== ($tokens[$i - 8][0] ?? null); // `else if (...)` is an else branch
+    }
+
+    /**
+     * Whether the ':' at $i opens an alternative-syntax block: the ')' before
+     * it closes the condition of `if`, `while`, `for`, `foreach`, `switch` or
+     * `declare`. `elseif (...):` and `else:` continue a block; a ternary's ':'
+     * and a `case` label do not qualify.
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function opensAlternativeBlock(array $tokens, int $i): bool
+    {
+        if (')' !== ($tokens[$i - 1][0] ?? null)) {
+            return false;
+        }
+        $depth = 0;
+        for ($j = $i - 1; $j >= 0; $j--) {
+            if (')' === $tokens[$j][0]) {
+                $depth++;
+            } elseif ('(' === $tokens[$j][0] && 0 === --$depth) {
+                return in_array($tokens[$j - 1][0] ?? null, [T_IF, T_WHILE, T_FOR, T_FOREACH, T_SWITCH, T_DECLARE], true);
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -358,7 +401,8 @@ final class LanguageConstantGuard
     }
 
     /**
-     * Whether the token at $i reads $constant: `_X`, `\_X` or `constant('_X')`.
+     * Whether the token at $i reads $constant: `_X`, `\_X`, `constant('_X')`
+     * or `constant(name: '_X')`.
      *
      * @param list<array{0: int|string, 1: string, 2: int}> $tokens
      */
@@ -372,10 +416,15 @@ final class LanguageConstantGuard
                 && '(' !== $next && T_DOUBLE_COLON !== $next;
         }
 
-        return self::isNamed($tokens, $i, 'constant')
-            && '(' === ($tokens[$i + 1][0] ?? null)
-            && $constant === self::literal($tokens, $i + 2)
-            && ')' === ($tokens[$i + 3][0] ?? null);
+        if (!self::isNamed($tokens, $i, 'constant') || '(' !== ($tokens[$i + 1][0] ?? null)) {
+            return false;
+        }
+        $arg = $i + 2;
+        if (T_STRING === ($tokens[$arg][0] ?? null) && 'name' === $tokens[$arg][1] && ':' === ($tokens[$arg + 1][0] ?? null)) {
+            $arg += 2; // named argument
+        }
+
+        return $constant === self::literal($tokens, $arg) && ')' === ($tokens[$arg + 1][0] ?? null);
     }
 
     /**
@@ -410,11 +459,15 @@ final class LanguageConstantGuard
     }
 
     /**
-     * Contents of a blob such as ":path" or "HEAD:path"; '' when absent.
+     * Contents of a blob such as ":path" or "HEAD:path". Every caller names a
+     * blob the index diff just listed, so a failure is a git failure and ends
+     * the run with status 2 rather than passing for an empty file.
+     *
+     * @throws \RuntimeException
      */
     private static function show(string $object): string
     {
-        return self::run(['show', $object]) ?? '';
+        return self::git(['show', $object]);
     }
 
     /**

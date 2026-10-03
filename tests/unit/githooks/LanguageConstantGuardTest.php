@@ -107,7 +107,11 @@ final class LanguageConstantGuardTest extends TestCase
             'block, negated condition'               => ["if (!defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}", [2]],
             'block, else branch'                     => ["if (defined('_ZZ_PROBE')) {\n    \$x = 1;\n} else {\n    echo _ZZ_PROBE;\n}", [4]],
             'block, elseif is not a canonical form'  => ["if (\$a) {\n    \$x = 1;\n} elseif (defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}", [4]],
+            'block, else if is not a canonical form' => ["if (\$a) {\n    \$x = 1;\n} else if (defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}", [4]],
             'block, alternative syntax'              => ["if (defined('_ZZ_PROBE')):\n    echo _ZZ_PROBE;\nendif;", [2]],
+            'fallback inside alternative syntax'     => ["if (\$flag):\n    \$x = 1;\n    defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'x');\nendif;\necho _ZZ_PROBE;", [5]],
+            'fallback inside a ternary-free foreach' => ["foreach (\$a as \$b):\n    defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'x');\nendforeach;\n\$v = \$c ? (\$d) : _ZZ_PROBE;", [4]],
+            'constant() with a named argument'       => ["echo constant(name: '_ZZ_PROBE');", [1]],
             'read after the block'                   => ["if (defined('_ZZ_PROBE')) {\n    \$x = 1;\n}\necho _ZZ_PROBE;", [4]],
             'read before the fallback'               => ["echo _ZZ_PROBE;\ndefined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');", [1]],
             'read in a function after the fallback'  => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\nfunction f() {\n    return _ZZ_PROBE;\n}", [3]],
@@ -196,6 +200,11 @@ final class LanguageConstantGuardTest extends TestCase
             '@@ -7,0 +8,2 @@ function x()',
             '+echo _X;',
             '+++$n;', // an added line "++$n;", not a header
+            '@@ -12 +13 @@',
+            '--- $x;', // a removed line "-- $x;" ...
+            '+++ $x;', // ... and an added line "++ $x;": not a header pair
+            '@@ -20,0 +21 @@',
+            '+echo _X;', // this hunk must still count for a.php
             "diff --git a/htdocs/with space.php b/htdocs/with space.php",
             "--- a/htdocs/with space.php\t",
             "+++ b/htdocs/with space.php\t", // git ends a path containing a space with a tab
@@ -212,7 +221,7 @@ final class LanguageConstantGuardTest extends TestCase
         ]);
 
         self::assertSame(
-            ['htdocs/a.php' => [8 => true, 9 => true], 'htdocs/with space.php' => [1 => true]],
+            ['htdocs/a.php' => [8 => true, 9 => true, 13 => true, 21 => true], 'htdocs/with space.php' => [1 => true]],
             LanguageConstantGuard::addedLinesByFile($diff)
         );
     }
