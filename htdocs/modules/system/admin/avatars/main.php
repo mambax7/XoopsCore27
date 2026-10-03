@@ -273,45 +273,43 @@ switch ($op) {
         break;
 
     case 'delfile':
+        // Get variables, and stop on a missing avatar before any output
+        $user_id     = Request::getInt('user_id', 0);
+        $avatar_id   = Request::getInt('avatar_id', 0);
+        $avt_handler = xoops_getHandler('avatar');
+        $avatar      = $avatar_id > 0 ? $avt_handler->get($avatar_id) : null;
+        if (!is_object($avatar)) {
+            redirect_header('admin.php?fct=avatars', 1, _AM_SYSTEM_DBERROR);
+        }
         // Define Stylesheet
         $xoTheme->addStylesheet(XOOPS_URL . '/modules/system/css/admin.css');
         // Define Breadcrumb and tips
         $xoBreadCrumb->addLink(_AM_SYSTEM_AVATAR_DELETE);
         $xoBreadCrumb->addHelp(system_adminVersion('avatars', 'help') . '#delete');
         $xoBreadCrumb->render();
-        // Get variables
-        $user_id   = Request::getInt('user_id', 0);
-        $avatar_id = Request::getInt('avatar_id', 0);
-        // Get avatar handler
-        $avt_handler = xoops_getHandler('avatar');
-        if ($avatar_id > 0) {
-            $avatar = $avt_handler->get($avatar_id);
-            $msg = '<div class="spacer"><img src="' . XOOPS_UPLOAD_URL . '/'
-                . $avatar->getVar('avatar_file', 's')
-                . '" alt="" /></div><div class="txtcenter bold">'
-                . $avatar->getVar('avatar_name', 's')
-                . '</div>' . _AM_SYSTEM_AVATAR_SUREDEL;
-            // Display message
-            xoops_confirm(
-                [
-                    'op' => 'delfileok',
-                    'avatar_id' => $avatar_id,
-                    'fct' => 'avatars',
-                    'user_id' => $user_id,
-                ],
-                'admin.php',
-                $msg,
-            );
-        } else {
-            redirect_header('admin.php?fct=avatars', 1, _AM_SYSTEM_DBERROR);
-        }
+        $msg = '<div class="spacer"><img src="' . XOOPS_UPLOAD_URL . '/'
+            . $avatar->getVar('avatar_file', 's')
+            . '" alt="" /></div><div class="txtcenter bold">'
+            . $avatar->getVar('avatar_name', 's')
+            . '</div>' . _AM_SYSTEM_AVATAR_SUREDEL;
+        // Display message
+        xoops_confirm(
+            [
+                'op' => 'delfileok',
+                'avatar_id' => $avatar_id,
+                'fct' => 'avatars',
+                'user_id' => $user_id,
+            ],
+            'admin.php',
+            $msg,
+        );
         // Call footer
         xoops_cp_footer();
         break;
 
     case 'delfileok':
         if (!$GLOBALS['xoopsSecurity']->check()) {
-            redirect_header('admin.php?fct=avatars', 1, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            redirect_header('admin.php?fct=avatars', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         $avatar_id = Request::getInt('avatar_id', 0, 'POST');
         if ($avatar_id <= 0) {
