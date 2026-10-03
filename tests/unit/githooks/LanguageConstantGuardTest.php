@@ -92,6 +92,8 @@ final class LanguageConstantGuardTest extends TestCase
             'catch type'                    => ["try {\n} catch (_ZZ_PROBE | \\Throwable \$e) {\n}"],
             'attribute names'               => ["#[_ZZ_PROBE]\nclass C {}\n#[A(1), _ZZ_PROBE(2)]\nfunction g() {}"],
             'goto label'                    => ["_ZZ_PROBE:\necho 1;\ngoto _ZZ_PROBE;"],
+            'aliases'                       => ["use Foo\\Bar as _ZZ_PROBE;\nuse Baz\\{Qux as _ZZ_PROBE};\nclass C { use A, B { A::f insteadof _ZZ_PROBE; } }"],
+            'enum cases and const lists'    => ["enum E { case _ZZ_PROBE; case B = 1; }\nenum F: string { case _ZZ_PROBE = 'x'; }\nclass C { const A = 1, _ZZ_PROBE = 2; }"],
             'last interface before a body'  => ["class C implements A, _ZZ_PROBE {}\ninterface I extends A, _ZZ_PROBE {}"],
         ];
     }

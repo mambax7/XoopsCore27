@@ -43,7 +43,7 @@ final class LanguageConstantGuard
     private const NOT_A_READ_AFTER = [
         T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION,
         T_CONST, T_NEW, T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM, T_EXTENDS,
-        T_IMPLEMENTS, T_INSTANCEOF, T_USE, T_NAMESPACE, T_GOTO,
+        T_IMPLEMENTS, T_INSTANCEOF, T_USE, T_NAMESPACE, T_GOTO, T_AS, T_INSTEADOF,
     ];
 
     /**
@@ -516,6 +516,9 @@ final class LanguageConstantGuard
             $next = $tokens[$i + 1][0] ?? null;
             if (':' === $next && !in_array($prev, ['?', T_CASE], true)) {
                 return null; // a label: named argument `f(_X: 1)` or goto target `_X:`
+            }
+            if ('=' === $next || (T_CASE === $prev && ';' === $next)) {
+                return null; // a declaration: `const A = 1, _X = 2`, `case _X = 1`, enum `case _X;`
             }
 
             return !in_array($prev, self::NOT_A_READ_AFTER, true) && !in_array($next, ['(', '{', T_DOUBLE_COLON], true)
