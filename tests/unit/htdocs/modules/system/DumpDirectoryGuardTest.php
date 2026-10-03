@@ -35,9 +35,21 @@ final class DumpWriteProbe extends \SystemMaintenance
 
     public static bool $chmodSucceeds = true;
 
+    /** Bytes the writer stops after, null for a complete write. */
+    public static ?int $shortWrite = null;
+
     public static function dumpDirectoryPath(): string
     {
         return self::$dir;
+    }
+
+    protected static function writeDump(string $file, string $content): int|false
+    {
+        if (null !== self::$shortWrite) {
+            $content = substr($content, 0, self::$shortWrite);
+        }
+
+        return parent::writeDump($file, $content);
     }
 
     protected static function restrictDumpPermissions(string $file): bool
@@ -107,12 +119,14 @@ final class DumpDirectoryGuardTest extends TestCase
         mkdir($this->base, 0777, true);
         DumpWriteProbe::$dir           = $this->base . DIRECTORY_SEPARATOR . 'dumps';
         DumpWriteProbe::$chmodSucceeds = true;
+        DumpWriteProbe::$shortWrite    = null;
     }
 
     protected function tearDown(): void
     {
         DumpWriteProbe::$dir           = '';
         DumpWriteProbe::$chmodSucceeds = true;
+        DumpWriteProbe::$shortWrite    = null;
         if ('' === $this->base || !is_dir($this->base)) {
             return;
         }
@@ -121,7 +135,14 @@ final class DumpDirectoryGuardTest extends TestCase
             \RecursiveIteratorIterator::CHILD_FIRST
         );
         foreach ($items as $item) {
-            $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
+            $path = $item->getPathname();
+            if ($item->isLink()) {
+                // isDir() follows the link. Linux removes a directory symlink
+                // with unlink(); Windows needs rmdir() for one.
+                '\\' === DIRECTORY_SEPARATOR && $item->isDir() ? rmdir($path) : unlink($path);
+            } else {
+                $item->isDir() ? rmdir($path) : unlink($path);
+            }
         }
         rmdir($this->base);
     }
@@ -224,7 +245,24 @@ final class DumpDirectoryGuardTest extends TestCase
             'stray closing tag'         => ["</Files>\nRequire all denied\n"],
             'unclosed container'        => ["Require all denied\n<Files x>\n"],
             'deny only inside IfModule' => ["<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n"],
+            'deny only in the 2.2 half' => ["<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
+            'pair with a grant in one'  => ["<IfModule mod_authz_core.c>\nRequire all granted\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
+            'deny in another IfModule'  => ["<IfModule mod_rewrite.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
+            'reversed version pair'     => ["<IfModule mod_authz_core.c>\nDeny from all\n</IfModule>\n<IfModule !mod_authz_core.c>\nRequire all denied\n</IfModule>\n"],
         ];
+    }
+
+    #[Test]
+    public function theGeneratedGuardKeepsEachDirectiveInsideItsVersionBlock(): void
+    {
+        $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
+        self::assertTrue($this->prepare($dir));
+        $rules = (string) file_get_contents($dir . '/.htaccess');
+
+        // A bare Require is an unknown directive on Apache 2.2 (a 500, not a 403).
+        self::assertStringStartsWith("<IfModule mod_authz_core.c>\n", $rules);
+        self::assertStringContainsString("<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>", $rules);
+        self::assertStringContainsString("<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>", $rules);
     }
 
     #[Test]
@@ -468,18 +506,29 @@ final class DumpDirectoryGuardTest extends TestCase
     #[Test]
     public function aShortDumpWriteCountsAsFailedAndIsRemoved(): void
     {
-        $src = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php');
+        DumpWriteProbe::$shortWrite = 4; // the disk "fills" after four bytes
 
-        self::assertSame(
-            1,
-            preg_match('/\$written\s*=\s*strlen\(\s*\$ret\[0\]\s*\)\s*===\s*file_put_contents\(\s*\$path_file\s*,\s*\$ret\[0\]\s*\)/', $src),
-            'A dump write counts only when every byte was written.'
-        );
-        self::assertSame(
-            1,
-            preg_match('/if\s*\(\s*!\$written\s*&&\s*is_file\(\s*\$path_file\s*\)\s*\)\s*\{\s*unlink\(\s*\$path_file\s*\)/', $src),
-            'A partial dump must be removed, not left behind.'
-        );
+        [, $html] = $this->dumpWrite();
+
+        self::assertSame([], $this->writtenDumps(), 'No dump carries a downloadable name.');
+        self::assertSame([], glob(DumpWriteProbe::$dir . '/*.part') ?: [], 'The stage file is removed.');
+        self::assertStringContainsString('icon:cancel.png', $html);
+        self::assertStringNotContainsString('op=dump_download', $html);
+    }
+
+    #[Test]
+    public function aPartialDumpNeverHasADownloadableNameEvenWhenItCannotBeRemoved(): void
+    {
+        // The stage name is what a short write leaves behind; the download
+        // action only accepts dump_<date>_<16 hex>.sql, so a leftover stage
+        // file cannot be served even if unlink() fails.
+        DumpWriteProbe::$shortWrite = 4;
+        $this->dumpWrite();
+
+        $src = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/maintenance/main.php');
+        self::assertSame(1, preg_match('/preg_match\(\'(\/\^dump_[^\']*\\\\.sql\$\/)\'/', $src, $m), 'The download name pattern is in place.');
+        self::assertSame(0, preg_match($m[1], 'dump_2026.10.02_12.00.00_0123456789abcdef.sql.part'));
+        self::assertSame(1, preg_match($m[1], 'dump_2026.10.02_12.00.00_0123456789abcdef.sql'));
     }
 
     #[Test]

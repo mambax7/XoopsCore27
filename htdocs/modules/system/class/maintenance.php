@@ -758,8 +758,14 @@ class SystemMaintenance
         return $dir;
     }
 
-    /** Deny-all rules for the dump directory, for Apache 2.4 and for 2.2. */
-    private const DUMP_HTACCESS = "Require all denied\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n";
+    /**
+     * Deny-all rules for the dump directory, for Apache 2.4 and for 2.2.
+     *
+     * Each version's directive sits inside its own <IfModule>, as in
+     * xoops_data/logs/.htaccess: a bare `Require` is an unknown directive on
+     * 2.2 and makes every request to the directory a 500 instead of a 403.
+     */
+    private const DUMP_HTACCESS = "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n";
 
     /**
      * Create the dump directory and its guard files where missing.
@@ -884,19 +890,24 @@ class SystemMaintenance
     /**
      * Whether .htaccess rules deny the whole directory.
      *
-     * A `Require all denied` or `Deny from all` line counts only outside every
-     * container, <IfModule> included, since Apache may skip such a block (so a
-     * deny scoped to <Files> or wrapped in <RequireAny> does not count), and any grant fails the check: another
-     * `Require` line, `Allow from` or `Satisfy any`. Rules that cannot be
-     * established as a directory-wide deny fail closed.
+     * A `Require all denied` or `Deny from all` line counts outside every
+     * container, or as the complementary pair `<IfModule mod_authz_core.c>`
+     * plus `<IfModule !mod_authz_core.c>` (exactly one of the two applies on
+     * any Apache). A deny in any other container does not count, since
+     * Apache may skip the block (a deny scoped to <Files> or wrapped in
+     * <RequireAny>), and any grant fails the check: another `Require` line,
+     * `Allow from` or `Satisfy any`. Rules that cannot be established as a
+     * directory-wide deny fail closed.
      *
      * @param string $rules .htaccess contents
      * @return bool
      */
     private static function deniesAll(string $rules): bool
     {
-        $containers = [];
-        $denies     = false;
+        $containers = []; // open containers, innermost last: [tag, argument]
+        $bare       = false;
+        $with24     = false; // deny inside <IfModule mod_authz_core.c>
+        $with22     = false; // deny inside <IfModule !mod_authz_core.c>
         foreach (preg_split('/\R/', $rules) ?: [] as $line) {
             $line = trim($line);
             if ('' === $line || '#' === $line[0]) {
@@ -905,28 +916,36 @@ class SystemMaintenance
             if (1 === preg_match('/^<\/\s*([A-Za-z]+)/', $line, $m)) {
                 // A closing tag must close the innermost open container;
                 // anything else leaves the scope unknown, so fail closed.
-                if (array_pop($containers) !== strtolower($m[1])) {
+                $open = array_pop($containers);
+                if (null === $open || $open[0] !== strtolower($m[1])) {
                     return false;
                 }
                 continue;
             }
-            if (1 === preg_match('/^<\s*([A-Za-z]+)/', $line, $m)) {
-                $containers[] = strtolower($m[1]);
+            if (1 === preg_match('/^<\s*([A-Za-z]+)\s*([^>]*)>/', $line, $m)) {
+                $containers[] = [strtolower($m[1]), strtolower(trim($m[2]))];
                 continue;
             }
             if (1 === preg_match('/^(Require\s+(?!all\s+denied\s*$)|Allow\s+from\b|Satisfy\s+any\b)/i', $line)) {
                 return false; // a grant anywhere can open the directory
             }
-            // Only a deny outside every container counts: Apache may skip an
-            // <IfModule> block, so a deny inside one is not reliably applied.
-            if ([] === $containers
-                && 1 === preg_match('/^(Require\s+all\s+denied|Deny\s+from\s+all)$/i', $line)
-            ) {
-                $denies = true;
+            $require = 1 === preg_match('/^Require\s+all\s+denied$/i', $line);
+            $deny    = 1 === preg_match('/^Deny\s+from\s+all$/i', $line);
+            if (!$require && !$deny) {
+                continue;
+            }
+            // Each block counts only with its own version's directive: the
+            // other one is unknown there (a 500, not a deny) or never applies.
+            if ([] === $containers) {
+                $bare = true;
+            } elseif ($require && [['ifmodule', 'mod_authz_core.c']] === $containers) {
+                $with24 = true;
+            } elseif ($deny && [['ifmodule', '!mod_authz_core.c']] === $containers) {
+                $with22 = true;
             }
         }
 
-        return $denies && [] === $containers;
+        return ($bare || ($with24 && $with22)) && [] === $containers;
     }
 
     /**
@@ -947,6 +966,18 @@ class SystemMaintenance
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    /**
+     * Write the dump bytes to a file.
+     *
+     * @param string $file    stage file
+     * @param string $content dump
+     * @return int|false bytes written, as file_put_contents() reports them
+     */
+    protected static function writeDump(string $file, string $content): int|false
+    {
+        return file_put_contents($file, $content);
     }
 
     /**
@@ -983,15 +1014,19 @@ class SystemMaintenance
         // guessed from the creation time alone.
         $file_name = 'dump_' . date('Y.m.d_H.i.s') . '_' . bin2hex(random_bytes(8)) . '.sql';
         $path_file = $dir . '/' . $file_name;
+        // The dump is staged under a name the download action never accepts
+        // (its pattern ends in .sql) and renamed only once every byte is on
+        // disk, so a short write (a full disk, say) can never be offered for
+        // download, even when removing the stage file fails as well.
+        $stage = $path_file . '.part';
         // PHP's warning for a failed write names the full dump path; keep it off
         // the page and report the failure below instead.
         set_error_handler(static fn (): bool => true);
         try {
-            // Only a complete write counts: a short write (a full disk, say)
-            // leaves a truncated dump that must not be offered for download.
-            $written = strlen($ret[0]) === file_put_contents($path_file, $ret[0]);
-            if (!$written && is_file($path_file)) {
-                unlink($path_file);
+            $written = strlen($ret[0]) === static::writeDump($stage, $ret[0])
+                && rename($stage, $path_file);
+            if (!$written && is_file($stage)) {
+                unlink($stage);
             }
         } catch (\Throwable $e) {
             $written = false;
