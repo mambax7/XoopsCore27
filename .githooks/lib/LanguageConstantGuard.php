@@ -217,9 +217,9 @@ final class LanguageConstantGuard
         $found     = [];
 
         foreach ($tokens as $i => [$type]) {
-            if ('(' === $type || '[' === $type) {
+            if ('(' === $type || '[' === $type || T_ATTRIBUTE === $type) {
                 $paren += '(' === $type ? 1 : 0;
-                $nest++;
+                $nest++; // `#[` closes with ']' like any bracket
                 continue;
             }
             if (')' === $type || ']' === $type) {
