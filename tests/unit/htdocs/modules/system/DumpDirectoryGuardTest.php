@@ -418,9 +418,11 @@ final class DumpDirectoryGuardTest extends TestCase
         self::assertTrue(DumpWriteProbe::prepareDumpDirectory($dir));
         self::assertSame([], glob($dir . '/.owner-*') ?: [], 'The ownership probe is removed.');
 
-        // Nothing can be created inside: ownership cannot be established, so it fails closed.
-        if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
-            return; // root can always write; the refusal cannot be shown here
+        // Nothing can be created inside: ownership cannot be established, so it
+        // fails closed. (The guard files already exist, so the probe is the only
+        // thing left that can refuse the directory.)
+        if (0 === fileowner($dir)) {
+            return; // this process is root and can always write; the refusal cannot be shown here
         }
         chmod($dir, 0500);
         try {
