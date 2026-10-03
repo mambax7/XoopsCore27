@@ -262,6 +262,8 @@ final class DumpDirectoryGuardTest extends TestCase
             'pair with AuthMerging Or'  => ["AuthMerging Or\n<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
             'bare deny, AuthMerging And' => ["Require all denied\nAuthMerging And\n"],
             'grant split by a continuation' => ["Deny from all\nAllow \\\nfrom all\n"],
+            'grant split inside its name' => ["Deny from all\nAl\\\nlow from all\n"],
+            'grant split with CRLF'     => ["Deny from all\r\nAl\\\r\nlow from all\r\n"],
             'quoted Satisfy any'        => ["Deny from all\nSatisfy \"any\"\n"],
             'quoted Allow from'         => ["Deny from all\nAllow 'from' all\n"],
         ];

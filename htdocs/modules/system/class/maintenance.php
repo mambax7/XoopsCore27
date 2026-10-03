@@ -945,7 +945,9 @@ class SystemMaintenance
         $bare       = false;
         $with24     = false; // deny inside <IfModule mod_authz_core.c>
         $with22     = false; // deny inside <IfModule !mod_authz_core.c>
-        $rules      = (string) preg_replace('/\\\\\R/', ' ', $rules); // join continued lines
+        // Apache drops the backslash and the newline and inserts nothing, so
+        // `Al\` + newline + `low from all` is `Allow from all`.
+        $rules      = (string) preg_replace('/\\\\\r?\n/', '', $rules);
         foreach (preg_split('/\R/', $rules) ?: [] as $line) {
             $line = trim(str_replace(['"', "'"], '', $line));
             if ('' === $line || '#' === $line[0]) {
