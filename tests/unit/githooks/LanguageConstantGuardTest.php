@@ -82,6 +82,7 @@ final class LanguageConstantGuardTest extends TestCase
             'constant() with two arguments is not a read' => ["echo constant('_ZZ_PROBE', 1);"],
             'block, fully qualified call'   => ["if (\\defined('_ZZ_PROBE')) {\n    echo _ZZ_PROBE;\n}"],
             'file-level fallback'           => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\necho _ZZ_PROBE;"],
+            'file-level define'             => ["define('_ZZ_PROBE', 'text');\ndefine('_ZZ_TIP', 'See ' . _ZZ_PROBE);"],
             'fallback, then a later block'  => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', \"text\");\n\$x = 1;\necho _ZZ_PROBE;"],
             'fallback, read beside an arrow function' => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n\$v = [fn (\$a, \$b) => 1, _ZZ_PROBE];\nf(fn () => 1, _ZZ_PROBE);\n\$w = (fn () => 1) . _ZZ_PROBE;"],
             'fallback, read after a called arrow function' => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n\$v = (fn () => 1)() . _ZZ_PROBE;"],
@@ -149,6 +150,11 @@ final class LanguageConstantGuardTest extends TestCase
             'constant() with a named argument'       => ["echo constant(name: '_ZZ_PROBE');", [1]],
             'read after the block'                   => ["if (defined('_ZZ_PROBE')) {\n    \$x = 1;\n}\necho _ZZ_PROBE;", [4]],
             'read before the fallback'               => ["echo _ZZ_PROBE;\ndefined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');", [1]],
+            'read before the define'                 => ["define('_ZZ_TIP', 'See ' . _ZZ_PROBE);\ndefine('_ZZ_PROBE', 'text');", [1]],
+            'define with a non-literal value'        => ["define('_ZZ_PROBE', \$text);\necho _ZZ_PROBE;", [2]],
+            'define behind a condition'              => ["if (\$flag) define('_ZZ_PROBE', 'x');\necho _ZZ_PROBE;", [2]],
+            'read in a function after the define'    => ["define('_ZZ_PROBE', 'text');\nfunction f() {\n    return _ZZ_PROBE;\n}", [3]],
+            'ternary on the read'                    => ["\$v = _ZZ_PROBE ? \$a : \$b;\nf(_ZZ_PROBE ? \$a : 'x');\necho _ZZ_PROBE ?: 'x';", [1, 2, 3]],
             'read in a function after the fallback'  => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\nfunction f() {\n    return _ZZ_PROBE;\n}", [3]],
             'fallback inside a function'             => ["function f() {\n    defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n}\necho _ZZ_PROBE;", [4]],
             'read in an arrow function after the fallback' => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n\$f = fn () => _ZZ_PROBE;\necho _ZZ_PROBE;", [2]],
@@ -307,7 +313,7 @@ final class LanguageConstantGuardTest extends TestCase
     /**
      * @return array{0: int, 1: string}
      */
-    private static function runInThrowawayRepository(string $readCode): array
+    private static function runInThrowawayRepository(string $readCode, string $afterDefine = '', string $otherLanguageFile = ''): array
     {
         $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'xoops-rule18-' . bin2hex(random_bytes(6));
         mkdir($dir . '/htdocs/language/english', 0777, true);
@@ -322,11 +328,13 @@ final class LanguageConstantGuardTest extends TestCase
         try {
             self::gitIn($dir, ['init', '-q']);
             file_put_contents($dir . '/htdocs/language/english/global.php', "<?php\ndefine('_ZZ_OLD', 'old');\n");
+            file_put_contents($dir . '/htdocs/language/english/admin.php', "<?php\n");
             file_put_contents($dir . '/htdocs/include/functions.php', "<?php\n");
             self::gitIn($dir, ['add', '-A']);
             self::gitIn($dir, ['commit', '-q', '--no-verify', '-m', 'base']);
 
-            file_put_contents($dir . '/htdocs/language/english/global.php', "define('_ZZ_PROBE', 'new');\n", FILE_APPEND);
+            file_put_contents($dir . '/htdocs/language/english/global.php', "define('_ZZ_PROBE', 'new');\n" . $afterDefine, FILE_APPEND);
+            file_put_contents($dir . '/htdocs/language/english/admin.php', $otherLanguageFile, FILE_APPEND);
             file_put_contents($dir . '/htdocs/include/functions.php', $readCode . "\n", FILE_APPEND);
             self::gitIn($dir, ['add', '-A']);
 
@@ -364,6 +372,26 @@ final class LanguageConstantGuardTest extends TestCase
 
         self::assertSame(1, $status);
         self::assertSame("htdocs/include/functions.php:2: function zz(): string { return _ZZ_PROBE; }\n", $output);
+    }
+
+    #[Test]
+    public function aReadInAnotherLanguageFileIsReported(): void
+    {
+        // A pack that falls back to this English file runs the read, and its
+        // global.php may predate the constant.
+        [$status, $output] = self::runInThrowawayRepository('', '', "define('_ZZ_TIP', 'See ' . _ZZ_PROBE);\n");
+
+        self::assertSame(1, $status);
+        self::assertSame("htdocs/language/english/admin.php:2: define('_ZZ_TIP', 'See ' . _ZZ_PROBE);\n", $output);
+    }
+
+    #[Test]
+    public function aReadAfterTheDefineInItsOwnLanguageFileIsClean(): void
+    {
+        [$status, $output] = self::runInThrowawayRepository('', "define('_ZZ_TIP', 'See ' . _ZZ_PROBE);\n");
+
+        self::assertSame(0, $status, $output);
+        self::assertSame('', $output);
     }
 
     #[Test]

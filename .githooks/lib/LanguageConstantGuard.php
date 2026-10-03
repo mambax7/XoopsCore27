@@ -24,17 +24,15 @@ declare(strict_types=1);
  *  2. Block: `if (defined('_X')) { ... }`, where the call is the entire
  *     condition; reads inside that brace block (nested blocks included) are
  *     covered. `elseif`, `else` and the alternative syntax are not.
- *  3. File-level fallback: a statement at file scope that is exactly
- *     `defined('_X') || define('_X', '<literal>');`. It covers later reads at
- *     file scope only, never inside function, method or other blocks.
+ *  3. File-level definition: a statement at file scope that is exactly
+ *     `defined('_X') || define('_X', '<literal>');` or `define('_X', '<literal>');`.
+ *     It covers later reads at file scope only, never inside function,
+ *     method or other blocks. The plain form is what keeps a language file's
+ *     own "define it, then use it in the next define" quiet: language files
+ *     are scanned, because a pack that falls back to an English file runs
+ *     its reads of other files' constants.
  *
  * `\defined()` and `\_X` are accepted wherever `defined()` and `_X` are.
- *
- * Reads inside `language/` are not scanned: a translated pack replaces a
- * language file as a whole, so a read there (`define('_B', _A . 'x')`) never
- * runs against a pack that lacks that file's own constants, and a guard
- * would be noise. A read of another file's new constant from a language
- * file is the one shape this leaves out.
  *
  * @category  Xoops
  * @package   XoopsCore27
@@ -344,7 +342,7 @@ final class LanguageConstantGuard
             $diff = self::git([
                 '-c', 'core.quotepath=false', 'diff', '--cached', '-U0', '-M', '--no-color', '--no-ext-diff',
                 '--src-prefix=a/', '--dst-prefix=b/', '--diff-filter=ACMR', '--', '*.php',
-                ':(exclude,glob)**/vendor/**', ':(exclude,glob)**/language/**', ':(exclude,glob)**/tests/**',
+                ':(exclude,glob)**/vendor/**', ':(exclude,glob)**/tests/**',
                 ':(exclude,glob)docs/**', ':(exclude,glob).githooks/**',
             ]);
             $reported = 0;
@@ -489,21 +487,24 @@ final class LanguageConstantGuard
 
     /**
      * Whether the statement starting at $i is exactly
-     * `defined('$constant') || define('$constant', '<literal>');`.
+     * `defined('$constant') || define('$constant', '<literal>');` or
+     * `define('$constant', '<literal>');`.
      *
      * @param list<array{0: int|string, 1: string, 2: int}> $tokens
      */
     private static function isFileFallback(array $tokens, int $i, string $constant): bool
     {
-        return self::isDefinedCall($tokens, $i, $constant)
-            && T_BOOLEAN_OR === ($tokens[$i + 4][0] ?? null)
-            && self::isNamed($tokens, $i + 5, 'define')
-            && '(' === ($tokens[$i + 6][0] ?? null)
-            && $constant === self::literal($tokens, $i + 7)
-            && ',' === ($tokens[$i + 8][0] ?? null)
-            && T_CONSTANT_ENCAPSED_STRING === ($tokens[$i + 9][0] ?? null)
-            && ')' === ($tokens[$i + 10][0] ?? null)
-            && ';' === ($tokens[$i + 11][0] ?? null);
+        if (self::isDefinedCall($tokens, $i, $constant) && T_BOOLEAN_OR === ($tokens[$i + 4][0] ?? null)) {
+            $i += 5; // the define() after `defined('_X') ||`
+        }
+
+        return self::isNamed($tokens, $i, 'define')
+            && '(' === ($tokens[$i + 1][0] ?? null)
+            && $constant === self::literal($tokens, $i + 2)
+            && ',' === ($tokens[$i + 3][0] ?? null)
+            && T_CONSTANT_ENCAPSED_STRING === ($tokens[$i + 4][0] ?? null)
+            && ')' === ($tokens[$i + 5][0] ?? null)
+            && ';' === ($tokens[$i + 6][0] ?? null);
     }
 
     /**
@@ -604,9 +605,10 @@ final class LanguageConstantGuard
      */
     private static function isDeclarationName(array $tokens, int $i): bool
     {
-        // Forward over the rest of a type to the variable it declares.
+        // Forward over the rest of a type to the variable it declares. '?' only
+        // ever precedes a type: after the name it starts a ternary, `_X ? $a : $b`.
         $q = $i + 1;
-        while (in_array($tokens[$q][0] ?? null, self::TYPE_JOIN, true)) {
+        while ('?' !== ($tokens[$q][0] ?? null) && in_array($tokens[$q][0] ?? null, self::TYPE_JOIN, true)) {
             $q++;
         }
         if (in_array($tokens[$q][0] ?? null, [T_VARIABLE, T_ELLIPSIS], true) && '|' !== $tokens[$q - 1][0]) {
