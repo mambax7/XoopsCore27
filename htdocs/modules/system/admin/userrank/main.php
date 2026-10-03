@@ -209,7 +209,11 @@ switch ($op) {
         // Delete userrank
     case 'userrank_delete':
         $rank_id = Request::hasVar('rank_id', 'POST') ? Request::getInt('rank_id', 0, 'POST') : Request::getInt('rank_id', 0, 'GET');
-        $obj     = $userrank_Handler->get($rank_id);
+        // get(0) returns a new, empty rank, so a missing or zero id is refused first.
+        $obj = $rank_id > 0 ? $userrank_Handler->get($rank_id) : null;
+        if (!is_object($obj)) {
+            redirect_header('admin.php?fct=userrank', 2, _AM_SYSTEM_DBERROR);
+        }
         if (Request::getInt('ok', 0, 'POST') == 1) {
             if (!$GLOBALS['xoopsSecurity']->check()) {
                 redirect_header('admin.php?fct=userrank', 3, implode(',', $GLOBALS['xoopsSecurity']->getErrors()));
