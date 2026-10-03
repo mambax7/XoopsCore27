@@ -38,9 +38,17 @@ final class DumpWriteProbe extends \SystemMaintenance
     /** Bytes the writer stops after, null for a complete write. */
     public static ?int $shortWrite = null;
 
+    /** Pretend ext-posix is not loaded. */
+    public static bool $noPosix = false;
+
     public static function dumpDirectoryPath(): string
     {
         return self::$dir;
+    }
+
+    protected static function effectiveUid(): ?int
+    {
+        return self::$noPosix ? null : parent::effectiveUid();
     }
 
     protected static function writeDump(string $file, string $content): int|false
@@ -120,6 +128,7 @@ final class DumpDirectoryGuardTest extends TestCase
         DumpWriteProbe::$dir           = $this->base . DIRECTORY_SEPARATOR . 'dumps';
         DumpWriteProbe::$chmodSucceeds = true;
         DumpWriteProbe::$shortWrite    = null;
+        DumpWriteProbe::$noPosix       = false;
     }
 
     protected function tearDown(): void
@@ -127,6 +136,7 @@ final class DumpDirectoryGuardTest extends TestCase
         DumpWriteProbe::$dir           = '';
         DumpWriteProbe::$chmodSucceeds = true;
         DumpWriteProbe::$shortWrite    = null;
+        DumpWriteProbe::$noPosix       = false;
         if ('' === $this->base || !is_dir($this->base)) {
             return;
         }
@@ -393,6 +403,31 @@ final class DumpDirectoryGuardTest extends TestCase
 
         clearstatcache(true, $dir);
         self::assertSame(0700, fileperms($dir) & 0777, 'Group and world bits are removed.');
+    }
+
+    #[Test]
+    public function ownershipIsStillCheckedWithoutExtPosix(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            self::markTestSkipped('POSIX modes do not apply on Windows.');
+        }
+        DumpWriteProbe::$noPosix = true;
+        $dir = DumpWriteProbe::$dir;
+
+        // Owned by this process: the probe-file comparison passes and leaves nothing behind.
+        self::assertTrue(DumpWriteProbe::prepareDumpDirectory($dir));
+        self::assertSame([], glob($dir . '/.owner-*') ?: [], 'The ownership probe is removed.');
+
+        // Nothing can be created inside: ownership cannot be established, so it fails closed.
+        if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
+            return; // root can always write; the refusal cannot be shown here
+        }
+        chmod($dir, 0500);
+        try {
+            self::assertFalse(DumpWriteProbe::prepareDumpDirectory($dir));
+        } finally {
+            chmod($dir, 0700);
+        }
     }
 
     #[Test]

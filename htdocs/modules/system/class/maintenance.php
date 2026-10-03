@@ -825,8 +825,9 @@ class SystemMaintenance
      * A directory that another user created (or can read) would hand them the
      * dump without any race. Group and world bits are removed first, so a
      * directory created under a loose umask heals; one that stays open or
-     * belongs to someone else is refused. Windows has no POSIX modes, so the
-     * check is skipped there; NTFS inheritance keeps the data dir's ACL.
+     * belongs to someone else is refused, with or without ext-posix. Windows
+     * has no POSIX modes, so the check is skipped there; NTFS inheritance
+     * keeps the data dir's ACL.
      *
      * @param string $dir existing dump directory
      * @return bool
@@ -848,11 +849,37 @@ class SystemMaintenance
                 return false;
             }
         }
-        if (function_exists('posix_geteuid') && fileowner($dir) !== posix_geteuid()) {
+        $owner = fileowner($dir);
+        if (false === $owner) {
             return false;
         }
+        $uid = static::effectiveUid();
+        if (null !== $uid) {
+            return $owner === $uid;
+        }
+        // Without ext-posix the effective uid cannot be asked for directly. A
+        // file this process creates carries it, so compare the directory's
+        // owner with a probe's. A directory this process cannot write into
+        // fails here, which is right: nothing could be dumped into it anyway.
+        $probe = $dir . '/.owner-' . bin2hex(random_bytes(6));
+        if (false === file_put_contents($probe, '')) {
+            return false;
+        }
+        clearstatcache(true, $probe);
+        $probeOwner = fileowner($probe);
+        unlink($probe);
 
-        return true;
+        return false !== $probeOwner && $owner === $probeOwner;
+    }
+
+    /**
+     * Effective uid of this process, null when ext-posix is not loaded.
+     *
+     * @return int|null
+     */
+    protected static function effectiveUid(): ?int
+    {
+        return function_exists('posix_geteuid') ? posix_geteuid() : null;
     }
 
     /**
