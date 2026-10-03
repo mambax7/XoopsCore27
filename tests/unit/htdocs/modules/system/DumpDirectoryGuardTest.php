@@ -404,8 +404,11 @@ final class DumpDirectoryGuardTest extends TestCase
     }
 
     #[Test]
-    public function anExistingDirectoryOpenToOtherUsersIsTightened(): void
+    public function anExistingDirectoryOpenToOtherUsersIsRefusedNotTightened(): void
     {
+        // Another user who could already open or write the directory may hold
+        // a handle, a watch, or a hard link to a guard file; chmod() revokes
+        // none of those, so the directory is refused and left as it is.
         if ('\\' === DIRECTORY_SEPARATOR) {
             self::markTestSkipped('POSIX modes do not apply on Windows.');
         }
@@ -415,10 +418,10 @@ final class DumpDirectoryGuardTest extends TestCase
         clearstatcache(true, $dir);
         self::assertSame(0755, fileperms($dir) & 0777, 'Precondition: the directory starts out readable by others.');
 
-        self::assertTrue($this->prepare($dir));
+        self::assertFalse($this->prepare($dir));
 
         clearstatcache(true, $dir);
-        self::assertSame(0700, fileperms($dir) & 0777, 'Group and world bits are removed.');
+        self::assertSame(0755, fileperms($dir) & 0777, 'The directory is not modified.');
     }
 
     #[Test]

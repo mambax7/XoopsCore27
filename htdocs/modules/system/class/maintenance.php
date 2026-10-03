@@ -791,7 +791,7 @@ class SystemMaintenance
      * caches. What can be checked is checked: the directory is never taken
      * from a shared location, a symlink is refused, and an existing directory
      * is accepted only when it is owned by this process and closed to other
-     * users (0700, tightened here when it is looser).
+     * users (0700; a looser one is refused).
      */
     public static function prepareDumpDirectory(string $dir): bool
     {
@@ -823,9 +823,11 @@ class SystemMaintenance
      * Whether the dump directory is owned by this process and closed to others.
      *
      * A directory that another user created (or can read) would hand them the
-     * dump without any race. Group and world bits are removed first, so a
-     * directory created under a loose umask heals; one that stays open or
-     * belongs to someone else is refused, with or without ext-posix. On
+     * dump without any race. A directory with any group or world bit is
+     * refused rather than tightened: whoever could already open or write it
+     * may hold a directory handle, a watch, or a hard link to a guard file,
+     * and a chmod() revokes none of those. Ownership is checked with or
+     * without ext-posix. On
      * Windows PHP can read neither the owner nor the NTFS ACL of a directory,
      * so nothing is verified there: an existing directory is accepted as it
      * is, and the dump is only as private as the data directory's own ACL.
@@ -843,12 +845,7 @@ class SystemMaintenance
             return false;
         }
         if (0 !== ($mode & 0077)) {
-            chmod($dir, 0700);
-            clearstatcache(true, $dir);
-            $mode = fileperms($dir);
-            if (false === $mode || 0 !== ($mode & 0077)) {
-                return false;
-            }
+            return false;
         }
         $owner = fileowner($dir);
         if (false === $owner) {
