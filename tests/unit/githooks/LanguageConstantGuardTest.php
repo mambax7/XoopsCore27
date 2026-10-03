@@ -155,12 +155,13 @@ final class LanguageConstantGuardTest extends TestCase
         $source = "<?php\n"
             . "define('_ZZ_A', 'a');\n"
             . "define('THEME_ZZ_B', 'b');\n"
+            . "define(constant_name: '_ZZ_NAMED', value: 'c');\n"
             . "// define('_ZZ_COMMENTED', 'x');\n"
             . "\$help = \"define('_ZZ_STRING', 'x')\";\n"
             . "define('_ZZ_PART' . '_SUFFIX', 'x');\n"
             . "define('lowercase_zz', 'x');\n";
 
-        self::assertSame(['_ZZ_A', 'THEME_ZZ_B'], LanguageConstantGuard::definedConstants($source));
+        self::assertSame(['_ZZ_A', 'THEME_ZZ_B', '_ZZ_NAMED'], LanguageConstantGuard::definedConstants($source));
     }
 
     #[Test]

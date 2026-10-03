@@ -59,7 +59,8 @@ final class LanguageConstantGuard
 
     /**
      * Constants define()d in PHP code with a whole string literal as the
-     * name: any upper-case name, with or without a leading underscore.
+     * name, positional or as `constant_name:`: any upper-case name, with or
+     * without a leading underscore.
      *
      * @return list<string>
      */
@@ -68,10 +69,15 @@ final class LanguageConstantGuard
         $tokens = self::codeTokens($source);
         $names  = [];
         foreach (array_keys($tokens) as $i) {
-            if (self::isNamed($tokens, $i, 'define') && '(' === ($tokens[$i + 1][0] ?? null)
-                && ',' === ($tokens[$i + 3][0] ?? null)
-            ) {
-                $name = self::literal($tokens, $i + 2);
+            if (!self::isNamed($tokens, $i, 'define') || '(' !== ($tokens[$i + 1][0] ?? null)) {
+                continue;
+            }
+            $arg = $i + 2;
+            if (T_STRING === ($tokens[$arg][0] ?? null) && 'constant_name' === $tokens[$arg][1] && ':' === ($tokens[$arg + 1][0] ?? null)) {
+                $arg += 2; // named argument
+            }
+            if (',' === ($tokens[$arg + 1][0] ?? null)) {
+                $name = self::literal($tokens, $arg);
                 if (null !== $name && 1 === preg_match('/^[A-Z_][A-Z0-9_]*$/', $name)) {
                     $names[$name] = true;
                 }
