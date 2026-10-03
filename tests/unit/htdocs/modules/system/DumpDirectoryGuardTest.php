@@ -264,6 +264,8 @@ final class DumpDirectoryGuardTest extends TestCase
             'grant split by a continuation' => ["Deny from all\nAllow \\\nfrom all\n"],
             'grant split inside its name' => ["Deny from all\nAl\\\nlow from all\n"],
             'grant split with CRLF'     => ["Deny from all\r\nAl\\\r\nlow from all\r\n"],
+            'nested Order resets the deny' => ["Deny from all\n<FilesMatch \"\\.sql$\">\nOrder Deny,Allow\n</FilesMatch>\n"],
+            'nested host deny replaces it' => ["Deny from all\n<Files x.sql>\nDeny from 10.0.0.1\n</Files>\n"],
             'quoted Satisfy any'        => ["Deny from all\nSatisfy \"any\"\n"],
             'quoted Allow from'         => ["Deny from all\nAllow 'from' all\n"],
         ];

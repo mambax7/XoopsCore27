@@ -926,8 +926,11 @@ class SystemMaintenance
      * Apache may skip the block (a deny scoped to <Files> or wrapped in
      * <RequireAny>), and any grant fails the check: another `Require` line,
      * `Allow from`, `Satisfy any`, or an `AuthMerging` other than Off (it can
-     * merge the deny with a grant inherited from a parent). Rules that cannot
-     * be established as a directory-wide deny fail closed.
+     * merge the deny with a grant inherited from a parent). A legacy `Order`,
+     * `Deny` or `Allow` inside a section other than <IfModule> fails too:
+     * mod_access_compat does not merge, so the section replaces the deny for
+     * the files it matches. Rules that cannot be established as a
+     * directory-wide deny fail closed.
      *
      * The text is read the way Apache reads it first: a line ending in a
      * backslash continues on the next one, and quotes around an argument
@@ -966,6 +969,14 @@ class SystemMaintenance
             // A grant anywhere can open the directory, and AuthMerging (other
             // than Off) lets a deny be OR-ed with an inherited grant.
             if (1 === preg_match('/^(Require\s+(?!all\s+denied\s*$)|Allow\s+from\b|Satisfy\s+any\b|AuthMerging\s+(?!Off\s*$))/i', $line)) {
+                return false;
+            }
+            // mod_access_compat does not merge sections: a <Files>, <FilesMatch>
+            // or similar block holding its own Order, Deny or Allow replaces the
+            // inherited deny for what it matches, and the default order
+            // (Deny,Allow) allows. Only <IfModule> leaves the scope alone.
+            if (1 === preg_match('/^(Order|Deny|Allow)\b/i', $line)
+                && [] !== array_filter($containers, static fn (array $c): bool => 'ifmodule' !== $c[0])) {
                 return false;
             }
             $require = 1 === preg_match('/^Require\s+all\s+denied$/i', $line);
