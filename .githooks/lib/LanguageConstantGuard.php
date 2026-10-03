@@ -205,6 +205,9 @@ final class LanguageConstantGuard
      */
     public static function unguardedReads(string $source, string $constant, array $addedLines): array
     {
+        if (!str_contains($source, $constant)) {
+            return []; // every read form spells the name out: nothing to tokenize for
+        }
         $tokens    = self::codeTokens($source);
         $lines     = preg_split('/\R/', $source) ?: [];
         $stack     = []; // 'guard', 'block' or 'string' per open brace
@@ -356,14 +359,25 @@ final class LanguageConstantGuard
         }
     }
 
+    /** @var array<string, list<array{0: int|string, 1: string, 2: int}>> tokens per source, keyed by hash */
+    private static array $tokenCache = [];
+
     /**
      * Code tokens as [type, text, line]: no whitespace, comments, inline HTML
-     * or open tags; a closing tag ends a statement like ';'.
+     * or open tags; a closing tag ends a statement like ';'. Cached per source,
+     * since a run scans the same staged file once per new constant.
      *
      * @return list<array{0: int|string, 1: string, 2: int}>
      */
     private static function codeTokens(string $source): array
     {
+        $key = md5($source);
+        if (isset(self::$tokenCache[$key])) {
+            return self::$tokenCache[$key];
+        }
+        if (count(self::$tokenCache) >= 64) {
+            self::$tokenCache = [];
+        }
         $tokens = [];
         $line   = 1;
         foreach (token_get_all($source) as $token) {
@@ -379,7 +393,7 @@ final class LanguageConstantGuard
             }
         }
 
-        return $tokens;
+        return self::$tokenCache[$key] = $tokens;
     }
 
     /**
@@ -500,11 +514,12 @@ final class LanguageConstantGuard
         if ((T_STRING === $type && $constant === $text) || (T_NAME_FULLY_QUALIFIED === $type && '\\' . $constant === $text)) {
             $prev = $tokens[$i - 1][0] ?? null;
             $next = $tokens[$i + 1][0] ?? null;
-            if (':' === $next && in_array($prev, ['(', ','], true)) {
-                return null; // a named-argument label, `f(_X: 1)`
+            if (':' === $next && !in_array($prev, ['?', T_CASE], true)) {
+                return null; // a label: named argument `f(_X: 1)` or goto target `_X:`
             }
 
-            return !in_array($prev, self::NOT_A_READ_AFTER, true) && '(' !== $next && T_DOUBLE_COLON !== $next
+            return !in_array($prev, self::NOT_A_READ_AFTER, true) && !in_array($next, ['(', '{', T_DOUBLE_COLON], true)
+                && !self::isDeclarationName($tokens, $i) // a read is never followed by '{': `implements A, _X {`
                 ? $i
                 : null;
         }
@@ -519,6 +534,123 @@ final class LanguageConstantGuard
         $close = ',' === ($tokens[$arg + 1][0] ?? null) ? $arg + 2 : $arg + 1; // optional trailing comma
 
         return $constant === self::literal($tokens, $arg) && ')' === ($tokens[$close][0] ?? null) ? $arg : null;
+    }
+
+    /** The '&' token in each of PHP 8.1's spellings. */
+    private const AMPERSANDS = ['&', T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG];
+
+    /** Tokens that may sit between the names of one type declaration. */
+    private const TYPE_JOIN = [
+        '|', '&', T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG, '?',
+        T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_ARRAY, T_CALLABLE,
+    ];
+
+    /**
+     * Whether the name at $i is a declaration, not an expression: a parameter,
+     * property or catch type (`_X $v`, `?_X $v`, `_X|Y $v`), a return type
+     * (`): _X {`) or an attribute name (`#[_X]`, `#[A, _X(1)]`). Of two
+     * token-identical spellings, `_X & $v` reads and `_X &$v` declares; the
+     * declaration is taken only when a type name precedes the variable.
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function isDeclarationName(array $tokens, int $i): bool
+    {
+        // Forward over the rest of a type to the variable it declares.
+        $q = $i + 1;
+        while (in_array($tokens[$q][0] ?? null, self::TYPE_JOIN, true)) {
+            $q++;
+        }
+        if (in_array($tokens[$q][0] ?? null, [T_VARIABLE, T_ELLIPSIS], true)
+            && '|' !== $tokens[$q - 1][0] && !in_array($tokens[$q - 1][0], self::AMPERSANDS, true)
+        ) {
+            return true;
+        }
+        // Backward over the rest of a type to what introduces it.
+        $p = $i - 1;
+        while (in_array($tokens[$p][0] ?? null, self::TYPE_JOIN, true)) {
+            $p--;
+        }
+        if ('(' === ($tokens[$p][0] ?? null) && T_CATCH === ($tokens[$p - 1][0] ?? null)) {
+            return true;
+        }
+        if (':' === ($tokens[$p][0] ?? null) && ')' === ($tokens[$p - 1][0] ?? null) && self::closesSignature($tokens, $p - 1)) {
+            return true;
+        }
+
+        return self::isAttributeName($tokens, $i);
+    }
+
+    /**
+     * Whether the ')' at $i ends a function, closure or arrow-function
+     * parameter list (a closure's `use (...)` list included).
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function closesSignature(array $tokens, int $i): bool
+    {
+        $k = self::matchingOpen($tokens, $i) - 1;
+        if ($k >= 1 && T_USE === $tokens[$k][0] && ')' === $tokens[$k - 1][0]) {
+            $k = self::matchingOpen($tokens, $k - 1) - 1; // the parameter list before `use (...)`
+        }
+        if ($k >= 0 && T_STRING === $tokens[$k][0]) {
+            $k--; // the function's name
+        }
+        if ($k >= 0 && in_array($tokens[$k][0], self::AMPERSANDS, true)) {
+            $k--; // by-reference return
+        }
+
+        return $k >= 0 && in_array($tokens[$k][0], [T_FUNCTION, T_FN], true);
+    }
+
+    /**
+     * Index of the '(' matching the ')' at $i (-1 when unbalanced).
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function matchingOpen(array $tokens, int $i): int
+    {
+        $depth = 0;
+        for ($j = $i; $j >= 0; $j--) {
+            if (')' === $tokens[$j][0]) {
+                $depth++;
+            } elseif ('(' === $tokens[$j][0] && 0 === --$depth) {
+                return $j;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Whether the name at $i is an attribute's name: between `#[` and it come
+     * only other attribute names, their balanced argument lists and commas.
+     *
+     * @param list<array{0: int|string, 1: string, 2: int}> $tokens
+     */
+    private static function isAttributeName(array $tokens, int $i): bool
+    {
+        $depth = 0;
+        for ($p = $i - 1; $p >= 0; $p--) {
+            $t = $tokens[$p][0];
+            if (')' === $t || ']' === $t) {
+                $depth++;
+            } elseif ('(' === $t || '[' === $t) {
+                if (0 === $depth) {
+                    return false; // inside an argument list
+                }
+                $depth--;
+            } elseif (0 === $depth) {
+                if (T_ATTRIBUTE === $t) {
+                    return true;
+                }
+                if (!in_array($t, [',', T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED], true)) {
+                    return false;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

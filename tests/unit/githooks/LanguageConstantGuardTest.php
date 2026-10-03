@@ -87,6 +87,12 @@ final class LanguageConstantGuardTest extends TestCase
             'fallback, read after a called arrow function' => ["defined('_ZZ_PROBE') || define('_ZZ_PROBE', 'text');\n\$v = (fn () => 1)() . _ZZ_PROBE;"],
             'quoted name, comments, PHPDoc' => ["\$k = '_ZZ_PROBE'; // _ZZ_PROBE\n/** @see _ZZ_PROBE */\n/* _ZZ_PROBE */"],
             'property, method, class const' => ["\$o->_ZZ_PROBE;\n\$o->_ZZ_PROBE();\nFoo::_ZZ_PROBE;\n_ZZ_PROBE();"],
+            'parameter and return types'    => ["function f(_ZZ_PROBE \$v, ?_ZZ_PROBE \$w, _ZZ_PROBE|null ...\$rest): _ZZ_PROBE {}\n\$c = function () use (\$x): ?_ZZ_PROBE {};\n\$a = fn (_ZZ_PROBE \$v): _ZZ_PROBE => 1;\nfunction &g(): \\Foo|_ZZ_PROBE {}"],
+            'property types'                => ["class C {\n    public _ZZ_PROBE \$v;\n    private ?_ZZ_PROBE \$w;\n    public static _ZZ_PROBE|int \$x;\n}"],
+            'catch type'                    => ["try {\n} catch (_ZZ_PROBE | \\Throwable \$e) {\n}"],
+            'attribute names'               => ["#[_ZZ_PROBE]\nclass C {}\n#[A(1), _ZZ_PROBE(2)]\nfunction g() {}"],
+            'goto label'                    => ["_ZZ_PROBE:\necho 1;\ngoto _ZZ_PROBE;"],
+            'last interface before a body'  => ["class C implements A, _ZZ_PROBE {}\ninterface I extends A, _ZZ_PROBE {}"],
         ];
     }
 
@@ -102,6 +108,13 @@ final class LanguageConstantGuardTest extends TestCase
     {
         return [
             'bare read'                              => ['echo _ZZ_PROBE;', [1]],
+            'ternary else branch'                    => ["\$v = \$c ? 1 : _ZZ_PROBE;", [1]],
+            'ternary else after a call'              => ["\$v = g(\$a) ? h() : _ZZ_PROBE;", [1]],
+            'bitwise or with a variable'             => ["\$v = _ZZ_PROBE | \$y;", [1]],
+            'bitwise and with a variable'            => ["echo _ZZ_PROBE & \$m;", [1]],
+            'case label value'                       => ["switch (\$a) {\n    case _ZZ_PROBE:\n        break;\n}", [2]],
+            'attribute argument'                     => ["#[A(_ZZ_PROBE)]\nclass C {}", [1]],
+            'read beside a typed parameter default'  => ["function f(Foo \$v = _ZZ_PROBE) {}", [1]],
             'fully qualified bare read'              => ['echo \\_ZZ_PROBE;', [1]],
             'constant() outside a guard'             => ["echo constant('_ZZ_PROBE');", [1]],
             'constant() with a trailing comma'       => ["echo constant('_ZZ_PROBE',);", [1]],
