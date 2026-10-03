@@ -211,7 +211,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function anExistingDenyAllGuardIsKeptAsItIs(): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($dir . '/.htaccess', "# site-specific rules\nRequire all denied\n");
         file_put_contents($dir . '/index.html', '<!-- keep -->');
 
@@ -224,7 +224,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function anOlderDenyFromAllGuardIsAccepted(): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($dir . '/.htaccess', "Order allow,deny\nDeny from all\n");
 
         self::assertTrue($this->prepare($dir));
@@ -234,7 +234,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function anEmptyGuardIsRewritten(): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($dir . '/.htaccess', '');
 
         self::assertTrue($this->prepare($dir));
@@ -274,7 +274,7 @@ final class DumpDirectoryGuardTest extends TestCase
     {
         // Apache tokenizes these as the plain deny, so the validator must too.
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($dir . '/.htaccess', "Require \"all\" \\\n  denied\n");
 
         self::assertTrue($this->prepare($dir));
@@ -298,7 +298,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function aGuardWhoseDenyIsScopedOrOverriddenFailsClosed(string $rules): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($dir . '/.htaccess', $rules);
 
         self::assertFalse($this->prepare($dir));
@@ -342,7 +342,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function symlinkedGuardFilesAreRefused(): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($this->base . DIRECTORY_SEPARATOR . 'outside.htaccess', "Require all denied\n");
         if (!self::makeLink($this->base . DIRECTORY_SEPARATOR . 'outside.htaccess', $dir . '/.htaccess')) {
             self::markTestSkipped('symlink() is not permitted here.');
@@ -360,7 +360,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function aGuardWithoutADenyAllRuleFailsClosedAndIsLeftAlone(): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         file_put_contents($dir . '/.htaccess', "Options +Indexes\n");
 
         self::assertFalse($this->prepare($dir));
@@ -380,7 +380,7 @@ final class DumpDirectoryGuardTest extends TestCase
     public function aGuardFileThatCannotBeWrittenFailsClosed(): void
     {
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
-        mkdir($dir);
+        mkdir($dir, 0700);
         // A directory named .htaccess: the guard can be neither read nor written.
         mkdir($dir . DIRECTORY_SEPARATOR . '.htaccess');
 
