@@ -18,7 +18,7 @@ use PHPUnit\Framework\TestCase;
 use Xoops\Upgrade\XoopsUpgrade;
 
 /**
- * {@see XoopsUpgrade::removeLeftover()}: the clean-up the upgrade scripts use
+ * {@see XoopsUpgrade::removeLeftover()}: the clean-up that the upgrade scripts use
  * for temporary license files and emptied library directories.
  *
  * It removes a file, a link or an empty directory, reports whether anything

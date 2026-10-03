@@ -330,7 +330,8 @@ if ($xoopsConfig['use_ssl'] && $sslSessionId !== '' && preg_match('/^[a-zA-Z0-9,
     session_name($xoopsConfig['session_name']);
     session_cache_expire($xoopsConfig['session_expire']);
     // gc_maxlifetime can only be changed before the session starts.
-    if (PHP_SESSION_ACTIVE !== session_status()
+    if (
+        PHP_SESSION_ACTIVE !== session_status()
         && false === ini_set('session.gc_maxlifetime', (string) ($xoopsConfig['session_expire'] * 60))
     ) {
         trigger_error('The session lifetime setting could not be applied.', E_USER_WARNING);
