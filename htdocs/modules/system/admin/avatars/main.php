@@ -360,11 +360,12 @@ switch ($op) {
             }
             redirect_header('admin.php?fct=avatars', 2, sprintf(_AM_SYSTEM_AVATAR_FAILDEL, $avatar_id));
         }
-        // Delete file — validate path stays within upload directory
-        $avatarPath = realpath(XOOPS_UPLOAD_PATH . '/' . $file);
-        $uploadRoot = realpath(XOOPS_UPLOAD_PATH);
-        if ($uploadRoot !== false && $avatarPath !== false && str_starts_with($avatarPath, $uploadRoot . DIRECTORY_SEPARATOR) && is_file($avatarPath) && !unlink($avatarPath)) {
-            trigger_error('Failed to delete avatar file: ' . basename($avatarPath), E_USER_WARNING);
+        // Delete the file only when the stored name resolves to a file inside
+        // the upload directory; a failed removal is reported by basename.
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+        $avatarFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $file);
+        if ('' !== $avatarFile) {
+            xoops_remove_file_quietly($avatarFile, 'avatar image');
         }
         redirect_header('admin.php?fct=avatars', 2, _AM_SYSTEM_DBUPDATED);
         break;

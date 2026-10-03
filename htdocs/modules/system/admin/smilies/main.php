@@ -218,15 +218,13 @@ switch ($op) {
                 redirect_header('admin.php?fct=smilies', 3, implode(',', $GLOBALS['xoopsSecurity']->getErrors()));
             }
             if ($smilies_Handler->delete($obj)) {
-                // Contain the unlink to the uploads directory: a stored
-                // smile_url containing ../ must not drive a delete outside it.
-                $uploadReal = realpath(XOOPS_UPLOAD_PATH);
-                $fileReal   = realpath(XOOPS_UPLOAD_PATH . '/' . $obj->getVar('smile_url'));
-                if (false !== $uploadReal && false !== $fileReal
-                    && str_starts_with($fileReal, $uploadReal . DIRECTORY_SEPARATOR)
-                    && is_file($fileReal)) {
-                    chmod($fileReal, 0777);
-                    unlink($fileReal);
+                // Remove the image only when the stored name resolves to a file
+                // inside the upload directory; a smile_url containing ../ must
+                // not drive a delete outside it.
+                require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                $smileFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, (string) $obj->getVar('smile_url', 'n'));
+                if ('' !== $smileFile) {
+                    xoops_remove_file_quietly($smileFile, 'smiley image');
                 }
                 redirect_header('admin.php?fct=smilies', 2, _AM_SYSTEM_SMILIES_SAVE);
             } else {
