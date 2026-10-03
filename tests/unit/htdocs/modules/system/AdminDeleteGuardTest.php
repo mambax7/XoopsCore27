@@ -45,12 +45,12 @@ final class AdminDeleteGuardTest extends TestCase
         self::assertSame(
             1,
             preg_match(
-                '/case \'userrank_delete\':.*?\$obj\s*=\s*\$userrank_Handler->get\(\$rank_id\);'
+                '/case \'userrank_delete\':.*?\$obj\s*=\s*\$rank_id\s*>\s*0\s*\?\s*\$userrank_Handler->get\(\$rank_id\)\s*:\s*null;'
                 . '\s*if\s*\(\s*!is_object\(\$obj\)\s*\)\s*\{\s*redirect_header\(\'admin\.php\?fct=userrank\',\s*2,\s*_AM_SYSTEM_DBERROR\);\s*\}'
                 . '\s*if\s*\(\s*Request::getInt\(\'ok\'/s',
                 self::source('userrank')
             ),
-            'The rank must be checked right after get(), before the delete and the confirmation page use it.'
+            'The rank must be looked up only for a positive id (get(0) returns a new object) and checked before the delete and the confirmation page use it.'
         );
     }
 
@@ -81,12 +81,18 @@ final class AdminDeleteGuardTest extends TestCase
     #[Test]
     public function theAvatarDeleteReportsAFailedTokenCheck(): void
     {
-        $src = self::source('avatars');
+        // Scoped to the delfileok case: the save case carries the same redirect.
+        $src   = self::source('avatars');
+        $start = strpos($src, "case 'delfileok':");
+        self::assertNotFalse($start);
+        $end = strpos($src, 'case ', $start + 1);
+        self::assertNotFalse($end);
+        $block = substr($src, $start, $end - $start);
 
         self::assertStringContainsString(
             "redirect_header('admin.php?fct=avatars', 3, implode('<br>', \$GLOBALS['xoopsSecurity']->getErrors()));",
-            $src
+            $block
         );
-        self::assertStringNotContainsString("redirect_header('admin.php?fct=avatars', 1, 3,", $src);
+        self::assertStringNotContainsString("redirect_header('admin.php?fct=avatars', 1, 3,", $block);
     }
 }
