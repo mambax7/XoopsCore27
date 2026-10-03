@@ -399,7 +399,7 @@ class Protector
      * seeing an emptied or half-written ban list, bandwidth file or
      * .htaccess: they see the old file or the new one. A failed write leaves
      * the old content in place and removes the temporary file, and an existing
-     * file this process cannot write is left alone. A scoped error
+     * file this process cannot write, or a symlink, is left alone. A scoped error
      * handler keeps PHP's warnings, which name the full server path, out of
      * the page.
      *
@@ -414,8 +414,10 @@ class Protector
         try {
             // An existing file PHP cannot write (another owner's .htaccess, say)
             // is refused, as fopen('w') refused it: a rename would replace it
-            // although its content could not be read and carried over.
-            if (is_dir($path) || (is_file($path) && !is_writable($path))) {
+            // although its content could not be read and carried over. A
+            // symlink is refused too: the rename would replace the link, and
+            // following it would write wherever a planted link points.
+            if (is_link($path) || is_dir($path) || (is_file($path) && !is_writable($path))) {
                 return false;
             }
             $tmp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';

@@ -861,6 +861,37 @@ class ProtectorTest extends TestCase
     }
 
     #[Test]
+    public function writeFileAtomicRefusesASymlink(): void
+    {
+        $parent = sys_get_temp_dir() . '/protector-link-' . bin2hex(random_bytes(6));
+        $target = $parent . '/elsewhere.conf';
+        $link   = $parent . '/.htaccess';
+        mkdir($parent);
+        file_put_contents($target, "keep me\n");
+        set_error_handler(static fn (): bool => true);
+        try {
+            $made = symlink($target, $link);
+        } finally {
+            restore_error_handler();
+        }
+        if (!$made) {
+            unlink($target);
+            rmdir($parent);
+            $this->markTestSkipped('symlink() is not available here.');
+        }
+        try {
+            $this->assertFalse($this->writeAtomic($link, "deny from 192.0.2.1\n"));
+            $this->assertTrue(is_link($link), 'The link must not be replaced by a regular file.');
+            $this->assertSame("keep me\n", file_get_contents($target), 'Nothing may be written through the link.');
+            $this->assertSame(['.htaccess', 'elsewhere.conf'], array_values(array_diff(scandir($parent) ?: [], ['.', '..'])), 'No temporary file may be left.');
+        } finally {
+            unlink($link);
+            unlink($target);
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
     public function writeFileAtomicKeepsTheOldFileAndCleansUpWhenTheRenameFails(): void
     {
         $parent = sys_get_temp_dir() . '/protector-renamefail-' . bin2hex(random_bytes(6));
