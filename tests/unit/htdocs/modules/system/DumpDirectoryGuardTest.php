@@ -249,6 +249,8 @@ final class DumpDirectoryGuardTest extends TestCase
             'pair with a grant in one'  => ["<IfModule mod_authz_core.c>\nRequire all granted\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
             'deny in another IfModule'  => ["<IfModule mod_rewrite.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
             'reversed version pair'     => ["<IfModule mod_authz_core.c>\nDeny from all\n</IfModule>\n<IfModule !mod_authz_core.c>\nRequire all denied\n</IfModule>\n"],
+            'pair with AuthMerging Or'  => ["AuthMerging Or\n<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
+            'bare deny, AuthMerging And' => ["Require all denied\nAuthMerging And\n"],
         ];
     }
 
@@ -383,6 +385,7 @@ final class DumpDirectoryGuardTest extends TestCase
         }
         $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
         mkdir($dir, 0755);
+        chmod($dir, 0755); // mkdir() is subject to the umask; chmod() is not
         clearstatcache(true, $dir);
         self::assertSame(0755, fileperms($dir) & 0777, 'Precondition: the directory starts out readable by others.');
 
@@ -517,14 +520,12 @@ final class DumpDirectoryGuardTest extends TestCase
     }
 
     #[Test]
-    public function aPartialDumpNeverHasADownloadableNameEvenWhenItCannotBeRemoved(): void
+    public function theDownloadActionNeverAcceptsAStageFileName(): void
     {
-        // The stage name is what a short write leaves behind; the download
-        // action only accepts dump_<date>_<16 hex>.sql, so a leftover stage
-        // file cannot be served even if unlink() fails.
-        DumpWriteProbe::$shortWrite = 4;
-        $this->dumpWrite();
-
+        // A short write leaves at most a .part stage file behind. The download
+        // action only accepts dump_<date>_<16 hex>.sql, so a stage file that
+        // unlink() could not remove is still not downloadable. (The unlink()
+        // failure itself is not simulated here; this pins the name contract.)
         $src = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/maintenance/main.php');
         self::assertSame(1, preg_match('/preg_match\(\'(\/\^dump_[^\']*\\\\.sql\$\/)\'/', $src, $m), 'The download name pattern is in place.');
         self::assertSame(0, preg_match($m[1], 'dump_2026.10.02_12.00.00_0123456789abcdef.sql.part'));

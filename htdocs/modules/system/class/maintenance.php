@@ -715,9 +715,13 @@ class SystemMaintenance
      * Absolute path of the SQL-dump directory, without touching the disk.
      *
      * Dumps hold password hashes, e-mail addresses and the full configuration,
-     * so they are written under XOOPS_VAR_PATH (outside the web root) and served
-     * only through the admin-authenticated download action — never as a
-     * directly fetchable file under the web root. There is no fallback: without
+     * so they are written under XOOPS_VAR_PATH and served through the
+     * admin-authenticated download action. The installer allows XOOPS_VAR_PATH
+     * inside the document root; there the deny-all .htaccess written by
+     * prepareDumpDirectory() and the unguessable file name are the only things
+     * between a dump and a direct request, and a server that ignores .htaccess
+     * relies on the name alone. Keep the data directory outside the web root.
+     * There is no fallback: without
      * a configured XOOPS_VAR_PATH the path is '' and no dump is written. The
      * system temp dir is not an option, as anyone on the host can own a
      * 'dumps' entry there and read what is written into it, and the empty
@@ -896,8 +900,9 @@ class SystemMaintenance
      * any Apache). A deny in any other container does not count, since
      * Apache may skip the block (a deny scoped to <Files> or wrapped in
      * <RequireAny>), and any grant fails the check: another `Require` line,
-     * `Allow from` or `Satisfy any`. Rules that cannot be established as a
-     * directory-wide deny fail closed.
+     * `Allow from`, `Satisfy any`, or an `AuthMerging` other than Off (it can
+     * merge the deny with a grant inherited from a parent). Rules that cannot
+     * be established as a directory-wide deny fail closed.
      *
      * @param string $rules .htaccess contents
      * @return bool
@@ -926,8 +931,10 @@ class SystemMaintenance
                 $containers[] = [strtolower($m[1]), strtolower(trim($m[2]))];
                 continue;
             }
-            if (1 === preg_match('/^(Require\s+(?!all\s+denied\s*$)|Allow\s+from\b|Satisfy\s+any\b)/i', $line)) {
-                return false; // a grant anywhere can open the directory
+            // A grant anywhere can open the directory, and AuthMerging (other
+            // than Off) lets a deny be OR-ed with an inherited grant.
+            if (1 === preg_match('/^(Require\s+(?!all\s+denied\s*$)|Allow\s+from\b|Satisfy\s+any\b|AuthMerging\s+(?!Off\s*$))/i', $line)) {
+                return false;
             }
             $require = 1 === preg_match('/^Require\s+all\s+denied$/i', $line);
             $deny    = 1 === preg_match('/^Deny\s+from\s+all$/i', $line);
