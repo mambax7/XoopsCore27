@@ -68,13 +68,13 @@ function protector_prepare()
 
     // $force_override = true ;
     if ($force_override || !empty($conf['enable_dblayertrap'])) {
-        @define('PROTECTOR_ENABLED_ANTI_SQL_INJECTION', 1);
+        defined('PROTECTOR_ENABLED_ANTI_SQL_INJECTION') || define('PROTECTOR_ENABLED_ANTI_SQL_INJECTION', 1);
         $protector->dblayertrap_init($force_override);
     }
 
     // "Big Umbrella" subset version
     if (!empty($conf['enable_bigumbrella'])) {
-        @define('PROTECTOR_ENABLED_ANTI_XSS', 1);
+        defined('PROTECTOR_ENABLED_ANTI_XSS') || define('PROTECTOR_ENABLED_ANTI_XSS', 1);
         $protector->bigumbrella_init();
     }
 

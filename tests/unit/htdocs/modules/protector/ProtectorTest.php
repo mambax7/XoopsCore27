@@ -23,6 +23,7 @@ class ProtectorTest extends TestCase
             }
             // Ensure protector var directory constant path exists conceptually
             require_once XOOPS_PATH . '/modules/protector/class/protector.php';
+            require_once __DIR__ . '/ProtectorRenameFails.php';
             self::$loaded = true;
         }
     }
@@ -683,6 +684,300 @@ class ProtectorTest extends TestCase
         $this->assertStringNotContainsString('move_uploaded_file(', $body);
         $this->assertStringNotContainsString('protector_upload_temporary', $body);
         $this->assertStringNotContainsString('@unlink(', $body);
+    }
+
+    // ---------------------------------------------------------------
+    // writeFileAtomic — complete, atomic replacement of Protector's files
+    // ---------------------------------------------------------------
+
+    /**
+     * Call Protector::writeFileAtomic() and fail the test if any PHP warning
+     * escapes it (PHP's file warnings name the full server path).
+     */
+    private function writeAtomic(string $path, string $content, string $class = \Protector::class): bool
+    {
+        $leaked = [];
+        set_error_handler(static function (int $errno, string $message) use (&$leaked): bool {
+            $leaked[] = $message;
+
+            return true;
+        });
+        try {
+            $result = (new \ReflectionMethod($class, 'writeFileAtomic'))->invoke(null, $path, $content);
+        } finally {
+            restore_error_handler();
+        }
+        $this->assertSame([], $leaked, 'writeFileAtomic() let a PHP warning escape.');
+
+        return $result;
+    }
+
+    #[Test]
+    public function writeFileAtomicWritesANewFile(): void
+    {
+        $path = sys_get_temp_dir() . '/protector-write-' . bin2hex(random_bytes(6));
+        try {
+            $this->assertTrue($this->writeAtomic($path, "1700000000\n"));
+            $this->assertSame("1700000000\n", file_get_contents($path));
+            if ('\\' !== DIRECTORY_SEPARATOR) {
+                clearstatcache();
+                $this->assertSame(0666 & ~umask(), fileperms($path) & 0777, 'A new file gets the mode a plain create would, so the web server can still read it.');
+            }
+        } finally {
+            is_file($path) && unlink($path);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicCreatesTheTemporaryFilePrivate(): void
+    {
+        // A 0600 target must never pass through a 0644 temporary file: a
+        // descriptor opened in that window survives the later chmod().
+        $body = self::methodBody(self::protectorSource('class/protector.php'), 'writeFileAtomic');
+
+        $this->assertSame(1, preg_match('/umask\(0077\);\s*try\s*\{\s*\$fp\s*=\s*fopen\(\s*\$tmp\s*,\s*.x.\s*\);\s*\}\s*finally\s*\{\s*umask\(\$umask\);/', $body), 'The temporary file must be created under a 0077 umask that is restored right after.');
+    }
+
+    #[Test]
+    public function writeFileAtomicReplacesLongerContentCompletely(): void
+    {
+        $path = sys_get_temp_dir() . '/protector-write-' . bin2hex(random_bytes(6));
+        file_put_contents($path, str_repeat('old ban list ', 50));
+        try {
+            $this->assertTrue($this->writeAtomic($path, "short\n"));
+            $this->assertSame("short\n", file_get_contents($path));
+        } finally {
+            unlink($path);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicFailsWithoutAWarningWhenTheDirectoryIsMissing(): void
+    {
+        $path = sys_get_temp_dir() . '/protector-missing-' . bin2hex(random_bytes(6)) . '/badips.serial';
+
+        $this->assertFalse($this->writeAtomic($path, 'x'));
+    }
+
+    #[Test]
+    public function writeFileAtomicFailsWithoutAWarningWhenThePathIsADirectory(): void
+    {
+        $dir = sys_get_temp_dir() . '/protector-dir-' . bin2hex(random_bytes(6));
+        mkdir($dir);
+        try {
+            $this->assertFalse($this->writeAtomic($dir, 'x'));
+        } finally {
+            rmdir($dir);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicLeavesNoTemporaryFileBehind(): void
+    {
+        $parent = sys_get_temp_dir() . '/protector-atomic-' . bin2hex(random_bytes(6));
+        mkdir($parent);
+        try {
+            $this->assertTrue($this->writeAtomic($parent . '/badips.serial', "a:0:{}\n"));
+            mkdir($parent . '/target-is-a-directory');
+            $this->assertFalse($this->writeAtomic($parent . '/target-is-a-directory', 'x'));
+
+            $this->assertSame(
+                ['badips.serial', 'target-is-a-directory'],
+                array_values(array_diff(scandir($parent) ?: [], ['.', '..'])),
+                'Only the target and the directory may remain: no temporary file after success or failure.'
+            );
+        } finally {
+            is_file($parent . '/badips.serial') && unlink($parent . '/badips.serial');
+            is_dir($parent . '/target-is-a-directory') && rmdir($parent . '/target-is-a-directory');
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicKeepsTheTargetsPermissions(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            $this->markTestSkipped('chmod() only toggles the read-only flag on Windows.');
+        }
+        $path = sys_get_temp_dir() . '/protector-perms-' . bin2hex(random_bytes(6));
+        file_put_contents($path, 'old');
+        chmod($path, 0640);
+        try {
+            $this->assertTrue($this->writeAtomic($path, 'new'));
+            clearstatcache();
+            $this->assertSame(0640, fileperms($path) & 0777);
+        } finally {
+            unlink($path);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicFallsBackToALockedInPlaceWriteWhenTheDirectoryIsReadOnly(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR || (function_exists('posix_geteuid') && 0 === posix_geteuid())) {
+            $this->markTestSkipped('A read-only directory cannot refuse new files here (Windows, or running as root).');
+        }
+        // A document root PHP may not write to, holding a writable .htaccess.
+        $dir  = sys_get_temp_dir() . '/protector-ro-' . bin2hex(random_bytes(6));
+        $path = $dir . '/.htaccess';
+        mkdir($dir);
+        file_put_contents($path, "old rules\n");
+        chmod($path, 0644);
+        chmod($dir, 0555);
+        try {
+            $this->assertTrue($this->writeAtomic($path, "deny from 192.0.2.1\n"));
+            $this->assertSame("deny from 192.0.2.1\n", file_get_contents($path));
+            $this->assertSame(['.htaccess'], array_values(array_diff(scandir($dir) ?: [], ['.', '..'])));
+        } finally {
+            chmod($dir, 0755);
+            unlink($path);
+            rmdir($dir);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicRefusesAnExistingFileItCannotWrite(): void
+    {
+        if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
+            $this->markTestSkipped('root can write any file.');
+        }
+        // A writable directory holding a .htaccess PHP may neither read nor
+        // write: fopen('w') refused it, and so must the rename.
+        $parent = sys_get_temp_dir() . '/protector-rofile-' . bin2hex(random_bytes(6));
+        $path   = $parent . '/.htaccess';
+        mkdir($parent);
+        file_put_contents($path, "RewriteEngine On\n");
+        chmod($path, 0444);
+        try {
+            $this->assertFalse($this->writeAtomic($path, "deny from 192.0.2.1\n"));
+            chmod($path, 0644);
+            $this->assertSame("RewriteEngine On\n", file_get_contents($path), 'The file it cannot write must keep its rules.');
+            $this->assertSame(['.htaccess'], array_values(array_diff(scandir($parent) ?: [], ['.', '..'])), 'No temporary file may be left.');
+        } finally {
+            chmod($path, 0644);
+            unlink($path);
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicRefusesASymlink(): void
+    {
+        $parent = sys_get_temp_dir() . '/protector-link-' . bin2hex(random_bytes(6));
+        $target = $parent . '/elsewhere.conf';
+        $link   = $parent . '/.htaccess';
+        mkdir($parent);
+        file_put_contents($target, "keep me\n");
+        set_error_handler(static fn (): bool => true);
+        try {
+            $made = symlink($target, $link);
+        } finally {
+            restore_error_handler();
+        }
+        if (!$made) {
+            unlink($target);
+            rmdir($parent);
+            $this->markTestSkipped('symlink() is not available here.');
+        }
+        try {
+            $this->assertFalse($this->writeAtomic($link, "deny from 192.0.2.1\n"));
+            $this->assertTrue(is_link($link), 'The link must not be replaced by a regular file.');
+            $this->assertSame("keep me\n", file_get_contents($target), 'Nothing may be written through the link.');
+            $this->assertSame(['.htaccess', 'elsewhere.conf'], array_values(array_diff(scandir($parent) ?: [], ['.', '..'])), 'No temporary file may be left.');
+        } finally {
+            unlink($link);
+            unlink($target);
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicKeepsTheOldFileAndCleansUpWhenTheRenameFails(): void
+    {
+        $parent = sys_get_temp_dir() . '/protector-renamefail-' . bin2hex(random_bytes(6));
+        $path   = $parent . '/badips.serial';
+        mkdir($parent);
+        file_put_contents($path, "old\n");
+        try {
+            $this->assertFalse($this->writeAtomic($path, "new\n", ProtectorRenameFails::class));
+            $this->assertSame("old\n", file_get_contents($path), 'A failure after the temporary file exists must leave the target untouched.');
+            $this->assertSame(['badips.serial'], array_values(array_diff(scandir($parent) ?: [], ['.', '..'])), 'The temporary file must be removed.');
+        } finally {
+            unlink($path);
+            rmdir($parent);
+        }
+    }
+
+    #[Test]
+    public function writeFileAtomicDoesNotTruncateTheTargetWhenTheDirectoryIsWritable(): void
+    {
+        // A temporary file that cannot be opened in a writable directory (disk
+        // full, quota) must not fall through to the truncating in-place write.
+        $body = self::methodBody(self::protectorSource('class/protector.php'), 'writeFileAtomic');
+
+        $this->assertSame(1, preg_match('/!is_writable\(\s*dirname\(\s*\$path\s*\)\s*\)\s*&&[\s\S]*?writeFileInPlace\(/', $body), 'The in-place fallback must require a directory that refuses new files.');
+    }
+
+    #[Test]
+    public function writeFileAtomicRenamesACompleteFileIntoPlace(): void
+    {
+        $src  = self::protectorSource('class/protector.php');
+        $body = self::methodBody($src, 'writeFileAtomic');
+
+        $this->assertSame(1, preg_match('/static::moveIntoPlace\(\s*\$tmp\s*,\s*\$path\s*\)/', $body), 'The complete temporary file must be moved over the target.');
+        $this->assertSame(1, preg_match('/\brename\(\s*\$tmp\s*,\s*\$path\s*\)/', self::methodBody($src, 'moveIntoPlace')), 'moveIntoPlace() must be a rename().');
+        $this->assertSame(1, preg_match('/\$complete\s*=\s*fclose\(\s*\$fp\s*\)\s*&&\s*\$complete/', $body), 'A failure reported by fclose() must keep the old file in place.');
+        $this->assertSame(0, preg_match('/\bftruncate\(|fopen\(\s*\$path\b/', $body), 'The live file must never be opened or truncated in place.');
+    }
+
+    private static function protectorSource(string $relative): string
+    {
+        $src = file_get_contents(XOOPS_PATH . '/modules/protector/' . $relative);
+        self::assertNotFalse($src);
+
+        return $src;
+    }
+
+    private static function methodBody(string $src, string $method): string
+    {
+        $start = strpos($src, 'function ' . $method . '(');
+        self::assertNotFalse($start, "$method() not found");
+        // The method ends where the next method of any visibility begins.
+        $end = 1 === preg_match('/\n    (?:(?:public|protected|private|static|final|abstract)\s+)*function\s/', $src, $m, PREG_OFFSET_CAPTURE, $start + 1)
+            ? $m[0][1]
+            : false;
+
+        return substr($src, $start, false === $end ? null : $end - $start);
+    }
+
+    #[Test]
+    public function banListWritersGoThroughTheAtomicWriter(): void
+    {
+        $src = self::protectorSource('class/protector.php');
+
+        foreach (['write_file_bwlimit', 'write_file_badips'] as $method) {
+            $body = self::methodBody($src, $method);
+            $this->assertSame(1, preg_match('/return\s+static::writeFileAtomic\(/', $body), "$method() must return the result of writeFileAtomic().");
+            $this->assertSame(0, preg_match('/@\s*(fopen|flock)\(/', $body), "$method() still suppresses errors.");
+        }
+    }
+
+    #[Test]
+    public function denyByHtaccessReportsAFailedWrite(): void
+    {
+        $body = self::methodBody(self::protectorSource('class/protector.php'), 'deny_by_htaccess');
+
+        $this->assertSame(1, preg_match('/return\s+static::writeFileAtomic\(\s*\$target_htaccess\s*,/', $body), 'The ban must report whether .htaccess was written.');
+        $this->assertSame(1, preg_match('/static::writeFileAtomic\(\s*\$backup_htaccess\s*,/', $body), 'The backup must go through the checked writer.');
+        $this->assertSame(0, preg_match('/\bfopen\(|@\s*flock\(/', $body), 'deny_by_htaccess() still opens files directly.');
+    }
+
+    #[Test]
+    public function noProtectorConstantIsDefinedWithErrorSuppression(): void
+    {
+        $this->assertSame(0, preg_match('/@\s*define\(/', self::protectorSource('class/protector.php')));
+        $this->assertSame(0, preg_match('/@\s*define\(/', self::protectorSource('include/precheck_functions.php')));
+        $this->assertSame(1, preg_match("/defined\\('XOOPS_DB_ALTERNATIVE'\\)\\s*\\|\\|\\s*define\\('XOOPS_DB_ALTERNATIVE'/", self::protectorSource('class/protector.php')));
     }
 
     // ---------------------------------------------------------------
