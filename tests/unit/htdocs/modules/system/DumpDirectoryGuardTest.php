@@ -261,7 +261,21 @@ final class DumpDirectoryGuardTest extends TestCase
             'reversed version pair'     => ["<IfModule mod_authz_core.c>\nDeny from all\n</IfModule>\n<IfModule !mod_authz_core.c>\nRequire all denied\n</IfModule>\n"],
             'pair with AuthMerging Or'  => ["AuthMerging Or\n<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n"],
             'bare deny, AuthMerging And' => ["Require all denied\nAuthMerging And\n"],
+            'grant split by a continuation' => ["Deny from all\nAllow \\\nfrom all\n"],
+            'quoted Satisfy any'        => ["Deny from all\nSatisfy \"any\"\n"],
+            'quoted Allow from'         => ["Deny from all\nAllow 'from' all\n"],
         ];
+    }
+
+    #[Test]
+    public function aQuotedOrContinuedDenyIsStillADeny(): void
+    {
+        // Apache tokenizes these as the plain deny, so the validator must too.
+        $dir = $this->base . DIRECTORY_SEPARATOR . 'dumps';
+        mkdir($dir);
+        file_put_contents($dir . '/.htaccess', "Require \"all\" \\\n  denied\n");
+
+        self::assertTrue($this->prepare($dir));
     }
 
     #[Test]

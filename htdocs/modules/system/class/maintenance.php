@@ -931,6 +931,10 @@ class SystemMaintenance
      * merge the deny with a grant inherited from a parent). Rules that cannot
      * be established as a directory-wide deny fail closed.
      *
+     * The text is read the way Apache reads it first: a line ending in a
+     * backslash continues on the next one, and quotes around an argument
+     * (`Satisfy "any"`) are not part of it.
+     *
      * @param string $rules .htaccess contents
      * @return bool
      */
@@ -940,8 +944,9 @@ class SystemMaintenance
         $bare       = false;
         $with24     = false; // deny inside <IfModule mod_authz_core.c>
         $with22     = false; // deny inside <IfModule !mod_authz_core.c>
+        $rules      = (string) preg_replace('/\\\\\R/', ' ', $rules); // join continued lines
         foreach (preg_split('/\R/', $rules) ?: [] as $line) {
-            $line = trim($line);
+            $line = trim(str_replace(['"', "'"], '', $line));
             if ('' === $line || '#' === $line[0]) {
                 continue;
             }
