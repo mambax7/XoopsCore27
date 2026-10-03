@@ -222,6 +222,21 @@ class XoopsDatabaseTest extends TestCase
         $this->assertFalse($this->db->isResultSet(42));
     }
 
+    /**
+     * isResultSet() is is_a($result, 'mysqli_result'); its docblock says so to
+     * PHPStan and Psalm, so a one-part guard narrows $result for the fetch
+     * methods that follow. The assertion lives on the mysqli class only: the
+     * abstract XoopsDatabase cannot promise a mysqli_result.
+     */
+    #[Test]
+    public function isResultSetTellsStaticAnalysisTheResultIsAMysqliResult(): void
+    {
+        $doc = (string) (new \ReflectionMethod(\XoopsMySQLDatabase::class, 'isResultSet'))->getDocComment();
+
+        $this->assertMatchesRegularExpression('/@phpstan-assert-if-true\s+\\\\mysqli_result\s+\$result\b/', $doc);
+        $this->assertMatchesRegularExpression('/@psalm-assert-if-true\s+\\\\mysqli_result\s+\$result\b/', $doc);
+    }
+
     // ---------------------------------------------------------------
     // getInsertId / genId tests
     // ---------------------------------------------------------------
