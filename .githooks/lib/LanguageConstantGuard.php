@@ -54,7 +54,7 @@ final class LanguageConstantGuard
      * does not compile on PHP 8).
      */
     private const INLINE_BEFORE = [
-        '=', ',', '[', '(', ';', '{', '}', ':', T_RETURN, T_ECHO, T_PRINT, T_YIELD, T_DOUBLE_ARROW,
+        '=', ',', '[', '(', ';', '{', '}', ':', T_CASE, T_RETURN, T_ECHO, T_PRINT, T_YIELD, T_DOUBLE_ARROW,
         T_OPEN_TAG_WITH_ECHO, T_CONCAT_EQUAL, T_PLUS_EQUAL, T_MINUS_EQUAL, T_MUL_EQUAL,
         T_DIV_EQUAL, T_MOD_EQUAL, T_POW_EQUAL, T_COALESCE_EQUAL, T_AND_EQUAL, T_OR_EQUAL,
         T_XOR_EQUAL, T_SL_EQUAL, T_SR_EQUAL,
@@ -210,7 +210,8 @@ final class LanguageConstantGuard
         $stack     = []; // 'guard', 'block' or 'string' per open brace
         $fallback  = false;
         $stmtStart = 0;
-        $arrow     = false; // a `fn` was seen in the current statement
+        $arrow     = null;  // brace depth at which an arrow function's statement began
+        $signature = false; // inside a function or closure signature, before its body
         $paren     = 0;     // open parentheses: a ';' inside a for header ends no statement
         $found     = [];
 
@@ -226,6 +227,7 @@ final class LanguageConstantGuard
             if ('{' === $type) {
                 $stack[]   = self::opensGuard($tokens, $i, $constant) ? 'guard' : 'block';
                 $stmtStart = $i + 1;
+                $signature = false;
                 continue;
             }
             if (T_CURLY_OPEN === $type || T_DOLLAR_OPEN_CURLY_BRACES === $type) {
@@ -254,18 +256,27 @@ final class LanguageConstantGuard
             if (';' === $type) {
                 if (0 === $paren) {
                     $stmtStart = $i + 1;
-                    $arrow     = false;
+                    $signature = false;
+                    if (null !== $arrow && count($stack) <= $arrow) {
+                        $arrow = null; // the statement holding the arrow function ended
+                    }
                 }
                 continue;
             }
             if (T_FN === $type) {
                 // An arrow function's body runs to the end of its expression;
-                // the rest of the statement is treated as inside it, so the
+                // the rest of the statement (a ';' inside a nested anonymous
+                // class does not end it) is treated as inside it, so the
                 // file-level fallback never covers a read there.
-                $arrow = true;
+                $arrow ??= count($stack);
                 continue;
             }
-            $atFileScope = !$arrow && !in_array('guard', $stack, true) && !in_array('block', $stack, true);
+            if (T_FUNCTION === $type) {
+                $signature = true; // a default value in the signature is not file scope
+                continue;
+            }
+            $atFileScope = null === $arrow && !$signature
+                && !in_array('guard', $stack, true) && !in_array('block', $stack, true);
             if ($atFileScope && $i === $stmtStart && self::isFileFallback($tokens, $i, $constant)) {
                 $fallback = true;
                 continue;
