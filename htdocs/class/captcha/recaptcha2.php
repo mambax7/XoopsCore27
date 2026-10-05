@@ -121,11 +121,12 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
                 CURLOPT_TIMEOUT        => 10,
             ]);
             $curlReturn = curl_exec($curlHandle);
-            curl_close($curlHandle);
             if (is_string($curlReturn)) {
                 return $curlReturn;
             }
             // No warning: a promoting error handler must not stop the stream fallback below.
+            // The handle is released here, not closed: closing is a no-op since PHP 8.0 and deprecated in 8.5 (#153).
+            unset($curlHandle);
         }
 
         $context = stream_context_create([

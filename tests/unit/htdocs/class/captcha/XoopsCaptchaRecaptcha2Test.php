@@ -218,5 +218,6 @@ final class XoopsCaptchaRecaptcha2Test extends TestCase
         self::assertStringContainsString('CURLOPT_POST', $source);
         self::assertSame(1, preg_match("/'method'\s*=>\s*'POST'/", $source), 'The stream fallback must POST too.');
         self::assertSame(1, preg_match("/'follow_location'\s*=>\s*0/", $source), 'The stream fallback must not follow a redirect with the secret.');
+        self::assertStringNotContainsString('curl_close(', $source, 'curl_close() is deprecated on PHP 8.5 (#153).');
     }
 }
