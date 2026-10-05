@@ -157,7 +157,16 @@ final class XoopsCaptchaRecaptcha2Test extends TestCase
             return true;
         });
         try {
-            foreach ([null, '', 'not json', '{"success":"true"}', '[]'] as $answer) {
+            $answers = [
+                null,
+                '',
+                'not json',
+                '{"success":"true"}',
+                '[]',
+                '{"success":false,"error-codes":[[]]}',
+                '{"success":false,"error-codes":[1,null,{"a":1}]}',
+            ];
+            foreach ($answers as $answer) {
                 $captcha = self::captcha($answer);
                 self::assertFalse($captcha->verify(), var_export($answer, true));
                 self::assertSame([], $captcha->reported, var_export($answer, true));

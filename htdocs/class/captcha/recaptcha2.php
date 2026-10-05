@@ -88,7 +88,8 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
             return true;
         }
         $codes = is_array($check) && is_array($check['error-codes'] ?? null) ? $check['error-codes'] : [];
-        $this->reportErrors(array_values(array_map('strval', $codes)));
+        // Google documents string codes; anything else in a malformed answer is dropped, not cast.
+        $this->reportErrors(array_values(array_filter($codes, 'is_string')));
 
         return false;
     }
@@ -117,10 +118,11 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
                 CURLOPT_TIMEOUT        => 10,
             ]);
             $curlReturn = curl_exec($curlHandle);
+            curl_close($curlHandle);
             if (is_string($curlReturn)) {
                 return $curlReturn;
             }
-            trigger_error(curl_error($curlHandle));
+            // No warning: a promoting error handler must not stop the stream fallback below.
         }
 
         $context = stream_context_create([
