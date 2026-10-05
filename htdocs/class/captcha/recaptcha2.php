@@ -71,11 +71,16 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
      */
     public function verify($sessionName = null)
     {
-        $body = http_build_query([
+        $fields = [
             'secret'   => (string) ($this->config['secret_key'] ?? ''),
             'response' => Request::getString('g-recaptcha-response', ''),
-            'remoteip' => IPAddress::fromRequest()->asReadable(),
-        ], '', '&');
+        ];
+        // asReadable() is false for an unparseable address; remoteip is optional, so leave it out rather than send "0".
+        $remoteIp = IPAddress::fromRequest()->asReadable();
+        if (is_string($remoteIp)) {
+            $fields['remoteip'] = $remoteIp;
+        }
+        $body = http_build_query($fields, '', '&');
 
         $answer = $this->postVerification(self::VERIFY_URL, $body);
         $check  = null === $answer ? null : json_decode($answer, true);

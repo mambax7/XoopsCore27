@@ -115,6 +115,21 @@ final class XoopsCaptchaRecaptcha2Test extends TestCase
     }
 
     #[Test]
+    public function anUnknownClientIpIsLeftOutNotSentAsZero(): void
+    {
+        $_SERVER['REMOTE_ADDR'] = 'not-an-ip';
+        $captcha = self::captcha('{"success":true}');
+        $captcha->verify();
+
+        parse_str((string) $captcha->body, $fields);
+        self::assertSame(
+            ['secret' => 'pr1v&te key', 'response' => 'token&secret=injected'],
+            $fields,
+            'IPAddress::asReadable() is false for an unparseable address; http_build_query() would send it as 0.'
+        );
+    }
+
+    #[Test]
     public function aSuccessfulAnswerVerifies(): void
     {
         $captcha = self::captcha('{"success":true,"hostname":"example.com"}');
