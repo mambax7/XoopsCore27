@@ -71,9 +71,11 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
      */
     public function verify($sessionName = null)
     {
-        $fields = [
+        // The token is a single string; an array in the request is not a token and must not warn on the cast.
+        $rawResponse = Request::getVar('g-recaptcha-response', '', 'default', 'none');
+        $fields      = [
             'secret'   => (string) ($this->config['secret_key'] ?? ''),
-            'response' => Request::getString('g-recaptcha-response', ''),
+            'response' => is_string($rawResponse) ? Request::getString('g-recaptcha-response', '') : '',
         ];
         // asReadable() is false for an unparseable address; remoteip is optional, so leave it out rather than send "0".
         $remoteIp = IPAddress::fromRequest()->asReadable();
@@ -88,8 +90,9 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
             return true;
         }
         $codes = is_array($check) && is_array($check['error-codes'] ?? null) ? $check['error-codes'] : [];
-        // Google documents string codes; anything else in a malformed answer is dropped, not cast.
-        $this->reportErrors(array_values(array_filter($codes, 'is_string')));
+        // Google documents lowercase-hyphen string codes; they are shown as raw HTML, so anything else is dropped.
+        $codes = array_filter($codes, static fn ($code): bool => is_string($code) && 1 === preg_match('/\A[a-z-]{1,64}\z/', $code));
+        $this->reportErrors(array_values($codes));
 
         return false;
     }
@@ -127,10 +130,11 @@ class XoopsCaptchaRecaptcha2 extends XoopsCaptchaMethod
 
         $context = stream_context_create([
             'http' => [
-                'method'  => 'POST',
-                'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
-                'content' => $body,
-                'timeout' => 10,
+                'method'          => 'POST',
+                'header'          => "Content-Type: application/x-www-form-urlencoded\r\n",
+                'content'         => $body,
+                'timeout'         => 10,
+                'follow_location' => 0,
             ],
         ]);
         // The warning of a failed request is not needed: no answer fails the check.

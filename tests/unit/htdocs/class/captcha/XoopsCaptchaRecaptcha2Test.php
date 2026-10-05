@@ -130,6 +130,38 @@ final class XoopsCaptchaRecaptcha2Test extends TestCase
     }
 
     #[Test]
+    public function anArrayResponseIsSentEmptyWithoutAWarning(): void
+    {
+        $_REQUEST['g-recaptcha-response'] = ['a', 'b'];
+        $_POST['g-recaptcha-response']    = ['a', 'b'];
+        $warnings = [];
+        set_error_handler(static function (int $no, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+
+            return true;
+        });
+        try {
+            $captcha = self::captcha('{"success":true}');
+            $captcha->verify();
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertSame([], $warnings);
+        parse_str((string) $captcha->body, $fields);
+        self::assertSame('', $fields['response']);
+    }
+
+    #[Test]
+    public function onlyDocumentedLookingErrorCodesAreReported(): void
+    {
+        $captcha = self::captcha('{"success":false,"error-codes":["bad-request","<b>x</b>","UPPER","a&b",""]}');
+
+        self::assertFalse($captcha->verify());
+        self::assertSame(['bad-request'], $captcha->reported, 'Codes are shown as raw HTML; only lowercase-hyphen codes pass.');
+    }
+
+    #[Test]
     public function aSuccessfulAnswerVerifies(): void
     {
         $captcha = self::captcha('{"success":true,"hostname":"example.com"}');
@@ -185,5 +217,6 @@ final class XoopsCaptchaRecaptcha2Test extends TestCase
         self::assertStringNotContainsString('siteverify?', $source);
         self::assertStringContainsString('CURLOPT_POST', $source);
         self::assertSame(1, preg_match("/'method'\s*=>\s*'POST'/", $source), 'The stream fallback must POST too.');
+        self::assertSame(1, preg_match("/'follow_location'\s*=>\s*0/", $source), 'The stream fallback must not follow a redirect with the secret.');
     }
 }
