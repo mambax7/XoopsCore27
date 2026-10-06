@@ -31,6 +31,15 @@ include_once __DIR__ . '/../class/preload.php';
 include_once __DIR__ . '/../class/database/databasefactory.php';
 include_once __DIR__ . '/../class/logger/xoopslogger.php';
 
+// Only the wizard run that wrote the configuration may finish the install.
+// Nothing else orders the pages, so without this a cold visitor could call
+// this page directly, drop a cleanup script into the web root on every
+// request and rename install/ out from under an install in progress.
+if (empty($_SESSION['UserLogin']) && empty($_SESSION['settings']['authorized'])) {
+    header('Location: index.php');
+    exit;
+}
+
 $_SESSION = [];
 xoops_setcookie('xo_install_user', '', 0, '', '');
 $key = \Xmf\Jwt\KeyFactory::build('install');
