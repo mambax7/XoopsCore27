@@ -16,7 +16,8 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_CACHE')):
     /**
      * @param array|null $groups
      *
-     * @return string
+     * @return string group segment for a cache name; '' when no usable cache-id key exists,
+     *                in which case the caller must neither read nor write the cache
      */
     function mod_generateCacheId_byGroup($groups = null)
     {
@@ -89,9 +90,12 @@ function mod_createCacheFile($data, $name = null, $dirname = null)
  */
 function mod_createCacheFile_byGroup($data, $name = null, $dirname = null, $groups = null)
 {
-    $name .= mod_generateCacheId_byGroup();
+    $groupId = mod_generateCacheId_byGroup();
+    if ('' === $groupId) {
+        return false; // no usable cache-id key: fail closed, write nothing
+    }
 
-    return mod_createCacheFile($data, $name, $dirname);
+    return mod_createCacheFile($data, $name . $groupId, $dirname);
 }
 
 /**
@@ -139,10 +143,12 @@ function mod_loadCacheFile($name, $dirname = null)
  */
 function mod_loadCacheFile_byGroup($name, $dirname = null, $groups = null)
 {
-    $name .= mod_generateCacheId_byGroup();
-    $data = mod_loadFile($name, $dirname);
+    $groupId = mod_generateCacheId_byGroup();
+    if ('' === $groupId) {
+        return null; // no usable cache-id key: fail closed, read nothing
+    }
 
-    return $data;
+    return mod_loadFile($name . $groupId, $dirname);
 }
 
 /* Shall we use the function of glob for better performance ? */

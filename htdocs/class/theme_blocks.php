@@ -186,6 +186,11 @@ class xos_logos_PageBuilder
         $template->setCompileId($xobject->getVar('dirname', 'n'));
         $tplName = ($tplName = $xobject->getVar('template')) ? "db:$tplName" : 'db:system_block_dummy.tpl';
         $cacheid = $this->generateCacheId('blk_' . $xobject->getVar('bid'));
+        // The theme switches caching off when no usable cache-id key exists:
+        // then skip the block's cached metas too, not only its Smarty cache.
+        if (!$template->caching) {
+            $bcachetime = 0;
+        }
 
         $xoopsLogger = XoopsLogger::getInstance();
         if (!$bcachetime || !$template->isCached($tplName, $cacheid)) {

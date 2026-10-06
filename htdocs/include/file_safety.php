@@ -635,16 +635,17 @@ if (!function_exists('xoops_groupCacheKey')) {
      * (created on first use in xoops_data/data, like the 'rememberme' key). The
      * former derivation hashed the database credentials into the name instead.
      *
-     * Without a usable key the segment is random for the request, so group
-     * content is written but never served from the cache, and a warning names
-     * the cause; a guessable segment is never produced. The one-time repair of a
-     * malformed key file is not atomic, so two first requests repairing at once
-     * can hold different secrets for that request: one more cache miss, nothing
-     * guessable.
+     * Without a usable key the result is '' and a warning names the cause: the
+     * caller must then neither read nor write group content from the cache. A
+     * per-request substitute key would leave a never-read cache file behind on
+     * every request for as long as key storage stays broken, and a guessable
+     * segment is never produced. The one-time repair of a malformed key file is
+     * not atomic, so two first requests repairing at once can hold different
+     * secrets for that request: one more cache miss, nothing guessable.
      *
      * @param int[] $groups group ids, in any order
      *
-     * @return string 16 hex characters; the same for the same group set
+     * @return string 16 hex characters, the same for the same group set; '' when no key is usable
      */
     function xoops_groupCacheKey(array $groups): string
     {
@@ -673,8 +674,11 @@ if (!function_exists('xoops_groupCacheKey')) {
             }
             if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
                 trigger_error('xoops_groupCacheKey(): no usable cacheid key in key storage; group content is not cached for this request', E_USER_WARNING);
-                $secret = bin2hex(random_bytes(16));
+                $secret = '';
             }
+        }
+        if ('' === $secret) {
+            return '';
         }
         $groups = array_map('intval', $groups);
         sort($groups);
