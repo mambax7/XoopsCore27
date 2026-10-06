@@ -82,7 +82,7 @@ class TestableXoopsSecurity extends \XoopsSecurity
             $_SESSION[$name . '_SESSION'] = [];
         }
         $token_data = [
-            'id'     => '',
+            'id'     => bin2hex(random_bytes(32)),
             'token'  => $token,
             'expire' => time() + (int) $timeout,
         ];
@@ -448,12 +448,27 @@ class XoopsSecurityTest extends TestCase
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $token);
     }
 
-    public function testCreateTokenStoresThePublicValueAndAnEmptyLegacyId(): void
+    public function testCreateTokenStoresThePublicValueAndARandomLegacyId(): void
     {
         $token = $this->security->createToken();
         $entry = $_SESSION['XOOPS_TOKEN_SESSION'][0];
         $this->assertSame($token, $entry['token']);
-        $this->assertSame('', $entry['id'], 'a pre-2.7.4 validateToken() reads id unguarded');
+        // A pre-2.7.4 validateToken() reads id unguarded and accepts
+        // md5(id . UA . prefix); the id must exist and must not be derivable.
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $entry['id']);
+        $this->assertNotSame($entry['id'], $token);
+    }
+
+    public function testNewEntryIsNotAcceptedThroughTheLegacyDigest(): void
+    {
+        $this->security->createToken();
+        $entry = $_SESSION['XOOPS_TOKEN_SESSION'][0];
+        // What a pre-2.7.4 validator accepts for this entry needs the secret
+        // id, so it is not computable from the User-Agent and prefix alone.
+        $legacyDigest = md5($entry['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX);
+        $this->assertNotSame(md5($_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX), $legacyDigest);
+        // The new validator takes the token branch for this entry and rejects the digest.
+        $this->assertFalse($this->security->validateToken($legacyDigest));
     }
 
     public function testTokenSurvivesAUserAgentChangeBetweenCreateAndValidate(): void

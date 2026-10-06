@@ -60,6 +60,7 @@ session_start();
 
 \$t = \$s->createToken();
 \$r['shape'] = ['hex32' => (bool) preg_match('/^[a-f0-9]{32}\$/', \$t), 'entry' => \$_SESSION['XOOPS_TOKEN_SESSION'][0]];
+\$r['legacyDigestOfNewEntry'] = \$s->validateToken(md5(\$r['shape']['entry']['id'] . 'Agent/1.0' . XOOPS_DB_PREFIX));
 \$r['roundTrip'] = \$s->validateToken(\$t);
 \$r['replay'] = \$s->validateToken(\$t);
 
@@ -105,7 +106,9 @@ PHP;
 
         self::assertTrue($r['shape']['hex32'], 'token stays 32 hex characters');
         self::assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $r['shape']['entry']['token'] ?? '', 'the public value is stored in the entry');
-        self::assertSame('', $r['shape']['entry']['id'], 'rollback shim: pre-2.7.4 code reads id unguarded');
+        self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $r['shape']['entry']['id'], 'pre-2.7.4 code reads id unguarded and hashes it; it must be random');
+        self::assertNotSame($r['shape']['entry']['id'], $r['shape']['entry']['token']);
+        self::assertFalse($r['legacyDigestOfNewEntry'], 'the old digest of a new entry is not a valid token');
         self::assertTrue($r['roundTrip']);
         self::assertFalse($r['replay'], 'token is single use');
         self::assertTrue($r['uaChange'], 'a User-Agent change no longer rejects the form');

@@ -71,11 +71,13 @@ class XoopsSecurity
         if (!isset($_SESSION[$name . '_SESSION'])) {
             $_SESSION[$name . '_SESSION'] = [];
         }
-        // 'id' => '' keeps a pre-2.7.4 validateToken() (rollback, or a mixed
-        // version node sharing the session store) warning-free: it reads
-        // $entry['id'] unguarded, and md5('' . UA . prefix) never matches.
+        // 'id' is read unguarded by a pre-2.7.4 validateToken() (rollback, or a
+        // mixed-version node sharing the session store), which accepts
+        // md5(id . UA . prefix). It must be present, so that code does not
+        // warn, and random, so the digest cannot be computed from public
+        // inputs; the client never sees it, so that validator fails safely.
         $token_data = [
-            'id'     => '',
+            'id'     => bin2hex(random_bytes(32)),
             'token'  => $token,
             'expire' => time() + (int) $timeout,
         ];
