@@ -658,7 +658,11 @@ if (!function_exists('xoops_groupCacheKey')) {
             $secret = '';
             try {
                 $key = \Xmf\Jwt\KeyFactory::build('cacheid');
-                $secret = (string) $key->getSigning();
+                try {
+                    $secret = (string) $key->getSigning();
+                } catch (\Throwable $e) {
+                    $secret = ''; // a syntactically broken key file throws on include
+                }
                 if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
                     $key->kill();
                     $key->create();
