@@ -637,7 +637,10 @@ if (!function_exists('xoops_groupCacheKey')) {
      *
      * Without a usable key the segment is random for the request, so group
      * content is written but never served from the cache, and a warning names
-     * the cause; a guessable segment is never produced.
+     * the cause; a guessable segment is never produced. The one-time repair of a
+     * malformed key file is not atomic, so two first requests repairing at once
+     * can hold different secrets for that request: one more cache miss, nothing
+     * guessable.
      *
      * @param int[] $groups group ids, in any order
      *
