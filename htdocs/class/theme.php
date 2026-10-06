@@ -471,11 +471,9 @@ class xos_opal_Theme
                 if (!isset($GLOBALS['xoopsUser']) || !is_object($GLOBALS['xoopsUser'])) {
                     $extra_string .= '-' . XOOPS_GROUP_ANONYMOUS;
                 } else {
-                    $groups = $GLOBALS['xoopsUser']->getGroups();
-                    sort($groups);
-                    // Generate group string for non-anonymous groups,
-                    // XOOPS_DB_PASS and XOOPS_DB_NAME (before we find better variables) are used to protect group sensitive contents
-                    $extra_string .= '-' . substr(md5(implode('-', $groups)), 0, 8) . '-' . substr(md5(XOOPS_DB_PASS . XOOPS_DB_NAME . XOOPS_DB_USER), 0, 8);
+                    // Group segment for non-anonymous users, keyed with the site's stored secret
+                    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                    $extra_string .= '-' . xoops_groupCacheKey($GLOBALS['xoopsUser']->getGroups());
                 }
             }
             $extraString = $extra_string;

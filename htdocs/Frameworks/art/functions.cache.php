@@ -27,8 +27,8 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_CACHE')):
             $groups = $xoopsUser->getGroups();
         }
         if (!empty($groups) && \is_array($groups)) {
-            sort($groups);
-            $contentCacheId = substr(md5(implode(',', $groups) . XOOPS_DB_PASS . XOOPS_DB_NAME), 0, strlen(XOOPS_DB_USER) * 2);
+            require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+            $contentCacheId = xoops_groupCacheKey($groups);
         } else {
             $contentCacheId = XOOPS_GROUP_ANONYMOUS;
         }

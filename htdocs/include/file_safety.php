@@ -14,6 +14,7 @@
  *  - xoops_validateLocalRedirect() — full same-site redirect policy (origin + base path)
  *  - xoops_postLoginRedirectUrl()  — the absolute URL to send a user to after login
  *  - xoops_rebuildQueryString() — parse-and-re-emit a query string for safe reflection
+ *  - xoops_groupCacheKey()     — unguessable cache-id segment for a group set
  *
  * They originally lived in include/cp_functions.php, but that file
  * unconditionally `define()`s XOOPS_CPFUNC_LOADED, which include/
@@ -621,5 +622,36 @@ if (!function_exists('xoops_rebuildQueryString')) {
         $rebuilt = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 
         return ('' === $rebuilt) ? '' : ('?' . $rebuilt);
+    }
+}
+
+if (!function_exists('xoops_groupCacheKey')) {
+    /**
+     * Cache-id segment for a set of group ids.
+     *
+     * Smarty cache ids become file names under xoops_data/caches. Content cached
+     * for one group set must not be addressable by guessing its name, so the
+     * segment is an HMAC of the sorted ids under the site's stored 'cacheid' key
+     * (created on first use in xoops_data/data, like the 'rememberme' key). The
+     * former derivation hashed the database credentials into the name instead.
+     *
+     * @param int[] $groups group ids, in any order
+     *
+     * @return string 16 hex characters; the same for the same group set
+     */
+    function xoops_groupCacheKey(array $groups): string
+    {
+        static $secret = null;
+        if (null === $secret) {
+            try {
+                $secret = (string) \Xmf\Jwt\KeyFactory::build('cacheid')->getSigning();
+            } catch (\Throwable $e) {
+                $secret = '';
+            }
+        }
+        $groups = array_map('intval', $groups);
+        sort($groups);
+
+        return substr(hash_hmac('sha256', implode('-', $groups), $secret), 0, 16);
     }
 }
