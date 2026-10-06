@@ -106,7 +106,7 @@ class XoopsSecurity
         }
         if (isset($entry['id']) && '' !== $entry['id']) {
             // legacy 2.7.3 token shape; remove in 2.8
-            $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            $agent = Request::getString('HTTP_USER_AGENT', '', 'SERVER', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
 
             return hash_equals(md5($entry['id'] . $agent . XOOPS_DB_PREFIX), $token);
         }

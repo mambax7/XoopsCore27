@@ -40,14 +40,14 @@ final class XoopsSecurityRealTokenTest extends TestCase
     {
         $directory = sys_get_temp_dir() . '/xoops-security-' . bin2hex(random_bytes(4));
         self::assertTrue(mkdir($directory, 0700, true));
-        $root     = str_replace('\\', '/', XOOPS_ROOT_PATH);
+        $root     = var_export(XOOPS_ROOT_PATH, true);
         $script   = <<<PHP
 <?php
 declare(strict_types=1);
 set_error_handler(static function (int \$no, string \$str, string \$file, int \$line): bool {
     throw new ErrorException(\$str, 0, \$no, \$file, \$line);
 });
-define('XOOPS_ROOT_PATH', '{$root}');
+define('XOOPS_ROOT_PATH', {$root});
 define('XOOPS_DB_PREFIX', 'xt');
 define('XOOPS_URL', 'http://example.test');
 require XOOPS_ROOT_PATH . '/xoops_lib/vendor/autoload.php';

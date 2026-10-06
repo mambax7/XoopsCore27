@@ -96,7 +96,7 @@ class TestableXoopsSecurity extends \XoopsSecurity
             return hash_equals((string) $entry['token'], $token);
         }
         if (isset($entry['id']) && '' !== $entry['id']) {
-            $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+            $agent = \Xmf\Request::getString('HTTP_USER_AGENT', '', 'SERVER', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM);
 
             return hash_equals(md5($entry['id'] . $agent . XOOPS_DB_PREFIX), $token);
         }
@@ -202,8 +202,12 @@ class XoopsSecurityTest extends TestCase
     /** @var TestableXoopsSecurity */
     private $security;
 
+    /** @var array<string, mixed> */
+    private array $serverBackup = [];
+
     protected function setUp(): void
     {
+        $this->serverBackup = $_SERVER;
         $this->security = new TestableXoopsSecurity();
 
         // Ensure $_SESSION is available as a superglobal array
@@ -222,7 +226,7 @@ class XoopsSecurityTest extends TestCase
     {
         unset($_SESSION['XOOPS_TOKEN_SESSION']);
         unset($_SESSION['CUSTOM_TOKEN_SESSION']);
-        unset($_SERVER['HTTP_REFERER']);
+        $_SERVER = $this->serverBackup;
     }
 
     // ---------------------------------------------------------------
