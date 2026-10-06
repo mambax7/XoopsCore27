@@ -137,27 +137,31 @@ if ($xoopsorgnews !== 0) {
         XoopsCache::write($rssfile, $items, 86400);
     }
     if ($items != '') {
-        // Feed links land in href attributes; only http(s) may reach the admin page.
-        $feedHref = static function ($url): string {
+        // Feed links land in href attributes; only http(s) may reach the admin
+        // page, and a rejected URL renders as plain text rather than an empty href.
+        $feedLink = static function ($url, string $text, string $extra = ''): string {
             $url = trim((string) $url);
+            if (!preg_match('#^https?://#i', $url)) {
+                return $text;
+            }
 
-            return preg_match('#^https?://#i', $url) ? htmlspecialchars($url, ENT_QUOTES | ENT_HTML5) : '';
+            return '<a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_HTML5) . '" rel="external"' . $extra . '>' . $text . '</a>';
         };
         $ret = '<table id="xoopsorgnews" class="outer width100">';
         foreach (array_keys($items) as $i) {
-            $ret .= '<tr class="head"><td><a href="' . $feedHref($items[$i]['link']) . '" rel="external">';
-            $ret .= htmlspecialchars($items[$i]['title'], ENT_QUOTES | ENT_HTML5) . '</a> (' . htmlspecialchars($items[$i]['pubdate'], ENT_QUOTES | ENT_HTML5) . ')</td></tr>';
+            $ret .= '<tr class="head"><td>' . $feedLink($items[$i]['link'], htmlspecialchars($items[$i]['title'], ENT_QUOTES | ENT_HTML5));
+            $ret .= ' (' . htmlspecialchars($items[$i]['pubdate'], ENT_QUOTES | ENT_HTML5) . ')</td></tr>';
             if ($items[$i]['description'] != '') {
                 // Remote feed body (xoops.org). Trusted, but a compromised or
                 // MITM feed could otherwise script the admin session — strip
                 // markup so only plain text reaches the admin page.
                 $ret .= '<tr><td class="odd">' . strip_tags((string) $items[$i]['description']);
                 if (!empty($items[$i]['guid'])) {
-                    $ret .= '&nbsp;&nbsp;<a href="' . $feedHref($items[$i]['guid']) . '" rel="external" title="">' . _MORE . '</a>';
+                    $ret .= '&nbsp;&nbsp;' . $feedLink($items[$i]['guid'], _MORE, ' title=""');
                 }
                 $ret .= '</td></tr>';
             } elseif ($items[$i]['guid'] != '') {
-                $ret .= '<tr><td class="even aligntop"></td><td colspan="2" class="odd"><a href="' . htmlspecialchars($items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external">' . _MORE . '</a></td></tr>';
+                $ret .= '<tr><td class="even aligntop"></td><td colspan="2" class="odd">' . $feedLink($items[$i]['guid'], _MORE) . '</td></tr>';
             }
         }
         $ret .= '</table>';

@@ -77,4 +77,13 @@ class GroupCacheKeyTest extends TestCase
         $this->assertNotSame($legacy, xoops_groupCacheKey($groups));
         $this->assertNotSame(substr(md5('1-2'), 0, 16), xoops_groupCacheKey($groups));
     }
+
+    #[Test]
+    public function keyIsTheHmacOfTheGroupSetUnderTheStoredCacheidKey(): void
+    {
+        $secret = (string) \Xmf\Jwt\KeyFactory::build('cacheid')->getSigning();
+
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{128}\z/', $secret);
+        $this->assertSame(substr(hash_hmac('sha256', '1-2', $secret), 0, 16), xoops_groupCacheKey([2, 1]));
+    }
 }
