@@ -137,9 +137,15 @@ if ($xoopsorgnews !== 0) {
         XoopsCache::write($rssfile, $items, 86400);
     }
     if ($items != '') {
+        // Feed links land in href attributes; only http(s) may reach the admin page.
+        $feedHref = static function ($url): string {
+            $url = trim((string) $url);
+
+            return preg_match('#^https?://#i', $url) ? htmlspecialchars($url, ENT_QUOTES | ENT_HTML5) : '';
+        };
         $ret = '<table id="xoopsorgnews" class="outer width100">';
         foreach (array_keys($items) as $i) {
-            $ret .= '<tr class="head"><td><a href="' . htmlspecialchars(trim($items[$i]['link']), ENT_QUOTES | ENT_HTML5) . '" rel="external">';
+            $ret .= '<tr class="head"><td><a href="' . $feedHref($items[$i]['link']) . '" rel="external">';
             $ret .= htmlspecialchars($items[$i]['title'], ENT_QUOTES | ENT_HTML5) . '</a> (' . htmlspecialchars($items[$i]['pubdate'], ENT_QUOTES | ENT_HTML5) . ')</td></tr>';
             if ($items[$i]['description'] != '') {
                 // Remote feed body (xoops.org). Trusted, but a compromised or
@@ -147,7 +153,7 @@ if ($xoopsorgnews !== 0) {
                 // markup so only plain text reaches the admin page.
                 $ret .= '<tr><td class="odd">' . strip_tags((string) $items[$i]['description']);
                 if (!empty($items[$i]['guid'])) {
-                    $ret .= '&nbsp;&nbsp;<a href="' . htmlspecialchars($items[$i]['guid'], ENT_QUOTES | ENT_HTML5) . '" rel="external" title="">' . _MORE . '</a>';
+                    $ret .= '&nbsp;&nbsp;<a href="' . $feedHref($items[$i]['guid']) . '" rel="external" title="">' . _MORE . '</a>';
                 }
                 $ret .= '</td></tr>';
             } elseif ($items[$i]['guid'] != '') {

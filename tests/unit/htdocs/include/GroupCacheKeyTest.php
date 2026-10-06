@@ -30,9 +30,25 @@ use PHPUnit\Framework\TestCase;
 #[CoversFunction('xoops_groupCacheKey')]
 class GroupCacheKeyTest extends TestCase
 {
+    /** @var string[] cacheid key files that did not exist before this class ran */
+    private static array $createdKeyFiles = [];
+
     public static function setUpBeforeClass(): void
     {
         require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+        // The first call creates the site's cacheid key through the production
+        // FileStorage; remember whether it was there so the checkout is left as found.
+        $before = glob(XOOPS_VAR_PATH . '/data/*-key-cacheid.php') ?: [];
+        xoops_groupCacheKey([1]);
+        $after = glob(XOOPS_VAR_PATH . '/data/*-key-cacheid.php') ?: [];
+        self::$createdKeyFiles = array_diff($after, $before);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        foreach (self::$createdKeyFiles as $file) {
+            @unlink($file);
+        }
     }
 
     #[Test]

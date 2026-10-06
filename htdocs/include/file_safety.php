@@ -647,13 +647,25 @@ if (!function_exists('xoops_groupCacheKey')) {
     {
         static $secret = null;
         if (null === $secret) {
+            // Xmf\Random::generateKey() is a sha512 hex digest. Anything else is a
+            // broken key file: an include of the empty file a concurrent first
+            // request is still writing returns 1, which getSigning() casts to '1',
+            // and an interrupted write leaves a file KeyFactory never replaces.
+            // One kill-and-rebuild repairs the latter instead of warning forever.
+            $secret = '';
             try {
-                $secret = (string) \Xmf\Jwt\KeyFactory::build('cacheid')->getSigning();
+                $key = \Xmf\Jwt\KeyFactory::build('cacheid');
+                $secret = (string) $key->getSigning();
+                if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
+                    $key->kill();
+                    $key->create();
+                    $secret = (string) $key->getSigning();
+                }
             } catch (\Throwable $e) {
                 $secret = '';
             }
-            if ('' === $secret) {
-                trigger_error('xoops_groupCacheKey(): no cacheid key in key storage; group content is not cached for this request', E_USER_WARNING);
+            if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
+                trigger_error('xoops_groupCacheKey(): no usable cacheid key in key storage; group content is not cached for this request', E_USER_WARNING);
                 $secret = bin2hex(random_bytes(16));
             }
         }
