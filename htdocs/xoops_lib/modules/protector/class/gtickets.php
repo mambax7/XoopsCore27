@@ -16,10 +16,11 @@ if (!class_exists('XoopsGTicket')) {
      *
      * @deprecated 2.7.4 Use $GLOBALS['xoopsSecurity'] (XoopsSecurity). Kept so
      *             modules that include this file from the trust path keep working.
-     *             A ticket is valid for the whole session that issued it: the
-     *             salt is ignored and the area no longer scopes a ticket (the old
-     *             check accepted a matching area OR referer, so it was never a
-     *             boundary between modules).
+     *             A ticket is bound to the session that issued it, single-use,
+     *             and expires after the requested timeout. The salt is ignored
+     *             and the area no longer scopes a ticket (the old check accepted
+     *             a matching area OR referer, so it was never a boundary between
+     *             modules).
      */
     class XoopsGTicket
     {
@@ -152,7 +153,10 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function issue($salt = '', $timeout = 1800, $area = '')
         {
-            $this->_latest_token = (string) $this->security()->createToken((int) $timeout, self::FIELD);
+            // XoopsSecurity reads 0 as "session lifetime"; GTicket read it as
+            // "expires now" (valid within the same second). Keep that meaning.
+            $timeout = max(1, (int) $timeout);
+            $this->_latest_token = (string) $this->security()->createToken($timeout, self::FIELD);
 
             return $this->_latest_token;
         }

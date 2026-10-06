@@ -123,6 +123,13 @@ class XoopsGTicketTest extends TestCase
     }
 
     #[Test]
+    public function issueKeepsAZeroTimeoutShortInsteadOfSessionLong(): void
+    {
+        $this->createFreshTicket()->issue('', 0);
+        $this->assertSame([['name' => 'XOOPS_G_TICKET', 'timeout' => 1]], $GLOBALS['xoopsSecurity']->created, 'XoopsSecurity would read 0 as the session lifetime');
+    }
+
+    #[Test]
     public function issueReturnsDifferentTicketsEachTime(): void
     {
         $ticket = $this->createFreshTicket();
