@@ -20,7 +20,6 @@ function validatePrefix(string $raw): string
 
 include XOOPS_ROOT_PATH . '/include/cp_header.php';
 include __DIR__ . '/admin_header.php';
-require_once dirname(__DIR__) . '/class/gtickets.php';
 $db = XoopsDatabaseFactory::getDatabaseConnection();
 
 // COPY TABLES
@@ -33,8 +32,8 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     }
 
     // Ticket check
-    if (!$xoopsGTicket->check(true, 'protector_admin')) {
-        redirect_header(XOOPS_URL . '/', 3, $xoopsGTicket->getErrors());
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
     $new_prefix = empty($new_prefix) ? 'x' . substr(bin2hex(random_bytes(4)), -5) : $new_prefix;
@@ -105,8 +104,8 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     }
 
     // Ticket check
-    if (!$xoopsGTicket->check(true, 'protector_admin')) {
-        redirect_header(XOOPS_URL . '/', 3, $xoopsGTicket->getErrors());
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
     // get table list
@@ -228,8 +227,8 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     }
 
     // Ticket check
-    if (!$xoopsGTicket->check(true, 'protector_admin')) {
-        redirect_header(XOOPS_URL . '/', 3, $xoopsGTicket->getErrors());
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
     // check if prefix is working
@@ -336,7 +335,7 @@ foreach ($prefixes as $prefix) {
     }
 
     $prefix4disp  = htmlspecialchars($prefix['name'], ENT_QUOTES | ENT_HTML5);
-    $ticket_input = $xoopsGTicket->getTicketHtml(__LINE__, 1800, 'protector_admin');
+    $ticket_input = $GLOBALS['xoopsSecurity']->getTokenHTML();
 
     if ($prefix['name'] == XOOPS_DB_PREFIX) {
         $del_button   = '';

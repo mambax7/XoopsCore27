@@ -2,6 +2,10 @@
 
 // GIJOE's Ticket Class (based on Marijuana's Oreteki XOOPS)
 // nobunobu's suggestions are applied
+//
+// Since 2.7.4 this class is a thin adapter over XoopsSecurity, the token
+// system every core form uses. New code should call
+// $GLOBALS['xoopsSecurity']->check() and getTokenHTML() directly.
 
 use Xmf\Request;
 
@@ -9,9 +13,15 @@ if (!class_exists('XoopsGTicket')) {
 
     /**
      * Class XoopsGTicket
+     *
+     * @deprecated 2.7.4 Use $GLOBALS['xoopsSecurity'] (XoopsSecurity). Kept so
+     *             modules that include this file from the trust path keep working.
      */
     class XoopsGTicket
     {
+        /** Name of the hidden field, and of the XoopsSecurity token set behind it. */
+        public const FIELD = 'XOOPS_G_TICKET';
+
         public $_errors       = [];
         public $_latest_token = '';
         public $messages      = [];
@@ -45,6 +55,20 @@ if (!class_exists('XoopsGTicket')) {
             }
         }
 
+        /**
+         * The XoopsSecurity instance the tickets are issued and checked with.
+         *
+         * @return XoopsSecurity
+         */
+        private function security()
+        {
+            if (!isset($GLOBALS['xoopsSecurity']) || !($GLOBALS['xoopsSecurity'] instanceof XoopsSecurity)) {
+                $GLOBALS['xoopsSecurity'] = new XoopsSecurity();
+            }
+
+            return $GLOBALS['xoopsSecurity'];
+        }
+
         // render form as plain html
         /**
          * @param string $salt
@@ -55,7 +79,7 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function getTicketHtml($salt = '', $timeout = 1800, $area = '')
         {
-            return '<input type="hidden" name="XOOPS_G_TICKET" value="' . $this->issue($salt, $timeout, $area) . '" />';
+            return '<input type="hidden" name="' . self::FIELD . '" value="' . $this->issue($salt, $timeout, $area) . '" />';
         }
 
         // returns an object of XoopsFormHidden including theh ticket
@@ -68,7 +92,7 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function getTicketXoopsForm($salt = '', $timeout = 1800, $area = '')
         {
-            return new XoopsFormHidden('XOOPS_G_TICKET', $this->issue($salt, $timeout, $area));
+            return new XoopsFormHidden(self::FIELD, $this->issue($salt, $timeout, $area));
         }
 
         // add a ticket as Hidden Element into XoopsForm
@@ -80,7 +104,7 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function addTicketXoopsFormElement($form, $salt = '', $timeout = 1800, $area = '')
         {
-            $form->addElement(new XoopsFormHidden('XOOPS_G_TICKET', $this->issue($salt, $timeout, $area)));
+            $form->addElement(new XoopsFormHidden(self::FIELD, $this->issue($salt, $timeout, $area)));
         }
 
         // returns an array for xoops_confirm() ;
@@ -93,7 +117,7 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function getTicketArray($salt = '', $timeout = 1800, $area = '')
         {
-            return ['XOOPS_G_TICKET' => $this->issue($salt, $timeout, $area)];
+            return [self::FIELD => $this->issue($salt, $timeout, $area)];
         }
 
         // return GET parameter string.
@@ -107,141 +131,45 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function getTicketParamString($salt = '', $noamp = false, $timeout = 1800, $area = '')
         {
-            return ($noamp ? '' : '&amp;') . 'XOOPS_G_TICKET=' . $this->issue($salt, $timeout, $area);
+            return ($noamp ? '' : '&amp;') . self::FIELD . '=' . $this->issue($salt, $timeout, $area);
         }
 
         // issue a ticket
         /**
-         * @param string $salt
-         * @param int    $timeout
-         * @param string $area
+         * A XoopsSecurity token in its own set (XOOPS_G_TICKET_SESSION), so it
+         * does not consume the page's XOOPS_TOKEN set. $salt and $area are
+         * accepted for callers and ignored.
+         *
+         * @param string $salt    unused since 2.7.4
+         * @param int    $timeout seconds the ticket stays valid
+         * @param string $area    unused since 2.7.4
          *
          * @return string
          */
         public function issue($salt = '', $timeout = 1800, $area = '')
         {
-            global $xoopsModule;
+            $this->_latest_token = (string) $this->security()->createToken((int) $timeout, self::FIELD);
 
-            if ('' === $salt) {
-                $salt = '$2y$07$' . str_replace('+', '.', base64_encode(random_bytes(16)));
-            }
-
-            // create a token
-            [$usec, $sec] = explode(' ', microtime());
-            $appendix_salt       = empty($_SERVER['PATH']) ? XOOPS_DB_NAME : $_SERVER['PATH'];
-            $token               = crypt($salt . $usec . $appendix_salt . $sec, $salt);
-            $this->_latest_token = $token;
-
-            if (empty($_SESSION['XOOPS_G_STUBS'])) {
-                $_SESSION['XOOPS_G_STUBS'] = [];
-            }
-
-            // limit max stubs 10
-            if (count($_SESSION['XOOPS_G_STUBS']) > 10) {
-                $_SESSION['XOOPS_G_STUBS'] = array_slice($_SESSION['XOOPS_G_STUBS'], -10);
-            }
-
-            // record referer if browser send it
-            $referer = empty($_SERVER['HTTP_REFERER']) ? '' : $_SERVER['REQUEST_URI'];
-
-            // area as module's dirname
-            if (!$area && isset($xoopsModule) && is_object($xoopsModule)) {
-                $area = $xoopsModule->getVar('dirname');
-            }
-
-            // store stub
-            $_SESSION['XOOPS_G_STUBS'][] = [
-                'expire'  => time() + $timeout,
-                'referer' => $referer,
-                'area'    => $area,
-                'token'   => $token,
-            ];
-
-            // paid md5ed token as a ticket
-            return md5($token . XOOPS_DB_PREFIX);
+            return $this->_latest_token;
         }
 
         // check a ticket
         /**
-         * @param bool   $post
-         * @param string $area
-         * @param bool   $allow_repost
+         * @param bool   $post         read the ticket from POST (true) or GET
+         * @param string $area         unused since 2.7.4
+         * @param bool   $allow_repost show the repost form on failure instead of returning false
          *
          * @return bool
          */
         public function check($post = true, $area = '', $allow_repost = true)
         {
-            global $xoopsModule;
-
             $this->_errors = [];
 
-            // CHECK: stubs are not stored in session
-            if (!isset($_SESSION['XOOPS_G_STUBS']) || !is_array($_SESSION['XOOPS_G_STUBS'])) {
-                $this->_errors[]           = $this->messages['err_nostubs'];
-                $_SESSION['XOOPS_G_STUBS'] = [];
-            }
-
-            // get key&val of the ticket from a user's query
-            $ticket = '';
-            if ($post) {
-                $ticket = Request::getString('XOOPS_G_TICKET', '', 'POST');
-            } else {
-                $ticket = Request::getString('XOOPS_G_TICKET', '', 'GET');
-            }
-
-            // CHECK: no tickets found
-            if (empty($ticket)) {
+            $ticket = Request::getString(self::FIELD, '', $post ? 'POST' : 'GET');
+            if ('' === $ticket) {
                 $this->_errors[] = $this->messages['err_noticket'];
-            }
-
-            // gargage collection & find a right stub
-            $stubs_tmp                 = $_SESSION['XOOPS_G_STUBS'];
-            $_SESSION['XOOPS_G_STUBS'] = [];
-            foreach ($stubs_tmp as $stub) {
-                // default lifetime 30min
-                if ($stub['expire'] >= time()) {
-                    if (hash_equals(md5($stub['token'] . XOOPS_DB_PREFIX), (string) $ticket)) {
-                        $found_stub = $stub;
-                    } else {
-                        // store the other valid stubs into session
-                        $_SESSION['XOOPS_G_STUBS'][] = $stub;
-                    }
-                } else {
-                    if (hash_equals(md5($stub['token'] . XOOPS_DB_PREFIX), (string) $ticket)) {
-                        // not CSRF but Time-Out
-                        $timeout_flag = true;
-                    }
-                }
-            }
-
-            // CHECK: the right stub found or not
-            if (empty($found_stub)) {
-                if (empty($timeout_flag)) {
-                    $this->_errors[] = $this->messages['err_nopair'];
-                } else {
-                    $this->_errors[] = $this->messages['err_timeout'];
-                }
-            } else {
-
-                // set area if necessary
-                // area as module's dirname
-                if (!$area && isset($xoopsModule) && is_object($xoopsModule)) {
-                    $area = $xoopsModule->getVar('dirname');
-                }
-
-                // check area or referer
-                if (isset($found_stub['area']) && $found_stub['area'] == $area) {
-                    $area_check = true;
-                }
-
-                if (!empty($found_stub['referer']) && isset($_SERVER['HTTP_REFERER']) && false !== strpos($_SERVER['HTTP_REFERER'], (string) $found_stub['referer'])) {
-                    $referer_check = true;
-                }
-
-
-                if (empty($area_check) && empty($referer_check)) { // loose
-                    $this->_errors[] = $this->messages['err_areaorref'];
-                }
+            } elseif (!$this->security()->check(true, $ticket, self::FIELD)) {
+                $this->_errors[] = $this->messages['err_nopair'];
             }
 
             if (!empty($this->_errors)) {
@@ -249,16 +177,15 @@ if (!class_exists('XoopsGTicket')) {
                     // repost form
                     $this->draw_repost_form($area);
                     exit;
-                } else {
-                    // failed
-                    $this->clear();
-
-                    return false;
                 }
-            } else {
-                // all green
-                return true;
+                // failed
+                $this->clear();
+
+                return false;
             }
+
+            // all green
+            return true;
         }
 
         // draw form for repost
@@ -285,7 +212,7 @@ if (!class_exists('XoopsGTicket')) {
             $form = '<form action="?' . htmlspecialchars($_SERVER['QUERY_STRING'] ?? '', ENT_QUOTES | ENT_HTML5) . '" method="post">';
 
             foreach ($_POST as $key => $val) {
-                if ('XOOPS_G_TICKET' === $key) {
+                if (self::FIELD === $key) {
                     continue;
                 }
 
@@ -328,10 +255,11 @@ if (!class_exists('XoopsGTicket')) {
             return [$table, $form];
         }
 
-        // clear all stubs
+        // clear all tickets
         public function clear()
         {
-            $_SESSION['XOOPS_G_STUBS'] = [];
+            // what XoopsSecurity::clearTokens(self::FIELD) does
+            $_SESSION[self::FIELD . '_SESSION'] = [];
         }
 
         // Ticket Using
@@ -340,11 +268,7 @@ if (!class_exists('XoopsGTicket')) {
          */
         public function using()
         {
-            if (!empty($_SESSION['XOOPS_G_STUBS'])) {
-                return true;
-            } else {
-                return false;
-            }
+            return !empty($_SESSION[self::FIELD . '_SESSION']);
         }
 
         // return errors

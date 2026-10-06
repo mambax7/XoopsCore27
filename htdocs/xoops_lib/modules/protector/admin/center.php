@@ -7,7 +7,6 @@ include_once __DIR__ . '/admin_header.php'; //mb problem: it shows always the sa
 xoops_cp_header();
 include __DIR__ . '/mymenu.php';
 require_once XOOPS_ROOT_PATH . '/class/pagenav.php';
-require_once dirname(__DIR__) . '/class/gtickets.php';
 
 // Define custom exception classes
 class FileOpenException extends RuntimeException {}
@@ -43,8 +42,8 @@ $action = Request::getCmd('action', '', 'POST');
 if ($action !== '') {
 
     // Ticket check
-    if (!$xoopsGTicket->check(true, 'protector_admin')) {
-        redirect_header(XOOPS_URL . '/', 3, $xoopsGTicket->getErrors());
+    if (!$GLOBALS['xoopsSecurity']->check()) {
+        redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
     if ($action === 'update_ips') {
@@ -249,7 +248,7 @@ $group1_ips4disp = htmlspecialchars(implode("\n", $group1_ips), ENT_QUOTES | ENT
 // edit configs about IP ban and IPs for group=1
 echo "
 <form name='ConfigForm' action='' method='POST'>
-" . $xoopsGTicket->getTicketHtml(__LINE__, 1800, 'protector_admin') . "
+" . $GLOBALS['xoopsSecurity']->getTokenHTML() . "
 <input type='hidden' name='action' value='update_ips' />
 <table width='95%' class='outer' cellpadding='4' cellspacing='1'>
   <tr valign='top' align='left'>
@@ -300,7 +299,7 @@ echo "
   </table>
 </form>
 <form name='MainForm' action='' method='POST' style='margin-top:0;'>
-" . $xoopsGTicket->getTicketHtml(__LINE__, 1800, 'protector_admin') . "
+" . $GLOBALS['xoopsSecurity']->getTokenHTML() . "
 <input type='hidden' name='action' value='' />
 <table width='95%' class='outer' cellpadding='4' cellspacing='1'>
   <tr valign='middle'>
