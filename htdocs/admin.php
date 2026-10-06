@@ -112,12 +112,12 @@ if ($xoopsorgnews !== 0) {
             try {
                 $httpGet = new XoopsHttpGet($url);
             } catch (\RuntimeException $e) {
-                echo $e->getMessage() . '<br>';
+                echo htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '<br>';
                 break;
             }
             $rssdata    = $httpGet->fetch();
             if (false === $rssdata) {
-                echo $httpGet->getError() . '<br>';
+                echo htmlspecialchars((string) $httpGet->getError(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '<br>';
             } else {
                 $rss2parser = new XoopsXmlRss2Parser($rssdata);
                 if (false !== $rss2parser->parse()) {
