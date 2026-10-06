@@ -17,10 +17,12 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * xoops_lib/.htaccess must deny web access on Apache 2.4 as well as 2.2.
- * "Order allow,deny / Deny from all" alone is honoured by 2.4 only with
- * mod_access_compat loaded; without it the trust path is served whenever
- * xoops_lib sits inside the document root. Both forms must be present, each
- * guarded by IfModule, as the xoops_data guards already are.
+ * "Order allow,deny / Deny from all" alone is understood by 2.4 only with
+ * mod_access_compat loaded; without it Apache rejects the directives as
+ * unknown and answers every request under xoops_lib with a 500 configuration
+ * error rather than a clean 403. Both forms must be present, each guarded by
+ * IfModule, as the xoops_data guards already are. (nginx and IIS ignore
+ * .htaccess altogether; there xoops_lib belongs outside the document root.)
  *
  * @category  Xoops
  * @package   Tests
@@ -35,7 +37,9 @@ final class TrustPathHtaccessTest extends TestCase
     #[Test]
     public function deniesAccessOnApache24And22(): void
     {
-        $htaccess = file_get_contents(XOOPS_PATH . '/.htaccess');
+        $path = XOOPS_PATH . '/.htaccess';
+        self::assertFileExists($path);
+        $htaccess = file_get_contents($path);
         self::assertNotFalse($htaccess);
 
         self::assertMatchesRegularExpression(
