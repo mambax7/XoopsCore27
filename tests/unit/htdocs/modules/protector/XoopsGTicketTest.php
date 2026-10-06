@@ -25,6 +25,9 @@ class XoopsGTicketTest extends TestCase
     /** @var mixed */
     private $securityBackup;
 
+    /** @var array<string, mixed> exact copies of the superglobals this test touches */
+    private array $globalsBackup = [];
+
     public static function setUpBeforeClass(): void
     {
         if (!self::$loaded) {
@@ -38,6 +41,7 @@ class XoopsGTicketTest extends TestCase
     protected function setUp(): void
     {
         $this->securityBackup = $GLOBALS['xoopsSecurity'] ?? null;
+        $this->globalsBackup  = ['_SESSION' => $_SESSION ?? null, '_SERVER' => $_SERVER, '_POST' => $_POST, '_GET' => $_GET];
         $GLOBALS['xoopsSecurity'] = new class extends \XoopsSecurity {
             /** @var array<int, array{name: string, timeout: int}> */
             public array $created = [];
@@ -83,7 +87,14 @@ class XoopsGTicketTest extends TestCase
     protected function tearDown(): void
     {
         $GLOBALS['xoopsSecurity'] = $this->securityBackup;
-        unset($_SESSION['XOOPS_G_TICKET_SESSION'], $_SERVER['HTTP_REFERER'], $_POST['XOOPS_G_TICKET'], $_GET['XOOPS_G_TICKET']);
+        if (null === $this->globalsBackup['_SESSION']) {
+            unset($_SESSION);
+        } else {
+            $_SESSION = $this->globalsBackup['_SESSION'];
+        }
+        $_SERVER = $this->globalsBackup['_SERVER'];
+        $_POST   = $this->globalsBackup['_POST'];
+        $_GET    = $this->globalsBackup['_GET'];
     }
 
     private function createFreshTicket(): \XoopsGTicket
