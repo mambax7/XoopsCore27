@@ -16,6 +16,9 @@ filter:
     - 'docs/'
     - 'htdocs/xoops_lib/vendor/'
     - 'htdocs/install/'
+    - 'htdocs/class/libraries/vendor/'
+    - 'htdocs/themes/*/docs/'
+    - 'htdocs/xoops_lib/modules/protector/filters_disabled/'
 
 tools:
   php_analyzer: true
