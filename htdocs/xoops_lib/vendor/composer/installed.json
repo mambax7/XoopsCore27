@@ -1876,17 +1876,17 @@
         },
         {
             "name": "xoops/xmf",
-            "version": "v1.3.1",
-            "version_normalized": "1.3.1.0",
+            "version": "v1.3.2",
+            "version_normalized": "1.3.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/xmf.git",
-                "reference": "10004e90b74aef995018928b47cad01107ee96c2"
+                "reference": "ca3d0cefff69c78e89355de6c706918a5677736d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/10004e90b74aef995018928b47cad01107ee96c2",
-                "reference": "10004e90b74aef995018928b47cad01107ee96c2",
+                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/ca3d0cefff69c78e89355de6c706918a5677736d",
+                "reference": "ca3d0cefff69c78e89355de6c706918a5677736d",
                 "shasum": ""
             },
             "require": {
@@ -1900,9 +1900,9 @@
                 "phpstan/phpstan": "^2.1",
                 "phpunit/phpunit": "^11.0",
                 "roave/security-advisories": "dev-latest",
-                "squizlabs/php_codesniffer": "^3.11"
+                "squizlabs/php_codesniffer": "^3.11 || ^4.0"
             },
-            "time": "2026-07-22T10:02:22+00:00",
+            "time": "2026-10-06T11:29:49+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
