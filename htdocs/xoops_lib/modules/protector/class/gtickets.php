@@ -175,8 +175,14 @@ if (!class_exists('XoopsGTicket')) {
             } else {
                 // Looked up before the check: a failed check garbage-collects
                 // expired entries, and the message must still say "time out".
-                $expired = $this->isExpired($ticket);
-                if (!$this->security()->check(true, $ticket, self::FIELD)) {
+                $expired  = $this->isExpired($ticket);
+                $security = $this->security();
+                // GTicket reports through its own messages; leave the shared
+                // XoopsSecurity error list as it was for the page's own checks.
+                $coreErrors = $security->errors ?? [];
+                $valid      = $security->check(true, $ticket, self::FIELD);
+                $security->errors = $coreErrors;
+                if (!$valid) {
                     $this->_errors[] = $this->messages[$expired ? 'err_timeout' : 'err_nopair'];
                 }
             }

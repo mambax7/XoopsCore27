@@ -43,6 +43,8 @@ class XoopsGTicketTest extends TestCase
             public array $created = [];
             /** @var array<int, array{token: string, name: string}> */
             public array $checked = [];
+            /** @var string[] what the real class accumulates in setErrors() */
+            public $errors = [];
 
             public function createToken($timeout = 0, $name = 'XOOPS_TOKEN')
             {
@@ -67,6 +69,9 @@ class XoopsGTicketTest extends TestCase
                 }
                 // like the real class: expired entries are garbage-collected after the check
                 $_SESSION[$name . '_SESSION'] = array_filter($_SESSION[$name . '_SESSION'] ?? [], static fn ($e) => $e['expire'] >= time());
+                if (!$valid) {
+                    $this->errors[] = 'No valid token found';
+                }
 
                 return $valid;
             }
@@ -258,6 +263,18 @@ class XoopsGTicketTest extends TestCase
         $this->assertFalse($ticket->check(true, '', false));
         $this->assertSame([$ticket->messages['err_nopair']], $ticket->_errors);
         $this->assertFalse($ticket->using(), 'a failed check clears the set, as before');
+    }
+
+    #[Test]
+    public function aFailedCheckLeavesTheCoreErrorListAlone(): void
+    {
+        $GLOBALS['xoopsSecurity']->errors = ['earlier'];
+        $ticket = $this->createFreshTicket();
+        $ticket->issue();
+        $_POST['XOOPS_G_TICKET'] = str_repeat('0', 32);
+
+        $this->assertFalse($ticket->check(true, '', false));
+        $this->assertSame(['earlier'], $GLOBALS['xoopsSecurity']->errors, 'GTicket reports through its own messages');
     }
 
     #[Test]
