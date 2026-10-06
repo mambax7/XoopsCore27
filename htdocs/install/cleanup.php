@@ -26,8 +26,13 @@
 require_once __DIR__ . '/include/common.inc.php';
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
+// Only the suffix page_end.php issued to this session may rename the
+// installer; the page is public, so a shape check alone would let anyone
+// rename the directory mid-install.
 $install_rename_suffix = \Xmf\Request::getString('instsuffix', '', 'POST');
-if (preg_match('/^[a-f0-9]{16}\z/', $install_rename_suffix)) {
+$issued                = (string) ($_SESSION['install_rename_suffix'] ?? '');
+if ('' !== $issued && hash_equals($issued, $install_rename_suffix) && preg_match('/^[a-f0-9]{16}\z/', $install_rename_suffix)) {
+    unset($_SESSION['install_rename_suffix']);
     $installer_modified = 'install_remove_' . $install_rename_suffix;
     install_finalize($installer_modified);
     echo 'OK';

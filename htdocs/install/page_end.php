@@ -39,6 +39,8 @@ defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
 $install_rename_suffix = bin2hex(random_bytes(8));
 $installer_modified    = 'install_remove_' . $install_rename_suffix;
+// cleanup.php (the fallback) only renames for the suffix this session issued.
+$_SESSION['install_rename_suffix'] = $install_rename_suffix;
 
 // Create a cleanup script OUTSIDE the install directory.
 // On Windows, rename() fails when called from a script inside the directory being renamed.
