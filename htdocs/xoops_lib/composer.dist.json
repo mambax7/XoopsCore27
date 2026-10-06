@@ -45,6 +45,11 @@
     "classmap-authoritative": true
   },
   "prefer-stable": true,
+  "scripts": {
+    "remove-phpmailer-oauth-helper": "@php -r \"if (is_file('vendor/phpmailer/phpmailer/get_oauth_token.php') && !unlink('vendor/phpmailer/phpmailer/get_oauth_token.php')) { echo 'Could not remove vendor/phpmailer/phpmailer/get_oauth_token.php', PHP_EOL; exit(1); }\"",
+    "post-install-cmd": "@remove-phpmailer-oauth-helper",
+    "post-update-cmd": "@remove-phpmailer-oauth-helper"
+  },
   "support": {
     "issues": "https://github.com/XOOPS/XoopsCore27/issues",
     "source": "https://github.com/XOOPS/XoopsCore27"
