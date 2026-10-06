@@ -49,6 +49,8 @@ Changes since RC 1
 - Database dumps are written only under XOOPS_VAR_PATH into a protected
   directory; reCAPTCHA v2 verifies over POST; xoops_lib/.htaccess works on
   Apache 2.4 without mod_access_compat.
+- The bundled XMF library is updated to 1.3.2, which tightens the filtering
+  of request input.
 - Protector writes its ban files atomically and rejects uploads it cannot
   inspect. See docs/changelog.270.txt for the full list.
 
