@@ -17,9 +17,10 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * PHPMailer ships get_oauth_token.php, an interactive OAuth2 helper that
- * nothing in XOOPS uses. xoops_lib/.htaccess denies web access only in Apache
- * 2.2 syntax, so on nginx, IIS or Apache 2.4 without mod_access_compat the
- * script is reachable whenever xoops_lib sits inside the document root. The
+ * nothing in XOOPS uses. nginx and IIS ignore xoops_lib/.htaccess, so there
+ * the script is reachable whenever xoops_lib sits inside the document root
+ * (Apache 2.4 without mod_access_compat answers with a 500 configuration
+ * error instead, see TrustPathHtaccessTest). The
  * file is not shipped, and because vendor/ is refreshed from
  * composer.dist.json, a post-install/post-update script removes it again.
  *
