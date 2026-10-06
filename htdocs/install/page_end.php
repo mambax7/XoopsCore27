@@ -37,13 +37,13 @@ $key = \Xmf\Jwt\KeyFactory::build('install');
 $key->kill();
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
-$install_rename_suffix = uniqid(substr(md5($x = mt_rand()) . $x, -10), true);
+$install_rename_suffix = bin2hex(random_bytes(8));
 $installer_modified    = 'install_remove_' . $install_rename_suffix;
 
 // Create a cleanup script OUTSIDE the install directory.
 // On Windows, rename() fails when called from a script inside the directory being renamed.
 // The suffix is embedded server-side so the script needs no client input.
-$cleanupScriptName = 'install_cleanup_' . substr(md5($install_rename_suffix), 0, 8) . '.php';
+$cleanupScriptName = 'install_cleanup_' . bin2hex(random_bytes(4)) . '.php';
 $cleanupScriptPath = XOOPS_ROOT_PATH . '/' . $cleanupScriptName;
 $cleanupUrl        = (defined('XOOPS_URL') && XOOPS_URL !== '') ? XOOPS_URL . '/' . $cleanupScriptName : '../' . $cleanupScriptName;
 
