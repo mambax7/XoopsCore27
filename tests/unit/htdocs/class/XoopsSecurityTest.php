@@ -77,16 +77,31 @@ class TestableXoopsSecurity extends \XoopsSecurity
             $expire  = @ini_get('session.gc_maxlifetime');
             $timeout = ($expire > 0) ? $expire : 900;
         }
-        $token_id = md5(uniqid((string) mt_rand(), true));
+        $token = bin2hex(random_bytes(16));
         if (!isset($_SESSION[$name . '_SESSION'])) {
             $_SESSION[$name . '_SESSION'] = [];
         }
         $token_data = [
-            'id'     => $token_id,
+            'id'     => bin2hex(random_bytes(32)),
+            'token'  => $token,
             'expire' => time() + (int) $timeout,
         ];
         $_SESSION[$name . '_SESSION'][] = $token_data;
-        return md5($token_id . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX);
+        return $token;
+    }
+
+    private function tokenMatches(array $entry, string $token): bool
+    {
+        if (isset($entry['token'])) {
+            return hash_equals((string) $entry['token'], $token);
+        }
+        if (isset($entry['id']) && '' !== $entry['id']) {
+            $agent = \Xmf\Request::getString('HTTP_USER_AGENT', '', 'SERVER', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM);
+
+            return hash_equals(md5($entry['id'] . $agent . XOOPS_DB_PREFIX), $token);
+        }
+
+        return false;
     }
 
     public function validateToken($token = false, $clearIfValid = true, $name = 'XOOPS_TOKEN')
@@ -98,7 +113,7 @@ class TestableXoopsSecurity extends \XoopsSecurity
         $validFound = false;
         $token_data = &$_SESSION[$name . '_SESSION'];
         foreach (array_keys($token_data) as $i) {
-            if ($token === md5($token_data[$i]['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX)) {
+            if ($this->tokenMatches((array) $token_data[$i], (string) $token)) {
                 if ($this->filterToken($token_data[$i])) {
                     if ($clearIfValid) {
                         unset($token_data[$i]);
@@ -187,8 +202,12 @@ class XoopsSecurityTest extends TestCase
     /** @var TestableXoopsSecurity */
     private $security;
 
+    /** @var array<string, mixed> */
+    private array $serverBackup = [];
+
     protected function setUp(): void
     {
+        $this->serverBackup = $_SERVER;
         $this->security = new TestableXoopsSecurity();
 
         // Ensure $_SESSION is available as a superglobal array
@@ -207,7 +226,7 @@ class XoopsSecurityTest extends TestCase
     {
         unset($_SESSION['XOOPS_TOKEN_SESSION']);
         unset($_SESSION['CUSTOM_TOKEN_SESSION']);
-        unset($_SERVER['HTTP_REFERER']);
+        $_SERVER = $this->serverBackup;
     }
 
     // ---------------------------------------------------------------
@@ -427,10 +446,73 @@ class XoopsSecurityTest extends TestCase
         $this->assertNotEmpty($token);
     }
 
-    public function testCreateTokenReturns32CharMd5Hash(): void
+    public function testCreateTokenReturns32HexChars(): void
     {
         $token = $this->security->createToken();
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $token);
+    }
+
+    public function testCreateTokenStoresThePublicValueAndARandomLegacyId(): void
+    {
+        $token = $this->security->createToken();
+        $entry = $_SESSION['XOOPS_TOKEN_SESSION'][0];
+        $this->assertSame($token, $entry['token']);
+        // A pre-2.7.4 validateToken() reads id unguarded and accepts
+        // md5(id . UA . prefix); the id must exist and must not be derivable.
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $entry['id']);
+        $this->assertNotSame($entry['id'], $token);
+    }
+
+    public function testNewEntryIsNotAcceptedThroughTheLegacyDigest(): void
+    {
+        $this->security->createToken();
+        $entry = $_SESSION['XOOPS_TOKEN_SESSION'][0];
+        // What a pre-2.7.4 validator accepts for this entry needs the secret
+        // id, so it is not computable from the User-Agent and prefix alone.
+        $legacyDigest = md5($entry['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX);
+        $this->assertNotSame(md5($_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX), $legacyDigest);
+        // The new validator takes the token branch for this entry and rejects the digest.
+        $this->assertFalse($this->security->validateToken($legacyDigest));
+    }
+
+    public function testTokenSurvivesAUserAgentChangeBetweenCreateAndValidate(): void
+    {
+        $token = $this->security->createToken();
+        $_SERVER['HTTP_USER_AGENT'] = 'Another-Agent/2.0';
+        $this->assertTrue($this->security->validateToken($token));
+    }
+
+    public function testTokenValidatesWithoutAUserAgentHeader(): void
+    {
+        $token = $this->security->createToken();
+        unset($_SERVER['HTTP_USER_AGENT']);
+        $this->assertTrue($this->security->validateToken($token));
+    }
+
+    public function testLegacyEntryValidatesAgainstItsMd5DerivationOnce(): void
+    {
+        $_SESSION['XOOPS_TOKEN_SESSION'] = [
+            ['id' => 'legacy-secret', 'expire' => time() + 300],
+        ];
+        $legacyToken = md5('legacy-secret' . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX);
+        $this->assertTrue($this->security->validateToken($legacyToken));
+        $this->assertFalse($this->security->validateToken($legacyToken), 'cleared after use');
+    }
+
+    public function testLegacyEntryRejectsAWrongToken(): void
+    {
+        $_SESSION['XOOPS_TOKEN_SESSION'] = [
+            ['id' => 'legacy-secret', 'expire' => time() + 300],
+        ];
+        $this->assertFalse($this->security->validateToken(str_repeat('0', 32)));
+    }
+
+    public function testLegacyEntryWithEmptyIdNeverMatches(): void
+    {
+        $_SESSION['XOOPS_TOKEN_SESSION'] = [
+            ['id' => '', 'expire' => time() + 300],
+        ];
+        $this->assertFalse($this->security->validateToken(md5('' . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX)));
     }
 
     public function testCreateTokenStoresInSession(): void
