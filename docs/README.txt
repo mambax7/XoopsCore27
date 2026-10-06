@@ -1,15 +1,15 @@
 XOOPS 2.7.4 RC 2
 
-The XOOPS Development Team is pleased to announce XOOPS 2.7.4 RC 2, the second
-release candidate for XOOPS 2.7.4. This release brings two-factor authentication into
-the core, makes SCEditor a full visual editor and the default for new sites,
-adds Markdown support through EasyMDE, and continues the security hardening of
-the 2.7 line. XOOPS 2.7.4 runs on PHP 8.2 through 8.5.
+The XOOPS Development Team is pleased to announce XOOPS 2.7.4 RC 2, the
+second release candidate for XOOPS 2.7.4. This release brings two-factor
+authentication into the core, makes SCEditor a full visual editor and the
+default for new sites, adds Markdown support through EasyMDE, and continues the
+security hardening of the 2.7 line. XOOPS 2.7.4 runs on PHP 8.2 through 8.5.
 
 This is a release candidate: the feature set is final. RC 2 adds no features;
 it collects the security and bug fixes made since RC 1 (see "Changes since
-RC 1" below). Please test it on a
-staging copy of your site and report anything you find before the final release.
+RC 1" below). Please test it on a staging copy of your site and report anything
+you find before the final release.
 
 Two-factor authentication: members can protect their account with a second
 step at login, using an authenticator app or a six-digit code sent by e-mail.
