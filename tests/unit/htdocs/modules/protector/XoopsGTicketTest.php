@@ -125,8 +125,14 @@ class XoopsGTicketTest extends TestCase
     #[Test]
     public function issueKeepsAZeroTimeoutShortInsteadOfSessionLong(): void
     {
-        $this->createFreshTicket()->issue('', 0);
-        $this->assertSame([['name' => 'XOOPS_G_TICKET', 'timeout' => 1]], $GLOBALS['xoopsSecurity']->created, 'XoopsSecurity would read 0 as the session lifetime');
+        $ticket = $this->createFreshTicket();
+        $ticket->issue('', 0);
+        $ticket->issue('', -5);
+        $this->assertSame(
+            [['name' => 'XOOPS_G_TICKET', 'timeout' => 1], ['name' => 'XOOPS_G_TICKET', 'timeout' => -5]],
+            $GLOBALS['xoopsSecurity']->created,
+            'XoopsSecurity would read 0 as the session lifetime; a negative value is already expired there too'
+        );
     }
 
     #[Test]

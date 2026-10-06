@@ -155,7 +155,12 @@ if (!class_exists('XoopsGTicket')) {
         {
             // XoopsSecurity reads 0 as "session lifetime"; GTicket read it as
             // "expires now" (valid within the same second). Keep that meaning.
-            $timeout = max(1, (int) $timeout);
+            // A negative timeout passes through: both store time() + timeout,
+            // which is already expired.
+            $timeout = (int) $timeout;
+            if (0 === $timeout) {
+                $timeout = 1;
+            }
             $this->_latest_token = (string) $this->security()->createToken($timeout, self::FIELD);
 
             return $this->_latest_token;
