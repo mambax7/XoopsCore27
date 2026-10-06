@@ -657,6 +657,11 @@ if (!function_exists('xoops_groupCacheKey')) {
             // and an interrupted write leaves a file KeyFactory never replaces.
             // One kill-and-rebuild repairs the latter instead of warning forever.
             $secret = '';
+            // The storage reads the key with a bare include and writes it with
+            // file_put_contents(): a missing, unreadable or unwritable key file
+            // raises native warnings that carry the absolute xoops_data path.
+            // Swallow those; the one warning below names the cause without it.
+            set_error_handler(static fn (): bool => true, E_WARNING | E_NOTICE);
             try {
                 $key = \Xmf\Jwt\KeyFactory::build('cacheid');
                 try {
@@ -671,6 +676,8 @@ if (!function_exists('xoops_groupCacheKey')) {
                 }
             } catch (\Throwable $e) {
                 $secret = '';
+            } finally {
+                restore_error_handler();
             }
             if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
                 trigger_error('xoops_groupCacheKey(): no usable cacheid key in key storage; group content is not cached for this request', E_USER_WARNING);
