@@ -17,7 +17,8 @@ exclude:
     - htdocs/xoops_lib/vendor/smarty/**
     # TCPDF: font-cache paths and output streaming
     - htdocs/xoops_lib/vendor/tecnickcom/**
-    # PHPMailer: also hides get_oauth_token.php; its removal is tracked separately
+    # PHPMailer: its OAuth helper get_oauth_token.php is not shipped; the
+    # composer.dist.json post-install/post-update script removes it again
     - htdocs/xoops_lib/vendor/phpmailer/**
     # Holds only composer and firebase (no XOOPS packages)
     - htdocs/class/libraries/vendor/**
