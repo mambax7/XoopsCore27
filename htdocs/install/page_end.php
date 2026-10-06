@@ -45,7 +45,7 @@ $_SESSION['install_rename_suffix'] = $install_rename_suffix;
 // Create a cleanup script OUTSIDE the install directory.
 // On Windows, rename() fails when called from a script inside the directory being renamed.
 // The suffix is embedded server-side so the script needs no client input.
-$cleanupScriptName = 'install_cleanup_' . bin2hex(random_bytes(4)) . '.php';
+$cleanupScriptName = 'install_cleanup_' . bin2hex(random_bytes(16)) . '.php';
 $cleanupScriptPath = XOOPS_ROOT_PATH . '/' . $cleanupScriptName;
 $cleanupUrl        = (defined('XOOPS_URL') && XOOPS_URL !== '') ? XOOPS_URL . '/' . $cleanupScriptName : '../' . $cleanupScriptName;
 
