@@ -90,7 +90,7 @@ function mod_createCacheFile($data, $name = null, $dirname = null)
  */
 function mod_createCacheFile_byGroup($data, $name = null, $dirname = null, $groups = null)
 {
-    $groupId = mod_generateCacheId_byGroup();
+    $groupId = mod_generateCacheId_byGroup($groups);
     if ('' === $groupId) {
         return false; // no usable cache-id key: fail closed, write nothing
     }
@@ -143,7 +143,7 @@ function mod_loadCacheFile($name, $dirname = null)
  */
 function mod_loadCacheFile_byGroup($name, $dirname = null, $groups = null)
 {
-    $groupId = mod_generateCacheId_byGroup();
+    $groupId = mod_generateCacheId_byGroup($groups);
     if ('' === $groupId) {
         return null; // no usable cache-id key: fail closed, read nothing
     }
