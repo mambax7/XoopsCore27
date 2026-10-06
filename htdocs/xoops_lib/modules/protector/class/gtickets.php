@@ -168,8 +168,13 @@ if (!class_exists('XoopsGTicket')) {
             $ticket = Request::getString(self::FIELD, '', $post ? 'POST' : 'GET');
             if ('' === $ticket) {
                 $this->_errors[] = $this->messages['err_noticket'];
-            } elseif (!$this->security()->check(true, $ticket, self::FIELD)) {
-                $this->_errors[] = $this->messages['err_nopair'];
+            } else {
+                // Looked up before the check: a failed check garbage-collects
+                // expired entries, and the message must still say "time out".
+                $expired = $this->isExpired($ticket);
+                if (!$this->security()->check(true, $ticket, self::FIELD)) {
+                    $this->_errors[] = $this->messages[$expired ? 'err_timeout' : 'err_nopair'];
+                }
             }
 
             if (!empty($this->_errors)) {
@@ -186,6 +191,25 @@ if (!class_exists('XoopsGTicket')) {
 
             // all green
             return true;
+        }
+
+        /**
+         * Whether the ticket is in the set but past its expiry (XoopsSecurity
+         * entry shape: 'token' and 'expire').
+         *
+         * @param string $ticket submitted ticket
+         *
+         * @return bool
+         */
+        private function isExpired(string $ticket): bool
+        {
+            foreach ($_SESSION[self::FIELD . '_SESSION'] ?? [] as $entry) {
+                if (is_array($entry) && isset($entry['token']) && hash_equals((string) $entry['token'], $ticket)) {
+                    return !empty($entry['expire']) && $entry['expire'] < time();
+                }
+            }
+
+            return false;
         }
 
         // draw form for repost

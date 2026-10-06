@@ -56,17 +56,19 @@ class XoopsGTicketTest extends TestCase
             public function check($clearIfValid = true, $token = false, $name = 'XOOPS_TOKEN')
             {
                 $this->checked[] = ['token' => (string) $token, 'name' => $name];
+                $valid = false;
                 foreach ($_SESSION[$name . '_SESSION'] ?? [] as $i => $entry) {
-                    if (hash_equals($entry['token'], (string) $token)) {
+                    if (hash_equals($entry['token'], (string) $token) && $entry['expire'] >= time()) {
                         if ($clearIfValid) {
                             unset($_SESSION[$name . '_SESSION'][$i]);
                         }
-
-                        return true;
+                        $valid = true;
                     }
                 }
+                // like the real class: expired entries are garbage-collected after the check
+                $_SESSION[$name . '_SESSION'] = array_filter($_SESSION[$name . '_SESSION'] ?? [], static fn ($e) => $e['expire'] >= time());
 
-                return false;
+                return $valid;
             }
         };
         $_SESSION['XOOPS_G_TICKET_SESSION'] = [];
@@ -256,6 +258,17 @@ class XoopsGTicketTest extends TestCase
         $this->assertFalse($ticket->check(true, '', false));
         $this->assertSame([$ticket->messages['err_nopair']], $ticket->_errors);
         $this->assertFalse($ticket->using(), 'a failed check clears the set, as before');
+    }
+
+    #[Test]
+    public function checkReportsAnExpiredTicketAsTimeout(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $_POST['XOOPS_G_TICKET'] = $ticket->issue('', 1800);
+        $_SESSION['XOOPS_G_TICKET_SESSION'][0]['expire'] = time() - 1;
+
+        $this->assertFalse($ticket->check(true, '', false));
+        $this->assertSame([$ticket->messages['err_timeout']], $ticket->_errors);
     }
 
     #[Test]
