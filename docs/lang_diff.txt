@@ -4,6 +4,13 @@ LANGUAGE DIFFERENCES
 Below are language differences from one version to the next.
 
 ================================
+2026/10: Version 2.7.4-RC2
+================================
+/htdocs/modules/system/language/english/admin/maintenance.php
+- added define('_AM_SYSTEM_MAINTENANCE_DUMP_DIR_UNSAFE', 'The dump directory could not be created or protected, so no dump was written.');
+- added define('_AM_SYSTEM_MAINTENANCE_DUMP_CHMOD_FAILED', 'The dump was written, but its permissions could not be restricted to the owner (0600). Check the file before leaving it on the server.');
+
+================================
 2026/09: Version 2.7.4-RC1
 ================================
 /htdocs/class/xoopseditor/sceditor/language/english.php
@@ -60,10 +67,6 @@ Below are language differences from one version to the next.
 - added define('_XOOPS_UPGRADE_274_EDITORS_CATEGORY_TAKEN', 'Preference category %d is already used by another category; the Editors preferences need that ID');
 - added define('_XOOPS_UPGRADE_274_LOCK_ACQUIRE', 'Could not acquire the %s migration lock; retry the upgrade');
 - added define('_XOOPS_UPGRADE_274_LOCK_RELEASE', 'Could not release the %s migration lock');
-
-/htdocs/modules/system/language/english/admin/maintenance.php
-- added define('_AM_SYSTEM_MAINTENANCE_DUMP_DIR_UNSAFE', 'The dump directory could not be created or protected, so no dump was written.');
-- added define('_AM_SYSTEM_MAINTENANCE_DUMP_CHMOD_FAILED', 'The dump was written, but its permissions could not be restricted to the owner (0600). Check the file before leaving it on the server.');
 
 ================================
 2026/09: Version 2.7.4-Beta2

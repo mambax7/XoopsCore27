@@ -1,12 +1,14 @@
-XOOPS 2.7.4 RC 1
+XOOPS 2.7.4 RC 2
 
-The XOOPS Development Team is pleased to announce XOOPS 2.7.4 RC 1, the release
-candidate for XOOPS 2.7.4. This release brings two-factor authentication into
+The XOOPS Development Team is pleased to announce XOOPS 2.7.4 RC 2, the second
+release candidate for XOOPS 2.7.4. This release brings two-factor authentication into
 the core, makes SCEditor a full visual editor and the default for new sites,
 adds Markdown support through EasyMDE, and continues the security hardening of
 the 2.7 line. XOOPS 2.7.4 runs on PHP 8.2 through 8.5.
 
-This is a release candidate: the feature set is final. Please test it on a
+This is a release candidate: the feature set is final. RC 2 adds no features;
+it collects the security and bug fixes made since RC 1 (see "Changes since
+RC 1" below). Please test it on a
 staging copy of your site and report anything you find before the final release.
 
 Two-factor authentication: members can protect their account with a second
@@ -27,10 +29,36 @@ read from the database on every request, stricter checks on registration,
 comment editing and the TinyMCE image manager, a webmaster-only upgrade wizard,
 and LDAP connections that refuse to continue without the TLS they asked for.
 
-Download XOOPS 2.7.4 RC 1 from GitHub: https://github.com/XOOPS/XoopsCore27/releases
+Download XOOPS 2.7.4 RC 2 from GitHub: https://github.com/XOOPS/XoopsCore27/releases
 
 For full documentation on installing or upgrading XOOPS please see:
 https://xoops.github.io/xoops-docs/
+
+Changes since RC 1
+-----------------------------------
+- CSRF tokens are random values, no longer tied to the browser's User-Agent,
+  so a browser update or a "desktop site" toggle no longer rejects open forms.
+  Protector's admin pages use the same core token instead of their own GTicket.
+- Login, post-login and theme-switch redirects share one same-site check.
+- Confirmation pages, object and login error lists, and the admin news-feed
+  error are escaped; image, smiley, rank and avatar files are deleted only
+  inside the upload directory.
+- Cache ids are keyed with a site key in xoops_data/data instead of the
+  database credentials; the installer uses random_bytes() for its rename
+  suffix and cleanup-script name.
+- Database dumps are written only under XOOPS_VAR_PATH into a protected
+  directory; reCAPTCHA v2 verifies over POST; xoops_lib/.htaccess works on
+  Apache 2.4 without mod_access_compat.
+- Protector writes its ban files atomically and rejects uploads it cannot
+  inspect. See docs/changelog.270.txt for the full list.
+
+Upgrading from 2.7.4 RC 1
+-----------------------------------
+Copy the new files over the web root. There are no database changes since
+RC 1; running the upgrade wizard is harmless but not required. Forms opened
+before the upgrade still submit; a Protector admin form opened before the
+upgrade must be reloaded once. xoops_data/data must stay writable: the new
+cache-id key is created there on first use.
 
 Upgrading from 2.7.3
 -----------------------------------
@@ -99,4 +127,4 @@ conversation going on the forums and on GitHub throughout the 2.7.4 cycle.
 
 
 XOOPS Development Team
-September 2026
+October 2026
