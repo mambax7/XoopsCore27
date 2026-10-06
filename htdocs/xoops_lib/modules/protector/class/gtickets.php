@@ -151,7 +151,7 @@ if (!class_exists('XoopsGTicket')) {
          *
          * @return string
          */
-        public function issue($salt = '', $timeout = 1800, $area = '')
+        public function issue(/** @scrutinizer ignore-unused */ $salt = '', $timeout = 1800, /** @scrutinizer ignore-unused */ $area = '')
         {
             // XoopsSecurity reads 0 as "session lifetime"; GTicket read it as
             // "expires now" (valid within the same second). Keep that meaning.
@@ -354,8 +354,8 @@ if (!class_exists('XoopsGTicket')) {
         // end of class
     }
 
-    // create a instance in global scope
-    $GLOBALS['xoopsGTicket'] = new XoopsGTicket();
+    // create a instance in global scope: the compatibility surface for modules
+    $GLOBALS['xoopsGTicket'] = /** @scrutinizer ignore-deprecated */ new XoopsGTicket();
 }
 
 if (!function_exists('admin_refcheck')) {
