@@ -491,4 +491,81 @@ class XoopsGTicketTest extends TestCase
         $_SERVER['HTTP_REFERER'] = XOOPS_URL . '/modules/other/admin.php';
         $this->assertFalse(admin_refcheck('/modules/system/'));
     }
+
+    // ---------------------------------------------------------------
+    // 2.7.4 ticket shape: random value, direct compare, legacy stubs
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function issueReturns32HexCharactersAndStoresThemInTheStub(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $value  = $ticket->issue('', 1800, 'area');
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $value);
+        $stub = $_SESSION['XOOPS_G_STUBS'][0];
+        $this->assertSame($value, $stub['ticket']);
+        $this->assertSame($value, $ticket->_latest_token);
+    }
+
+    #[Test]
+    public function saltIsIgnored(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $a = $ticket->issue('one', 1800, 'area');
+        $b = $ticket->issue('one', 1800, 'area');
+        $this->assertNotSame($a, $b);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $b);
+    }
+
+    #[Test]
+    public function stubCarriesARandomLegacyTokenThatIsNotTheTicket(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $value  = $ticket->issue('', 1800, 'area');
+        $stub   = $_SESSION['XOOPS_G_STUBS'][0];
+        // A pre-2.7.4 check() reads token unguarded and accepts
+        // md5(token . prefix); it must exist and must not be derivable.
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $stub['token']);
+        $this->assertNotSame($value, $stub['token']);
+        $this->assertNotSame(md5(XOOPS_DB_PREFIX), md5($stub['token'] . XOOPS_DB_PREFIX));
+    }
+
+    #[Test]
+    public function newStubIsNotAcceptedThroughTheLegacyDigest(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $ticket->issue('', 1800, 'area');
+        $stub = $_SESSION['XOOPS_G_STUBS'][0];
+        $_POST['XOOPS_G_TICKET'] = md5($stub['token'] . XOOPS_DB_PREFIX);
+        $this->assertFalse($ticket->check(true, 'area', false));
+    }
+
+    #[Test]
+    public function legacyStubWithEmptyTokenNeverMatches(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $_SESSION['XOOPS_G_STUBS'] = [[
+            'expire'  => time() + 1800,
+            'referer' => '',
+            'area'    => 'area',
+            'token'   => '',
+        ]];
+        $_POST['XOOPS_G_TICKET'] = md5('' . XOOPS_DB_PREFIX);
+        $this->assertFalse($ticket->check(true, 'area', false));
+    }
+
+    #[Test]
+    public function validLegacyStubStillAcceptsItsMd5Ticket(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $_SESSION['XOOPS_G_STUBS'] = [[
+            'expire'  => time() + 1800,
+            'referer' => '',
+            'area'    => 'area',
+            'token'   => 'legacy-token',
+        ]];
+        $_POST['XOOPS_G_TICKET'] = md5('legacy-token' . XOOPS_DB_PREFIX);
+        $this->assertTrue($ticket->check(true, 'area', false));
+        $this->assertSame([], $_SESSION['XOOPS_G_STUBS'], 'consumed');
+    }
 }

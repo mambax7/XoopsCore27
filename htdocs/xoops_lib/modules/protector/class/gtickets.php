@@ -112,7 +112,11 @@ if (!class_exists('XoopsGTicket')) {
 
         // issue a ticket
         /**
-         * @param string $salt
+         * The ticket is CSPRNG output handed to the browser as is and compared
+         * with hash_equals() in check(); it is no longer md5() of a crypt()
+         * token. $salt is kept in the signature for callers and ignored.
+         *
+         * @param string $salt   unused since 2.7.4
          * @param int    $timeout
          * @param string $area
          *
@@ -122,15 +126,8 @@ if (!class_exists('XoopsGTicket')) {
         {
             global $xoopsModule;
 
-            if ('' === $salt) {
-                $salt = '$2y$07$' . str_replace('+', '.', base64_encode(random_bytes(16)));
-            }
-
-            // create a token
-            [$usec, $sec] = explode(' ', microtime());
-            $appendix_salt       = empty($_SERVER['PATH']) ? XOOPS_DB_NAME : $_SERVER['PATH'];
-            $token               = crypt($salt . $usec . $appendix_salt . $sec, $salt);
-            $this->_latest_token = $token;
+            $ticket              = bin2hex(random_bytes(16));
+            $this->_latest_token = $ticket;
 
             if (empty($_SESSION['XOOPS_G_STUBS'])) {
                 $_SESSION['XOOPS_G_STUBS'] = [];
@@ -149,16 +146,46 @@ if (!class_exists('XoopsGTicket')) {
                 $area = $xoopsModule->getVar('dirname');
             }
 
-            // store stub
+            // store stub. 'token' is read unguarded by a pre-2.7.4 check()
+            // (rollback, or a mixed-version node sharing the session store),
+            // which accepts md5(token . XOOPS_DB_PREFIX): it must be present
+            // and random, never '', so that digest cannot be computed from
+            // public inputs.
             $_SESSION['XOOPS_G_STUBS'][] = [
                 'expire'  => time() + $timeout,
                 'referer' => $referer,
                 'area'    => $area,
-                'token'   => $token,
+                'token'   => bin2hex(random_bytes(16)),
+                'ticket'  => $ticket,
             ];
 
-            // paid md5ed token as a ticket
-            return md5($token . XOOPS_DB_PREFIX);
+            return $ticket;
+        }
+
+        /**
+         * Compare a submitted ticket with one session stub.
+         *
+         * Stubs written before 2.7.4 hold only a crypt() 'token'; the ticket was
+         * md5(token . XOOPS_DB_PREFIX). They stay valid until they expire so a
+         * form open while the site is upgraded still submits. Remove the legacy
+         * branch in 2.8.
+         *
+         * @param array  $stub   session stub
+         * @param string $ticket submitted ticket
+         *
+         * @return bool
+         */
+        private function stubMatches(array $stub, string $ticket): bool
+        {
+            if (isset($stub['ticket'])) {
+                return hash_equals((string) $stub['ticket'], $ticket);
+            }
+            if (isset($stub['token']) && '' !== $stub['token']) {
+                // legacy 2.7.3 stub shape; remove in 2.8
+                return hash_equals(md5($stub['token'] . XOOPS_DB_PREFIX), $ticket);
+            }
+
+            return false;
         }
 
         // check a ticket
@@ -200,14 +227,14 @@ if (!class_exists('XoopsGTicket')) {
             foreach ($stubs_tmp as $stub) {
                 // default lifetime 30min
                 if ($stub['expire'] >= time()) {
-                    if (hash_equals(md5($stub['token'] . XOOPS_DB_PREFIX), (string) $ticket)) {
+                    if ($this->stubMatches((array) $stub, (string) $ticket)) {
                         $found_stub = $stub;
                     } else {
                         // store the other valid stubs into session
                         $_SESSION['XOOPS_G_STUBS'][] = $stub;
                     }
                 } else {
-                    if (hash_equals(md5($stub['token'] . XOOPS_DB_PREFIX), (string) $ticket)) {
+                    if ($this->stubMatches((array) $stub, (string) $ticket)) {
                         // not CSRF but Time-Out
                         $timeout_flag = true;
                     }
