@@ -9,16 +9,28 @@ use PHPUnit\Framework\Attributes\CoversFunction;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * XoopsGTicket is a deprecated adapter over XoopsSecurity since 2.7.4: a
+ * ticket is a XoopsSecurity token in the XOOPS_G_TICKET set, issued with
+ * createToken() and checked with check(). The suite bootstrap stubs
+ * XoopsSecurity, so these tests install a small in-session double for it
+ * that records what the adapter asks of it.
+ */
 #[CoversClass(\XoopsGTicket::class)]
 #[CoversFunction('admin_refcheck')]
 class XoopsGTicketTest extends TestCase
 {
     private static bool $loaded = false;
 
+    /** @var mixed */
+    private $securityBackup;
+
+    /** @var array<string, mixed> exact copies of the superglobals this test touches */
+    private array $globalsBackup = [];
+
     public static function setUpBeforeClass(): void
     {
         if (!self::$loaded) {
-            // Ensure XoopsGTicket is loaded
             if (!class_exists('XoopsGTicket', false)) {
                 require_once XOOPS_PATH . '/modules/protector/class/gtickets.php';
             }
@@ -28,18 +40,61 @@ class XoopsGTicketTest extends TestCase
 
     protected function setUp(): void
     {
-        // Reset session stubs
-        $_SESSION['XOOPS_G_STUBS'] = [];
-        // Clear server vars used by ticket
-        unset($_SERVER['HTTP_REFERER'], $_SERVER['REQUEST_URI'], $_SERVER['PATH']);
-        unset($_POST['XOOPS_G_TICKET'], $_GET['XOOPS_G_TICKET']);
+        $this->securityBackup = $GLOBALS['xoopsSecurity'] ?? null;
+        $this->globalsBackup  = ['_SESSION' => $_SESSION ?? null, '_SERVER' => $_SERVER, '_POST' => $_POST, '_GET' => $_GET];
+        $GLOBALS['xoopsSecurity'] = new class extends \XoopsSecurity {
+            /** @var array<int, array{name: string, timeout: int}> */
+            public array $created = [];
+            /** @var array<int, array{token: string, name: string}> */
+            public array $checked = [];
+            /** @var string[] what the real class accumulates in setErrors() */
+            public $errors = [];
+
+            public function createToken($timeout = 0, $name = 'XOOPS_TOKEN')
+            {
+                $token = bin2hex(random_bytes(16));
+                $this->created[] = ['name' => $name, 'timeout' => (int) $timeout];
+                $_SESSION[$name . '_SESSION'][] = ['token' => $token, 'expire' => time() + (int) $timeout];
+
+                return $token;
+            }
+
+            public function check($clearIfValid = true, $token = false, $name = 'XOOPS_TOKEN')
+            {
+                $this->checked[] = ['token' => (string) $token, 'name' => $name];
+                $valid = false;
+                foreach ($_SESSION[$name . '_SESSION'] ?? [] as $i => $entry) {
+                    if (hash_equals($entry['token'], (string) $token) && $entry['expire'] >= time()) {
+                        if ($clearIfValid) {
+                            unset($_SESSION[$name . '_SESSION'][$i]);
+                        }
+                        $valid = true;
+                    }
+                }
+                // like the real class: expired entries are garbage-collected after the check
+                $_SESSION[$name . '_SESSION'] = array_filter($_SESSION[$name . '_SESSION'] ?? [], static fn ($e) => $e['expire'] >= time());
+                if (!$valid) {
+                    $this->errors[] = 'No valid token found';
+                }
+
+                return $valid;
+            }
+        };
+        $_SESSION['XOOPS_G_TICKET_SESSION'] = [];
+        unset($_SERVER['HTTP_REFERER'], $_POST['XOOPS_G_TICKET'], $_GET['XOOPS_G_TICKET']);
     }
 
     protected function tearDown(): void
     {
-        unset($_SESSION['XOOPS_G_STUBS']);
-        unset($_SERVER['HTTP_REFERER'], $_SERVER['REQUEST_URI'], $_SERVER['PATH']);
-        unset($_POST['XOOPS_G_TICKET'], $_GET['XOOPS_G_TICKET']);
+        $GLOBALS['xoopsSecurity'] = $this->securityBackup;
+        if (null === $this->globalsBackup['_SESSION']) {
+            unset($_SESSION);
+        } else {
+            $_SESSION = $this->globalsBackup['_SESSION'];
+        }
+        $_SERVER = $this->globalsBackup['_SERVER'];
+        $_POST   = $this->globalsBackup['_POST'];
+        $_GET    = $this->globalsBackup['_GET'];
     }
 
     private function createFreshTicket(): \XoopsGTicket
@@ -55,233 +110,90 @@ class XoopsGTicketTest extends TestCase
     public function constructorSetsDefaultMessages(): void
     {
         $ticket = $this->createFreshTicket();
-        $this->assertNotEmpty($ticket->messages);
-    }
-
-    #[Test]
-    public function defaultMessagesContainsExpectedKeys(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $expected = [
-            'err_general', 'err_nostubs', 'err_noticket', 'err_nopair',
-            'err_timeout', 'err_areaorref', 'fmt_prompt4repost', 'btn_repost',
-        ];
-        foreach ($expected as $key) {
-            $this->assertArrayHasKey($key, $ticket->messages, "Missing message key: $key");
+        foreach (['err_general', 'err_noticket', 'err_nopair', 'err_timeout', 'fmt_prompt4repost', 'btn_repost'] as $key) {
+            $this->assertArrayHasKey($key, $ticket->messages);
         }
-    }
-
-    #[Test]
-    public function constructorInitializesEmptyErrors(): void
-    {
-        $ticket = $this->createFreshTicket();
         $this->assertSame([], $ticket->_errors);
-    }
-
-    #[Test]
-    public function constructorInitializesEmptyLatestToken(): void
-    {
-        $ticket = $this->createFreshTicket();
         $this->assertSame('', $ticket->_latest_token);
     }
 
     // ---------------------------------------------------------------
-    // issue()
+    // issue(): a XoopsSecurity token in the XOOPS_G_TICKET set
     // ---------------------------------------------------------------
 
     #[Test]
-    public function issueReturnsMd5String(): void
+    public function issueCreatesAXoopsSecurityTokenInTheTicketSet(): void
     {
         $ticket = $this->createFreshTicket();
-        $result = $ticket->issue('salt', 1800, 'testarea');
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $result);
+        $value  = $ticket->issue('salt', 600, 'area');
+
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $value);
+        $this->assertSame($value, $ticket->_latest_token);
+        $this->assertSame([['name' => 'XOOPS_G_TICKET', 'timeout' => 600]], $GLOBALS['xoopsSecurity']->created);
+        $this->assertTrue($ticket->using());
     }
 
     #[Test]
-    public function issueStoresStubInSession(): void
+    public function issueKeepsAZeroTimeoutShortInsteadOfSessionLong(): void
     {
         $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'testarea');
-        $this->assertCount(1, $_SESSION['XOOPS_G_STUBS']);
+        $ticket->issue('', 0);
+        $ticket->issue('', -5);
+        $this->assertSame(
+            [['name' => 'XOOPS_G_TICKET', 'timeout' => 1], ['name' => 'XOOPS_G_TICKET', 'timeout' => -5]],
+            $GLOBALS['xoopsSecurity']->created,
+            'XoopsSecurity would read 0 as the session lifetime; a negative value is already expired there too'
+        );
     }
 
     #[Test]
-    public function issueStubContainsExpectedKeys(): void
+    public function issueReturnsDifferentTicketsEachTime(): void
     {
         $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'testarea');
-        $stub = $_SESSION['XOOPS_G_STUBS'][0];
-        $this->assertArrayHasKey('expire', $stub);
-        $this->assertArrayHasKey('referer', $stub);
-        $this->assertArrayHasKey('area', $stub);
-        $this->assertArrayHasKey('token', $stub);
-    }
-
-    #[Test]
-    public function issueStubAreaMatchesParameter(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'mymodule');
-        $this->assertSame('mymodule', $_SESSION['XOOPS_G_STUBS'][0]['area']);
-    }
-
-    #[Test]
-    public function issueStubExpireIsInFuture(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'testarea');
-        $this->assertGreaterThan(time(), $_SESSION['XOOPS_G_STUBS'][0]['expire']);
-    }
-
-    #[Test]
-    public function issueSetsLatestToken(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'testarea');
-        $this->assertNotEmpty($ticket->_latest_token);
-    }
-
-    #[Test]
-    public function issueWithEmptySaltGeneratesToken(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $result = $ticket->issue('', 1800, 'testarea');
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $result);
-    }
-
-    #[Test]
-    public function issueMultipleTokensAccumulate(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->issue('s1', 1800, 'area1');
-        $ticket->issue('s2', 1800, 'area2');
-        $ticket->issue('s3', 1800, 'area3');
-        $this->assertCount(3, $_SESSION['XOOPS_G_STUBS']);
-    }
-
-    #[Test]
-    public function issueLimitsStubsToTen(): void
-    {
-        $ticket = $this->createFreshTicket();
-        // Pre-fill with 11 stubs
-        for ($i = 0; $i < 11; $i++) {
-            $_SESSION['XOOPS_G_STUBS'][] = [
-                'expire' => time() + 1800,
-                'referer' => '',
-                'area' => 'old',
-                'token' => 'token_' . $i,
-            ];
-        }
-        // Issue one more - should trim to 10 first, then add
-        $ticket->issue('new', 1800, 'new');
-        $this->assertLessThanOrEqual(12, count($_SESSION['XOOPS_G_STUBS']));
-    }
-
-    #[Test]
-    public function issueReturnsDifferentTokensEachTime(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $t1 = $ticket->issue('salt1', 1800, 'area');
-        $t2 = $ticket->issue('salt2', 1800, 'area');
-        $this->assertNotSame($t1, $t2);
+        $this->assertNotSame($ticket->issue(), $ticket->issue());
+        $this->assertCount(2, $_SESSION['XOOPS_G_TICKET_SESSION']);
     }
 
     // ---------------------------------------------------------------
-    // getTicketHtml()
+    // Form helpers keep the XOOPS_G_TICKET field
     // ---------------------------------------------------------------
 
     #[Test]
     public function getTicketHtmlReturnsHiddenInput(): void
     {
-        $ticket = $this->createFreshTicket();
-        $html = $ticket->getTicketHtml('salt', 1800, 'area');
-        $this->assertStringContainsString('<input type="hidden"', $html);
-        $this->assertStringContainsString('name="XOOPS_G_TICKET"', $html);
-        $this->assertStringContainsString('value="', $html);
+        $html = $this->createFreshTicket()->getTicketHtml('salt', 1800, 'area');
+        $this->assertMatchesRegularExpression('/^<input type="hidden" name="XOOPS_G_TICKET" value="[a-f0-9]{32}" \/>$/', $html);
     }
-
-    #[Test]
-    public function getTicketHtmlValueIsMd5(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $html = $ticket->getTicketHtml('salt', 1800, 'area');
-        preg_match('/value="([a-f0-9]{32})"/', $html, $matches);
-        $this->assertNotEmpty($matches[1]);
-    }
-
-    // ---------------------------------------------------------------
-    // getTicketArray()
-    // ---------------------------------------------------------------
 
     #[Test]
     public function getTicketArrayReturnsArrayWithKey(): void
     {
-        $ticket = $this->createFreshTicket();
-        $result = $ticket->getTicketArray('salt', 1800, 'area');
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('XOOPS_G_TICKET', $result);
+        $array = $this->createFreshTicket()->getTicketArray();
+        $this->assertSame(['XOOPS_G_TICKET'], array_keys($array));
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $array['XOOPS_G_TICKET']);
     }
 
     #[Test]
-    public function getTicketArrayValueIsMd5(): void
+    public function getTicketParamStringWithAndWithoutAmp(): void
     {
         $ticket = $this->createFreshTicket();
-        $result = $ticket->getTicketArray('salt', 1800, 'area');
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $result['XOOPS_G_TICKET']);
+        $this->assertMatchesRegularExpression('/^&amp;XOOPS_G_TICKET=[a-f0-9]{32}$/', $ticket->getTicketParamString());
+        $this->assertMatchesRegularExpression('/^XOOPS_G_TICKET=[a-f0-9]{32}$/', $ticket->getTicketParamString('', true));
     }
 
     // ---------------------------------------------------------------
-    // getTicketParamString()
+    // clear() / using()
     // ---------------------------------------------------------------
 
     #[Test]
-    public function getTicketParamStringWithAmp(): void
+    public function clearEmptiesTheTicketSet(): void
     {
         $ticket = $this->createFreshTicket();
-        $result = $ticket->getTicketParamString('salt', false, 1800, 'area');
-        $this->assertStringStartsWith('&amp;XOOPS_G_TICKET=', $result);
-    }
-
-    #[Test]
-    public function getTicketParamStringWithNoamp(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $result = $ticket->getTicketParamString('salt', true, 1800, 'area');
-        $this->assertStringStartsWith('XOOPS_G_TICKET=', $result);
-    }
-
-    // ---------------------------------------------------------------
-    // clear()
-    // ---------------------------------------------------------------
-
-    #[Test]
-    public function clearEmptiesSessionStubs(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'area');
-        $this->assertNotEmpty($_SESSION['XOOPS_G_STUBS']);
-        $ticket->clear();
-        $this->assertSame([], $_SESSION['XOOPS_G_STUBS']);
-    }
-
-    // ---------------------------------------------------------------
-    // using()
-    // ---------------------------------------------------------------
-
-    #[Test]
-    public function usingReturnsFalseWhenNoStubs(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $_SESSION['XOOPS_G_STUBS'] = [];
-        $this->assertFalse($ticket->using());
-    }
-
-    #[Test]
-    public function usingReturnsTrueWhenStubsExist(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->issue('salt', 1800, 'area');
+        $ticket->issue();
         $this->assertTrue($ticket->using());
+        $ticket->clear();
+        $this->assertSame([], $_SESSION['XOOPS_G_TICKET_SESSION']);
+        $this->assertFalse($ticket->using());
     }
 
     // ---------------------------------------------------------------
@@ -289,40 +201,14 @@ class XoopsGTicketTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function getErrorsReturnsHtmlStringByDefault(): void
+    public function getErrorsReturnsHtmlStringByDefaultAndArrayOnRequest(): void
     {
         $ticket = $this->createFreshTicket();
         $ticket->_errors = ['Error 1', 'Error 2'];
-        $result = $ticket->getErrors(true);
-        $this->assertIsString($result);
-        $this->assertStringContainsString('Error 1', $result);
-        $this->assertStringContainsString('Error 2', $result);
-        $this->assertStringContainsString('<br>', $result);
-    }
-
-    #[Test]
-    public function getErrorsReturnsArrayWhenFalse(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->_errors = ['Error A', 'Error B'];
-        $result = $ticket->getErrors(false);
-        $this->assertIsArray($result);
-        $this->assertSame(['Error A', 'Error B'], $result);
-    }
-
-    #[Test]
-    public function getErrorsReturnsEmptyStringWhenNoErrors(): void
-    {
-        $ticket = $this->createFreshTicket();
+        $this->assertSame("Error 1<br>\nError 2<br>\n", $ticket->getErrors(true));
+        $this->assertSame(['Error 1', 'Error 2'], $ticket->getErrors(false));
         $ticket->_errors = [];
         $this->assertSame('', $ticket->getErrors(true));
-    }
-
-    #[Test]
-    public function getErrorsReturnsEmptyArrayWhenNoErrors(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $ticket->_errors = [];
         $this->assertSame([], $ticket->getErrors(false));
     }
 
@@ -334,8 +220,7 @@ class XoopsGTicketTest extends TestCase
     public function extractPostRecursiveFlatValues(): void
     {
         $ticket = $this->createFreshTicket();
-        $data = ['name' => 'John', 'email' => 'john@test.com'];
-        [$table, $form] = $ticket->extract_post_recursive('field', $data);
+        [$table, $form] = $ticket->extract_post_recursive('field', ['name' => 'John', 'email' => 'john@test.com']);
 
         $this->assertStringContainsString('field[name]', $table);
         $this->assertStringContainsString('John', $table);
@@ -346,10 +231,7 @@ class XoopsGTicketTest extends TestCase
     #[Test]
     public function extractPostRecursiveNestedValues(): void
     {
-        $ticket = $this->createFreshTicket();
-        $data = ['sub' => ['key' => 'val']];
-        [$table, $form] = $ticket->extract_post_recursive('parent', $data);
-
+        [$table] = $this->createFreshTicket()->extract_post_recursive('parent', ['sub' => ['key' => 'val']]);
         $this->assertStringContainsString('parent[sub][key]', $table);
         $this->assertStringContainsString('val', $table);
     }
@@ -357,100 +239,86 @@ class XoopsGTicketTest extends TestCase
     #[Test]
     public function extractPostRecursiveEscapesHtml(): void
     {
-        $ticket = $this->createFreshTicket();
-        $data = ['xss' => '<script>alert(1)</script>'];
-        [$table, $form] = $ticket->extract_post_recursive('field', $data);
-
+        [$table] = $this->createFreshTicket()->extract_post_recursive('field', ['xss' => '<script>alert(1)</script>']);
         $this->assertStringNotContainsString('<script>', $table);
         $this->assertStringContainsString('&lt;script&gt;', $table);
     }
 
     // ---------------------------------------------------------------
-    // check() — token validation (no allow_repost to avoid exit)
+    // check(): no allow_repost, so it returns instead of exiting
     // ---------------------------------------------------------------
-
-    #[Test]
-    public function checkFailsWithNoStubsAndNoRepost(): void
-    {
-        $ticket = $this->createFreshTicket();
-        $_SESSION['XOOPS_G_STUBS'] = [];
-        $_POST['XOOPS_G_TICKET'] = 'invalidticket';
-        $result = $ticket->check(true, 'testarea', false);
-        $this->assertFalse($result);
-    }
 
     #[Test]
     public function checkFailsWithEmptyTicket(): void
     {
         $ticket = $this->createFreshTicket();
-        $_POST['XOOPS_G_TICKET'] = '';
-        $result = $ticket->check(true, 'testarea', false);
-        $this->assertFalse($result);
+        $this->assertFalse($ticket->check(true, 'area', false));
+        $this->assertSame([$ticket->messages['err_noticket']], $ticket->_errors);
+        $this->assertSame([], $GLOBALS['xoopsSecurity']->checked, 'nothing to check');
     }
 
     #[Test]
-    public function checkSucceedsWithValidTicket(): void
+    public function checkSucceedsWithValidTicketAndConsumesIt(): void
     {
         $ticket = $this->createFreshTicket();
-        $md5ticket = $ticket->issue('salt', 1800, 'testarea');
-        $_POST['XOOPS_G_TICKET'] = $md5ticket;
-        $result = $ticket->check(true, 'testarea', false);
-        $this->assertTrue($result);
+        $_POST['XOOPS_G_TICKET'] = $ticket->issue('salt', 1800, 'area');
+
+        $this->assertTrue($ticket->check(true, 'area', false));
+        $this->assertSame([], $ticket->_errors);
+        $this->assertSame([['token' => $_POST['XOOPS_G_TICKET'], 'name' => 'XOOPS_G_TICKET']], $GLOBALS['xoopsSecurity']->checked);
+        $this->assertFalse($ticket->check(true, 'area', false), 'single use');
     }
 
     #[Test]
-    public function checkConsumesTheStub(): void
+    public function checkReadsTheTicketFromGetWhenAsked(): void
     {
         $ticket = $this->createFreshTicket();
-        $md5ticket = $ticket->issue('salt', 1800, 'testarea');
-        $_POST['XOOPS_G_TICKET'] = $md5ticket;
-        $ticket->check(true, 'testarea', false);
-        // Stub should be consumed (removed from session)
-        $this->assertEmpty($_SESSION['XOOPS_G_STUBS']);
+        $_GET['XOOPS_G_TICKET'] = $ticket->issue();
+        $this->assertTrue($ticket->check(false, '', false));
     }
 
     #[Test]
-    public function checkFromGetParameter(): void
+    public function checkFailsForAnUnknownTicketAndClearsTheSet(): void
     {
         $ticket = $this->createFreshTicket();
-        $md5ticket = $ticket->issue('salt', 1800, 'testarea');
-        $_GET['XOOPS_G_TICKET'] = $md5ticket;
-        $result = $ticket->check(false, 'testarea', false);
-        $this->assertTrue($result);
+        $ticket->issue();
+        $_POST['XOOPS_G_TICKET'] = str_repeat('0', 32);
+
+        $this->assertFalse($ticket->check(true, '', false));
+        $this->assertSame([$ticket->messages['err_nopair']], $ticket->_errors);
+        $this->assertFalse($ticket->using(), 'a failed check clears the set, as before');
     }
 
     #[Test]
-    public function checkExpiredTicketFails(): void
+    public function aFailedCheckLeavesTheCoreErrorListAlone(): void
     {
+        $GLOBALS['xoopsSecurity']->errors = ['earlier'];
         $ticket = $this->createFreshTicket();
-        // Manually create an expired stub
-        $token = 'expired_token_' . microtime();
-        $_SESSION['XOOPS_G_STUBS'][] = [
-            'expire' => time() - 100, // already expired
-            'referer' => '',
-            'area' => 'testarea',
-            'token' => $token,
-        ];
-        $_POST['XOOPS_G_TICKET'] = md5($token . XOOPS_DB_PREFIX);
-        $result = $ticket->check(true, 'testarea', false);
-        $this->assertFalse($result);
+        $ticket->issue();
+        $_POST['XOOPS_G_TICKET'] = str_repeat('0', 32);
+
+        $this->assertFalse($ticket->check(true, '', false));
+        $this->assertSame(['earlier'], $GLOBALS['xoopsSecurity']->errors, 'GTicket reports through its own messages');
     }
 
     #[Test]
-    public function checkSetsTimeoutError(): void
+    public function checkReportsAnExpiredTicketAsTimeout(): void
     {
         $ticket = $this->createFreshTicket();
-        $token = 'timed_out_token';
-        $_SESSION['XOOPS_G_STUBS'][] = [
-            'expire' => time() - 100,
-            'referer' => '',
-            'area' => 'testarea',
-            'token' => $token,
-        ];
-        $_POST['XOOPS_G_TICKET'] = md5($token . XOOPS_DB_PREFIX);
-        $ticket->check(true, 'testarea', false);
-        $errors = $ticket->getErrors(false);
-        $this->assertContains($ticket->messages['err_timeout'], $errors);
+        $_POST['XOOPS_G_TICKET'] = $ticket->issue('', 1800);
+        $_SESSION['XOOPS_G_TICKET_SESSION'][0]['expire'] = time() - 1;
+
+        $this->assertFalse($ticket->check(true, '', false));
+        $this->assertSame([$ticket->messages['err_timeout']], $ticket->_errors);
+    }
+
+    #[Test]
+    public function aTicketIsNotAValidCoreToken(): void
+    {
+        $ticket = $this->createFreshTicket();
+        $value  = $ticket->issue();
+        $this->assertArrayNotHasKey('XOOPS_TOKEN_SESSION', $_SESSION);
+        $this->assertFalse($GLOBALS['xoopsSecurity']->check(true, $value, 'XOOPS_TOKEN'));
     }
 
     // ---------------------------------------------------------------
