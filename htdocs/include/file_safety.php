@@ -635,6 +635,10 @@ if (!function_exists('xoops_groupCacheKey')) {
      * (created on first use in xoops_data/data, like the 'rememberme' key). The
      * former derivation hashed the database credentials into the name instead.
      *
+     * Without a usable key the segment is random for the request, so group
+     * content is written but never served from the cache, and a warning names
+     * the cause; a guessable segment is never produced.
+     *
      * @param int[] $groups group ids, in any order
      *
      * @return string 16 hex characters; the same for the same group set
@@ -647,6 +651,10 @@ if (!function_exists('xoops_groupCacheKey')) {
                 $secret = (string) \Xmf\Jwt\KeyFactory::build('cacheid')->getSigning();
             } catch (\Throwable $e) {
                 $secret = '';
+            }
+            if ('' === $secret) {
+                trigger_error('xoops_groupCacheKey(): no cacheid key in key storage; group content is not cached for this request', E_USER_WARNING);
+                $secret = bin2hex(random_bytes(16));
             }
         }
         $groups = array_map('intval', $groups);
