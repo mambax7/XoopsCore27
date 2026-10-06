@@ -14,6 +14,7 @@
  *  - xoops_validateLocalRedirect() — full same-site redirect policy (origin + base path)
  *  - xoops_postLoginRedirectUrl()  — the absolute URL to send a user to after login
  *  - xoops_rebuildQueryString() — parse-and-re-emit a query string for safe reflection
+ *  - xoops_groupCacheKey()     — unguessable cache-id segment for a group set
  *
  * They originally lived in include/cp_functions.php, but that file
  * unconditionally `define()`s XOOPS_CPFUNC_LOADED, which include/
@@ -621,5 +622,74 @@ if (!function_exists('xoops_rebuildQueryString')) {
         $rebuilt = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 
         return ('' === $rebuilt) ? '' : ('?' . $rebuilt);
+    }
+}
+
+if (!function_exists('xoops_groupCacheKey')) {
+    /**
+     * Cache-id segment for a set of group ids.
+     *
+     * Smarty cache ids become file names under xoops_data/caches. Content cached
+     * for one group set must not be addressable by guessing its name, so the
+     * segment is an HMAC of the sorted ids under the site's stored 'cacheid' key
+     * (created on first use in xoops_data/data, like the 'rememberme' key). The
+     * former derivation hashed the database credentials into the name instead.
+     *
+     * Without a usable key the result is '' and a warning names the cause: the
+     * caller must then neither read nor write group content from the cache. A
+     * per-request substitute key would leave a never-read cache file behind on
+     * every request for as long as key storage stays broken, and a guessable
+     * segment is never produced. The one-time repair of a malformed key file is
+     * not atomic, so two first requests repairing at once can hold different
+     * secrets for that request: one more cache miss, nothing guessable.
+     *
+     * @param int[] $groups group ids, in any order
+     *
+     * @return string 16 hex characters, the same for the same group set; '' when no key is usable
+     */
+    function xoops_groupCacheKey(array $groups): string
+    {
+        static $secret = null;
+        if (null === $secret) {
+            // Xmf\Random::generateKey() is a sha512 hex digest. Anything else is a
+            // broken key file: an include of the empty file a concurrent first
+            // request is still writing returns 1, which getSigning() casts to '1',
+            // and an interrupted write leaves a file KeyFactory never replaces.
+            // One kill-and-rebuild repairs the latter instead of warning forever.
+            $secret = '';
+            // The storage reads the key with a bare include and writes it with
+            // file_put_contents(): a missing, unreadable or unwritable key file
+            // raises native warnings that carry the absolute xoops_data path.
+            // Swallow those; the one warning below names the cause without it.
+            set_error_handler(static fn (): bool => true, E_WARNING | E_NOTICE);
+            try {
+                $key = \Xmf\Jwt\KeyFactory::build('cacheid');
+                try {
+                    $secret = (string) $key->getSigning();
+                } catch (\Throwable $e) {
+                    $secret = ''; // a syntactically broken key file throws on include
+                }
+                if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
+                    $key->kill();
+                    $key->create();
+                    $secret = (string) $key->getSigning();
+                }
+            } catch (\Throwable $e) {
+                $secret = '';
+            } finally {
+                restore_error_handler();
+            }
+            if (!preg_match('/^[0-9a-f]{128}\z/', $secret)) {
+                trigger_error('xoops_groupCacheKey(): no usable cacheid key in key storage; group content is not cached for this request', E_USER_WARNING);
+                $secret = '';
+            }
+        }
+        if ('' === $secret) {
+            return '';
+        }
+        $groups = array_map('intval', $groups);
+        sort($groups);
+
+        return substr(hash_hmac('sha256', implode('-', $groups), $secret), 0, 16);
     }
 }

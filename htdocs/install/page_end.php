@@ -31,19 +31,30 @@ include_once __DIR__ . '/../class/preload.php';
 include_once __DIR__ . '/../class/database/databasefactory.php';
 include_once __DIR__ . '/../class/logger/xoopslogger.php';
 
+// Only the wizard run that wrote the configuration may finish the install.
+// Nothing else orders the pages, so without this a cold visitor could call
+// this page directly, drop a cleanup script into the web root on every
+// request and rename install/ out from under an install in progress.
+if (empty($_SESSION['UserLogin']) && empty($_SESSION['settings']['authorized'])) {
+    header('Location: index.php');
+    exit;
+}
+
 $_SESSION = [];
 xoops_setcookie('xo_install_user', '', 0, '', '');
 $key = \Xmf\Jwt\KeyFactory::build('install');
 $key->kill();
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
-$install_rename_suffix = uniqid(substr(md5($x = mt_rand()) . $x, -10), true);
+$install_rename_suffix = bin2hex(random_bytes(8));
 $installer_modified    = 'install_remove_' . $install_rename_suffix;
+// cleanup.php (the fallback) only renames for the suffix this session issued.
+$_SESSION['install_rename_suffix'] = $install_rename_suffix;
 
 // Create a cleanup script OUTSIDE the install directory.
 // On Windows, rename() fails when called from a script inside the directory being renamed.
 // The suffix is embedded server-side so the script needs no client input.
-$cleanupScriptName = 'install_cleanup_' . substr(md5($install_rename_suffix), 0, 8) . '.php';
+$cleanupScriptName = 'install_cleanup_' . bin2hex(random_bytes(16)) . '.php';
 $cleanupScriptPath = XOOPS_ROOT_PATH . '/' . $cleanupScriptName;
 $cleanupUrl        = (defined('XOOPS_URL') && XOOPS_URL !== '') ? XOOPS_URL . '/' . $cleanupScriptName : '../' . $cleanupScriptName;
 
