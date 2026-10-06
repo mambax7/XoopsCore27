@@ -16,6 +16,10 @@ if (!class_exists('XoopsGTicket')) {
      *
      * @deprecated 2.7.4 Use $GLOBALS['xoopsSecurity'] (XoopsSecurity). Kept so
      *             modules that include this file from the trust path keep working.
+     *             A ticket is valid for the whole session that issued it: the
+     *             salt is ignored and the area no longer scopes a ticket (the old
+     *             check accepted a matching area OR referer, so it was never a
+     *             boundary between modules).
      */
     class XoopsGTicket
     {
