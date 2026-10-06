@@ -60,22 +60,56 @@ class XoopsSecurity
             $expire  = @ini_get('session.gc_maxlifetime');
             $timeout = ($expire > 0) ? $expire : 900;
         }
-        // CSPRNG token id — the framework-wide CSRF boundary must not rest on
-        // mt_rand()/uniqid() (SECURITY.md M-4). The public token format below is
-        // unchanged for BC; only the entropy source is hardened.
-        $token_id = bin2hex(random_bytes(32));
+        // The token is CSPRNG output handed to the browser as is and compared
+        // with hash_equals() in validateToken(). It is no longer derived from a
+        // session secret plus the User-Agent header: that binding added nothing
+        // against CSRF (a forged request comes from the victim's browser) and
+        // rejected every open form when the UA changed between render and
+        // submit (browser update, privacy extension, "desktop site" toggle).
+        $token = bin2hex(random_bytes(16));
         // save token data on the server
         if (!isset($_SESSION[$name . '_SESSION'])) {
             $_SESSION[$name . '_SESSION'] = [];
         }
+        // 'id' => '' keeps a pre-2.7.4 validateToken() (rollback, or a mixed
+        // version node sharing the session store) warning-free: it reads
+        // $entry['id'] unguarded, and md5('' . UA . prefix) never matches.
         $token_data = [
-            'id'     => $token_id,
+            'id'     => '',
+            'token'  => $token,
             'expire' => time() + (int) $timeout,
         ];
         $_SESSION[$name . '_SESSION'][] = $token_data;
-        // Force update of session in base
-//        session_write_close();
-        return md5($token_id . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX);
+
+        return $token;
+    }
+
+    /**
+     * Compare a submitted token with one session entry.
+     *
+     * Entries written before 2.7.4 hold only a secret 'id'; the public token was
+     * md5(id . User-Agent . XOOPS_DB_PREFIX). They stay valid until they expire
+     * so that a form open while the site is upgraded still submits. Remove the
+     * legacy branch in 2.8.
+     *
+     * @param array  $entry session entry
+     * @param string $token submitted token
+     *
+     * @return bool
+     */
+    private function tokenMatches(array $entry, string $token): bool
+    {
+        if (isset($entry['token'])) {
+            return hash_equals((string) $entry['token'], $token);
+        }
+        if (isset($entry['id']) && '' !== $entry['id']) {
+            // legacy 2.7.3 token shape; remove in 2.8
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+            return hash_equals(md5($entry['id'] . $agent . XOOPS_DB_PREFIX), $token);
+        }
+
+        return false;
     }
 
     /**
@@ -107,7 +141,7 @@ class XoopsSecurity
         $validFound = false;
         $token_data = &$_SESSION[$name . '_SESSION'];
         foreach (array_keys($token_data) as $i) {
-            if (hash_equals(md5($token_data[$i]['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX), (string) $token)) {
+            if ($this->tokenMatches((array) $token_data[$i], (string) $token)) {
                 if ($this->filterToken($token_data[$i])) {
                     if ($clearIfValid) {
                         // token should be valid once, so clear it once validated
