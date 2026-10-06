@@ -5,6 +5,142 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.4-RC2] - 2026-10-06
+
+### Bug Fixes
+- **cache**: Pass the explicit group set through the art framework group cache helpers
+- **captcha**: Tighten the reCAPTCHA v2 request and its error reporting
+- **captcha**: Keep reCAPTCHA v2 failures free of warnings on malformed codes and a failed cURL request
+- **captcha**: Leave remoteip out of the reCAPTCHA v2 request when the client address is unparseable
+- **hooks**: A ternary on the read is a read; scan language files with a plain define() as cover
+- **hooks**: A by-reference typed parameter is a declaration
+- **hooks**: A ':' after a read ends a ternary branch unless the read starts a label
+- **hooks**: Aliases, enum cases and const lists are not reads
+- **hooks**: Declaration names are not reads; tokenize a file once per run
+- **hooks**: See a split or trailing-comma constant() read
+- **hooks**: End an arrow function's scope at its sibling comma or closing delimiter
+- **hooks**: Case labels, arrow-function nesting and signatures in the rule-18 whitelist
+- **hooks**: A semicolon inside parentheses ends no statement
+- **hooks**: Named arguments and arrow functions in the rule-18 whitelist
+- **hooks**: Count a define() with a named constant_name argument
+- **hooks**: Close five parser gaps in the rule-18 whitelist
+- **admin**: Refuse a zero rank id before loading the rank
+- **admin**: Stop the user-rank and avatar deletes on a missing record
+- **admin**: Remove smiley, rank and avatar images through the containment helper
+- **hardening**: Probe the path directly before trusting the directory listing
+- **hardening**: Keep scandir's own warning out of the absence check
+- **hardening**: Confirm a path is absent before treating a removal as done
+- **protector**: Refuse to replace a symlink; give the test fixture the standard header
+- **protector**: Create the temporary file private before copying the target's mode
+- **protector**: Refuse to replace an existing file PHP cannot write
+- **protector**: Keep the old file when a temporary file cannot be opened in a writable directory
+- **protector**: Write the ban-list and .htaccess files completely and atomically
+- **images**: Contain image deletes and check database-stored uploads
+
+### Compatibility
+- **php85**: Drop the curl_close() reintroduced in the reCAPTCHA v2 fallback
+
+### Documentation
+- Rewrap the RC 2 introduction in README
+- **cache**: Note that concurrent key repairs are not atomic in xoops_groupCacheKey()
+- **protector**: Say that a GTicket is no longer scoped by area
+- **xoops_lib**: State the Apache 2.4 failure mode correctly; assert the .htaccess exists
+- **xoops_lib**: Name nginx and IIS as the servers that reach the helper
+- **maintenance**: State that nothing about the dump directory is verified on Windows
+
+### Miscellaneous
+- **ci**: Exclude bundled libraries, theme docs and disabled Protector filters from Scrutinizer
+- **protector**: Mark the intentional unused GTicket parameters and the deprecated global for Scrutinizer
+- **hooks**: Warn on new language constants read outside a canonical guard
+- **database**: Let isResultSet() narrow the result for static analysis
+- **hooks**: Require both copyright tags in new PHP files
+- **hardening**: Replace the error-suppressed calls Scrutinizer flagged
+- **hooks**: Require the copyright tags in new PHP files
+- **hooks**: Require the standard file header in new test files
+- **snyk**: Exclude third-party packages from Snyk Code
+
+### Other
+- Fix typos in htdocs directory
+- Update docs/install.html
+- Fixing typos in docs directory
+
+### Performance
+- **hardening**: List the directory only when unlink() failed
+
+### Refactor
+- **preferences**: Drop the dead template-set branch that wrote image-set files into the cache
+
+### Security
+- **lib**: Update the bundled XMF library to 1.3.2
+- **install**: Let only the authorized wizard session reach the finish page
+- **install**: Give the external cleanup script a 128-bit random name
+- **cache**: Keep the key file path out of warnings raised while loading the cacheid key
+- **cache**: Fail closed when no usable cacheid key exists instead of caching under a per-request key
+- **cache**: Repair a cacheid key file that fails to include, not only one with the wrong shape
+- **install**: Let cleanup.php rename the installer only for the suffix issued to the installing session
+- **admin**: Render feed links as text when the URL is not http(s), on every feed rendering path
+- **cache,install,admin**: Accept the new installer suffix in cleanup.php, verify the cache-id key shape, and limit feed links to http(s)
+- **cache**: Fail closed when the cacheid key cannot be read
+- **admin**: Escape the news-feed fetch error before printing it on the admin home page
+- **cache**: Key the group segment of cache ids with a stored site key instead of the database credentials
+- **install**: Take the installer rename suffix and the cleanup-script name from random_bytes()
+- **protector**: Map only a zero GTicket timeout; let negatives stay expired
+- **protector**: Keep a zero GTicket timeout short; describe the ticket lifetime correctly
+- **protector**: Keep GTicket failures out of the shared XoopsSecurity error list
+- **protector**: Keep the GTicket time-out message in the adapter
+- **protector**: Check admin forms with the core CSRF token; make XoopsGTicket an adapter
+- **xoops_lib**: Deny web access to the trust path in Apache 2.4 syntax
+- **csrf**: Read the legacy User-Agent through Xmf\Request; tidy the tests
+- **xoops_lib**: Remove PHPMailer's OAuth helper script and keep it out of vendor
+- **csrf**: Give new token entries a random legacy id, not an empty one
+- **csrf**: Stop binding the session token to the User-Agent header
+- **captcha**: Verify reCAPTCHA v2 with a POST, the secret in the body
+- **maintenance**: Fail the dump guard check on legacy access rules inside a section
+- **maintenance**: Refuse a dump directory open to other users instead of tightening it
+- **maintenance**: Join .htaccess continuation lines the way Apache does
+- **maintenance**: Read the dump guard the way Apache does
+- **maintenance**: Verify dump directory ownership without ext-posix too
+- **maintenance**: Reject AuthMerging in the dump guard check; state the web-root caveat
+- **maintenance**: Version-specific dump guard, staged dump write, lang_diff entries
+- **maintenance**: Write dumps only under a private, configured data directory
+- **maintenance**: Refuse to write a database dump into an unguarded directory
+- **protector**: Reject upload images that cannot be inspected
+- **redirect**: Send the post-login redirect through the shared same-site policy
+- **sql**: Quote legacy tree, topic and block-rebuild SQL
+- **confirm**: Escape confirmation form fields and HTML error lists
+- **redirect**: One same-site policy for login, profile and theme redirects
+- **sceditor**: Cast the emoticon display flag to int in the smiles INSERT
+- **cookies**: Keep raw setcookie calls visible past escaped quotes and inline block comments
+- **cookies**: Make the raw setcookie sniff case-insensitive and skip strings and the helper
+- **cookies**: Route the editor sample through xoops_setcookie and sniff raw calls
+- **system**: Harden file-tree loading message and workflow permissions
+
+### Styling
+- PSR-12 multiline if in common.php; reword a test docblock
+
+### Testing
+- **protector**: Pin the core CSRF guard and token fields on the admin pages
+- **protector**: Run the GTicket adapter on the real XoopsSecurity; restore globals exactly
+- **captcha**: Pin a POST reCAPTCHA v2 verification with the secret in the body
+- **hooks**: Pin the arrow-function scope edges; count #[ as a bracket
+- **hooks**: Pin the canonical guard forms of pre-commit rule 18
+- **database**: Pin the isResultSet() assertion and XoopsTree's handling of non-mysqli results
+- **admin**: Pin the missing-record guards on the user-rank and avatar deletes
+- **admin**: Pin contained image removal on the smilies, user-rank and avatar pages
+- **hardening**: Pin the conversion of the error-suppressed calls Scrutinizer flagged
+- **protector**: Pin complete, atomic writes of Protector's files
+- **maintenance**: Create dump directory fixtures as 0700
+- **maintenance**: Detect a root runner without ext-posix in the ownership fallback test
+- **maintenance**: Pin a fail-closed dump directory
+- **images**: Pin contained deletes and checked database storage in the image manager
+- **protector**: Pin the rejection of upload images that cannot be inspected
+- **redirect**: Pin the post-login redirect to the shared same-site policy
+- **style**: Put the file header before declare() in SystemMenusTreeTest
+- **style**: Add the standard file header and class tags to the redirect, confirm and notification tests
+- **sql**: Pin quoting in XoopsTopic, XoopsTree and the module-update block SQL
+- **confirm**: Pin field escaping for xoops_confirm(), getHtmlErrors() and their callers
+- **redirect**: Pin backslash, encoded-separator and control-character redirect targets
+
 ## [v2.7.4-RC1] - 2026-09-26
 
 ### Bug Fixes
