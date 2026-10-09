@@ -1,6 +1,15 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.4 NOT RELEASED
+===================================
+Bug fixes:
+- templates can use |sprintf without a Smarty 4 deprecation notice: XoopsTpl registers sprintf as a modifier, as it already does for strstr, trim and file_exists (class/template.php) (#264)
+
+Libraries and assets:
+- HTML Purifier 4.19.1, firebase/php-jwt 7.2.1, Monolog 3.12.1, Punic 3.8.2, Smarty 4.5.8, symfony/polyfill-mbstring 1.43.0, symfony/var-dumper 7.4.18, symfony/yaml 7.4.20, TCPDF 6.11.4, webmozart/assert 2.5.0 (xoops_lib/composer.dist.lock, xoops_lib/vendor) (#265)
+
+===================================
 2.7.4 RC 2                    2026-10
 ===================================
 Security:
@@ -33,7 +42,6 @@ Bug fixes:
 - Protector replaces its ban list, bandwidth file and .htaccess ban atomically where the directory allows a temporary file, so a request never reads an emptied or half-written file and a failed write keeps the old content; where the directory refuses new files but the file itself is writable, it writes the file in place under a lock so the ban still applies (not atomic: a failed write there can leave the file partial). It no longer stops with a fatal error when .htaccess is not writable (xoops_lib/modules/protector/class/protector.php) (#244)
 - failures that were silenced with @ are now handled or reported: avatar, cache and debug-config clean-up, the debug log's permissions, session start-up, and file clean-up in the upgrade scripts (include/common.php, include/debugconfig.php, class/logger/filelogger.php, edituser.php, modules/profile/edituser.php, Frameworks/art/functions.cache.php, upgrade/) (#245)
 - the optional confirmation step for deleting notifications works: it no longer stops with a TypeError on the selection or posts back to itself, it carries only numeric notification ids to the delete step, and the delete step skips ids that no longer exist (notifications.php) (#233)
-- templates can use |sprintf without a Smarty 4 deprecation notice: XoopsTpl registers sprintf as a modifier, as it already does for strstr, trim and file_exists (class/template.php)
 - the TinyMCE 5 and 7 image managers no longer double-encode their target field on delete confirmations, and URL-encode it in their links (class/xoopseditor/tinymce5|7/js/tinymce/plugins/xoopsimagemanager/xoopsimagemanager.php) (#233)
 
 Core:
@@ -42,9 +50,6 @@ Core:
 
 Database:
 - XoopsMySQLDatabase::isResultSet() tells PHPStan and Psalm that a passing result is a mysqli_result, so a one-part isResultSet() guard narrows the result for the fetch methods; the deprecated XoopsTree also checks for a mysqli_result and treats anything else as a failed query (#249)
-
-Libraries and assets:
-- HTML Purifier 4.19.1, firebase/php-jwt 7.2.1, Monolog 3.12.1, Punic 3.8.2, Smarty 4.5.8, symfony/polyfill-mbstring 1.43.0, symfony/var-dumper 7.4.18, symfony/yaml 7.4.20, TCPDF 6.11.4, webmozart/assert 2.5.0 (xoops_lib/composer.dist.lock, xoops_lib/vendor)
 
 ===================================
 2.7.4 RC 1                    2026-09
