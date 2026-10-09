@@ -43,6 +43,9 @@ Core:
 Database:
 - XoopsMySQLDatabase::isResultSet() tells PHPStan and Psalm that a passing result is a mysqli_result, so a one-part isResultSet() guard narrows the result for the fetch methods; the deprecated XoopsTree also checks for a mysqli_result and treats anything else as a failed query (#249)
 
+Libraries and assets:
+- HTML Purifier 4.19.1, firebase/php-jwt 7.2.1, Monolog 3.12.1, Punic 3.8.2, Smarty 4.5.8, symfony/polyfill-mbstring 1.43.0, symfony/var-dumper 7.4.18, symfony/yaml 7.4.20, TCPDF 6.11.4, webmozart/assert 2.5.0 (xoops_lib/composer.dist.lock, xoops_lib/vendor)
+
 ===================================
 2.7.4 RC 1                    2026-09
 ===================================
