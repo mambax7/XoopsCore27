@@ -59,6 +59,8 @@ class XoopsTpl extends Smarty
         $this->registerPlugin('modifier', 'trim', 'trim');
         // Assuming $smarty is your Smarty instance
         $this->registerPlugin('modifier', 'file_exists', 'file_exists');
+        // Smarty 4 deprecates unregistered PHP functions used as modifiers.
+        $this->registerPlugin('modifier', 'sprintf', 'sprintf');
 
         if ($xoopsConfig['debug_mode']) {
             $this->debugging_ctrl = 'URL';
