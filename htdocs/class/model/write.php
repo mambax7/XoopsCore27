@@ -197,7 +197,8 @@ class XoopsModelWrite extends XoopsModelAbstract
                         $cleanv[$key] = str_replace('\\"', '"', addslashes($cleanv[$key]));
                     }
                     // TODO: Not encoding safe, should try base64_encode -- phppp
-                    $cleanv = "'" . serialize(array_walk($cleanv, 'xoops_aw_encode')) . "'";
+                    array_walk($cleanv, 'xoops_aw_encode');
+                    $cleanv = $this->handler->db->quote(serialize($cleanv));
                     break;
 
                 case XOBJ_DTYPE_ARRAY:

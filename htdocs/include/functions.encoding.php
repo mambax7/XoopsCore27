@@ -128,12 +128,14 @@ function xoops_convert_decode($data, $store_method = 'urlcode')
 /**
  * xoops_aw_encode()
  *
- * @param  mixed $value value of array
+ * array_walk() callback: encodes the array element in place.
+ *
+ * @param  mixed $value value of array, passed by reference
  * @param  mixed $key key of array
  * @param string $store_method
- * @return boolean|string
+ * @return void
  */
-function xoops_aw_encode($value, $key, $store_method = 'urlcode')
+function xoops_aw_encode(&$value, $key, $store_method = 'urlcode')
 {
     $value = xoops_convert_encode($value, $store_method);
 }
@@ -141,12 +143,14 @@ function xoops_aw_encode($value, $key, $store_method = 'urlcode')
 /**
  * xoops_aw_decode()
  *
- * @param mixed $value value of array
+ * array_walk() callback: decodes the array element in place.
+ *
+ * @param mixed $value value of array, passed by reference
  * @param mixed $key key of array
  * @param string $store_method
- * @return boolean|string
+ * @return void
  */
-function xoops_aw_decode($value, $key, $store_method = 'urlcode')
+function xoops_aw_decode(&$value, $key, $store_method = 'urlcode')
 {
     $value = xoops_convert_decode($value, $store_method);
 }

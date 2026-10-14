@@ -4,6 +4,11 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 2.7.4 NOT RELEASED
 ===================================
 Bug fixes:
+- image.php no longer crashes on PHP 8 when an angle is requested: imagerotate() is called with three arguments, the fourth was removed in PHP 8.0 (image.php)
+- LDAP and Active Directory logins on PHP 8.3+ no longer emit a deprecation: ldap_connect() receives one ldap:// URI built from the configured server and port, and a server already written with an ldap:// or ldaps:// scheme is used as is (class/auth/auth_ldap.php, class/auth/auth_ads.php)
+- a cache engine without read() or write() throws LogicException instead of trigger_error(E_USER_ERROR), which PHP 8.4 deprecates (class/cache/xoopscache.php)
+- xoops_aw_encode() and xoops_aw_decode() take their element by reference, so the array_walk() calls that encode and decode XOBJ_DTYPE_UNICODE_ARRAY values act on the array; write.php serializes the walked array instead of array_walk()'s return value and quotes it through the database handler (include/functions.encoding.php, class/model/write.php, kernel/object.php)
+- xoops_getUrlDomain() checks the host key only when parse_url() returned an array (include/functions.php)
 - templates can use |sprintf without a Smarty 4 deprecation notice: XoopsTpl registers sprintf as a modifier, as it already does for strstr, trim and file_exists (class/template.php) (#264)
 
 Libraries and assets:

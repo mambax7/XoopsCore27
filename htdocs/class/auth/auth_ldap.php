@@ -235,7 +235,11 @@ class XoopsAuthLdap extends XoopsAuth
 
             return $authenticated;
         }
-        $this->_ds = ldap_connect($this->ldap_server, $this->ldap_port);
+        // PHP 8.3 deprecated the ($host, $port) form; pass one URI and keep a scheme the admin configured.
+        $ldapUri = preg_match('#^ldaps?://#i', (string) $this->ldap_server)
+            ? $this->ldap_server
+            : 'ldap://' . $this->ldap_server . ':' . $this->ldap_port;
+        $this->_ds = ldap_connect($ldapUri);
         if ($this->_ds) {
             ldap_set_option($this->_ds, LDAP_OPT_PROTOCOL_VERSION, $this->ldap_version);
             if ($this->ldap_use_TLS) { // We use TLS secure connection

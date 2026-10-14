@@ -688,7 +688,7 @@ if (ENABLE_ROUNDCORNER && !empty($radius)) {
 
 // Imagerotate
 if (ENABLE_IMAGEROTATE && !empty($angle)) {
-    $destination_image = imagerotate($destination_image, $angle, $background, 0);
+    $destination_image = imagerotate($destination_image, $angle, $background);
 }
 
 if ($do_sharpen) {
