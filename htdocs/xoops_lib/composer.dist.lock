@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1519108191e313200e6a370e4888cec8",
+    "content-hash": "e1feffdc17804ff281ac1b93767049b8",
     "packages": [
         {
             "name": "boenrobot/money_format_polyfill",
@@ -1817,16 +1817,16 @@
         },
         {
             "name": "xoops/xmf",
-            "version": "v1.3.2",
+            "version": "v1.3.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/xmf.git",
-                "reference": "ca3d0cefff69c78e89355de6c706918a5677736d"
+                "reference": "503968036436a44b2fd32d90f3c9e6651b834ed9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/ca3d0cefff69c78e89355de6c706918a5677736d",
-                "reference": "ca3d0cefff69c78e89355de6c706918a5677736d",
+                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/503968036436a44b2fd32d90f3c9e6651b834ed9",
+                "reference": "503968036436a44b2fd32d90f3c9e6651b834ed9",
                 "shasum": ""
             },
             "require": {
@@ -1887,7 +1887,7 @@
                     "type": "opencollective"
                 }
             ],
-            "time": "2026-10-06T11:29:49+00:00"
+            "time": "2026-10-14T04:09:40+00:00"
         }
     ],
     "packages-dev": [],
