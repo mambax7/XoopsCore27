@@ -7,6 +7,7 @@ Bug fixes:
 - templates can use |sprintf without a Smarty 4 deprecation notice: XoopsTpl registers sprintf as a modifier, as it already does for strstr, trim and file_exists (class/template.php) (#264)
 
 Libraries and assets:
+- update the bundled XMF library to 1.3.3: the proxy_env header is only honoured when the direct peer is listed in the new $xoopsConfig['proxy_trusted'] (addresses or CIDR ranges, documented in xoops_data/configs/xoopsconfig.dist.php) — sites that set proxy_env must add proxy_trusted, until then the peer address is used; Forwarded headers are parsed per RFC 7239; Xmf\Mail\SendmailRunner has a delivery timeout; Xmf\Database\Tables keeps CURRENT_TIMESTAMP defaults and refuses tables with functional index parts; Xmf\Security\Serializer accepts every legacy payload; Xmf\Jwt\TokenReader accepts Bearer tokens on custom headers again (xoops_lib/composer.dist.json, xoops_lib/vendor/xoops/xmf)
 - HTML Purifier 4.19.1, firebase/php-jwt 7.2.1, Monolog 3.12.1, Punic 3.8.2, Smarty 4.5.8, symfony/polyfill-mbstring 1.43.0, symfony/var-dumper 7.4.18, symfony/yaml 7.4.20, TCPDF 6.11.4, webmozart/assert 2.5.0 (xoops_lib/composer.dist.lock, xoops_lib/vendor) (#265)
 
 ===================================

@@ -74,4 +74,14 @@ return [
      * The default if proxy_env is not specified is no proxy ip address is considered.
      */
     //'proxy_env' => 'HTTP_FORWARDED',
+
+    /**
+     * proxy_trusted lists the proxy servers or load balancers allowed to set
+     * the proxy_env header. The header is only used when the direct peer
+     * (REMOTE_ADDR) is in this list; entries in the header that are trusted
+     * proxies are skipped, and the first untrusted address is the client.
+     * Accepts an array or a comma separated string of IP addresses and CIDR
+     * ranges. If proxy_trusted is not specified, the proxy_env header is ignored.
+     */
+    //'proxy_trusted' => ['10.0.0.1', '192.168.0.0/16', '2001:db8::/32'],
 ];
