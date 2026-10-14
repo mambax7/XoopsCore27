@@ -550,7 +550,7 @@ class XoopsObject
                             }
                             $ret = is_array($ret) ? $ret : [];
                             if (is_array($ret)) {
-                                $ret = array_walk($ret, 'xoops_aw_decode');
+                                array_walk($ret, 'xoops_aw_decode');
                             }
                         }
 
@@ -885,7 +885,8 @@ class XoopsObject
                         $cleanv = xoops_convert_encode($cleanv);
                         break;
                     case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
-                        $cleanv = serialize(array_walk($cleanv, 'xoops_aw_encode'));
+                        array_walk($cleanv, 'xoops_aw_encode');
+                        $cleanv = serialize($cleanv);
                         break;
                     default:
                         break;
