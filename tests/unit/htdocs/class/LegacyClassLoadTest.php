@@ -160,18 +160,12 @@ class LegacyClassLoadTest extends TestCase
             }
         };
         $messages = [];
-        set_error_handler(static function (int $no, string $msg) use (&$messages): bool {
-            if ($no === E_USER_ERROR) {
-                $messages[] = $msg;
+        foreach ([static fn () => $engine->write('k', 'v'), static fn () => $engine->read('k')] as $call) {
+            try {
+                $call();
+            } catch (\LogicException $e) {
+                $messages[] = $e->getMessage();
             }
-
-            return true;
-        });
-        try {
-            $engine->write('k', 'v');
-            $engine->read('k');
-        } finally {
-            restore_error_handler();
         }
 
         self::assertSame([

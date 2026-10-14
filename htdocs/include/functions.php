@@ -1381,7 +1381,7 @@ function xoops_getUrlDomain($url)
     $domain = '';
     $_URL   = parse_url($url);
 
-    if (!empty($_URL) || !empty($_URL['host'])) {
+    if (!empty($_URL) && !empty($_URL['host'])) {
         $domain = $_URL['host'];
     }
 
