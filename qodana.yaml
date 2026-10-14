@@ -1,0 +1,22 @@
+version: "1.0"
+
+image: jetbrains/qodana-php:2026.2
+
+profile:
+  name: qodana.recommended
+
+php:
+  version: "8.4"
+
+bootstrap: cd htdocs/xoops_lib && cp composer.dist.json composer.json && cp composer.dist.lock composer.lock && composer install --no-interaction --prefer-dist '--ignore-platform-req=ext-*'
+
+exclude:
+  - name: All
+    paths:
+      - htdocs/xoops_lib/vendor
+      - htdocs/class/libraries/vendor
+      - htdocs/install
+      - htdocs/xoops_data
+      - extras
+      - tests
+      - build
