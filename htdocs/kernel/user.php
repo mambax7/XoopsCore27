@@ -91,7 +91,7 @@ class XoopsUser extends XoopsObject
 
     /**
      * constructor
-     * @param array|null $id ID of the user to be loaded from the database.
+     * @param int|array|null $id ID of the user to be loaded from the database, or an array of values
      */
     public function __construct($id = null)
     {
