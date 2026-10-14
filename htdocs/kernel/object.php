@@ -263,7 +263,9 @@ class XoopsObject
                         $value = $temp;
                         $this->vars[$key]['value'] = $value;
                     } else {
-                        $this->vars[$key]['value'] = xoops_convert_decode($value);
+                        // A stored value is a serialized array of encoded elements; getVar() unserializes
+                        // and decodes it. Decoding the serialized string here would break its lengths.
+                        $this->vars[$key]['value'] = $value;
                     }
                     break;
                 case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL:
