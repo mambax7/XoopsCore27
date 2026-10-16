@@ -11,9 +11,12 @@ $base = 'C:\wamp64\www\2512menus\themes\xtailwind2'
         "watch": "tailwindcss -i ./css/input.css -o ./css/styles.css --watch"
     },
     "devDependencies": {
-        "@tailwindcss/typography": "^0.5.10",
+        "@tailwindcss/typography": "^0.5.20",
         "daisyui": "^4.12.0",
         "tailwindcss": "^3.4.0"
+    },
+    "overrides": {
+        "postcss-selector-parser": "^7.1.6"
     }
 }
 '@ | Set-Content -Path (Join-Path $base 'package.json') -Encoding UTF8
