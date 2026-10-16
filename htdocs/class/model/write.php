@@ -193,10 +193,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                     if (!$v['not_gpc']) {
                         $cleanv = array_map([&$myts, 'stripSlashesGPC'], $cleanv);
                     }
-                    foreach (array_keys($cleanv) as $key) {
-                        $cleanv[$key] = str_replace('\\"', '"', addslashes($cleanv[$key]));
-                    }
-                    // TODO: Not encoding safe, should try base64_encode -- phppp
+                    // Elements are url-encoded, then the whole value is SQL-quoted below: no addslashes() pass.
                     array_walk($cleanv, 'xoops_aw_encode');
                     $cleanv = $this->handler->db->quote(serialize($cleanv));
                     break;
