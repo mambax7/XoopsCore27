@@ -1,7 +1,7 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
-2.7.4 NOT RELEASED
+2.7.4                     2026-10
 ===================================
 Bug fixes:
 - image.php no longer crashes on PHP 8.3+ when an angle is requested: imagerotate() is called with three arguments, the fourth was removed in PHP 8.3 (image.php)
