@@ -5,6 +5,32 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.4] - 2026-10-16
+
+### Bug Fixes
+- **smarty**: Keep the UTF-8 round-trip for non-UTF-8 charsets in smarty_mb_str_replace()
+- **smarty**: Drop mb_regex_encoding()/mb_split() from smarty_mb_str_replace()
+- **kernel**: Reload XOBJ_DTYPE_UNICODE_ARRAY values intact
+- **template**: Register sprintf as a Smarty modifier
+- **security**: Terminate XMF tag filtering and leave no tag opener in stripped text
+
+### Documentation
+- **config**: Document proxy_trusted in xoopsconfig.dist.php
+
+### Miscellaneous
+- **xoops_lib**: Update symfony/var-dumper and symfony/yaml to 7.4.21
+- **themes**: Carry the postcss-selector-parser override into the xtailwind2 generator
+- **lib**: Update the bundled XMF library to 1.3.3
+- **lib**: Update bundled vendor libraries
+
+### Other
+- Document the integer id XoopsUser::__construct() accepts
+- Address review on the Qodana fixes
+- Fix the correctness findings from the Qodana scan
+- Restrict default permissions in the Qodana workflow
+- Enable CodeRabbit automatic reviews
+- Add Qodana scanning to pull requests and master
+
 ## [v2.7.4-RC2] - 2026-10-06
 
 ### Bug Fixes
