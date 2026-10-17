@@ -5,7 +5,7 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
-## [v2.7.4] - 2026-10-16
+## [v2.7.4] - 2026-10-17
 
 ### Bug Fixes
 - **smarty**: Keep the UTF-8 round-trip for non-UTF-8 charsets in smarty_mb_str_replace()
@@ -24,6 +24,7 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 - **lib**: Update bundled vendor libraries
 
 ### Other
+- Version update
 - Document the integer id XoopsUser::__construct() accepts
 - Address review on the Qodana fixes
 - Fix the correctness findings from the Qodana scan
