@@ -109,11 +109,12 @@ class xos_opal_ThemeFactory
     {
         $options = $this->resolveFolderName($options);
         // Validate $options['folderName'] AND the defaultTheme property
-        // unconditionally, after every resolution branch. Two paths
-        // bypass resolveFolderName() and could still produce an
-        // unsafe path segment:
+        // unconditionally, after every resolution branch. Two inputs
+        // reach this point without the request/session validation in
+        // resolveFolderName() and could still produce an unsafe path
+        // segment:
         //   - A non-standard caller may have supplied a poisoned
-        //     folderName directly (skipping the empty()-branch).
+        //     folderName directly (returned unchanged).
         //   - $this->defaultTheme is a public property; any caller
         //     can overwrite it before createInstance() runs.
         // xoops_validateThemeValue() — scalar gate + path/HTML validate
