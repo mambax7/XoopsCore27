@@ -830,8 +830,12 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
     $xoopsThemeFactory                = new xos_opal_ThemeFactory();
     $xoopsThemeFactory->allowedThemes = $xoopsConfig['theme_set_allowed'];
     $xoopsThemeFactory->defaultTheme  = $theme;
+    // Name the folder: the factory would otherwise prefer the visitor's
+    // session theme over defaultTheme, while the template variables below
+    // are built for $theme.
     $xoTheme                          = $xoopsThemeFactory->createInstance(
         [
+            'folderName'   => $theme,
             'plugins'      => [],
             'renderBanner' => false,
         ],

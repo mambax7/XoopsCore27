@@ -1,6 +1,14 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.5 NOT RELEASED
+===================================
+Bug fixes:
+- the theme selector block works again after a theme was chosen with ?xoops_theme_select= in a URL: the theme factory kept its own session copy of that choice, which overrode every later selection, and now uses the same $_SESSION['xoopsUserTheme'] as the selector and login (class/theme.php)
+- a theme picked in the selector block is no longer replaced on the next page when the current URL still contains ?xoops_theme_select=: the selector redirect drops that parameter (class/xoopskernel.php)
+- the admin redirect page renders the default theme its template variables are built for, instead of the visitor's session theme (include/functions.php)
+
+===================================
 2.7.4                     2026-10
 ===================================
 Bug fixes:

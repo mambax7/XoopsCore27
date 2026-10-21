@@ -87,4 +87,35 @@ final class XoopsKernelThemeRedirectTest extends TestCase
 
         $this->assertSame('/modules/newbb/viewpost.php?status=new', $kernel->themeRedirectUrl());
     }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function themeSelectParamProvider(): array
+    {
+        return [
+            'only pair'        => ['/index.php?xoops_theme_select=alpha', '/index.php'],
+            'middle pair'      => ['/x.php?a=1&xoops_theme_select=alpha&b=2#top', '/x.php?a=1&b=2#top'],
+            'dot alias'        => ['/x.php?xoops.theme.select=alpha&a=1', '/x.php?a=1'],
+            'plus alias'       => ['/x.php?xoops+theme+select=alpha', '/x.php'],
+            'percent encoded'  => ['/x.php?xoops%5Ftheme%5Fselect=alpha', '/x.php'],
+            'array form'       => ['/x.php?xoops_theme_select[]=alpha&a=1', '/x.php?a=1'],
+            'leading space'    => ['/x.php?+xoops_theme_select=alpha', '/x.php'],
+            'unclosed bracket' => ['/x.php?xoops[theme_select=alpha', '/x.php'],
+            'similar key kept' => ['/x.php?xoops_theme_selected=1', '/x.php?xoops_theme_selected=1'],
+            'value only kept'  => ['/x.php?q=xoops_theme_select', '/x.php?q=xoops_theme_select'],
+            'fragment kept'    => ['/x.php?a=1#xoops_theme_select=alpha', '/x.php?a=1#xoops_theme_select=alpha'],
+            'rejected target'  => ['https://example.com/?xoops_theme_select=alpha', ''],
+        ];
+    }
+
+    #[DataProvider('themeSelectParamProvider')]
+    public function testThemeRedirectUrlDropsThemeSelectParam(string $input, string $expected): void
+    {
+        $_POST['xoops_theme_redirect'] = $input;
+
+        $kernel = new TestableThemeRedirectKernel();
+
+        $this->assertSame($expected, $kernel->themeRedirectUrl());
+    }
 }

@@ -224,14 +224,33 @@ class xos_kernel_Xoops2
     /**
      * Return a safe same-site target for the theme selector redirect.
      *
+     * Any xoops_theme_select query pair is dropped: the selector posts the
+     * current page URL, and a ?xoops_theme_select= still in it would override
+     * the theme just chosen on the redirected GET.
+     *
      * @return string Validated redirect URL, or '' if no safe target was supplied.
      */
     protected function getThemeRedirectUrl(): string
     {
-        return $this->validateThemeRedirectUrl(
+        $url = $this->validateThemeRedirectUrl(
             \Xmf\Request::getString('xoops_theme_redirect', '', 'POST'),
             XOOPS_URL
         );
+        $parts = explode('#', $url, 2);
+        $pathQuery = explode('?', $parts[0], 2);
+        if (isset($pathQuery[1])) {
+            // parse_str() per pair names each key exactly as the redirected
+            // GET will ('.', '+', %5F, leading spaces, [] and an unclosed '[').
+            // Only the pair is parsed; the kept pairs are re-joined verbatim.
+            $kept = array_filter(explode('&', $pathQuery[1]), static function (string $pair): bool {
+                parse_str($pair, $parsed);
+
+                return !array_key_exists('xoops_theme_select', $parsed);
+            });
+            $parts[0] = $pathQuery[0] . ($kept === [] ? '' : '?' . implode('&', $kept));
+        }
+
+        return implode('#', $parts);
     }
 
     /**
