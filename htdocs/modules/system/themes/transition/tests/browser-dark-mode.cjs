@@ -104,11 +104,11 @@ const server = http.createServer((req, res) => {
             assert.equal(await page.locator('tr.even a').evaluate(el => getComputedStyle(el).color), 'rgb(157, 204, 255)');
         }
         await page.locator('.styleswitch[rel="orange"]').click();
-        await page.waitForTimeout(300);
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('input[type="submit"]')).backgroundColor === 'rgb(255, 118, 0)');
         assert.equal(await color('input[type="submit"]'), 'rgb(255, 118, 0)');
         for (const selector of ['#darkModeToggle', 'input[type="submit"]']) {
             await page.locator(selector).hover();
-            await page.waitForTimeout(300);
+            await page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).backgroundColor === 'rgb(255, 146, 46)', selector);
             const contrast = await page.locator(selector).evaluate(el => {
                 const luminance = color => color.match(/[\d.]+/g).slice(0, 3).map(Number).map(c => c / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
                 const style = getComputedStyle(el), fg = luminance(style.color), bg = luminance(style.backgroundColor);
@@ -122,7 +122,7 @@ const server = http.createServer((req, res) => {
         assert.equal(await page.locator('body').getAttribute('data-admin-style'), 'orange');
         // A site customizer can target the selected accent without dark mode replacing it.
         await page.addStyleTag({content: 'body[data-admin-style="orange"] { --transition-accent: #8844cc; --transition-accent-text: white; }'});
-        await page.waitForTimeout(300);
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('input[type="submit"]')).backgroundColor === 'rgb(136, 68, 204)');
         assert.equal(await color('input[type="submit"]'), 'rgb(136, 68, 204)');
         await page.screenshot({path: path.join(require('node:os').tmpdir(), 'transition-dark-mode.png'), fullPage: true});
         await toggle.click();
