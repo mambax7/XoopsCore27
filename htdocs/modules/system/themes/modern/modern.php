@@ -11,9 +11,6 @@
 
 xoops_load('gui', 'system');
 
-// Load theme language file
-xoops_loadLanguage('main', 'system/themes/modern');
-
 /**
  * XOOPS Modern Admin Theme
  *
