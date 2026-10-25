@@ -4,16 +4,6 @@
  */
 
 body.dark-mode {
-    /* Dark Mode Color Palette */
-    --primary: #3b82f6;
-    --primary-dark: #2563eb;
-    --primary-light: #60a5fa;
-    --secondary: #94a3b8;
-    --success: #34d399;
-    --warning: #fbbf24;
-    --danger: #f87171;
-    --info: #22d3ee;
-
     /* Dark Backgrounds */
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;

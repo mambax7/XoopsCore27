@@ -228,29 +228,6 @@ body:not(.help-active) .help_view {
    that need overriding in dark mode.
    ======================================== */
 
-/* Scope dark mode button overrides to module admin content only.
-   Primary action buttons (e.g. in customizer) keep their theme color. */
-body.dark-mode #xo-content input[type="submit"],
-body.dark-mode #xo-content input[type="button"],
-body.dark-mode table.outer input[type="submit"],
-body.dark-mode table.outer input[type="button"],
-body.dark-mode fieldset input[type="submit"],
-body.dark-mode fieldset input[type="button"] {
-    background: #374151 !important;
-    border-color: #4b5563 !important;
-    color: #e5e7eb !important;
-}
-
-body.dark-mode #xo-content input[type="submit"]:hover,
-body.dark-mode #xo-content input[type="button"]:hover,
-body.dark-mode table.outer input[type="submit"]:hover,
-body.dark-mode table.outer input[type="button"]:hover,
-body.dark-mode fieldset input[type="submit"]:hover,
-body.dark-mode fieldset input[type="button"]:hover {
-    background: #4b5563 !important;
-    border-color: #6b7280 !important;
-}
-
 /* ========================================
    7. XOOPS CORE ELEMENT ROUNDING
    Applies consistent border-radius to

@@ -201,7 +201,10 @@ body > div.jGrowl div.jGrowl-closer {
    XOOPS Admin Content Overrides
    Style the old XOOPS admin tables/forms
    =================================== */
-
+/* general */
+.dark-mode a {
+    color: var(--text-primary);
+}
 /* Admin breadcrumb */
 #xo-breadcrumb {
     background: var(--bg-secondary);
@@ -231,6 +234,12 @@ body > div.jGrowl div.jGrowl-closer {
     color: var(--primary-dark);
     background: var(--bg-tertiary);
     border-radius: var(--radius);
+}
+/* nav menue */
+.nav-item.active {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-left-color: var(--primary);
 }
 
 /* Tips section */
@@ -603,6 +612,7 @@ body.dark-mode #help-template p.even {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 /* Horizontal toolbar - inline with module name */
@@ -699,7 +709,6 @@ body.dark-mode #help-template p.even {
 /* Top button bar (Preferences, Update, etc.) */
 #buttontop_mod {
     background: var(--bg-tertiary);
-    border-radius: var(--radius-lg);
     padding: 12px 20px;
     margin-bottom: 20px;
     border: 1px solid var(--border);
@@ -778,10 +787,6 @@ body.dark-mode #help-template p.even {
 body.dark-mode #xo-nav-options {
     background: #1f2937;
     border-bottom-color: #374151;
-}
-
-body.dark-mode #xo-modname {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
 }
 
 body.dark-mode #xo-toolbar a {
