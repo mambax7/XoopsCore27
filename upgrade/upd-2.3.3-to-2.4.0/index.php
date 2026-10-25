@@ -228,10 +228,7 @@ class Upgrade_240 extends XoopsUpgrade
 
                 return false;
             }
-            $existing_keys = [];
-            while (false !== ($row = $this->db->fetchArray($result))) {
-                $existing_keys[] = $row['Key_name'];
-            }
+            $existing_keys = $this->coveredKeys($result);
             foreach ($keys as $key) {
                 if (!in_array($key, $existing_keys)) {
                     return false;
@@ -240,6 +237,30 @@ class Upgrade_240 extends XoopsUpgrade
         }
 
         return true;
+    }
+
+    /**
+     * Index names plus the leading column of every index in a SHOW KEYS result.
+     *
+     * A key counts as present when any index leads with its column: 2.7.3 replaced
+     * the single-column com_status key with idx_status_created (com_status, com_created),
+     * and a name-only check re-queued this patch, which then re-added com_status.
+     *
+     * @param \mysqli_result $result
+     *
+     * @return string[]
+     */
+    private function coveredKeys($result): array
+    {
+        $covered = [];
+        while (false !== ($row = $this->db->fetchArray($result))) {
+            $covered[] = $row['Key_name'];
+            if (1 === (int) $row['Seq_in_index']) {
+                $covered[] = $row['Column_name'];
+            }
+        }
+
+        return $covered;
     }
 
     /**
@@ -262,10 +283,7 @@ class Upgrade_240 extends XoopsUpgrade
 
                 return false;
             }
-            $existing_keys = [];
-            while (false !== ($row = $this->db->fetchArray($result))) {
-                $existing_keys[] = $row['Key_name'];
-            }
+            $existing_keys = $this->coveredKeys($result);
             foreach ($keys as $key) {
                 if (!in_array($key, $existing_keys)) {
                     $sql = 'ALTER TABLE `' . $this->db->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
