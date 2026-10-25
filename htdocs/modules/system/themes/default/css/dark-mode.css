@@ -1,0 +1,362 @@
+/*
+ * Default Admin Theme — dark mode
+ * Copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * License: GNU GPL 3.0 (https://www.gnu.org/licenses/gpl-3.0.html)
+ * Adapted from the XOOPS Dark and Transition admin themes.
+ * The existing dark.css is a header accent; this file controls the full page.
+ */
+
+#xo-headnav #darkModeToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    margin-inline-end: 8px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    box-shadow: none;
+    color: #f2f4f7;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#xo-headnav #darkModeToggle:hover {
+    background: rgba(128, 128, 128, .22);
+}
+
+#xo-headnav #darkModeToggle:focus-visible {
+    outline: 2px solid #9bc4ef;
+    outline-offset: 2px;
+    background: #283440;
+}
+
+#darkModeToggle .icon-sun,
+body.dark-mode #darkModeToggle .icon-moon { display: none; }
+body.dark-mode #darkModeToggle .icon-sun { display: inline; }
+
+html[dir="rtl"] #xo-headnav {
+    float: left;
+    left: 50px;
+    right: auto;
+}
+
+html[dir="rtl"] #main-logo a {
+    float: right;
+    left: auto;
+    right: 0;
+}
+
+body {
+    --admin-accent: #9bbde1;
+    --admin-action: #3e6186;
+    --admin-action-hover: #4b7198;
+    --admin-action-text: #f2f4f7;
+}
+
+body[data-admin-style="orange"] {
+    --admin-accent: #d2ac85;
+    --admin-action: #c39a70;
+    --admin-action-hover: #d2ac85;
+    --admin-action-text: #20252c;
+}
+
+body[data-admin-style="silver"] {
+    --admin-accent: #b8c4d2;
+    --admin-action: #536477;
+    --admin-action-hover: #65788e;
+}
+
+body.dark-mode {
+    color-scheme: dark;
+    --admin-bg: #191d23;
+    --admin-surface: #20252c;
+    --admin-row: #242a32;
+    --admin-raised: #2b323c;
+    --admin-border: #3c4552;
+    --admin-control-border: #788797;
+    --admin-text: #d4dae3;
+    --admin-muted: #aab4c2;
+    --admin-link: #9bbde1;
+    background: var(--admin-bg);
+    color: var(--admin-text);
+}
+
+body.dark-mode li { color: inherit; }
+
+body.dark-mode a:link,
+body.dark-mode a:visited { color: var(--admin-link); }
+body.dark-mode a:hover { color: #c3d9ef; }
+
+body.dark-mode #xo-body,
+body.dark-mode fieldset,
+body.dark-mode blockquote,
+body.dark-mode .xoopsQuote,
+body.dark-mode .xoopsCode,
+body.dark-mode #accordion,
+body.dark-mode #accordion .pane,
+body.dark-mode .help,
+body.dark-mode .panes li,
+body.dark-mode #help-template,
+body.dark-mode #help-content,
+body.dark-mode #non-modhelp,
+body.dark-mode .xo-help-menu,
+body.dark-mode .xo-thumb,
+body.dark-mode #xo-centercolumn,
+body.dark-mode .xo-block,
+body.dark-mode .xo-blockhide .xo-block,
+body.dark-mode .xo-blocksection,
+body.dark-mode .display_folder,
+body.dark-mode #xo-module-log .logger {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+    box-shadow: none;
+}
+
+body.dark-mode #xo-logo-head,
+body.dark-mode #xo_globalnav,
+body.dark-mode #xo-nav-options,
+body.dark-mode #xo-footer,
+body.dark-mode #buttontop_mod,
+body.dark-mode #buttonbar_mod {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode #xo-nav-options { border-block-end: 2px solid var(--admin-action); }
+
+body.dark-mode #xo-modname,
+body.dark-mode .xo-title,
+body.dark-mode #xokeytitle,
+body.dark-mode #xo-footer a {
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode #main-logo a {
+    background-image: url(../img/dark/header-logo_big.png) !important;
+}
+
+body.dark-mode #xo_globalnav ul.menu ul,
+body.dark-mode #xo_globalnav ul.menu ul li a,
+body.dark-mode #xo_globalnav ul.menu .menulink,
+body.dark-mode #choosestyle a,
+body.dark-mode #buttonbar_mod a,
+body.dark-mode #buttonbar_mod a span,
+body.dark-mode #buttontop_mod a,
+body.dark-mode #buttontop_mod a span {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode #xo_globalnav ul.menu ul li { border-color: var(--admin-border); }
+
+body.dark-mode #xo_globalnav ul.menu .sub::after {
+    content: '\203A';
+    float: inline-end;
+    margin-inline-start: 8px;
+}
+
+body.dark-mode #xo_globalnav ul.menu ul li a:hover,
+body.dark-mode #xo_globalnav ul.menu .menulink:hover,
+body.dark-mode #xo_globalnav ul.menu .menuhover,
+body.dark-mode #choosestyle a:hover,
+body.dark-mode #xo-nav-options a:hover {
+    background: var(--admin-raised);
+    color: var(--admin-text);
+}
+
+body.dark-mode #xo-nav-options a { border-color: transparent; }
+
+body.dark-mode #choosestyle a { box-shadow: none; }
+
+body.dark-mode #buttonbar_mod #current a,
+body.dark-mode #buttonbar_mod #current a span {
+    background: var(--admin-raised);
+    color: var(--admin-accent);
+    box-shadow: inset 0 -2px var(--admin-accent);
+}
+
+body.dark-mode .outer,
+body.dark-mode .tabs,
+body.dark-mode .tabs + .panes,
+body.dark-mode .panes li { border-color: var(--admin-border); }
+
+body.dark-mode .head,
+body.dark-mode th,
+body.dark-mode tr.head td,
+body.dark-mode .foot,
+body.dark-mode tr.foot td,
+body.dark-mode .xo-block .xo-blocktitle,
+body.dark-mode .xo-block .xo-blockaction {
+    background: var(--admin-raised);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode .even,
+body.dark-mode tr.even td,
+body.dark-mode #xo-module-sort tr.even td {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode .odd,
+body.dark-mode tr.odd td,
+body.dark-mode #xo-module-sort tr.odd td {
+    background: var(--admin-row);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode .help p,
+body.dark-mode .xoops-form-element-help,
+body.dark-mode .xo-blocksection .xo-title,
+body.dark-mode .label,
+body.dark-mode .ct-label { color: var(--admin-muted); }
+
+body.dark-mode input:not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]),
+body.dark-mode textarea,
+body.dark-mode select {
+    background: #1c222a;
+    color: var(--admin-text);
+    border: 1px solid var(--admin-control-border);
+    accent-color: var(--admin-accent);
+    box-shadow: none;
+}
+
+/* Default's select and several legacy surfaces force their light styles. */
+body.dark-mode select { border: 1px solid var(--admin-control-border) !important; }
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+    outline: 2px solid #9bc4ef;
+    outline-offset: 1px;
+    text-shadow: none;
+}
+
+body.dark-mode input[type="button"],
+body.dark-mode input[type="reset"],
+body.dark-mode button,
+body.dark-mode .xo-formbuttons,
+body.dark-mode .formButton,
+body.dark-mode .xo-buttons a,
+body.dark-mode .xo-buttons button,
+body.dark-mode .xo-btn-actions {
+    background: var(--admin-raised);
+    color: var(--admin-text);
+    border-color: var(--admin-control-border);
+    box-shadow: none;
+}
+
+body.dark-mode input[type="submit"],
+body.dark-mode button[type="submit"] {
+    background: var(--admin-action);
+    color: var(--admin-action-text);
+    border: 1px solid var(--admin-control-border);
+    box-shadow: none;
+}
+
+body.dark-mode input[type="submit"]:hover,
+body.dark-mode button[type="submit"]:hover { background: var(--admin-action-hover); }
+
+body.dark-mode #xo-icon a,
+body.dark-mode #xo-module-icons a,
+body.dark-mode div.rmmenuicon a {
+    background: var(--admin-row);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode #xo-icon a:hover,
+body.dark-mode #xo-module-icons a:hover,
+body.dark-mode div.rmmenuicon a:hover,
+body.dark-mode ul.jqueryFileTree a:hover { background: var(--admin-raised); }
+
+body.dark-mode #accordion h5,
+body.dark-mode .panes ul,
+body.dark-mode .tabs a,
+body.dark-mode .ui-dialog,
+body.dark-mode .ui-widget-content,
+body.dark-mode .ui-widget-header,
+body.dark-mode #xo-logger-tabs {
+    background: var(--admin-row) !important;
+    color: var(--admin-text) !important;
+    border-color: var(--admin-border);
+}
+
+body.dark-mode .tabs .current,
+body.dark-mode .tabs li.current a,
+body.dark-mode #accordion h5.current { background: var(--admin-raised) !important; }
+
+body.dark-mode #xo-breadcrumb,
+body.dark-mode #xo-breadcrumb a {
+    background-image: none !important;
+    background-color: var(--admin-row);
+    color: var(--admin-link);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode #xo-breadcrumb li + li::before {
+    content: '/';
+    float: inline-start;
+    padding-inline-end: 8px;
+    color: var(--admin-muted);
+}
+
+body.dark-mode #xo-breadcrumb li.xo-help::before { content: none; }
+
+body.dark-mode #xo-content code,
+body.dark-mode #xo-content pre,
+body.dark-mode #tooltip,
+body.dark-mode .tips,
+body.dark-mode #xo-logger-output > table,
+body.dark-mode #xo-logger-tabs > a,
+body.dark-mode div.jGrowl div.jGrowl-notification,
+body.dark-mode div.jGrowl div.jGrowl-closer {
+    background: var(--admin-row);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+
+body.dark-mode #xo-logger-output > table th { color: var(--admin-text); }
+
+body.dark-mode .errorMsg {
+    background: #34282e;
+    color: #e7b4bc;
+    border-color: #805760;
+}
+
+body.dark-mode .confirmMsg {
+    background: #302d26 !important;
+    color: #dac69f !important;
+    border-color: #796a4e !important;
+}
+
+body.dark-mode .resultMsg,
+body.dark-mode .successMsg {
+    background: #25312d;
+    color: #afcfbd;
+    border-color: #557865;
+}
+
+body.dark-mode .errorMsg a,
+body.dark-mode .confirmMsg a,
+body.dark-mode .resultMsg a,
+body.dark-mode .successMsg a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+body.dark-mode .red,
+body.dark-mode #xo-module-sort strong.red { color: #e7a3ae; }

@@ -7,7 +7,7 @@
     <{include file="$theme_tpl/xo_metas.tpl"}>
     <{include file="$theme_tpl/xo_scripts.tpl"}>
 </head>
-<body id="<{$xoops_dirname}>" class="<{$xoops_langcode}>">
+<body id="<{$xoops_dirname}>" class="<{$xoops_langcode}><{if $dark_mode|default:false}> dark-mode<{/if}>">
 
 <{include file="$theme_tpl/xo_head.tpl"}>
 <{include file="$theme_tpl/xo_globalnav.tpl"}>

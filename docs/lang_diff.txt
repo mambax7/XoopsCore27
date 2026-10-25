@@ -4,6 +4,14 @@ LANGUAGE DIFFERENCES
 Below are language differences from one version to the next.
 
 ================================
+Admin theme dark mode
+================================
+/htdocs/modules/system/themes/default/language/english/admin.php
+/htdocs/modules/system/themes/transition/language/english/admin.php
+- added define('_OXYGEN_DARK_MODE', 'Dark mode');
+- the standalone dark admin theme has been removed; saved dark preferences load Transition, where dark mode can be enabled using the header toggle
+
+================================
 2026/10: Version 2.7.4-RC2
 ================================
 /htdocs/modules/system/language/english/admin/maintenance.php

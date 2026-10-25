@@ -86,9 +86,11 @@ class XoopsGuiTransition extends XoopsSystemGui
 
         // language
         $tpl->assign('xoops_language', $xoopsConfig['language']);
+        $tpl->assign('dark_mode', \Xmf\Request::getString('xoops_dark_mode', '0', 'COOKIE') === '1');
 
         $xoTheme->addScript('browse.php?Frameworks/jquery/jquery.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/transition/js/styleswitch.js');
+        $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/transition/js/dark-mode.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/transition/js/formenu.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/transition/js/menu.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/transition/js/tooltip.js');
@@ -103,6 +105,11 @@ class XoopsGuiTransition extends XoopsSystemGui
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/transition/css/dark.css', ['title' => 'dark', 'media' => 'screen']);
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/transition/css/silver.css', ['title' => 'silver', 'media' => 'screen']);
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/transition/css/orange.css', ['title' => 'orange', 'media' => 'screen']);
+        // No title: the accent switcher must not disable the dark-mode overlay.
+        $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/transition/css/dark-mode.css');
+        if (file_exists(__DIR__ . '/css/custom.css')) {
+            $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/transition/css/custom.css');
+        }
 
         $tpl->assign('lang_cp', _CPHOME);
         //start system overview

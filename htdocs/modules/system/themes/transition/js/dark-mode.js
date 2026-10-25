@@ -1,0 +1,27 @@
+/* XOOPS Transition theme — shares the Modern theme's display preference. */
+(function () {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggle = document.getElementById('darkModeToggle');
+        if (!toggle) return;
+
+        function applyMode(dark) {
+            document.body.classList.toggle('dark-mode', dark);
+            toggle.setAttribute('aria-pressed', String(dark));
+        }
+
+        applyMode(document.cookie.split(';').some(function (cookie) {
+            return cookie.trim() === 'xoops_dark_mode=1';
+        }));
+
+        toggle.addEventListener('click', function () {
+            const dark = !document.body.classList.contains('dark-mode');
+            applyMode(dark);
+            const expires = new Date(Date.now() + 365 * 86400000).toUTCString();
+            document.cookie = 'xoops_dark_mode=' + (dark ? '1' : '0')
+                + ';expires=' + expires + ';path=/;SameSite=Lax'
+                + (location.protocol === 'https:' ? ';Secure' : '');
+        });
+    });
+})();

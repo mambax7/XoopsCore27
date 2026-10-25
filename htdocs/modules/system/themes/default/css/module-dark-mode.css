@@ -1,0 +1,161 @@
+/* Default admin dark-mode compatibility for module-owned UI surfaces.
+ * Copyright (c) 2000-2026 XOOPS Project. GNU GPL 3.0.
+ */
+body.dark-mode .CPbigTitle { color: var(--admin-text); }
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder { color: var(--admin-muted); opacity: 1; }
+
+/* Shared XMF permission workbench (Quotes and other modules). */
+body.dark-mode .xmfwb {
+    --wb-accent: var(--admin-action);
+    --wb-accent-soft: #293b50;
+    --wb-border: var(--admin-border);
+    --wb-surface: var(--admin-surface);
+    --wb-subtle: var(--admin-row);
+    --wb-text: var(--admin-text);
+    --wb-muted: var(--admin-muted);
+    --wb-head: var(--admin-raised);
+    --wb-head-text: var(--admin-text);
+    --wb-changed: #393329;
+    --wb-changed-line: #ab9164;
+}
+body.dark-mode .xmfwb-grid :is(th,td) { color: var(--wb-text); }
+body.dark-mode .xmfwb-grid thead th { background: var(--wb-head); }
+body.dark-mode .xmfwb-grid td.is-changed { background: var(--wb-changed); }
+body.dark-mode .xmfwb-btn--primary,
+body.dark-mode .xmfwb-tab[aria-selected="true"] {
+    background: var(--admin-action);
+    color: var(--admin-action-text);
+}
+
+/* xStyles workspace chrome only; specimens and comparison frames keep their theme. */
+body.dark-mode #xs-gallery {
+    --xs-ui-ink: var(--admin-text);
+    --xs-ui-muted: var(--admin-muted);
+    --xs-ui-line: var(--admin-border);
+    --xs-ui-accent: var(--admin-link);
+}
+body.dark-mode #xs-gallery.xs-workbench > .xs-header,
+body.dark-mode #xs-gallery.xs-workbench .xs-sidebar,
+body.dark-mode #xs-gallery.xs-workbench .xs-example-header,
+body.dark-mode #xs-gallery :is(.xs-source,.xs-controls,.xs-responsive,.xs-preview-notice,.xs-demo-notice) {
+    background: var(--admin-row);
+    color: var(--admin-text);
+}
+body.dark-mode #xs-gallery .xs-source pre,
+body.dark-mode #xs-gallery .xs-view-switch button,
+body.dark-mode #xs-gallery .xs-single-tools :is(button,select),
+body.dark-mode #xs-gallery .xs-comparison :is(button,select),
+body.dark-mode #xs-gallery .xs-source button,
+body.dark-mode #xs-gallery #xs-filter,
+body.dark-mode #xs-gallery [data-cssholmes-designer],
+body.dark-mode #xs-gallery .xs-single-tools .xs-nav a,
+body.dark-mode #xs-gallery .xs-holmes a {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    border-color: var(--admin-control-border);
+}
+body.dark-mode #xs-gallery.xs-workbench .xs-sections a[aria-current],
+body.dark-mode #xs-gallery .xs-element-list a[aria-current],
+body.dark-mode #xs-gallery .xs-single-tools .xs-nav a[aria-current] {
+    background: #293b50;
+    color: var(--admin-link);
+}
+body.dark-mode #xs-gallery .xs-view-switch button[aria-pressed="true"],
+body.dark-mode #xs-gallery .xs-control-form button {
+    background: var(--admin-action);
+    color: var(--admin-action-text);
+}
+body.dark-mode #xs-gallery .xs-known-issue {
+    background: #302d26;
+    color: #dac69f;
+    border-color: #796a4e;
+}
+
+/* Installer uses explicit table selectors and a token for selected rows. */
+body.dark-mode { --installer-selected: #2c4137; }
+body.dark-mode .installer-dash-card,
+body.dark-mode .installer-sticky-bar,
+body.dark-mode .installer-sets-panel,
+body.dark-mode .installer-plan-summary,
+body.dark-mode .installer-set-toolbar,
+body.dark-mode #installer-set-toolbar {
+    background: var(--admin-row);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+}
+body.dark-mode .installer-module-list table.module tr.even > td { background: var(--admin-surface); }
+body.dark-mode .installer-module-list table.module tr.odd > td { background: var(--admin-row); }
+body.dark-mode :is(.installer-set-toolbar-hint,.installer-filter-hint,.installer-result-dirname,.installer-top-selected,.installer-title-count),
+body.dark-mode .CPbigTitle .installer-title-count { color: var(--admin-muted); }
+body.dark-mode .installer-log-error,
+body.dark-mode .installer-empty-warn { color: #e7b4bc; }
+body.dark-mode .installer-log-warning { color: #dac69f; }
+body.dark-mode .installer-log-success { color: #afcfbd; }
+
+/* DebugBar's diagnostic report has its own heading, row and badge palette. */
+body.dark-mode .debugbar-diagnostics { color: var(--admin-text); }
+body.dark-mode .debugbar-diagnostics__header p { color: var(--admin-muted); }
+body.dark-mode .debugbar-diagnostics__privacy,
+body.dark-mode .debugbar-diagnostics__table thead th,
+body.dark-mode .debugbar-diagnostics__table tbody th,
+body.dark-mode .debugbar-diagnostics__table tbody tr:nth-child(even) th {
+    background: var(--admin-raised);
+    color: var(--admin-text);
+}
+body.dark-mode .debugbar-diagnostics__table tbody :is(tr,td) {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+}
+body.dark-mode .debugbar-diagnostics__table tbody tr:nth-child(even),
+body.dark-mode .debugbar-diagnostics__table tbody tr:nth-child(even) td { background: var(--admin-row); }
+body.dark-mode :is(.debugbar-diagnostics__header,.debugbar-diagnostics__privacy,.debugbar-diagnostics__table-wrap),
+body.dark-mode .debugbar-diagnostics__table :is(th,td) { border-color: var(--admin-border); }
+body.dark-mode .debugbar-diagnostics__status--ok { background: #253b30; color: #afcfbd; }
+body.dark-mode .debugbar-diagnostics__status--warning { background: #393329; color: #dac69f; }
+body.dark-mode .debugbar-diagnostics__status--info { background: #303c4b; color: #c1d1e4; }
+
+/* xThemes: retain toolbar icons and preview images; remove light button fills. */
+body.dark-mode #px-menu-options,
+body.dark-mode .it_config_container,
+body.dark-mode .it_config_tabs ul li,
+body.dark-mode .theme_buttons a,
+body.dark-mode #it-form-container input.button {
+    background: var(--admin-row);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+    box-shadow: none;
+}
+body.dark-mode #px-menu-options a,
+body.dark-mode .theme_buttons a span { color: var(--admin-text); border-color: var(--admin-border); }
+body.dark-mode #it-current-theme .theme_data strong,
+body.dark-mode #it_other_themes .other_theme_item span.descs,
+body.dark-mode #it-form-container :is(.information,.descriptions),
+body.dark-mode tr.plug_item span.desc { color: var(--admin-muted); }
+body.dark-mode #it_other_themes .other_theme_item img.screenshot { background: var(--admin-row); box-shadow: none; }
+body.dark-mode .it_config_tabs ul li.current,
+body.dark-mode .it_config_tabs ul li:hover,
+body.dark-mode .theme_buttons a:hover { background: var(--admin-raised); }
+
+/* SCEditor chrome; the iframe's document is synchronized by editor-dark-mode.js. */
+body.dark-mode .sceditor-container,
+body.dark-mode .sceditor-toolbar,
+body.dark-mode .sceditor-group,
+body.dark-mode .sceditor-dropdown {
+    background: var(--admin-row);
+    color: var(--admin-text);
+    border-color: var(--admin-border);
+    box-shadow: none;
+}
+body.dark-mode .sceditor-container iframe,
+body.dark-mode .sceditor-container textarea { background: #1c222a; color: var(--admin-text); }
+body.dark-mode .sceditor-dropdown :is(label,.sceditor-font-option,.sceditor-fontsize-option,.sceditor-format a) { color: var(--admin-text); }
+body.dark-mode .sceditor-dropdown .button { background: var(--admin-raised); color: var(--admin-text); border-color: var(--admin-control-border); }
+body.dark-mode .sceditor-button svg { fill: var(--admin-text); }
+body.dark-mode .sceditor-button.disabled svg { fill: var(--admin-muted); }
+body.dark-mode .sceditor-button.active,
+body.dark-mode .sceditor-button:hover,
+body.dark-mode .sceditor-dropdown a:hover { background-color: var(--admin-raised); box-shadow: none; }
+body.dark-mode :is(.sceditor-button-bold,.sceditor-button-italic,.sceditor-button-underline,.sceditor-button-strike,.sceditor-button-subscript,.sceditor-button-superscript) div {
+    filter: brightness(0) invert(.85);
+}

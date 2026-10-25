@@ -27,11 +27,13 @@
             return false;
         });
         var c = readCookie('xoadmstyle');
-        if (c) switchStylestyle(c);
+        switchStylestyle(c || 'dark');
     });
 
     function switchStylestyle(styleName)
     {
+        if (['dark', 'silver', 'orange'].indexOf(styleName) === -1) styleName = 'dark';
+        document.body.setAttribute('data-admin-style', styleName);
         $('link[rel*=style][title]').each(function(i)
         {
             this.disabled = true;

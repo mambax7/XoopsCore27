@@ -11,19 +11,19 @@
 <div class="panes">
     <div>
         <div class="help">
-            <a href=""><{$smarty.const._OXYGEN_HELP_1}></a>
+            <h4><{$smarty.const._OXYGEN_HELP_1}></h4>
 
-            <p><{$smarty.const._OXYGEN_HELP_DESC_1}></P>
+            <p><{$smarty.const._OXYGEN_HELP_DESC_1}></p>
         </div>
         <div class="help">
-            <a href=""><{$smarty.const._OXYGEN_HELP_2}></a>
+            <h4><{$smarty.const._OXYGEN_HELP_2}></h4>
 
-            <p><{$smarty.const._OXYGEN_HELP_DESC_2}></P>
+            <p><{$smarty.const._OXYGEN_HELP_DESC_2}></p>
         </div>
         <div class="help">
-            <a href=""><{$smarty.const._OXYGEN_HELP_3}></a>
+            <h4><{$smarty.const._OXYGEN_HELP_3}></h4>
 
-            <p><{$smarty.const._OXYGEN_HELP_DESC_3}></P>
+            <p><{$smarty.const._OXYGEN_HELP_DESC_3}></p>
         </div>
     </div>
     <div><{xoBlock id=4}></div>

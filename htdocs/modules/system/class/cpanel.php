@@ -56,6 +56,10 @@ class XoopsSystemCpanel
      */
     public function loadGui($gui)
     {
+        // Existing installations can still have the retired theme saved in preferences.
+        if ($gui === 'dark') {
+            $gui = 'transition';
+        }
         if (!empty($gui)) {
             $class = 'XoopsGui' . ucfirst($gui);
             if (!class_exists($class)) {
