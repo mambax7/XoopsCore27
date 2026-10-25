@@ -1,0 +1,346 @@
+/*
+ * Transition dark mode, adapted from the XOOPS Dark admin theme.
+ * Copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * License: GNU GPL 3.0 (https://www.gnu.org/licenses/gpl-3.0.html)
+ * Original theme: Xoops Design Theme <https://xoops.org/>
+ * This overlay is maintained directly; css/dark.css remains the legacy accent.
+ */
+
+body {
+    --transition-accent: #0873ac;
+    --transition-accent-hover: #065b88;
+    --transition-accent-text: #fff;
+}
+
+body[data-admin-style="orange"] {
+    --transition-accent: #ff7600;
+    --transition-accent-hover: #ff922e;
+    --transition-accent-text: #1d1f24;
+}
+
+#xo-headnav > li > #darkModeToggle {
+    display: block;
+    margin: 0;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 0 0 0 3px;
+    background: var(--transition-accent);
+    color: var(--transition-accent-text);
+    font: inherit;
+    font-size: 10px;
+    line-height: 30px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+#xo-headnav > li > #darkModeToggle:hover {
+    background: var(--transition-accent-hover);
+}
+
+#darkModeToggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -4px;
+}
+
+body.dark-mode {
+    color-scheme: dark;
+    --transition-bg: #030303;
+    --transition-surface: #22252b;
+    --transition-raised: #333740;
+    --transition-border: #626875;
+    --transition-text: #dedede;
+    --transition-muted: #b8bdc7;
+    background: var(--transition-bg);
+    color: var(--transition-text);
+}
+
+/* Orange forces link colors; keep the dark palette readable with any accent. */
+body.dark-mode a,
+body.dark-mode a:link,
+body.dark-mode a:visited {
+    color: #9dccff !important;
+}
+
+body.dark-mode a:hover {
+    color: #c5e1ff !important;
+}
+
+body.dark-mode #xo-body,
+body.dark-mode #xo-module-sort tr td,
+body.dark-mode #xo-module-log .logger {
+    background: var(--transition-bg);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode #xo-logo-head,
+body.dark-mode #xo_globalnav,
+body.dark-mode #xo-footer,
+body.dark-mode #xo-nav-options,
+body.dark-mode #buttontop_mod,
+body.dark-mode #buttonbar_mod {
+    background: var(--transition-raised);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode #xo-headnav > li > a,
+body.dark-mode #xo_globalnav ul.menu .menulink,
+body.dark-mode #choosestyle a,
+body.dark-mode #xo-modname,
+body.dark-mode #xo-footer a {
+    color: var(--transition-text) !important;
+    background: transparent;
+}
+
+body.dark-mode #xo_globalnav ul.menu ul li a {
+    color: var(--transition-text) !important;
+    background-color: var(--transition-surface);
+}
+
+body.dark-mode #xo-headnav > li > a:hover,
+body.dark-mode #xo_globalnav ul.menu ul li a:hover,
+body.dark-mode #choosestyle a:hover {
+    background: var(--transition-accent);
+    color: var(--transition-accent-text) !important;
+}
+
+body.dark-mode #xo_globalnav ul.menu .menulink:hover,
+body.dark-mode #xo_globalnav ul.menu .menuhover {
+    background: var(--transition-surface);
+    color: var(--transition-text) !important;
+}
+
+body.dark-mode .xo-title {
+    color: var(--transition-text);
+    border-color: var(--transition-accent);
+}
+
+body.dark-mode .outer,
+body.dark-mode .tabs,
+body.dark-mode .tabs + .panes,
+body.dark-mode .panes li,
+body.dark-mode .help {
+    border-color: var(--transition-border);
+}
+
+body.dark-mode .head,
+body.dark-mode tr.head td,
+body.dark-mode th,
+body.dark-mode .foot,
+body.dark-mode tr.foot td,
+body.dark-mode #xo-module-sort tr.foot td,
+body.dark-mode #accordion h5,
+body.dark-mode .xo-block .xo-blocktitle {
+    background: var(--transition-raised);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode .even,
+body.dark-mode tr.even td,
+body.dark-mode .odd,
+body.dark-mode tr.odd td,
+body.dark-mode fieldset,
+body.dark-mode #accordion,
+body.dark-mode #accordion .pane,
+body.dark-mode #help-template,
+body.dark-mode #help-content,
+body.dark-mode #non-modhelp,
+body.dark-mode .xo-help-menu,
+body.dark-mode .xo-thumb,
+body.dark-mode #xo-centercolumn,
+body.dark-mode .xo-block,
+body.dark-mode .xo-block .xo-blockaction,
+body.dark-mode .xo-blocksection,
+body.dark-mode .display_folder {
+    background: var(--transition-surface);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode #xo-logger-output > table,
+body.dark-mode #xo-logger-tabs,
+body.dark-mode #xo-logger-tabs > a {
+    background: var(--transition-surface);
+}
+
+body.dark-mode #xo-logger-output > table th {
+    color: var(--transition-text);
+}
+
+body.dark-mode #buttonbar_mod a,
+body.dark-mode #buttonbar_mod a span,
+body.dark-mode #buttontop_mod a,
+body.dark-mode #buttontop_mod a span {
+    background: var(--transition-surface);
+    color: var(--transition-text);
+}
+
+body.dark-mode #buttonbar_mod #current a,
+body.dark-mode #buttonbar_mod #current a span {
+    background: var(--transition-accent);
+    color: var(--transition-accent-text) !important;
+}
+
+body.dark-mode tr.odd td,
+body.dark-mode #accordion h5.current {
+    background: var(--transition-raised);
+}
+
+body.dark-mode .xoops-form-element-help,
+body.dark-mode .xo-blocksection .xo-title,
+body.dark-mode .label,
+body.dark-mode .ct-label {
+    color: var(--transition-muted);
+}
+
+body.dark-mode input:not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]),
+body.dark-mode textarea,
+body.dark-mode select {
+    background: var(--transition-bg);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus {
+    border-color: var(--transition-accent);
+    box-shadow: 0 0 0 1px var(--transition-accent);
+    text-shadow: none;
+}
+
+body.dark-mode input[type="button"],
+body.dark-mode input[type="reset"],
+body.dark-mode button,
+body.dark-mode .xo-formbuttons,
+body.dark-mode .formButton,
+body.dark-mode .xo-buttons a,
+body.dark-mode .xo-btn-actions {
+    background: var(--transition-raised);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+/* Keep selected/custom action colors, as in Modern's custom-settings fix. */
+body.dark-mode input[type="submit"],
+body.dark-mode button[type="submit"] {
+    background: var(--transition-accent);
+    color: var(--transition-accent-text);
+}
+
+body.dark-mode input[type="submit"]:hover,
+body.dark-mode button[type="submit"]:hover {
+    background: var(--transition-accent-hover);
+}
+
+body.dark-mode #xo-icon a,
+body.dark-mode #xo-module-icons a,
+body.dark-mode div.rmmenuicon a {
+    background: var(--transition-surface);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode #xo-icon a:hover,
+body.dark-mode #xo-module-icons a:hover,
+body.dark-mode div.rmmenuicon a:hover,
+body.dark-mode ul.jqueryFileTree a:hover {
+    background: var(--transition-raised);
+}
+
+body.dark-mode #xo-nav-options img,
+body.dark-mode #xo-module-sort img,
+body.dark-mode #xo-installable-modules img,
+body.dark-mode .xo-catsetting img {
+    filter: brightness(85%);
+}
+
+body.dark-mode img.module-size {
+    background: var(--transition-raised);
+}
+
+body.dark-mode #xoops-logo {
+    filter: brightness(0) invert(1);
+}
+
+/* These base styles and breadcrumb images use !important or inline styles. */
+body.dark-mode .tabs a,
+body.dark-mode .ui-dialog,
+body.dark-mode .ui-widget-content {
+    background: var(--transition-surface) !important;
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode .tabs a:hover,
+body.dark-mode .tabs .current,
+body.dark-mode .tabs .current:hover,
+body.dark-mode .tabs li.current a {
+    background: var(--transition-raised) !important;
+    color: var(--transition-text) !important;
+}
+
+body.dark-mode #xo-breadcrumb,
+body.dark-mode #xo-breadcrumb a {
+    background-image: none !important;
+    background-color: var(--transition-surface);
+    color: #9dccff;
+    border-color: var(--transition-border);
+}
+
+body.dark-mode #xo-breadcrumb li + li::before {
+    content: '/';
+    float: inline-start;
+    padding-inline-end: 8px;
+    color: var(--transition-muted);
+}
+
+body.dark-mode #xo-breadcrumb li.xo-help::before {
+    content: none;
+}
+
+body.dark-mode #xo-content code,
+body.dark-mode #xo-content pre,
+body.dark-mode #tooltip,
+body.dark-mode .tips,
+body.dark-mode #trans-info,
+body.dark-mode div.jGrowl div.jGrowl-notification,
+body.dark-mode div.jGrowl div.jGrowl-closer {
+    background: var(--transition-raised);
+    color: var(--transition-text);
+    border-color: var(--transition-border);
+}
+
+body.dark-mode .errorMsg {
+    background: #401e24;
+    color: #ffb3ba;
+    border-color: #b85463;
+}
+
+body.dark-mode .confirmMsg {
+    background: #382f18 !important;
+    color: #f5db91 !important;
+    border-color: #9c8345 !important;
+}
+
+body.dark-mode .resultMsg,
+body.dark-mode .successMsg {
+    background: #193526;
+    color: #a2e4b8;
+    border-color: #46855d;
+}
+
+body.dark-mode .errorMsg a,
+body.dark-mode .confirmMsg a,
+body.dark-mode .resultMsg a,
+body.dark-mode .successMsg a {
+    color: inherit !important;
+    text-decoration: underline;
+}
+
+body.dark-mode .red,
+body.dark-mode #xo-module-sort strong.red {
+    color: #ff8585;
+}

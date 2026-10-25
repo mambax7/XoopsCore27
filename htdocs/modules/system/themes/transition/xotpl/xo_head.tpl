@@ -6,6 +6,12 @@
     </div>
     <ul id="xo-headnav">
         <li>
+            <button type="button" id="darkModeToggle" aria-pressed="<{if $dark_mode|default:false}>true<{else}>false<{/if}>" title="<{$smarty.const._OXYGEN_DARK_MODE|default:'Dark mode'|escape}>">
+                <span class="fa-solid fa-moon" aria-hidden="true"></span>
+                <{$smarty.const._OXYGEN_DARK_MODE|default:'Dark mode'|escape}>
+            </button>
+        </li>
+        <li>
             <a class="tooltip" href="<{xoAppUrl}>" title="<{$smarty.const._YOURHOME}>">
                 <span class="fa-solid fa-home"></span>
                 <{$smarty.const._YOURHOME}>

@@ -56,6 +56,10 @@ class XoopsSystemCpanel
      */
     public function loadGui($gui)
     {
+        // Existing installations can still have the retired theme saved in preferences.
+        if ($gui === 'dark') {
+            $gui = 'transition';
+        }
         if (!empty($gui)) {
             $class = 'XoopsGui' . ucfirst($gui);
             if (!class_exists($class)) {
@@ -88,6 +92,9 @@ class XoopsSystemCpanel
         xoops_load('XoopsLists');
         $lists = XoopsLists::getDirListAsArray(XOOPS_ADMINTHEME_PATH);
         foreach (array_keys($lists) as $gui) {
+            if ($gui === 'dark') {
+                continue;
+            }
             if (file_exists($file = XOOPS_ADMINTHEME_PATH . '/' . $gui . '/' . $gui . '.php')) {
                 include_once $file;
                 if (class_exists($class = 'XoopsGui' . ucfirst($gui))) {

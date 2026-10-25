@@ -1,10 +1,10 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="https://www.w3.org/1999/xhtml" xml:lang="<{$xoops_langcode}>" lang="<{$xoops_langcode}>">
+<html xmlns="https://www.w3.org/1999/xhtml" xml:lang="<{$xoops_langcode}>" lang="<{$xoops_langcode}>" dir="<{$xoops_text_direction|default:'ltr'}>">
 <head>
     <{include file="$theme_tpl/xo_metas.tpl"}>
     <{include file="$theme_tpl/xo_scripts.tpl"}>
 </head>
-<body id="<{$xoops_dirname}>" class="<{$xoops_langcode}>">
+<body id="<{$xoops_dirname}>" class="<{$xoops_langcode}> <{if $xoops_rtl|default:false}>xoops-rtl<{/if}><{if $dark_mode|default:false}> dark-mode<{/if}>">
 <{include file="$theme_tpl/xo_head.tpl"}>
 <{include file="$theme_tpl/xo_globalnav.tpl"}>
 <{include file="$theme_tpl/xo_toolbar.tpl"}>

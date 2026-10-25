@@ -57,4 +57,5 @@ define('_OXYGEN_HELP_DESC_3', 'If you need more help and information to using XO
 
 //2.7.0
 define('_OXYGEN_COMPOSER_PACKAGES', 'Composer Packages');
+define('_OXYGEN_DARK_MODE', 'Dark mode');
 

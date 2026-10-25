@@ -53,7 +53,11 @@ class XoopsGuiDefault extends XoopsSystemGui
 
         include_once dirname(__DIR__) . '/ComposerInfo.php';
 
+        $tpl->assign('dark_mode', \Xmf\Request::getString('xoops_dark_mode', '0', 'COOKIE') === '1');
+
         $xoTheme->addScript('browse.php?Frameworks/jquery/jquery.js');
+        $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/default/js/dark-mode.js');
+        $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/default/js/editor-dark-mode.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/default/js/styleswitch.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/default/js/formenu.js');
         $xoTheme->addScript(XOOPS_ADMINTHEME_URL . '/default/js/menu.js');
@@ -66,6 +70,12 @@ class XoopsGuiDefault extends XoopsSystemGui
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/default/css/dark.css', ['title' => 'dark', 'media' => 'screen']);
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/default/css/silver.css', ['title' => 'silver', 'media' => 'screen']);
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/default/css/orange.css', ['title' => 'orange', 'media' => 'screen']);
+        // No title: the header accent switcher must not disable dark mode.
+        $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/default/css/dark-mode.css');
+        $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/default/css/module-dark-mode.css');
+        if (file_exists(__DIR__ . '/css/custom.css')) {
+            $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/default/css/custom.css');
+        }
 
         $tpl->assign('lang_cp', _CPHOME);
         //start system overview

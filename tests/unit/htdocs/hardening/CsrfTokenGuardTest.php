@@ -173,7 +173,6 @@ final class CsrfTokenGuardTest extends TestCase
     {
         $checks = [
             '/modules/system/templates/admin/system_users.tpl'                       => 'XOOPS_TOKEN_REQUEST=<{$users_csrf}>',
-            '/modules/system/themes/dark/modules/system/admin/system_users.tpl'      => 'XOOPS_TOKEN_REQUEST=<{$users_csrf}>',
             '/modules/profile/templates/profile_admin_steplist.tpl'                  => 'XOOPS_TOKEN_REQUEST=<{$steps_csrf}>',
         ];
         foreach ($checks as $rel => $needle) {
