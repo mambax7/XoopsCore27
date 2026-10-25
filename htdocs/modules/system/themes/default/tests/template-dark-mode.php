@@ -76,11 +76,12 @@ HTML);
     ]);
     foreach (['ltr', 'rtl'] as $direction) {
         foreach ([false, true] as $dark) {
-            $smarty->assign(['dark_mode' => $dark, 'xoops_text_direction' => $direction, 'xoops_is_rtl' => $direction === 'rtl']);
+            $smarty->assign(['dark_mode' => $dark, 'xoops_text_direction' => $direction, 'xoops_rtl' => $direction === 'rtl']);
             $html = $smarty->fetch(dirname(__DIR__) . '/theme.tpl');
             if (!str_contains($html, 'aria-pressed="' . ($dark ? 'true' : 'false') . '"')
                 || !str_contains($html, 'dir="' . $direction . '"')
                 || (str_contains($html, ' dark-mode') !== $dark)
+                || (str_contains($html, 'xoops-rtl') !== ($direction === 'rtl'))
                 || !str_contains($html, 'class="icon-moon"') || !str_contains($html, 'class="icon-sun"')) {
                 throw new RuntimeException('Template state mismatch');
             }

@@ -92,6 +92,9 @@ class XoopsSystemCpanel
         xoops_load('XoopsLists');
         $lists = XoopsLists::getDirListAsArray(XOOPS_ADMINTHEME_PATH);
         foreach (array_keys($lists) as $gui) {
+            if ($gui === 'dark') {
+                continue;
+            }
             if (file_exists($file = XOOPS_ADMINTHEME_PATH . '/' . $gui . '/' . $gui . '.php')) {
                 include_once $file;
                 if (class_exists($class = 'XoopsGui' . ucfirst($gui))) {

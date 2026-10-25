@@ -14,7 +14,7 @@ body {
 
 body[data-admin-style="orange"] {
     --transition-accent: #ff7600;
-    --transition-accent-hover: #b85500;
+    --transition-accent-hover: #ff922e;
     --transition-accent-text: #1d1f24;
 }
 
@@ -128,6 +128,7 @@ body.dark-mode .head,
 body.dark-mode tr.head td,
 body.dark-mode th,
 body.dark-mode .foot,
+body.dark-mode tr.foot td,
 body.dark-mode #xo-module-sort tr.foot td,
 body.dark-mode #accordion h5,
 body.dark-mode .xo-block .xo-blocktitle {

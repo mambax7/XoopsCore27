@@ -4,7 +4,7 @@
     <{include file="$theme_tpl/xo_metas.tpl"}>
     <{include file="$theme_tpl/xo_scripts.tpl"}>
 </head>
-<body id="<{$xoops_dirname}>" class="<{$xoops_langcode}> <{if $xoops_is_rtl|default:false}>xoops-rtl<{/if}><{if $dark_mode|default:false}> dark-mode<{/if}>">
+<body id="<{$xoops_dirname}>" class="<{$xoops_langcode}> <{if $xoops_rtl|default:false}>xoops-rtl<{/if}><{if $dark_mode|default:false}> dark-mode<{/if}>">
 <{include file="$theme_tpl/xo_head.tpl"}>
 <{include file="$theme_tpl/xo_globalnav.tpl"}>
 <{include file="$theme_tpl/xo_toolbar.tpl"}>

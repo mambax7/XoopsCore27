@@ -1,3 +1,15 @@
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ @license GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ */
 /* Run with: node browser-dark-mode.cjs /path/to/playwright-or-playwright-core */
 'use strict';
 const assert = require('node:assert/strict');
@@ -41,6 +53,7 @@ const html = `<!doctype html><html><head>
 <tr class="head"><td>Setting</td><td>Value</td></tr>
 <tr class="even"><td><a href="#">Site name</a></td><td><input type="text" value="XOOPS"></td></tr>
 <tr class="odd"><td>Editor</td><td><select><option>Default editor</option></select></td></tr></table>
+<table class="outer"><tfoot><tr class="txtcenter foot"><td>Confirm module changes</td></tr></tfoot></table>
 <fieldset><legend>Options</legend><label><input type="checkbox" checked> Enabled</label><textarea>Sample content</textarea>
 <input type="submit" value="Save"><button type="button">Cancel</button></fieldset>
 <ul class="tabs"><li class="current"><a class="current" href="#">Overview</a></li><li><a href="#">Details</a></li></ul>
@@ -81,6 +94,7 @@ const server = http.createServer((req, res) => {
         assert.equal(await color('tr.even td'), 'rgb(34, 37, 43)');
         assert.equal(await color('.ui-dialog'), 'rgb(34, 37, 43)');
         assert.equal(await color('.tabs .current a'), 'rgb(51, 55, 64)');
+        assert.equal(await color('tr.foot td'), 'rgb(51, 55, 64)');
         for (const accent of ['orange', 'silver', 'dark']) {
             await page.locator('.styleswitch[rel="' + accent + '"]').click();
             assert.equal(await color('#xo-body'), 'rgb(3, 3, 3)');
@@ -92,6 +106,17 @@ const server = http.createServer((req, res) => {
         await page.locator('.styleswitch[rel="orange"]').click();
         await page.waitForTimeout(300);
         assert.equal(await color('input[type="submit"]'), 'rgb(255, 118, 0)');
+        for (const selector of ['#darkModeToggle', 'input[type="submit"]']) {
+            await page.locator(selector).hover();
+            await page.waitForTimeout(300);
+            const contrast = await page.locator(selector).evaluate(el => {
+                const luminance = color => color.match(/[\d.]+/g).slice(0, 3).map(Number).map(c => c / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
+                const style = getComputedStyle(el), fg = luminance(style.color), bg = luminance(style.backgroundColor);
+                return (Math.max(fg, bg) + .05) / (Math.min(fg, bg) + .05);
+            });
+            assert.ok(contrast >= 4.5, selector + ' orange hover contrast: ' + contrast);
+        }
+        await page.mouse.move(0, 0);
         await page.reload();
         assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
         assert.equal(await page.locator('body').getAttribute('data-admin-style'), 'orange');

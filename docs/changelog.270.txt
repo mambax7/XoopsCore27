@@ -7,6 +7,7 @@ Enhancements:
 - Default and Transition admin themes now offer a persistent light/dark toggle; Default includes dark styling for module panels, permission grids and SCEditor. The standalone dark theme is removed, and saved dark preferences load Transition, where the header toggle enables dark mode (modules/system/themes, modules/system/class/cpanel.php)
 
 Bug fixes:
+- hide leftover Dark admin theme files from the selector after an in-place upgrade; use the core RTL flag in Default and keep Transition confirmation footers and orange hover states readable in dark mode
 - the theme selector block works again after a theme was chosen with ?xoops_theme_select= in a URL: the theme factory kept its own session copy of that choice, which overrode every later selection, and now uses the same $_SESSION['xoopsUserTheme'] as the selector and login (class/theme.php)
 - a theme picked in the selector block is no longer replaced on the next page when the current URL still contains ?xoops_theme_select=: the selector redirect drops that parameter (class/xoopskernel.php)
 - the admin redirect page renders the default theme its template variables are built for, instead of the visitor's session theme (include/functions.php)
