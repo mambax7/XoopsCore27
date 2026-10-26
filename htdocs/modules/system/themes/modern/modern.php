@@ -44,6 +44,7 @@ class XoopsGuiModern extends XoopsSystemGui
     public function header()
     {
         parent::header();
+        $this->xoTheme->addLanguage('main');
 
         global $xoopsConfig, $xoopsUser, $xoopsModule, $xoTheme, $xoopsTpl, $xoopsDB;
         $tpl =& $this->template;
