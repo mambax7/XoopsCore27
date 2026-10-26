@@ -998,17 +998,18 @@ class Protector
     }
 
     /**
-     * @param $current
-     * @param $indexes
+     * @param array|mixed $current superglobal to walk; passed by reference
+     * @param string[]    $indexes base64-encoded keys, outermost first
      *
-     * @return bool
+     * @return mixed reference to the addressed value, or false when a key is missing
      */
-    public function get_ref_from_base64index(&$current, $indexes)
+    public function &get_ref_from_base64index(&$current, $indexes)
     {
+        $notFound = false;
         foreach ($indexes as $index) {
             $index = base64_decode($index);
-            if (!is_array($current)) {
-                return false;
+            if (!is_array($current) || !array_key_exists($index, $current)) {
+                return $notFound;
             }
             $current = & $current[$index];
         }
@@ -1022,37 +1023,35 @@ class Protector
      */
     public function replace_doubtful($key, $val)
     {
-        global $HTTP_GET_VARS, $HTTP_POST_VARS, $HTTP_COOKIE_VARS;
-
-        $index_expression = '';
-        $indexes          = explode('_', $key);
-        $base_array       = array_shift($indexes);
+        $indexes    = explode('_', $key);
+        $base_array = array_shift($indexes);
 
         switch ($base_array) {
             case 'G':
-                $main_ref   =  $this->get_ref_from_base64index($_GET, $indexes);
-                $legacy_ref =  $this->get_ref_from_base64index($HTTP_GET_VARS, $indexes);
+                $main_ref = & $this->get_ref_from_base64index($_GET, $indexes);
                 break;
             case 'P':
-                $main_ref   =  $this->get_ref_from_base64index($_POST, $indexes);
-                $legacy_ref =  $this->get_ref_from_base64index($HTTP_POST_VARS, $indexes);
+                $main_ref = & $this->get_ref_from_base64index($_POST, $indexes);
                 break;
             case 'C':
-                $main_ref   =  $this->get_ref_from_base64index($_COOKIE, $indexes);
-                $legacy_ref =  $this->get_ref_from_base64index($HTTP_COOKIE_VARS, $indexes);
+                $main_ref = & $this->get_ref_from_base64index($_COOKIE, $indexes);
                 break;
             default:
                 exit;
         }
-        if (!isset($main_ref)) {
-            exit;
+        // The value is gone, e.g. stopforumspam() emptied $_POST earlier in the request
+        if (false === $main_ref) {
+            return;
         }
-        $request_ref =  $this->get_ref_from_base64index($_REQUEST, $indexes);
-        if (false !== $request_ref && $main_ref == $request_ref) {
+        $request_ref = & $this->get_ref_from_base64index($_REQUEST, $indexes);
+        if (false !== $request_ref && $main_ref === $request_ref) {
             $request_ref = $val;
         }
-        $main_ref   = $val;
-        $legacy_ref = $val;
+        $main_ref = $val;
+        // Later checks rewrite from this copy, so keep earlier rewrites in it
+        if (isset($this->_doubtful_requests[$key])) {
+            $this->_doubtful_requests[$key] = $val;
+        }
     }
 
     /**

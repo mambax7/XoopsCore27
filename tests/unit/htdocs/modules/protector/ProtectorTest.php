@@ -34,7 +34,7 @@ class ProtectorTest extends TestCase
     /** @var array<string, array<mixed>> superglobals the tests assign, as found before each test */
     private array $savedSuperglobals = [];
 
-    private const ASSIGNED_PROPERTIES = ['_conn', '_done_badext', '_done_intval', '_safe_badext', '_safe_contami', 'last_error_type', 'message'];
+    private const ASSIGNED_PROPERTIES = ['_conn', '_doubtful_requests', '_done_badext', '_done_intval', '_done_isocom', '_done_union', '_safe_badext', '_safe_contami', '_safe_isocom', '_safe_union', 'last_error_type', 'message'];
 
     protected function setUp(): void
     {
@@ -44,7 +44,7 @@ class ProtectorTest extends TestCase
         foreach (self::ASSIGNED_PROPERTIES as $property) {
             $this->savedProtectorState[$property] = $this->protector->{$property};
         }
-        $this->savedSuperglobals = ['_FILES' => $_FILES, '_GET' => $_GET, '_REQUEST' => $_REQUEST];
+        $this->savedSuperglobals = ['_FILES' => $_FILES, '_GET' => $_GET, '_POST' => $_POST, '_COOKIE' => $_COOKIE, '_REQUEST' => $_REQUEST];
     }
 
     protected function tearDown(): void
@@ -54,7 +54,86 @@ class ProtectorTest extends TestCase
         }
         $_FILES   = $this->savedSuperglobals['_FILES'];
         $_GET     = $this->savedSuperglobals['_GET'];
+        $_POST    = $this->savedSuperglobals['_POST'];
+        $_COOKIE  = $this->savedSuperglobals['_COOKIE'];
         $_REQUEST = $this->savedSuperglobals['_REQUEST'];
+    }
+
+    // ---------------------------------------------------------------
+    // replace_doubtful(): writes the sanitised value back
+    // ---------------------------------------------------------------
+
+    /** The key _initial_recursive() builds: base letter + base64 of each index. */
+    private static function doubtfulKey(string $base, string|int ...$indexes): string
+    {
+        return implode('_', [$base, ...array_map(static fn($i) => base64_encode((string) $i), $indexes)]);
+    }
+
+    #[Test]
+    public function replaceDoubtfulRewritesGetAndMatchingRequest(): void
+    {
+        $_GET     = ['a' => "x\0y", 'n' => ['b' => 'deep', 0 => 'zero']];
+        $_REQUEST = $_GET;
+
+        $this->protector->replace_doubtful(self::doubtfulKey('G', 'a'), 'x y');
+        $this->protector->replace_doubtful(self::doubtfulKey('G', 'n', 'b'), 'D');
+        $this->protector->replace_doubtful(self::doubtfulKey('G', 'n', 0), 'Z');
+
+        $this->assertSame(['a' => 'x y', 'n' => ['b' => 'D', 0 => 'Z']], $_GET);
+        $this->assertSame($_GET, $_REQUEST);
+    }
+
+    #[Test]
+    public function replaceDoubtfulLeavesRequestAloneWhenItHoldsAnotherValue(): void
+    {
+        $_POST    = ['p' => 'union select'];
+        $_REQUEST = ['p' => 'from cookie'];
+
+        $this->protector->replace_doubtful(self::doubtfulKey('P', 'p'), 'uni-on select');
+
+        $this->assertSame(['p' => 'uni-on select'], $_POST);
+        $this->assertSame(['p' => 'from cookie'], $_REQUEST);
+    }
+
+    #[Test]
+    public function replaceDoubtfulDoesNotCreateMissingRequestKeys(): void
+    {
+        $_COOKIE  = ['c' => 'v'];
+        $_REQUEST = [];
+
+        $this->protector->replace_doubtful(self::doubtfulKey('C', 'c'), 'w');
+
+        $this->assertSame(['c' => 'w'], $_COOKIE);
+        $this->assertSame([], $_REQUEST);
+    }
+
+    #[Test]
+    public function replaceDoubtfulReturnsWhenTheValueIsGone(): void
+    {
+        $_POST    = []; // stopforumspam() empties it
+        $_REQUEST = [];
+
+        $this->protector->replace_doubtful(self::doubtfulKey('P', 'p'), 'x');
+
+        $this->assertSame([], $_POST);
+        $this->assertSame([], $_REQUEST);
+    }
+
+    #[Test]
+    public function isocomAndUnionRewritesOfOneValueBothSurvive(): void
+    {
+        $key      = self::doubtfulKey('P', 'q');
+        $_POST    = ['q' => 'x UNION SELECT 1 /*'];
+        $_REQUEST = $_POST;
+        $this->protector->_doubtful_requests = [$key => $_POST['q']];
+        $this->protector->_done_isocom       = false;
+        $this->protector->_done_union        = false;
+
+        $this->protector->check_sql_isolatedcommentin(true);
+        $this->protector->check_sql_union(true);
+
+        $this->assertSame(['q' => 'x uni-on SELECT 1 /**/'], $_POST);
+        $this->assertSame($_POST, $_REQUEST);
     }
 
     // ---------------------------------------------------------------
