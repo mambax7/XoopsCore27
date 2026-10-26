@@ -310,8 +310,9 @@ if ($op === 'avatarupload') {
                     // Save the new avatar first; the previous custom avatar
                     // (record + file) is removed only once that has succeeded.
                     $oldavatar = $xoopsUser->getVar('user_avatar');
-                    $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $xoopsDB->prefix('users'), $xoopsDB->quote('avatars/' . $uploader->getSavedFileName()), $xoopsUser->getVar('uid'));
-                    if (!$xoopsDB->exec($sql)) {
+                    /** @var XoopsMemberHandler $member_handler */
+                    $member_handler = xoops_getHandler('member');
+                    if (!$member_handler->updateUserByField($xoopsUser, 'user_avatar', 'avatars/' . $uploader->getSavedFileName())) {
                         $avt_handler->delete($avatar);
                         require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
                         xoops_remove_file_quietly($uploader->getSavedDestination(), 'avatar upload');
