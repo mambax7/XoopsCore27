@@ -147,39 +147,6 @@ function profile_install_addField($name, $title, $description, $category, $type,
     profile_install_setPermissions($obj->getVar('field_id'), $module_id, $canedit, $visible);
 
     return true;
-    /*
-    //$GLOBALS['xoopsDB']->query("INSERT INTO ".$GLOBALS['xoopsDB']->prefix("profile_field")." VALUES (0, {$category}, '{$type}', {$valuetype}, '{$name}', " . $GLOBALS['xoopsDB']->quote($title) . ", " . $GLOBALS['xoopsDB']->quote($description) . ", 0, {$length}, {$weight}, '', 1, {$canedit}, 1, 0, '" . serialize($options) . "', {$step_id})");
-    $gperm_itemid = $obj->getVar('field_id');
-    unset($obj);
-    $gperm_modid = $module_id;
-    $sql = "INSERT INTO " . $GLOBALS['xoopsDB']->prefix("group_permission") .
-        " (gperm_groupid, gperm_itemid, gperm_modid, gperm_name) " .
-        " VALUES " .
-        ($canedit ?
-            " (" . XOOPS_GROUP_ADMIN . ", {$gperm_itemid}, {$gperm_modid}, 'profile_edit'), "
-        : "" ) .
-        ($canedit == 1 ?
-            " (" . XOOPS_GROUP_USERS . ", {$gperm_itemid}, {$gperm_modid}, 'profile_edit'), "
-        : "" ) .
-        " (" . XOOPS_GROUP_ADMIN . ", {$gperm_itemid}, {$gperm_modid}, 'profile_search'), " .
-        " (" . XOOPS_GROUP_USERS . ", {$gperm_itemid}, {$gperm_modid}, 'profile_search') " .
-        " ";
-    $GLOBALS['xoopsDB']->query($sql);
-
-    if ($visible) {
-        $sql = "INSERT INTO " . $GLOBALS['xoopsDB']->prefix("profile_visibility") .
-            " (field_id, user_group, profile_group) " .
-            " VALUES " .
-            " ({$gperm_itemid}, " . XOOPS_GROUP_ADMIN . ", " . XOOPS_GROUP_ADMIN . "), " .
-            " ({$gperm_itemid}, " . XOOPS_GROUP_ADMIN . ", " . XOOPS_GROUP_USERS . "), " .
-            " ({$gperm_itemid}, " . XOOPS_GROUP_USERS . ", " . XOOPS_GROUP_ADMIN . "), " .
-            " ({$gperm_itemid}, " . XOOPS_GROUP_USERS . ", " . XOOPS_GROUP_USERS . "), " .
-            " ({$gperm_itemid}, " . XOOPS_GROUP_ANONYMOUS . ", " . XOOPS_GROUP_ADMIN . "), " .
-            " ({$gperm_itemid}, " . XOOPS_GROUP_ANONYMOUS . ", " . XOOPS_GROUP_USERS . ")" .
-            " ";
-        $GLOBALS['xoopsDB']->query($sql);
-    }
-    */
 }
 
 /**
