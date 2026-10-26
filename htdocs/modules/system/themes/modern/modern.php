@@ -11,9 +11,6 @@
 
 xoops_load('gui', 'system');
 
-// Load theme language file
-xoops_loadLanguage('main', 'system/themes/modern');
-
 /**
  * XOOPS Modern Admin Theme
  *
@@ -47,6 +44,7 @@ class XoopsGuiModern extends XoopsSystemGui
     public function header()
     {
         parent::header();
+        $this->xoTheme->addLanguage('main');
 
         global $xoopsConfig, $xoopsUser, $xoopsModule, $xoTheme, $xoopsTpl, $xoopsDB;
         $tpl =& $this->template;
