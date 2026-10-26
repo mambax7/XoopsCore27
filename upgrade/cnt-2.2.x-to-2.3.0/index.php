@@ -421,7 +421,7 @@ class Upgrade_220 extends XoopsUpgrade
                 $dirname     = (string) $row['dirname'];
                 $modversion  = [];
                 // Reject traversal attempts and slashes in the DB-sourced dirname
-                if ('' === $dirname || !preg_match('/^[A-Za-z0-9_-]+$/', $dirname)) {
+                if ('' === $dirname || !preg_match('/^[A-Za-z0-9_-]+\z/', $dirname)) {
                     continue;
                 }
                 $versionFile = false !== $modulesRoot
@@ -476,7 +476,7 @@ class Upgrade_220 extends XoopsUpgrade
                 $dirname     = (string) $row['dirname'];
                 $modversion  = [];
                 // Reject traversal attempts and slashes in the DB-sourced dirname
-                if ('' === $dirname || !preg_match('/^[A-Za-z0-9_-]+$/', $dirname)) {
+                if ('' === $dirname || !preg_match('/^[A-Za-z0-9_-]+\z/', $dirname)) {
                     continue;
                 }
                 $versionFile = false !== $modulesRoot

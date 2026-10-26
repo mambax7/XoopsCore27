@@ -22,6 +22,7 @@ use Xmf\Request;
 $xoopsOption['pagetype'] = 'user';
 include __DIR__ . '/header.php';
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');
+require_once $GLOBALS['xoops']->path('include/file_safety.php');
 
 // If not a user, redirect
 if (!is_object($GLOBALS['xoopsUser'])) {
@@ -222,8 +223,8 @@ if ($op === 'avatarupload') {
                         $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
                         if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
                             $avt_handler->delete($avatars[0]);
-                            $oldavatar_path = realpath(XOOPS_UPLOAD_PATH . '/' . $oldavatar);
-                            if (0 === strpos($oldavatar_path, XOOPS_UPLOAD_PATH) && is_file($oldavatar_path)) {
+                            $oldavatar_path = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $oldavatar);
+                            if ('' !== $oldavatar_path) {
                                 unlink($oldavatar_path);
                             }
                         }
@@ -260,8 +261,7 @@ if ($op === 'avatarchoose') {
         }
         unset($avatars, $criteria_avatar);
     }
-    $user_avatarpath = realpath(XOOPS_UPLOAD_PATH . '/' . $user_avatar);
-    if (0 === strpos($user_avatarpath, (string) realpath(XOOPS_UPLOAD_PATH)) && is_file($user_avatarpath)) {
+    if ('' !== xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $user_avatar)) {
         $oldavatar = $GLOBALS['xoopsUser']->getVar('user_avatar');
         $GLOBALS['xoopsUser']->setVar('user_avatar', $user_avatar);
         /** @var XoopsMemberHandler $member_handler */
@@ -277,8 +277,8 @@ if ($op === 'avatarchoose') {
             $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
             if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
                 $avt_handler->delete($avatars[0]);
-                $oldavatar_path = realpath(XOOPS_UPLOAD_PATH . '/' . $oldavatar);
-                if (0 === strpos($oldavatar_path, (string) realpath(XOOPS_UPLOAD_PATH)) && is_file($oldavatar_path)) {
+                $oldavatar_path = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $oldavatar);
+                if ('' !== $oldavatar_path) {
                     unlink($oldavatar_path);
                 }
             }

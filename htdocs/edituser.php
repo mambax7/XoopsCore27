@@ -26,6 +26,7 @@ $xoopsPreload->triggerEvent('core.edituser.start');
 
 xoops_loadLanguage('user');
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');
+require_once $GLOBALS['xoops']->path('include/file_safety.php');
 
 // If not a user, redirect
 if (!is_object($xoopsUser)) {
@@ -59,7 +60,7 @@ if ($op === 'saveuser') {
             $errors[] = sprintf(_US_PWDTOOSHORT, $xoopsConfigUser['minpass']);
         } else {
             $vpass = Request::getVar('vpass', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
-            if ($password != $vpass) {
+            if ($password !== $vpass) {
                 $errors[] = _US_PASSNOTSAME;
             } elseif (mb_strtolower($password, 'UTF-8') === mb_strtolower((string) $xoopsUser->getVar('uname', 'n'), 'UTF-8')) {
                 $errors[] = _US_PWDEQUALSUNAME;
@@ -311,8 +312,8 @@ if ($op === 'avatarupload') {
                         $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
                         if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
                             $avt_handler->delete($avatars[0]);
-                            $oldavatar_path = realpath(XOOPS_UPLOAD_PATH . '/' . $oldavatar);
-                            if (0 === strpos($oldavatar_path, XOOPS_UPLOAD_PATH) && is_file($oldavatar_path)) {
+                            $oldavatar_path = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $oldavatar);
+                            if ('' !== $oldavatar_path) {
                                 unlink($oldavatar_path);
                             }
                         }
@@ -349,8 +350,7 @@ if ($op === 'avatarchoose') {
         }
         unset($avatars, $criteria_avatar);
     }
-    $user_avatarpath = realpath(XOOPS_UPLOAD_PATH . '/' . $user_avatar);
-    if (0 === strpos($user_avatarpath, (string) realpath(XOOPS_UPLOAD_PATH)) && is_file($user_avatarpath)) {
+    if ('' !== xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $user_avatar)) {
         $oldavatar = $xoopsUser->getVar('user_avatar');
         $xoopsUser->setVar('user_avatar', $user_avatar);
         /** @var XoopsMemberHandler $member_handler */
@@ -366,8 +366,8 @@ if ($op === 'avatarchoose') {
             $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
             if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
                 $avt_handler->delete($avatars[0]);
-                $oldavatar_path = realpath(XOOPS_UPLOAD_PATH . '/' . $oldavatar);
-                if (0 === strpos($oldavatar_path, (string) realpath(XOOPS_UPLOAD_PATH)) && is_file($oldavatar_path)) {
+                $oldavatar_path = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, $oldavatar);
+                if ('' !== $oldavatar_path) {
                     unlink($oldavatar_path);
                 }
             }

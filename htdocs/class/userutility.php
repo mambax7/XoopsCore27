@@ -297,7 +297,7 @@ class XoopsUserUtility
         if (!isset($pass) || $pass == '' || !isset($vpass) || $vpass == '') {
             $stop .= _US_ENTERPWD . '<br>';
         }
-        if (isset($pass) && ($pass != $vpass)) {
+        if (isset($pass) && ($pass !== $vpass)) {
             $stop .= _US_PASSNOTSAME . '<br>';
         } elseif (($pass != '') && (strlen($pass) < $xoopsConfigUser['minpass'])) {
             $stop .= sprintf(_US_PWDTOOSHORT, $xoopsConfigUser['minpass']) . '<br>';

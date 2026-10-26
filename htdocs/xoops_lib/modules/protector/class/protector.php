@@ -1003,12 +1003,13 @@ class Protector
      *
      * @return bool
      */
-    public function get_ref_from_base64index(&$current, $indexes)
+    public function &get_ref_from_base64index(&$current, $indexes)
     {
+        $notFound = false;
         foreach ($indexes as $index) {
             $index = base64_decode($index);
-            if (!is_array($current)) {
-                return false;
+            if (!is_array($current) || !array_key_exists($index, $current)) {
+                return $notFound;
             }
             $current = & $current[$index];
         }
@@ -1022,37 +1023,30 @@ class Protector
      */
     public function replace_doubtful($key, $val)
     {
-        global $HTTP_GET_VARS, $HTTP_POST_VARS, $HTTP_COOKIE_VARS;
-
-        $index_expression = '';
-        $indexes          = explode('_', $key);
-        $base_array       = array_shift($indexes);
+        $indexes    = explode('_', $key);
+        $base_array = array_shift($indexes);
 
         switch ($base_array) {
             case 'G':
-                $main_ref   =  $this->get_ref_from_base64index($_GET, $indexes);
-                $legacy_ref =  $this->get_ref_from_base64index($HTTP_GET_VARS, $indexes);
+                $main_ref = & $this->get_ref_from_base64index($_GET, $indexes);
                 break;
             case 'P':
-                $main_ref   =  $this->get_ref_from_base64index($_POST, $indexes);
-                $legacy_ref =  $this->get_ref_from_base64index($HTTP_POST_VARS, $indexes);
+                $main_ref = & $this->get_ref_from_base64index($_POST, $indexes);
                 break;
             case 'C':
-                $main_ref   =  $this->get_ref_from_base64index($_COOKIE, $indexes);
-                $legacy_ref =  $this->get_ref_from_base64index($HTTP_COOKIE_VARS, $indexes);
+                $main_ref = & $this->get_ref_from_base64index($_COOKIE, $indexes);
                 break;
             default:
                 exit;
         }
-        if (!isset($main_ref)) {
+        if (false === $main_ref) {
             exit;
         }
-        $request_ref =  $this->get_ref_from_base64index($_REQUEST, $indexes);
+        $request_ref = & $this->get_ref_from_base64index($_REQUEST, $indexes);
         if (false !== $request_ref && $main_ref == $request_ref) {
             $request_ref = $val;
         }
-        $main_ref   = $val;
-        $legacy_ref = $val;
+        $main_ref = $val;
     }
 
     /**
