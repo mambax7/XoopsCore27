@@ -998,10 +998,10 @@ class Protector
     }
 
     /**
-     * @param $current
-     * @param $indexes
+     * @param array|mixed $current superglobal to walk; passed by reference
+     * @param string[]    $indexes base64-encoded keys, outermost first
      *
-     * @return bool
+     * @return mixed reference to the addressed value, or false when a key is missing
      */
     public function &get_ref_from_base64index(&$current, $indexes)
     {
@@ -1039,14 +1039,19 @@ class Protector
             default:
                 exit;
         }
+        // The value is gone, e.g. stopforumspam() emptied $_POST earlier in the request
         if (false === $main_ref) {
-            exit;
+            return;
         }
         $request_ref = & $this->get_ref_from_base64index($_REQUEST, $indexes);
-        if (false !== $request_ref && $main_ref == $request_ref) {
+        if (false !== $request_ref && $main_ref === $request_ref) {
             $request_ref = $val;
         }
         $main_ref = $val;
+        // Later checks rewrite from this copy, so keep earlier rewrites in it
+        if (isset($this->_doubtful_requests[$key])) {
+            $this->_doubtful_requests[$key] = $val;
+        }
     }
 
     /**

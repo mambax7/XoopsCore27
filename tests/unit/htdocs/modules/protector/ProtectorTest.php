@@ -34,7 +34,7 @@ class ProtectorTest extends TestCase
     /** @var array<string, array<mixed>> superglobals the tests assign, as found before each test */
     private array $savedSuperglobals = [];
 
-    private const ASSIGNED_PROPERTIES = ['_conn', '_done_badext', '_done_intval', '_safe_badext', '_safe_contami', 'last_error_type', 'message'];
+    private const ASSIGNED_PROPERTIES = ['_conn', '_doubtful_requests', '_done_badext', '_done_intval', '_done_isocom', '_done_union', '_safe_badext', '_safe_contami', '_safe_isocom', '_safe_union', 'last_error_type', 'message'];
 
     protected function setUp(): void
     {
@@ -105,6 +105,35 @@ class ProtectorTest extends TestCase
 
         $this->assertSame(['c' => 'w'], $_COOKIE);
         $this->assertSame([], $_REQUEST);
+    }
+
+    #[Test]
+    public function replaceDoubtfulReturnsWhenTheValueIsGone(): void
+    {
+        $_POST    = []; // stopforumspam() empties it
+        $_REQUEST = [];
+
+        $this->protector->replace_doubtful(self::doubtfulKey('P', 'p'), 'x');
+
+        $this->assertSame([], $_POST);
+        $this->assertSame([], $_REQUEST);
+    }
+
+    #[Test]
+    public function isocomAndUnionRewritesOfOneValueBothSurvive(): void
+    {
+        $key      = self::doubtfulKey('P', 'q');
+        $_POST    = ['q' => 'x UNION SELECT 1 /*'];
+        $_REQUEST = $_POST;
+        $this->protector->_doubtful_requests = [$key => $_POST['q']];
+        $this->protector->_done_isocom       = false;
+        $this->protector->_done_union        = false;
+
+        $this->protector->check_sql_isolatedcommentin(true);
+        $this->protector->check_sql_union(true);
+
+        $this->assertSame(['q' => 'x uni-on SELECT 1 /**/'], $_POST);
+        $this->assertSame($_POST, $_REQUEST);
     }
 
     // ---------------------------------------------------------------

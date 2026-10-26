@@ -307,7 +307,16 @@ if ($op === 'avatarupload') {
                     require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
                     xoops_remove_file_quietly($uploader->getSavedDestination(), 'avatar upload');
                 } else {
+                    // Save the new avatar first; the previous custom avatar
+                    // (record + file) is removed only once that has succeeded.
                     $oldavatar = $xoopsUser->getVar('user_avatar');
+                    $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $xoopsDB->prefix('users'), $xoopsDB->quote('avatars/' . $uploader->getSavedFileName()), $xoopsUser->getVar('uid'));
+                    if (!$xoopsDB->exec($sql)) {
+                        $avt_handler->delete($avatar);
+                        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                        xoops_remove_file_quietly($uploader->getSavedDestination(), 'avatar upload');
+                        redirect_header('edituser.php?op=avatarform', 3, _ERRORS);
+                    }
                     if (!empty($oldavatar) && false !== strpos(strtolower($oldavatar), 'cavt')) {
                         $avatars = $avt_handler->getObjects(new Criteria('avatar_file', $oldavatar));
                         if (!empty($avatars) && count($avatars) == 1 && is_object($avatars[0])) {
@@ -318,8 +327,6 @@ if ($op === 'avatarupload') {
                             }
                         }
                     }
-                    $sql = sprintf('UPDATE %s SET user_avatar = %s WHERE uid = %u', $xoopsDB->prefix('users'), $xoopsDB->quote('avatars/' . $uploader->getSavedFileName()), $xoopsUser->getVar('uid'));
-                    $xoopsDB->exec($sql);
                     $avt_handler->addUser($avatar->getVar('avatar_id'), $xoopsUser->getVar('uid'));
                     redirect_header('userinfo.php?t=' . time() . '&amp;uid=' . $xoopsUser->getVar('uid'), 3, _US_PROFUPDATED);
                 }
