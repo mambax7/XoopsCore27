@@ -353,8 +353,9 @@ class XoopsPrivmessageTest extends KernelTestCase
         $pm = new \XoopsPrivmessage();
         $pm->assignVar('msg_id', 10);
 
-        // delete uses query() not exec()
-        $this->db->method('query')->willReturn('mock_result');
+        // a DELETE is a mutating statement: exec(), not query()
+        $this->db->expects($this->never())->method('query');
+        $this->db->expects($this->once())->method('exec')->willReturn(true);
 
         $result = $this->handler->delete($pm);
         $this->assertTrue($result);
@@ -367,7 +368,7 @@ class XoopsPrivmessageTest extends KernelTestCase
         $pm = new \XoopsPrivmessage();
         $pm->assignVar('msg_id', 10);
 
-        $this->db->method('query')->willReturn(false);
+        $this->db->method('exec')->willReturn(false);
 
         $result = $this->handler->delete($pm);
         $this->assertFalse($result);

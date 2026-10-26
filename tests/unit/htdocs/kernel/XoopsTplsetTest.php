@@ -824,9 +824,9 @@ final class XoopsTplsetTest extends KernelTestCase
     public function testDeleteReturnsTrueOnSuccess(): void
     {
         $db = $this->createMockDatabase();
-        // delete() uses query(), not exec()
-        // First query: DELETE from tplset, second: DELETE from imgset_tplset_link
-        $db->method('query')->willReturn('mock_result');
+        // Both DELETEs (tplset, then imgset_tplset_link) are mutating: exec(), not query()
+        $db->expects($this->never())->method('query');
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $handler = $this->createHandler('XoopsTplsetHandler', $db);
 
@@ -855,8 +855,8 @@ final class XoopsTplsetTest extends KernelTestCase
     public function testDeleteReturnsFalseWhenFirstQueryFails(): void
     {
         $db = $this->createMockDatabase();
-        // First DELETE query fails
-        $db->method('query')->willReturn(false);
+        // First DELETE fails
+        $db->method('exec')->willReturn(false);
 
         $handler = $this->createHandler('XoopsTplsetHandler', $db);
 
@@ -876,10 +876,10 @@ final class XoopsTplsetTest extends KernelTestCase
         $db = $this->createMockDatabase();
 
         $sqlCalls = [];
-        $db->method('query')
+        $db->method('exec')
            ->willReturnCallback(function ($sql) use (&$sqlCalls) {
                $sqlCalls[] = $sql;
-               return 'mock_result';
+               return true;
            });
 
         $handler = $this->createHandler('XoopsTplsetHandler', $db);
@@ -904,11 +904,11 @@ final class XoopsTplsetTest extends KernelTestCase
         $db = $this->createMockDatabase();
 
         $callCount = 0;
-        $db->method('query')
+        $db->method('exec')
            ->willReturnCallback(function () use (&$callCount) {
                $callCount++;
                if ($callCount === 1) {
-                   return 'mock_result'; // First DELETE succeeds
+                   return true; // First DELETE succeeds
                }
                return false; // Second DELETE fails (imgset_tplset_link)
            });

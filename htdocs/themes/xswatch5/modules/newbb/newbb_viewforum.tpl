@@ -174,7 +174,7 @@
                         <td class="d-none d-sm-table-cell">
                             <{$topic.rating_img}>
                         </td>
-                    <{/if}> <{assign var='golast' value=$smarty.const._MD_NEWBB_GOTOLASTPOST}> <{assign var='golastimg' value="<span class='fa-solid fa-forward' aria-hidden='true' title='{$golast}'></span>" }>
+                    <{/if}> <{assign var='golast' value=$smarty.const._MD_NEWBB_GOTOLASTPOST}> <{assign var='golastimg' value="<span class='fa-solid fa-forward' aria-hidden='true' title='<{$golast}>'></span>" }>
                     <td>
                         <{$topic.topic_last_posttime}> <{$smarty.const._MD_NEWBB_BY}> <{$topic.topic_last_poster}> <{$topic.topic_page_jump_icon|regex_replace: '/<img .*>/' :$golastimg}>
                     </td>

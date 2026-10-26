@@ -624,7 +624,7 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
         $profile_handler = xoops_getModuleHandler('profile', 'profile');
         // remove column from table
         $sql = 'ALTER TABLE ' . $profile_handler->table . ' DROP `' . $obj->getVar('field_name', 'n') . '`';
-        if ($this->db->query($sql)) {
+        if ($this->db->exec($sql)) {
             //change this to update the cached field information storage
             if (!parent::delete($obj, $force)) {
                 return false;

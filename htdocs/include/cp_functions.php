@@ -28,9 +28,17 @@ require_once __DIR__ . '/file_safety.php';
 /**
  * CP Header
  *
+ * Renders once per request. Several system admin pages call it at the top and
+ * again in an error branch; a second run would open a nested output buffer and
+ * rebuild $xoTheme / $xoopsTpl, so later calls are ignored.
  */
 function xoops_cp_header()
 {
+    static $rendered = false;
+    if ($rendered) {
+        return;
+    }
+    $rendered = true;
     xoops_load('cpanel', 'system');
     $cpanel = XoopsSystemCpanel::getInstance();
     $cpanel->gui->header();
@@ -39,9 +47,15 @@ function xoops_cp_header()
 /**
  * CP Footer
  *
+ * Renders once per request, like xoops_cp_header().
  */
 function xoops_cp_footer()
 {
+    static $rendered = false;
+    if ($rendered) {
+        return;
+    }
+    $rendered = true;
     // Emit a request token on every control-panel page so admin AJAX actions
     // (status toggles, drag/drop ordering, ...) can submit and validate it.
     if (isset($GLOBALS['xoopsSecurity']) && is_object($GLOBALS['xoopsSecurity'])) {

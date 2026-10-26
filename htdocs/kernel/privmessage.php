@@ -255,7 +255,7 @@ class XoopsPrivmessageHandler extends XoopsObjectHandler
             return false;
         }
 
-        if (!$result = $this->db->query(sprintf('DELETE FROM %s WHERE msg_id = %u', $this->db->prefix('priv_msgs'), $pm->getVar('msg_id')))) {
+        if (!$this->db->exec(sprintf('DELETE FROM %s WHERE msg_id = %u', $this->db->prefix('priv_msgs'), $pm->getVar('msg_id')))) {
             return false;
         }
 

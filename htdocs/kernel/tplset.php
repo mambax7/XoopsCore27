@@ -240,11 +240,11 @@ class XoopsTplsetHandler extends XoopsObjectHandler
             return false;
         }
         $sql = sprintf('DELETE FROM %s WHERE tplset_id = %u', $this->db->prefix('tplset'), $tplset->getVar('tplset_id'));
-        if (!$result = $this->db->query($sql)) {
+        if (!$this->db->exec($sql)) {
             return false;
         }
         $sql = sprintf('DELETE FROM %s WHERE tplset_name = %s', $this->db->prefix('imgset_tplset_link'), $this->db->quote($tplset->getVar('tplset_name')));
-        $this->db->query($sql);
+        $this->db->exec($sql);
 
         return true;
     }
