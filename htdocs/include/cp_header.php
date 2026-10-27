@@ -29,8 +29,11 @@ if ($xoopsUser) {
     $url_arr        = explode('/', strstr($_SERVER['REQUEST_URI'], '/modules/'));
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');
-    $xoopsModule    = $module_handler->getByDirname($url_arr[2]);
+    $xoopsModule    = $module_handler->getByDirname($url_arr[2] ?? '');
     unset($url_arr);
+    if (!$xoopsModule instanceof XoopsModule) {
+        redirect_header(XOOPS_URL . '/modules/system/admin.php?fct=modulesadmin', 3, _MODULENOEXIST);
+    }
     if (!$moduleperm_handler->checkRight('module_admin', $xoopsModule->getVar('mid'), $xoopsUser->getGroups())) {
         redirect_header(XOOPS_URL, 1, _NOPERM);
     }

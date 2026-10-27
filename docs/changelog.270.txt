@@ -20,6 +20,7 @@ Bug fixes:
 - xoops_cp_header() and xoops_cp_footer() render once per request; system admin pages that called them again in an error branch output a nested, duplicated page (include/cp_functions.php)
 - the "go to last post" icon in xSwatch5's newbb forum view shows the translated title instead of {Go to last post} with literal braces (themes/xswatch5/modules/newbb/newbb_viewforum.tpl)
 - the 2.2.x upgrade's dirname allow-list ends with \z, so a trailing newline no longer passes it (upgrade/cnt-2.2.x-to-2.3.0/index.php)
+- opening the admin page of a module that is on disk but not installed redirects to the Modules page with "Selected module does not exist!" instead of failing with "Call to a member function getVar() on false" (include/cp_header.php)
 
 ===================================
 2.7.4                     2026-10
