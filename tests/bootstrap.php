@@ -184,6 +184,9 @@ if (!defined('_MA_USER_MORE')) {
 if (!defined('_NOPERM')) {
     define('_NOPERM', "Sorry, you don't have the permission to access this area.");
 }
+if (!defined('_MODULENOEXIST')) {
+    define('_MODULENOEXIST', 'Selected module does not exist!');
+}
 
 // Renderer constants — used by XoopsFormRendererLegacy
 if (!defined('_DELETE')) {

@@ -57,4 +57,37 @@ final class CpHeaderModuleGuardTest extends TestCase
     {
         $this->assertStringContainsString('getByDirname($url_arr[2] ?? \'\')', $this->source());
     }
+
+    #[Test]
+    public function aMissingModuleRedirectsToModulesAdmin(): void
+    {
+        $source     = $this->source();
+        $lookup     = strpos($source, '$xoopsModule    = $module_handler->getByDirname(');
+        $permission = strpos($source, 'if (!$moduleperm_handler->checkRight', (int) $lookup);
+        $this->assertNotFalse($lookup);
+        $this->assertNotFalse($permission);
+
+        // The locals the lookup and the guard read; the URL has no module segment.
+        $url_arr        = ['', 'modules'];
+        $module_handler = new class {
+            public ?string $dirname = null;
+
+            public function getByDirname($dirname)
+            {
+                $this->dirname = $dirname;
+
+                return false;
+            }
+        };
+
+        try {
+            eval(substr($source, $lookup, $permission - $lookup));
+            $this->fail('a missing module must redirect');
+        } catch (RedirectHeaderException $redirect) {
+            $this->assertSame(XOOPS_URL . '/modules/system/admin.php?fct=modulesadmin', $redirect->url);
+            $this->assertSame(3, $redirect->time);
+            $this->assertSame(_MODULENOEXIST, $redirect->getMessage());
+        }
+        $this->assertSame('', $module_handler->dirname);
+    }
 }
