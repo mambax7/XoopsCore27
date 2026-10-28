@@ -114,13 +114,26 @@ class Upgrade_259 extends XoopsUpgrade
             $content = fread($inFile, filesize($path . $sourceName));
             fclose($inFile);
 
+            // A replacement callback with var_export() keeps backslashes and
+            // quotes in a value literal; a replacement string would reinterpret them.
             foreach ($vars as $key => $val) {
-                if (is_int($val) && preg_match("/(define\()([\"'])({$key})\\2,\s*(\d+)\s*\)/", $content)) {
-                    $content = preg_replace("/(define\()([\"'])({$key})\\2,\s*(\d+)\s*\)/", "define('{$key}', {$val})", $content);
-                } elseif (preg_match("/(define\()([\"'])({$key})\\2,\s*([\"'])(.*?)\\4\s*\)/", $content)) {
-                    $val = str_replace('$', '\$', addslashes($val));
-                    $content = preg_replace("/(define\()([\"'])({$key})\\2,\s*([\"'])(.*?)\\4\s*\)/", "define('{$key}', '{$val}')", $content);
+                $quotedKey  = preg_quote((string) $key, '/');
+                $intPattern = "/(define\()([\"'])({$quotedKey})\\2,\s*(\d+)\s*\)/";
+                $strPattern = "/(define\()([\"'])({$quotedKey})\\2,\s*([\"'])(.*?)\\4\s*\)/";
+                if (is_int($val) && preg_match($intPattern, $content)) {
+                    $literal = (string) $val;
+                    $pattern = $intPattern;
+                } elseif (preg_match($strPattern, $content)) {
+                    $literal = var_export((string) $val, true);
+                    $pattern = $strPattern;
+                } else {
+                    continue;
                 }
+                $content = preg_replace_callback(
+                    $pattern,
+                    static fn(array $m): string => "define('{$m[3]}', {$literal})",
+                    $content
+                );
             }
             $outFile = fopen($path . $fileName, 'w');
             if (false === $outFile) {

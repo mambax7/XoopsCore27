@@ -76,6 +76,52 @@ final class SessionRestoreActiveCheckTest extends TestCase
     }
 
     #[Test]
+    public function aChangedPasswordEndsTheSession(): void
+    {
+        // Runs for a loaded active account, before the factor check, and a
+        // mismatch (or a malformed stamp) ends the session; a missing stamp is
+        // set from the current account rather than ending it.
+        $active = strpos($this->restore, '$endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();');
+        $check  = strpos($this->restore, '$sessionPfp = XoopsUserUtility::sessionFingerprint($xoopsUser);');
+        $factor = strpos($this->restore, "xoops_getHandler('user2fa')->getRow(");
+        self::assertNotFalse($active);
+        self::assertNotFalse($check);
+        self::assertNotFalse($factor);
+        self::assertLessThan($check, $active);
+        self::assertLessThan($factor, $check);
+
+        $flat = (string) preg_replace('/\s+/', ' ', substr($this->restore, $check, $factor - $check));
+        self::assertStringContainsString("if (!isset(\$_SESSION['xoopsUserPfp'])) { \$_SESSION['xoopsUserPfp'] = \$sessionPfp; }", $flat);
+        self::assertStringContainsString("elseif (!is_string(\$_SESSION['xoopsUserPfp']) || !hash_equals(\$sessionPfp, \$_SESSION['xoopsUserPfp'])) { \$endSession = true; }", $flat);
+
+        // Login stamps the fresh session from the authenticated object.
+        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
+        self::assertNotFalse($login);
+        $set = substr($login, (int) strpos($login, 'function xoops_login_set_session('));
+        self::assertStringContainsString("\$_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint(\$user);", $set);
+        self::assertLessThan(
+            strpos($set, "\$_SESSION['xoopsUserPfp']"),
+            strpos($set, '$_SESSION = [];')
+        );
+    }
+
+    #[Test]
+    public function everySelfServicePasswordSaveReStampsTheCurrentSession(): void
+    {
+        $root = dirname($this->filePath, 3);
+        foreach ([
+            'htdocs/edituser.php'                      => '$edituser',
+            'htdocs/modules/profile/changepass.php'    => "\$GLOBALS['xoopsUser']",
+            'htdocs/modules/system/admin/users/main.php' => '$edituser',
+            'htdocs/modules/profile/admin/user.php'    => '$user',
+        ] as $file => $var) {
+            $src = file_get_contents($root . '/' . $file);
+            self::assertNotFalse($src, $file);
+            self::assertStringContainsString("XoopsUserUtility::refreshSessionFingerprint({$var});", $src, $file);
+        }
+    }
+
+    #[Test]
     public function groupsComeFromTheDatabaseNotTheSessionCopy(): void
     {
         self::assertStringNotContainsString("setGroups(\$_SESSION['xoopsUserGroups'])", $this->restore);

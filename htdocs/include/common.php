@@ -445,6 +445,19 @@ if (!empty($_SESSION['xoopsUserId'])) {
     // restored from the session store or from the remember-me cookie (whose
     // own checks ran above, before the session was seeded).
     $endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();
+    if (!$endSession) {
+        // A password change ends every session established with the old
+        // password. A session without a stamp (opened by an entry point that
+        // does not stamp, or before this check existed) is stamped now.
+        xoops_load('XoopsUserUtility');
+        $sessionPfp = XoopsUserUtility::sessionFingerprint($xoopsUser);
+        if (!isset($_SESSION['xoopsUserPfp'])) {
+            $_SESSION['xoopsUserPfp'] = $sessionPfp;
+        } elseif (!is_string($_SESSION['xoopsUserPfp']) || !hash_equals($sessionPfp, $_SESSION['xoopsUserPfp'])) {
+            $endSession = true;
+        }
+        unset($sessionPfp);
+    }
     $factorRow  = null;
     if (!$endSession) {
         // The factor row, read on every request so an enrolment in another

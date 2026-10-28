@@ -19,7 +19,7 @@
 <{foreach item=name from=$avatars|default:null key=file}>
     <div class="px-1">
         <figure class="figure">
-            <img src="<{$upload_url}><{$file}>" alt="<{$name}>" title="<{$name}>" class="figure-img img-fluid rounded">
+            <img src="<{$upload_url}><{$file|escape}>" alt="<{$name}>" title="<{$name}>" class="figure-img img-fluid rounded">
             <figcaption class="figure-caption text-center">
                 <{$name}><br>
                 <{counter name=avatarid assign=avatarid}>

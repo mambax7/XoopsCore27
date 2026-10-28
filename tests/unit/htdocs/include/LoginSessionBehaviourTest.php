@@ -224,7 +224,7 @@ final class LoginSessionBehaviourTest extends TestCase
             'setcookie:xoops_user:expire',
             'doLoginMaintenance:5',
         ], $GLOBALS['sandboxLog']);
-        self::assertSame(['xoopsUserId' => 5, 'xoopsUserGroups' => [2], 'xoops2faGeneration' => '', 'xoops2faVerified' => false, 'xoopsUserTheme' => 'default'], $_SESSION);
+        self::assertSame(['xoopsUserId' => 5, 'xoopsUserGroups' => [2], 'xoopsUserPfp' => 'sfp-of-$2y$hash', 'xoops2faGeneration' => '', 'xoops2faVerified' => false, 'xoopsUserTheme' => 'default'], $_SESSION);
         self::assertGreaterThan(0, $user->vars['last_login']);
     }
 
@@ -502,6 +502,7 @@ final class LoginSessionBehaviourTest extends TestCase
         class XoopsUserUtility {
             public static function rememberKey(): ?\Xmf\Key\KeyAbstract { $GLOBALS['sandboxLog'][] = 'rememberKey'; return $GLOBALS['sandboxKey']; }
             public static function rememberFingerprint(object $user, string $signing): string { return 'fp-of-' . $user->getVar('pass'); }
+            public static function sessionFingerprint(object $user): string { return 'sfp-of-' . $user->getVar('pass'); }
         }
         function xoops_loadLanguage(string $name): void { $GLOBALS['sandboxLog'][] = 'loadLanguage:' . $name; }
         function xoops_load(string $name): void {}

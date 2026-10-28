@@ -110,6 +110,8 @@ if ($op === 'saveuser') {
             echo $edituser->getHtmlErrors();
             include $GLOBALS['xoops']->path('footer.php');
         } else {
+            xoops_load('XoopsUserUtility');
+            XoopsUserUtility::refreshSessionFingerprint($edituser);
             redirect_header('userinfo.php?uid=' . $uid, 1, _US_PROFUPDATED);
         }
         exit();

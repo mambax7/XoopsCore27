@@ -821,3 +821,40 @@ function writeLicenseKey()
 {
     return xoPutLicenseKey(xoBuildLicenceKey(), XOOPS_VAR_PATH . '/data/license.php', __DIR__ . '/license.dist.php');
 }
+
+/**
+ * Rewrite the define('XOOPS_<KEY>', ...) lines of a configuration template.
+ *
+ * Values are emitted with var_export() from a replacement callback, so no
+ * value is ever read as preg_replace() replacement syntax: a backslash or a
+ * quote in a submitted value stays inside the generated PHP string literal.
+ *
+ * @param string                $content configuration template source
+ * @param array<string, scalar> $vars    values keyed by the name without the XOOPS_ prefix
+ *
+ * @return string rewritten source
+ */
+function xoInstallerRewriteDefines(string $content, array $vars): string
+{
+    foreach ($vars as $key => $val) {
+        $key = preg_quote((string) $key, '/');
+        $intPattern = "/(define\()([\"'])(XOOPS_{$key})\\2,\s*(\d+)\s*\)/";
+        $strPattern = "/(define\()([\"'])(XOOPS_{$key})\\2,\s*([\"'])(.*?)\\4\s*\)/";
+        if (is_int($val) && preg_match($intPattern, $content)) {
+            $literal = (string) $val;
+            $pattern = $intPattern;
+        } elseif (preg_match($strPattern, $content)) {
+            $literal = var_export((string) $val, true);
+            $pattern = $strPattern;
+        } else {
+            continue;
+        }
+        $content = preg_replace_callback(
+            $pattern,
+            static fn(array $m): string => "define('{$m[3]}', {$literal})",
+            $content
+        );
+    }
+
+    return $content;
+}
