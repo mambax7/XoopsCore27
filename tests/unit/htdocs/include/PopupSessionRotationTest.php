@@ -49,7 +49,7 @@ namespace {
     // an earlier identity on the same session must not survive a failed rotation
     $_SESSION['xoopsUserId'] = 7;
     register_shutdown_function(static function () use ($initial): void {
-        file_put_contents(__DIR__ . '/result.json', json_encode(['initial' => $initial, 'final' => session_id(), 'uid' => $_SESSION['xoopsUserId'] ?? null]));
+        file_put_contents(__DIR__ . '/result.json', json_encode(['initial' => $initial, 'final' => session_id(), 'uid' => $_SESSION['xoopsUserId'] ?? null, 'pfp' => $_SESSION['xoopsUserPfp'] ?? null]));
     });
     $sess_handler = new class {
         public function regenerate_id(bool $delete): bool { return ($GLOBALS['argv'][1] ?? '') === 'fail' ? false : session_regenerate_id($delete); }
@@ -98,6 +98,7 @@ PHP;
                 if ($mode === 'success') {
                     self::assertNotSame($result['initial'], $result['final'], $errors);
                     self::assertSame(9, $result['uid']);
+                    self::assertSame('sfp', $result['pfp'], 'Popup login must stamp the session fingerprint');
                 } else {
                     self::assertNull($result['uid'], 'Failed session rotation must never authenticate the old session');
                 }

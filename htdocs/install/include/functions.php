@@ -827,11 +827,12 @@ function writeLicenseKey()
 /**
  * Rewrite the define('XOOPS_<KEY>', ...) lines of a configuration template.
  *
- * One pass over the template: every define is matched in the original text,
- * so a value written for one setting is never scanned again by the next.
- * Values are emitted with var_export() from a replacement callback, so no
- * value is ever read as preg_replace() replacement syntax: a backslash or a
- * quote in a submitted value stays inside the generated PHP string literal.
+ * The template is tokenised, so only an executable define(NAME, LITERAL)
+ * call is rewritten: a define quoted in a comment (the "Example:" line of
+ * mainfile.dist.php) is left alone, where a value holding a PHP close tag
+ * would end the comment and start executable PHP. Only the value token changes, and
+ * each value is emitted with var_export(), so a backslash, a quote or a
+ * close tag in a submitted value stays inside the generated string literal.
  * An integer value replaces an integer define; anything else replaces a
  * string define.
  *
@@ -842,19 +843,38 @@ function writeLicenseKey()
  */
 function xoInstallerRewriteDefines(string $content, array $vars): string
 {
-    return (string) preg_replace_callback(
-        "/define\(([\"'])XOOPS_(\w+)\\1,\s*(?:(\d+)|([\"'])(.*?)\\4)\s*\)/",
-        static function (array $m) use ($vars): string {
-            if (!array_key_exists($m[2], $vars)) {
-                return $m[0];
-            }
-            $val = $vars[$m[2]];
-            if ('' !== $m[3]) {
-                return is_int($val) ? "define('XOOPS_{$m[2]}', {$val})" : $m[0];
-            }
+    $tokens = token_get_all($content);
+    $code   = [];
+    foreach ($tokens as $i => $t) {
+        if (!is_array($t) || !in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            $code[] = $i;
+        }
+    }
+    foreach ($code as $k => $i) {
+        $t = $tokens[$i];
+        if (!is_array($t) || T_STRING !== $t[0] || 0 !== strcasecmp('define', $t[1])) {
+            continue;
+        }
+        $name  = $tokens[$code[$k + 2] ?? -1] ?? null;
+        $index = $code[$k + 4] ?? null;
+        $value = null === $index ? null : $tokens[$index];
+        if ('(' !== ($tokens[$code[$k + 1] ?? -1] ?? null)
+            || !is_array($name) || T_CONSTANT_ENCAPSED_STRING !== $name[0]
+            || ',' !== ($tokens[$code[$k + 3] ?? -1] ?? null)
+            || !is_array($value)
+            || ')' !== ($tokens[$code[$k + 5] ?? -1] ?? null)
+            || !preg_match('/^(["\'])XOOPS_(\w+)\1$/', $name[1], $m)
+            || !array_key_exists($m[2], $vars)
+        ) {
+            continue;
+        }
+        $val = $vars[$m[2]];
+        if (T_LNUMBER === $value[0] && is_int($val)) {
+            $tokens[$index][1] = (string) $val;
+        } elseif (T_CONSTANT_ENCAPSED_STRING === $value[0]) {
+            $tokens[$index][1] = var_export((string) $val, true);
+        }
+    }
 
-            return "define('XOOPS_{$m[2]}', " . var_export((string) $val, true) . ')';
-        },
-        $content
-    );
+    return implode('', array_map(static fn($t): string => is_array($t) ? $t[1] : $t, $tokens));
 }

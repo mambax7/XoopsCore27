@@ -66,18 +66,20 @@ final class SelectedUploadFileTest extends TestCase
     {
         // XoopsLists lists every image in the folder; ordinary names with a
         // space, a leading underscore or parentheses must stay selectable.
-        $names = ['happy face (1).gif', '_smile+2.gif'];
-        $dir   = XOOPS_UPLOAD_PATH . '/smilies/';
+        $names   = ['happy face (1).gif', '_smile+2.gif'];
+        $dir     = XOOPS_UPLOAD_PATH . '/smilies/';
+        $created = [];
         try {
             foreach ($names as $name) {
-                touch($dir . $name);
+                if (!file_exists($dir . $name)) {
+                    touch($dir . $name);
+                    $created[] = $name;
+                }
                 $this->assertSame('smilies/' . $name, system_selectedUploadFile('smilies', $name));
             }
         } finally {
-            foreach ($names as $name) {
-                if (is_file($dir . $name)) {
-                    unlink($dir . $name);
-                }
+            foreach ($created as $name) {
+                unlink($dir . $name);
             }
         }
     }

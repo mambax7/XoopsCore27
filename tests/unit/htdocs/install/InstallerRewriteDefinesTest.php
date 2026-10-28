@@ -94,13 +94,31 @@ class InstallerRewriteDefinesTest extends TestCase
     {
         $out = xoInstallerRewriteDefines(self::TEMPLATE, ['DB_PCONNECT' => 1]);
 
-        $this->assertStringContainsString("define('XOOPS_DB_PCONNECT', 1)", $out);
+        $this->assertStringContainsString('define("XOOPS_DB_PCONNECT", 1)', $out);
     }
 
     #[Test]
     public function unknownKeyLeavesContentUnchanged(): void
     {
         $this->assertSame(self::TEMPLATE, xoInstallerRewriteDefines(self::TEMPLATE, ['NOPE' => 'x']));
+    }
+
+    #[Test]
+    public function aDefineQuotedInACommentIsNotRewritten(): void
+    {
+        // mainfile.dist.php carries this example line; a PHP close tag written
+        // into the comment would end it and start executable PHP.
+        $comment  = '// Example: define("XOOPS_URL", "http://url_to_xoops_directory");';
+        $template = "<?php\n{$comment}\ndefine('XOOPS_URL', 'https://');\n";
+        $url      = "https://x?><?php echo 1;";
+
+        $out = xoInstallerRewriteDefines($template, ['URL' => $url]);
+
+        $this->assertStringContainsString($comment, $out);
+        $this->assertSame($url, $this->literalOf($out, 'XOOPS_URL'));
+        $kinds = array_map(static fn($t) => is_array($t) ? $t[0] : $t, token_get_all($out));
+        $this->assertSame(1, count(array_keys($kinds, T_OPEN_TAG, true)));
+        $this->assertNotContains(T_CLOSE_TAG, $kinds);
     }
 
     /**
@@ -123,6 +141,8 @@ class InstallerRewriteDefinesTest extends TestCase
                 $this->assertSame(T_CONSTANT_ENCAPSED_STRING, $tokens[$i + 2][0]);
                 $this->assertSame(')', $tokens[$i + 3]);
                 $this->assertSame(';', $tokens[$i + 4]);
+                $this->assertStringStartsWith("'", $tokens[$i + 2][1]);
+                $this->assertStringEndsWith("'", $tokens[$i + 2][1]);
                 $literal = substr($tokens[$i + 2][1], 1, -1);
 
                 return (string) preg_replace_callback("/\\\\([\\\\'])/", static fn(array $m): string => $m[1], $literal);
