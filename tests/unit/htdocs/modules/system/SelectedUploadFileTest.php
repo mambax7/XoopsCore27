@@ -61,6 +61,27 @@ final class SelectedUploadFileTest extends TestCase
         }
     }
 
+    #[Test]
+    public function existingNamesThePickerOffersAreAccepted(): void
+    {
+        // XoopsLists lists every image in the folder; ordinary names with a
+        // space, a leading underscore or parentheses must stay selectable.
+        $names = ['happy face (1).gif', '_smile+2.gif'];
+        $dir   = XOOPS_UPLOAD_PATH . '/smilies/';
+        try {
+            foreach ($names as $name) {
+                touch($dir . $name);
+                $this->assertSame('smilies/' . $name, system_selectedUploadFile('smilies', $name));
+            }
+        } finally {
+            foreach ($names as $name) {
+                if (is_file($dir . $name)) {
+                    unlink($dir . $name);
+                }
+            }
+        }
+    }
+
     /**
      * @return array<string, array{string}>
      */
@@ -71,7 +92,10 @@ final class SelectedUploadFileTest extends TestCase
             'missing file'        => ['nothere.gif'],
             'attribute breakout'  => ['blank.gif" onerror="alert(1)'],
             'single quote'        => ["blank.gif'x"],
-            'space'               => ['blank .gif'],
+            'angle bracket'       => ['blank<b>.gif'],
+            'ampersand'           => ['a&quot;.gif'],
+            'leading space'       => [' blank.gif'],
+            'backslash'           => ['x' . chr(92) . 'blank.gif'],
             'traversal'           => ['../avatars/blank.gif'],
             'subfolder'           => ['x/blank.gif'],
             'hidden file'         => ['.htaccess'],
@@ -133,5 +157,8 @@ final class SelectedUploadFileTest extends TestCase
             $src = (string) file_get_contents(XOOPS_ROOT_PATH . '/' . $tpl);
             $this->assertStringContainsString('<{$upload_url}><{$file|escape}>', $src, $tpl);
         }
+        // The admin list prints the stored OTHER-typed path, which toArray() returns raw.
+        $list = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/templates/admin/system_avatars.tpl');
+        $this->assertStringContainsString('/uploads/<{$avatar.avatar_file|escape}>"', $list);
     }
 }

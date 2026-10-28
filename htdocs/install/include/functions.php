@@ -56,6 +56,8 @@ function install_acceptUser()
     $GLOBALS['xoopsUser']        = $user;
     $_SESSION['xoopsUserId']     = $GLOBALS['xoopsUser']->getVar('uid');
     $_SESSION['xoopsUserGroups'] = $GLOBALS['xoopsUser']->getGroups();
+    xoops_load('XoopsUserUtility');
+    $_SESSION['xoopsUserPfp']    = XoopsUserUtility::sessionFingerprint($GLOBALS['xoopsUser']);
 
     return true;
 }
@@ -825,9 +827,13 @@ function writeLicenseKey()
 /**
  * Rewrite the define('XOOPS_<KEY>', ...) lines of a configuration template.
  *
+ * One pass over the template: every define is matched in the original text,
+ * so a value written for one setting is never scanned again by the next.
  * Values are emitted with var_export() from a replacement callback, so no
  * value is ever read as preg_replace() replacement syntax: a backslash or a
  * quote in a submitted value stays inside the generated PHP string literal.
+ * An integer value replaces an integer define; anything else replaces a
+ * string define.
  *
  * @param string                $content configuration template source
  * @param array<string, scalar> $vars    values keyed by the name without the XOOPS_ prefix
@@ -836,25 +842,19 @@ function writeLicenseKey()
  */
 function xoInstallerRewriteDefines(string $content, array $vars): string
 {
-    foreach ($vars as $key => $val) {
-        $key = preg_quote((string) $key, '/');
-        $intPattern = "/(define\()([\"'])(XOOPS_{$key})\\2,\s*(\d+)\s*\)/";
-        $strPattern = "/(define\()([\"'])(XOOPS_{$key})\\2,\s*([\"'])(.*?)\\4\s*\)/";
-        if (is_int($val) && preg_match($intPattern, $content)) {
-            $literal = (string) $val;
-            $pattern = $intPattern;
-        } elseif (preg_match($strPattern, $content)) {
-            $literal = var_export((string) $val, true);
-            $pattern = $strPattern;
-        } else {
-            continue;
-        }
-        $content = preg_replace_callback(
-            $pattern,
-            static fn(array $m): string => "define('{$m[3]}', {$literal})",
-            $content
-        );
-    }
+    return (string) preg_replace_callback(
+        "/define\(([\"'])XOOPS_(\w+)\\1,\s*(?:(\d+)|([\"'])(.*?)\\4)\s*\)/",
+        static function (array $m) use ($vars): string {
+            if (!array_key_exists($m[2], $vars)) {
+                return $m[0];
+            }
+            $val = $vars[$m[2]];
+            if ('' !== $m[3]) {
+                return is_int($val) ? "define('XOOPS_{$m[2]}', {$val})" : $m[0];
+            }
 
-    return $content;
+            return "define('XOOPS_{$m[2]}', " . var_export((string) $val, true) . ')';
+        },
+        $content
+    );
 }

@@ -427,6 +427,8 @@ if (empty($_SESSION['xoopsUserId'])
     }
     if (null !== $rememberUser) {
         $_SESSION['xoopsUserId'] = $rememberUser->getVar('uid');
+        // The token's own fingerprint matched the current hash just above.
+        $_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint($rememberUser);
     } else {
         // Not a cookie login: the restore block must not renew a refused token.
         $rememberClaims = false;
@@ -447,15 +449,14 @@ if (!empty($_SESSION['xoopsUserId'])) {
     $endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();
     if (!$endSession) {
         // A password change ends every session established with the old
-        // password. A session without a stamp (opened by an entry point that
-        // does not stamp, or before this check existed) is stamped now.
+        // password. Every sign-in path stamps the session, so a session
+        // without a stamp predates this check and could have been opened with
+        // a password changed since: it ends too (a one-time sign-out of
+        // sessions opened before this check existed).
         xoops_load('XoopsUserUtility');
-        $sessionPfp = XoopsUserUtility::sessionFingerprint($xoopsUser);
-        if (!isset($_SESSION['xoopsUserPfp'])) {
-            $_SESSION['xoopsUserPfp'] = $sessionPfp;
-        } elseif (!is_string($_SESSION['xoopsUserPfp']) || !hash_equals($sessionPfp, $_SESSION['xoopsUserPfp'])) {
-            $endSession = true;
-        }
+        $sessionPfp = $_SESSION['xoopsUserPfp'] ?? null;
+        $endSession = !is_string($sessionPfp)
+            || !hash_equals(XoopsUserUtility::sessionFingerprint($xoopsUser), $sessionPfp);
         unset($sessionPfp);
     }
     $factorRow  = null;

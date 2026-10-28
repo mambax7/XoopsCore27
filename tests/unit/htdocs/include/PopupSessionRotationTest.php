@@ -73,6 +73,10 @@ namespace {
             public function insertUser(object $user): bool { return true; }
         };
     }
+    class XoopsUserUtility {
+        public static function sessionFingerprint(object $user): string { return 'sfp'; }
+    }
+    function xoops_load(string $name): void {}
     function xoops_loadLanguage(string $name): void {}
     function xoops_getcss(string $theme): string { return ''; }
     function xoops_error(string $message): void { echo $message; }

@@ -72,6 +72,24 @@ class InstallerRewriteDefinesTest extends TestCase
     }
 
     #[Test]
+    public function aValueWrittenForOneDefineIsNotRewrittenByTheNext(): void
+    {
+        $template = "<?php\ndefine('XOOPS_DB_PASS', '');\ndefine('XOOPS_DB_NAME', '');\n";
+        $pass     = "a');define(\"XOOPS_DB_NAME\", \"x\");//";
+
+        $out = xoInstallerRewriteDefines($template, ['DB_PASS' => $pass, 'DB_NAME' => 'xoops']);
+
+        $this->assertSame($pass, $this->literalOf($out, 'XOOPS_DB_PASS'));
+        $this->assertSame('xoops', $this->literalOf($out, 'XOOPS_DB_NAME'));
+    }
+
+    #[Test]
+    public function stringValueLeavesAnIntegerDefineAlone(): void
+    {
+        $this->assertSame(self::TEMPLATE, xoInstallerRewriteDefines(self::TEMPLATE, ['DB_PCONNECT' => '1']));
+    }
+
+    #[Test]
     public function integerValueReplacesIntegerDefine(): void
     {
         $out = xoInstallerRewriteDefines(self::TEMPLATE, ['DB_PCONNECT' => 1]);

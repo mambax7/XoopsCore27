@@ -114,27 +114,24 @@ class Upgrade_259 extends XoopsUpgrade
             $content = fread($inFile, filesize($path . $sourceName));
             fclose($inFile);
 
-            // A replacement callback with var_export() keeps backslashes and
-            // quotes in a value literal; a replacement string would reinterpret them.
-            foreach ($vars as $key => $val) {
-                $quotedKey  = preg_quote((string) $key, '/');
-                $intPattern = "/(define\()([\"'])({$quotedKey})\\2,\s*(\d+)\s*\)/";
-                $strPattern = "/(define\()([\"'])({$quotedKey})\\2,\s*([\"'])(.*?)\\4\s*\)/";
-                if (is_int($val) && preg_match($intPattern, $content)) {
-                    $literal = (string) $val;
-                    $pattern = $intPattern;
-                } elseif (preg_match($strPattern, $content)) {
-                    $literal = var_export((string) $val, true);
-                    $pattern = $strPattern;
-                } else {
-                    continue;
-                }
-                $content = preg_replace_callback(
-                    $pattern,
-                    static fn(array $m): string => "define('{$m[3]}', {$literal})",
-                    $content
-                );
-            }
+            // One pass over the template, so a value written for one define is
+            // never scanned again for the next; a replacement callback with
+            // var_export() keeps backslashes and quotes inside the literal.
+            $content = (string) preg_replace_callback(
+                "/define\(([\"'])(\w+)\\1,\s*(?:(\d+)|([\"'])(.*?)\\4)\s*\)/",
+                static function (array $m) use ($vars): string {
+                    if (!array_key_exists($m[2], $vars)) {
+                        return $m[0];
+                    }
+                    $val = $vars[$m[2]];
+                    if ('' !== $m[3]) {
+                        return is_int($val) ? "define('{$m[2]}', {$val})" : $m[0];
+                    }
+
+                    return "define('{$m[2]}', " . var_export((string) $val, true) . ')';
+                },
+                $content
+            );
             $outFile = fopen($path . $fileName, 'w');
             if (false === $outFile) {
                 return sprintf(_FILE_ACCESS_ERROR, $fileName);
