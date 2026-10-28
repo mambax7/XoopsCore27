@@ -50,6 +50,10 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             }
             $com_mode = empty($com_mode) ? $xoopsConfig['com_mode'] : $com_mode;
         }
+        // The mode is placed in links and inline handlers: only the three real modes pass.
+        if (!in_array($com_mode, ['flat', 'thread', 'nest'], true)) {
+            $com_mode = 'nest';
+        }
         $xoopsTpl->assign('comment_mode', $com_mode);
         if (!Request::hasVar('com_order', 'GET')) {
             if (is_object($xoopsUser)) {

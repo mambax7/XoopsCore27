@@ -356,7 +356,10 @@ switch ($op) {
                 'name'      => Request::getString('name', '', 'POST'),
             ]);
         }
-        $block_type = Request::getString('block_type', '');
+        // A stored system or module block keeps its type: relabelling it would
+        // lift the protection the delete handler applies to those types.
+        $storedType = $block->isNew() ? '' : (string) $block->getVar('block_type');
+        $block_type = in_array($storedType, ['S', 'M'], true) ? $storedType : Request::getString('block_type', '');
         $block->setVar('block_type', $block_type);
 
         $blockVars = [
@@ -496,16 +499,11 @@ switch ($op) {
         $block_id = Request::getInt('bid', 0);
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
-            if ($block->getVar('block_type') === 'S') {
-                redirect_header('admin.php?fct=blocksadmin', 4, _AM_SYSTEM_BLOCKS_SYSTEMCANT);
-            } elseif ($block->getVar('block_type') === 'M') {
-                // Fix for duplicated blocks created in 2.0.9 module update
-                // A module block can be deleted if there is more than 1 that
-                // has the same func_num/show_func which is mostly likely
-                // be the one that was duplicated in 2.0.9
-                if (1 >= $count = $block_handler->countSimilarBlocks($block->getVar('mid'), $block->getVar('func_num'), $block->getVar('show_func'))) {
-                    redirect_header('admin.php?fct=blocksadmin', 4, _AM_SYSTEM_BLOCKS_MODULECANT);
-                }
+            if (!is_object($block)) {
+                redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
+            }
+            if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
+                redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
             }
             // Define main template
             $GLOBALS['xoopsOption']['template_main'] = 'system_header.tpl';
@@ -536,6 +534,13 @@ switch ($op) {
         $block_id = Request::getInt('bid', 0);
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
+            // The confirmation step can be skipped by posting here directly.
+            if (!is_object($block)) {
+                redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
+            }
+            if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
+                redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
+            }
             if ($block_handler->delete($block)) {
                 // Delete Group link
                 $blocklinkmodule_handler = xoops_getModuleHandler('blocklinkmodule');

@@ -155,6 +155,14 @@ class XoopsCaptcha
             require_once $this->path_basic . '/text.php';
         }
         $handler = new $class($this);
+        // An enabled CAPTCHA whose mode cannot run here (image mode without
+        // GD, for example) falls back to the text challenge; leaving no
+        // handler would make verify() pass every submission.
+        if (!$handler->isActive() && 'XoopsCaptchaText' !== $class) {
+            require_once $this->path_basic . '/text.php';
+            $handler = new XoopsCaptchaText($this);
+            $name    = 'text';
+        }
         if ($handler->isActive()) {
             $this->handler = $handler;
             $this->handler->loadConfig($name);

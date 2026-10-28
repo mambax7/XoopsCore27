@@ -231,8 +231,9 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
-    // check if prefix is working
-    if ($prefix == XOOPS_DB_PREFIX) {
+    // check if prefix is working (case-insensitively: with lower_case_table_names
+    // MySQL reports the working tables in lower case)
+    if (0 === strcasecmp($prefix, XOOPS_DB_PREFIX)) {
         die("You can't drop working tables");
     }
 
@@ -259,6 +260,11 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     while (false !== ($row_table = $db->fetchArray($srs))) {
         $table = $row_table['Name'];
         if (substr($table, 0, strlen($prefix) + 1) !== $prefix . '_') {
+            continue;
+        }
+        // A shorter prefix can still match the working tables (prefix "xoops"
+        // against working prefix "xoops_test"): never drop one of those.
+        if (str_starts_with(strtolower($table), strtolower(XOOPS_DB_PREFIX . '_'))) {
             continue;
         }
         $drs = $db->exec("DROP TABLE `$table`");

@@ -73,6 +73,11 @@ switch ($op) {
         $xoBreadCrumb->addHelp(system_adminVersion('users', 'help') . '#edit');
         $xoBreadCrumb->addLink(_AM_SYSTEM_USERS_NAV_EDIT_USER);
         $xoBreadCrumb->render();
+        $target = xoops_getHandler('member')->getUser($uid);
+        if (is_object($target) && !system_users_mayEdit($target)) {
+            xoops_error(_NOPERM);
+            break;
+        }
         form_user(false, $uid);
         break;
 
@@ -181,6 +186,10 @@ case 'users_save':
             xoops_error(_AM_SYSTEM_USERS_NO_SUCH_USER);
             break;
         }
+        if (!system_users_mayEdit($edituser)) {
+            xoops_error(_NOPERM);
+            break;
+        }
 
         // --- Validation ---
         if (($edituser->getVar('uname', 'n') != Request::getString('uname')) &&
@@ -243,8 +252,9 @@ case 'users_save':
             break;
         }
 
-        // Groups
-        $groups = Request::getArray('groups', []);
+        // Groups: only an administrator of the Groups section may change
+        // memberships (the form sends them as hidden fields to everyone else).
+        $groups = system_users_canManageGroups() ? array_map('intval', Request::getArray('groups', [])) : [];
         if (!empty($groups)) {
             $oldgroups = $edituser->getGroups();
             // Prevent removing yourself from webmasters
@@ -341,7 +351,8 @@ case 'users_save':
         }
 
         $groups_failed = [];
-        $groups = Request::getArray('groups', []);
+        // Without Groups-section rights a new account joins Registered Users only.
+        $groups = system_users_canManageGroups() ? Request::getArray('groups', []) : [XOOPS_GROUP_USERS];
         if (!empty($groups)) {
             foreach ($groups as $group) {
                 $group = (int)$group;

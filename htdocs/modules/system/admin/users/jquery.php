@@ -29,6 +29,13 @@ require XOOPS_ROOT_PATH . '/header.php';
 if (!is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin($xoopsModule->mid())) {
     exit(_NOPERM);
 }
+// Same section rule as admin.php: System module admin rights alone do not
+// cover the Users section.
+include_once XOOPS_ROOT_PATH . '/modules/system/constants.php';
+if (!in_array(XOOPS_GROUP_ADMIN, $xoopsUser->getGroups())
+    && !xoops_getHandler('groupperm')->checkRight('system_admin', XOOPS_SYSTEM_USER, $xoopsUser->getGroups(), $xoopsModule->getVar('mid'))) {
+    exit(_NOPERM);
+}
 
 $op = Request::getCmd('op', 'default', 'REQUEST');
 

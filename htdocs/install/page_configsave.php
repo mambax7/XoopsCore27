@@ -83,7 +83,8 @@ if (true === $writeCheck) {
                 if ($k === 'authorized') {
                     continue;
                 }
-                echo "<li><strong>XOOPS_{$k}</strong> " . IS_VALOR . " {$v}</li>";
+                echo '<li><strong>XOOPS_' . htmlspecialchars((string) $k, ENT_QUOTES) . '</strong> ' . IS_VALOR . ' '
+                    . htmlspecialchars((string) $v, ENT_QUOTES) . '</li>';
             }
         ?>
         </ul>

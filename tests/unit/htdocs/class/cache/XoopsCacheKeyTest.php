@@ -60,6 +60,46 @@ class XoopsCacheKeyTest extends TestCase
     }
 
     #[Test]
+    public function keyReplacesBackslashWithUnderscore(): void
+    {
+        // A Windows path separator must not survive into a cache file name.
+        $this->assertSame('______x', $this->cache->key('..' . chr(92) . '..' . chr(92) . 'x'));
+    }
+
+    #[Test]
+    public function fileEngineRefusesKeysThatLeaveItsFolder(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/cache/file.php';
+        $dir = sys_get_temp_dir() . '/xoops-cachekey-' . bin2hex(random_bytes(4));
+        mkdir($dir);
+        $escaped = dirname($dir) . '/escaped.txt';
+        if (is_file($escaped)) {
+            unlink($escaped);
+        }
+        try {
+            $engine = new \XoopsCacheFile();
+            $this->assertTrue($engine->init(['path' => $dir, 'prefix' => '', 'extension' => '.txt']));
+            // Engine-level guard, for callers that bypass XoopsCache::key().
+            foreach (['../escaped', '..' . chr(92) . 'escaped', 'a/b', "a\0b", ''] as $key) {
+                $this->assertFalse($engine->write($key, 'x', 60), var_export($key, true));
+            }
+            $this->assertTrue($engine->write('plain_key', 'x', 60));
+            $this->assertFileExists($dir . '/plain_key.txt');
+            $this->assertFileDoesNotExist(dirname($dir) . '/escaped.txt');
+
+            // clear() maps each file back to its key (the extension used to be
+            // appended twice, so nothing was ever removed) and leaves guard files.
+            file_put_contents($dir . '/index.html', '');
+            $this->assertTrue($engine->clear(false));
+            $this->assertFileDoesNotExist($dir . '/plain_key.txt');
+            $this->assertFileExists($dir . '/index.html');
+        } finally {
+            array_map('unlink', glob($dir . '/*') ?: []);
+            rmdir($dir);
+        }
+    }
+
+    #[Test]
     public function keyReplacesDotWithUnderscore(): void
     {
         $result = $this->cache->key('file.cache');

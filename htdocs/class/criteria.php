@@ -186,8 +186,13 @@ class CriteriaElement
         if ($clause === '') {
             return '';
         }
+        // Structure, not just characters: each item is one column reference
+        // (table.column allowed) with an optional direction, so words such as
+        // UNION or SELECT cannot follow a column.
+        $ident = '(?:`[A-Za-z0-9_$]+`|[A-Za-z0-9_$]+)';
+        $item  = $ident . '(?:\.' . $ident . ')?(?:\s+(?:ASC|DESC))?';
 
-        return preg_match('/^[A-Za-z0-9_.,`\s]+$/', $clause) ? $clause : '';
+        return preg_match('/^' . $item . '(?:\s*,\s*' . $item . ')*\z/i', $clause) ? $clause : '';
     }
     /**
      * *#@-

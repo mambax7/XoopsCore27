@@ -289,8 +289,19 @@ class XoopsCacheFile extends XoopsCacheEngine
             $now       = time();
             $threshold = $now - $this->settings['duration'];
         }
+        $prefix    = (string) $this->settings['prefix'];
+        $extension = (string) $this->settings['extension'];
         while (($entry = $dir->read()) !== false) {
-            if ($this->setKey(str_replace($this->settings['prefix'], '', $entry)) === false) {
+            // Only this engine's files, turned back into their key: setKey()
+            // adds the prefix and extension again.
+            // The folder's guard files are never cache entries, whatever the prefix.
+            if (in_array($entry, ['index.php', 'index.html', '.htaccess', '.', '..'], true)
+                || ('' !== $prefix && !str_starts_with($entry, $prefix))
+                || ('' !== $extension && !str_ends_with($entry, $extension))) {
+                continue;
+            }
+            $key = substr($entry, strlen($prefix), strlen($entry) - strlen($prefix) - strlen($extension));
+            if ($this->setKey($key) === false) {
                 continue;
             }
             if ($check) {
@@ -323,6 +334,12 @@ class XoopsCacheFile extends XoopsCacheEngine
      */
     private function setKey($key)
     {
+        // A key names one file in the cache folder: no separators, NUL or
+        // parent references, whatever the caller did or did not normalise.
+        $key = (string) $key;
+        if ('' === $key || false !== strpbrk($key, "/\\\0") || str_contains($key, '..')) {
+            return false;
+        }
         $this->file->folder->cd($this->settings['path']);
         $this->file->name   = $this->settings['prefix'] . $key . $this->settings['extension'];
         $this->file->handle = null;

@@ -552,7 +552,7 @@ class XoopsCache
         if (empty($key)) {
             return false;
         }
-        $key = str_replace(['/', '.'], '_', (string) $key);
+        $key = str_replace(['/', '\\', '.'], '_', (string) $key);
 
         return $key;
     }

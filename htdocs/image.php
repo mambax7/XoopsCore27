@@ -312,6 +312,9 @@ if (!empty($imageId)) {
     if (false === $srcInfo || ($srcInfo[0] * $srcInfo[1]) > $imgSrcMaxPixels) {
         exitInvalidRequest();
     }
+    // Serve the type the bytes decode as, not the one the uploading client
+    // declared and the image manager stored.
+    $imageMimetype = $srcInfo['mime'];
     $sourceImage = imagecreatefromstring($imageData);
     // imagesx()/imagesy() require a GdImage; reject a decode failure rather than
     // passing false into them (a TypeError under PHP 8).
@@ -460,6 +463,7 @@ if (empty($width)
     $etag = md5($imageData);
     doConditionalGet($etag, $last_modified_string);
     header("Content-type: {$imageMimetype}");
+    header('X-Content-Type-Options: nosniff');
     header('Content-Length: ' . strlen($imageData));
     echo $imageData;
     exit();

@@ -66,6 +66,11 @@ if (in_array($op, ['order', 'display', 'display_in_menu'], true)) {
             $module_id = Request::getInt('mid', 0);
             if ($module_id > 0) {
                 $module = $module_handler->get($module_id);
+                // The System module is never deactivated (its toggle is hidden,
+                // but the id can still be posted here).
+                if (!is_object($module) || $module->getVar('dirname', 'n') === 'system') {
+                    break;
+                }
                 $old    = $module->getVar('isactive');
                 $module->setVar('isactive', !$old);
                 $module_handler->insert($module);

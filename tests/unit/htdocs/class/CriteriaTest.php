@@ -254,6 +254,57 @@ class CriteriaTest extends TestCase
         $this->assertSame(' GROUP BY category, status', $el->getGroupby());
     }
 
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function columnListsAccepted(): array
+    {
+        return [
+            'single'            => ['uid'],
+            'dotted backticked' => ['`u`.`uid`'],
+            'list with dirs'    => ['t.weight ASC, t.title desc'],
+            'tight comma'       => ['a,b'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('columnListsAccepted')]
+    public function testColumnListsPassTheGroupAndSortGrammar(string $clause): void
+    {
+        $el = new CriteriaElement();
+        $el->setGroupBy($clause);
+        $el->setSort($clause);
+
+        $this->assertSame(' GROUP BY ' . $clause, $el->getGroupby());
+        $this->assertSame($clause, $el->getSort());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function clausesRejected(): array
+    {
+        return [
+            'union select'       => ['uid UNION SELECT pass, 1 FROM xoops_users'],
+            'trailing keyword'   => ['uid HAVING 1'],
+            'two words'          => ['uid uname'],
+            'empty item'         => ['uid,,uname'],
+            'three part name'    => ['a.b.c'],
+            'function call'      => ['RAND()'],
+            'inner newline'      => ["uid\nUNION"],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('clausesRejected')]
+    public function testAnythingButAColumnListIsDropped(string $clause): void
+    {
+        $el = new CriteriaElement();
+        $el->setGroupBy($clause);
+        $el->setSort($clause);
+
+        $this->assertSame('', $el->getGroupby());
+        $this->assertSame('', $el->getSort());
+    }
+
     // =========================================================================
     // CriteriaElement — render() base class
     // =========================================================================

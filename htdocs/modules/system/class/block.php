@@ -680,6 +680,36 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
     }
 
     /**
+     * Why a block may not be deleted, or null when it may.
+     *
+     * System blocks are never deleted; a module block only when another
+     * module block with the same function exists (the duplicates left by the
+     * 2.0.9 module update). Used by both the confirmation and the final delete.
+     *
+     * @param XoopsBlock $block block as stored
+     * @return string|null language string explaining the refusal
+     */
+    public function deletionRefusal(XoopsBlock $block): ?string
+    {
+        if ($block->getVar('block_type') === 'S') {
+            return _AM_SYSTEM_BLOCKS_SYSTEMCANT;
+        }
+        if ($block->getVar('block_type') === 'M') {
+            // Count module blocks only: a custom block posted with the same
+            // module and function must not count as the surviving copy.
+            $criteria = new CriteriaCompo(new Criteria('mid', (int) $block->getVar('mid')));
+            $criteria->add(new Criteria('func_num', (int) $block->getVar('func_num')));
+            $criteria->add(new Criteria('show_func', trim((string) $block->getVar('show_func'))));
+            $criteria->add(new Criteria('block_type', 'M'));
+            if (1 >= $this->getCount($criteria)) {
+                return _AM_SYSTEM_BLOCKS_MODULECANT;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * XoopsBlock::countSimilarBlocks()
      *
      * @param  mixed $moduleId
