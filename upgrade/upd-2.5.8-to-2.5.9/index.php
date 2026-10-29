@@ -146,7 +146,8 @@ class Upgrade_259 extends XoopsUpgrade
                 $val = $vars[$m[2]];
                 if (T_LNUMBER === $value[0] && is_int($val)) {
                     $tokens[$index][1] = (string) $val;
-                } elseif (T_CONSTANT_ENCAPSED_STRING === $value[0]) {
+                } elseif (T_CONSTANT_ENCAPSED_STRING === $value[0] && null !== $val) {
+                    // null is a key the current mainfile.php lacks: the template default stays.
                     $tokens[$index][1] = var_export((string) $val, true);
                 }
             }

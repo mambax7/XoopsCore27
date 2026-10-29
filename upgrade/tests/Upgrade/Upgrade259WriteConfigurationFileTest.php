@@ -80,4 +80,23 @@ final class Upgrade259WriteConfigurationFileTest extends TestCase
         self::assertNotContains(T_CLOSE_TAG, $kinds);
         self::assertNotContains(T_INLINE_HTML, $kinds);
     }
+
+    #[Test]
+    public function aKeyMissingFromTheCurrentConfigurationKeepsTheTemplateDefault(): void
+    {
+        // checkmainfile.php leaves a key the old mainfile.php does not define at null.
+        $writer = new ReflectionMethod(Upgrade_259::class, 'writeConfigurationFile');
+        $result = $writer->invoke(
+            (new ReflectionClass(Upgrade_259::class))->newInstanceWithoutConstructor(),
+            ['XOOPS_URL' => null, 'XOOPS_ROOT_PATH' => '/srv/xoops'],
+            $this->dir,
+            'mainfile.dist.php',
+            'mainfile.php',
+        );
+        self::assertTrue($result);
+
+        $out = file_get_contents($this->dir . '/mainfile.php');
+        self::assertStringContainsString("define('XOOPS_URL', 'https://')", $out);
+        self::assertStringContainsString("define('XOOPS_ROOT_PATH', '/srv/xoops')", $out);
+    }
 }

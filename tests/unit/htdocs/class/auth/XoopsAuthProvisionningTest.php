@@ -438,6 +438,43 @@ class XoopsAuthProvisionningTest extends TestCase
     }
 
     #[Test]
+    public function changeKeepsTheStoredHashWhileThePasswordIsUnchanged(): void
+    {
+        // Every directory sign-in runs change(); a fresh salt each time would end
+        // the account's other sessions, whose stamp is bound to the hash.
+        $this->ensureMemberHandlerReady();
+        $instance = $this->createConfiguredInstance();
+        $hash = password_hash('secret', PASSWORD_DEFAULT);
+        $user = new XoopsUser();
+        $user->setVar('uname', 'ldapuser');
+        $user->setVar('pass', $hash);
+
+        // The hash is decided before the save; the save fails on the stub
+        // database and ends in the bootstrap's redirect exception.
+        $change = static function (string $password) use ($instance, $user): void {
+            try {
+                $instance->change($user, [], 'ldapuser', $password);
+            } catch (\RedirectHeaderException $e) {
+            }
+        };
+
+        $change('secret');
+        $this->assertSame($hash, $user->getVar('pass', 'n'));
+
+        $change('changed');
+        $this->assertNotSame($hash, $user->getVar('pass', 'n'));
+        $this->assertTrue(password_verify('changed', $user->getVar('pass', 'n')));
+
+        // A request value holding backslash-n is read like the bind and add()
+        // paths: stripslashes() drops the backslash (anb); stripcslashes()
+        // would make it a newline and the hash add() stored would never verify.
+        $escaped = password_hash('anb', PASSWORD_DEFAULT);
+        $user->setVar('pass', $escaped);
+        $change('a\nb');
+        $this->assertSame($escaped, $user->getVar('pass', 'n'));
+    }
+
+    #[Test]
     public function getXoopsUserReturnsFalseWithLongUsername(): void
     {
         $this->ensureMemberHandlerReady();

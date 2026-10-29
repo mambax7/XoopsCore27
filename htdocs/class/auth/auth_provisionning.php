@@ -187,7 +187,14 @@ class XoopsAuthProvisionning
         $ret = false;
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
-        $xoopsUser->setVar('pass', password_hash(stripcslashes((string)$pwd), PASSWORD_DEFAULT));
+        // Keep the stored hash while the password is unchanged: every sign-in
+        // runs this sync, and a new salt would end the account's other sessions
+        // (common.php ends a session whose stamp no longer matches the hash).
+        $password = stripslashes((string) $pwd); // as add() and the LDAP/AD bind
+        $hash     = (string) $xoopsUser->getVar('pass', 'n');
+        if ('' === $hash || !password_verify($password, $hash)) {
+            $xoopsUser->setVar('pass', password_hash($password, PASSWORD_DEFAULT));
+        }
         $tab_mapping = explode('|', $this->ldap_field_mapping);
         foreach ($tab_mapping as $mapping) {
             $fields = explode('=', trim($mapping));
