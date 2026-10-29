@@ -5,6 +5,7 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 ===================================
 Enhancements:
 - Default and Transition admin themes now offer a persistent light/dark toggle; Default includes dark styling for module panels, permission grids and SCEditor. The standalone dark theme is removed, and saved dark preferences load Transition, where the header toggle enables dark mode (modules/system/themes, modules/system/class/cpanel.php)
+- the System section in the Modern admin theme sidebar is hidden when the user has no system menu items (modules/system/themes/modern/xotpl/xo_sidebar.tpl)
 
 Bug fixes:
 - listing available admin themes no longer loads Modern's translations before the selected theme, preventing duplicate _OXYGEN_SYSOPTIONS warnings when previewing Default or Transition; the selected Modern header explicitly loads its main language file before using dashboard labels (modules/system/themes/modern/modern.php)

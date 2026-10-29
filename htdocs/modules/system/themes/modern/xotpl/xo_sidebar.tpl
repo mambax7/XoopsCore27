@@ -14,24 +14,26 @@
         </div>
 
         <!-- Nav section with system module -->
-        <details class="nav-section nav-section-collapsible" <{if $showSystemServices}>open<{/if}>>
-            <summary class="nav-section-title">
-                <span><{$smarty.const._MODERN_SYSTEM}></span>
-                <span class="nav-section-arrow">&#9654;</span>
-            </summary>
-            <div class="nav-section-items">
-                <{foreach item='item' from=$sys_options}>
-                <a href="<{$item.link|escape:'html'}>" class="nav-item <{$item.active|escape:'html'}>">
-                    <{if !empty($item.icon)}>
-                        <img src="<{$item.icon|escape:'html'}>" class="nav-icon-img" alt="">
-                    <{else}>
-                        <span class="nav-icon">⚙️</span>
-                    <{/if}>
-                    <span class="nav-text"><{$item.title|escape:'html'}></span>
-                </a>
-                <{/foreach}>
-            </div>
-        </details>
+        <{if $sys_options|default:[]}>
+            <details class="nav-section nav-section-collapsible" <{if $showSystemServices}>open<{/if}>>
+                <summary class="nav-section-title">
+                    <span><{$smarty.const._MODERN_SYSTEM}></span>
+                    <span class="nav-section-arrow">&#9654;</span>
+                </summary>
+                <div class="nav-section-items">
+                    <{foreach item='item' from=$sys_options}>
+                    <a href="<{$item.link|escape:'html'}>" class="nav-item <{$item.active|escape:'html'}>">
+                        <{if !empty($item.icon)}>
+                            <img src="<{$item.icon|escape:'html'}>" class="nav-icon-img" alt="">
+                        <{else}>
+                            <span class="nav-icon">⚙️</span>
+                        <{/if}>
+                        <span class="nav-text"><{$item.title|escape:'html'}></span>
+                    </a>
+                    <{/foreach}>
+                </div>
+            </details>
+        <{/if}>
 
         <!-- Nav section all other modules -->
         <{if $module_menu}>
