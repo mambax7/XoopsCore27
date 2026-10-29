@@ -160,6 +160,7 @@ switch ($op) {
 
         if (count($errors) == 0) {
             if ($handler->insertUser($user)) {
+                XoopsUserUtility::refreshSessionFingerprint($user);
                 $profile->setVar('profile_id', $user->getVar('uid'));
                 $profile_handler->insert($profile);
                 include_once $GLOBALS['xoops']->path('/modules/system/constants.php');

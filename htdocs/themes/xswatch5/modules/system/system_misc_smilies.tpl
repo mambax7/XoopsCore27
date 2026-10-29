@@ -23,10 +23,10 @@
     <tbody>
         <{foreach item=smile from=$smilies|default:null}>
             <tr>
-                <td class="text-center"><{$smile.code}></td>
-                <td class="text-center"><{$smile.emotion}></td>
+                <td class="text-center"><{$smile.code|escape}></td>
+                <td class="text-center"><{$smile.emotion|escape}></td>
                 <td class="text-center">
-                    <img onmouseover="style.cursor='hand'" onclick="doSmilie(' <{$smile.code}> ');" src="<{$upload_url}><{$smile.smile_url}>" alt="<{$smile.emotion}>" title="<{$smile.emotion}>" />
+                    <img onmouseover="style.cursor='hand'" data-code="<{$smile.code|escape}>" onclick="doSmilie(' ' + this.getAttribute('data-code') + ' ');" src="<{$upload_url}><{$smile.smile_url|escape}>" alt="<{$smile.emotion|escape}>" title="<{$smile.emotion|escape}>" />
                 </td>
             </tr>
         <{/foreach}>

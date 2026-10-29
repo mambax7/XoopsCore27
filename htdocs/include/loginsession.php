@@ -238,6 +238,8 @@ function xoops_login_set_session(XoopsUser $user, string $factorGeneration, bool
     $_SESSION = [];
     $_SESSION['xoopsUserId'] = $user->getVar('uid');
     $_SESSION['xoopsUserGroups'] = $user->getGroups();
+    xoops_load('XoopsUserUtility');
+    $_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint($user);
     $_SESSION['xoops2faGeneration'] = $factorGeneration;
     $_SESSION['xoops2faVerified'] = $verified;
     $theme = xoops_validateThemeName((string) $user->getVar('theme', 'n'));

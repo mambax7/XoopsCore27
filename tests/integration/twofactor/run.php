@@ -255,6 +255,10 @@ try {
     check(!$result['authenticated'], 'Changed generation ends verified session');
     $result = $request(['request' => 'common', 'uid' => 99, 'seed' => ['xoopsUserId' => 99]]);
     check($result['authenticated'] && $result['session']['xoops2faGeneration'] === '', 'Absent row stamps and preserves session');
+    $result = $request(['request' => 'common', 'uid' => 99, 'seed' => ['xoopsUserId' => 99, 'xoopsUserPfp' => str_repeat('0', 64)]]);
+    check(!$result['authenticated'] && $result['session'] === [], 'Password stamp from an older hash ends the session');
+    $result = $request(['request' => 'common', 'uid' => 99, 'seed' => ['xoopsUserId' => 99, 'xoopsUserPfp' => null]]);
+    check(!$result['authenticated'] && $result['session'] === [], 'Session without a password stamp ends');
     $paused = $request(['request' => 'complete', 'uid' => 21, 'policy' => 'off']);
     check(($paused['session']['xoopsUserId'] ?? null) === 21 && !$paused['session']['xoops2faVerified'], 'Paused policy permits password session');
     check(!array_filter($paused['cookies'], static fn (array $cookie): bool => $cookie[1] !== null), 'Paused enrolled account gets no cookie');

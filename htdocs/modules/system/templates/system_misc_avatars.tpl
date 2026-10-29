@@ -13,7 +13,7 @@
     <tr>
     <{foreach item=name from=$avatars|default:null key=file }>
         <td align="center" valign="center">
-            <img src="<{$upload_url}><{$file}>" alt="<{$name}>" title="<{$name}>" /><br>
+            <img src="<{$upload_url}><{$file|escape}>" alt="<{$name}>" title="<{$name}>" /><br>
             <{$name}><br>
             <{counter name=avatarid assign=avatarid}>
             <{counter name=loopid assign=loopid}>

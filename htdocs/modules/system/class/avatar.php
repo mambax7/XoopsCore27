@@ -69,7 +69,7 @@ class SystemAvatar extends XoopsAvatar
         }
         $imageselect_img->setExtra("onchange='showImgSelected(\"xo-avatar-img\", \"avatar_file\", \"avatars\", \"\", \"" . XOOPS_UPLOAD_URL . "\")'");
         $imgtray_img->addElement($imageselect_img, false);
-        $imgtray_img->addElement(new XoopsFormLabel('', "<br><img src='" . XOOPS_UPLOAD_URL . '/avatars/' . $blank_img . "' name='image_img' id='xo-avatar-img' alt='' />"));
+        $imgtray_img->addElement(new XoopsFormLabel('', "<br><img src='" . XOOPS_UPLOAD_URL . '/avatars/' . htmlspecialchars($blank_img, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "' name='image_img' id='xo-avatar-img' alt='' />"));
         $fileseltray_img = new XoopsFormElementTray('<br>', '<br><br>');
         $fileseltray_img->addElement(new XoopsFormFile(_AM_SYSTEM_AVATAR_UPLOAD, 'avatar_file', 500000), false);
         $imgtray_img->addElement($fileseltray_img);

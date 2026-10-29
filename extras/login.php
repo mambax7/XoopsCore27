@@ -118,6 +118,8 @@ if ($op === 'dologin') {
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();
+        xoops_load('XoopsUserUtility');
+        $_SESSION['xoopsUserPfp']    = XoopsUserUtility::sessionFingerprint($user);
         // The stamp include/common.php checks on every request: without it an
         // enrolled account signed in while the policy is off loses this
         // session on its next request.

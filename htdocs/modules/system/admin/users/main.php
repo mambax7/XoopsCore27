@@ -242,6 +242,8 @@ case 'users_save':
             xoops_error($edituser->getHtmlErrors());
             break;
         }
+        xoops_load('XoopsUserUtility');
+        XoopsUserUtility::refreshSessionFingerprint($edituser);
 
         // Groups
         $groups = Request::getArray('groups', []);
