@@ -699,7 +699,9 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
             // module and function must not count as the surviving copy.
             $criteria = new CriteriaCompo(new Criteria('mid', (int) $block->getVar('mid')));
             $criteria->add(new Criteria('func_num', (int) $block->getVar('func_num')));
-            $criteria->add(new Criteria('show_func', trim((string) $block->getVar('show_func'))));
+            // allowEmptyValue: an empty show_func must still be compared, or
+            // a sibling with a different function inflates the count.
+            $criteria->add(new Criteria('show_func', trim((string) $block->getVar('show_func')), '=', '', '', true));
             $criteria->add(new Criteria('block_type', 'M'));
             if (1 >= $this->getCount($criteria)) {
                 return _AM_SYSTEM_BLOCKS_MODULECANT;

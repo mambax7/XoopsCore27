@@ -804,7 +804,8 @@ class XoopsMediaUploaderTest extends TestCase
         // A reused uploader classified the last file as an image; the next
         // file must be judged on its own, even when fetchMedia() stops early.
         $uploader = $this->createUploader();
-        $uploader->mediaRealType = 'image/jpeg';
+        $uploader->extensionToMime = ['jpg' => 'image/jpeg'];
+        $uploader->mediaRealType   = 'image/jpeg';
 
         $uploader->fetchMedia('no_such_field');
 

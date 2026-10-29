@@ -70,12 +70,11 @@ class XoopsCacheKeyTest extends TestCase
     public function fileEngineRefusesKeysThatLeaveItsFolder(): void
     {
         require_once XOOPS_ROOT_PATH . '/class/cache/file.php';
-        $dir = sys_get_temp_dir() . '/xoops-cachekey-' . bin2hex(random_bytes(4));
-        mkdir($dir);
-        $escaped = dirname($dir) . '/escaped.txt';
-        if (is_file($escaped)) {
-            unlink($escaped);
-        }
+        // Both the cache folder and the escape target live inside one
+        // throw-away parent, so no shared temp file is ever touched.
+        $base = sys_get_temp_dir() . '/xoops-cachekey-' . bin2hex(random_bytes(4));
+        $dir  = $base . '/cache';
+        mkdir($dir, 0777, true);
         try {
             $engine = new \XoopsCacheFile();
             $this->assertTrue($engine->init(['path' => $dir, 'prefix' => '', 'extension' => '.txt']));
@@ -85,7 +84,7 @@ class XoopsCacheKeyTest extends TestCase
             }
             $this->assertTrue($engine->write('plain_key', 'x', 60));
             $this->assertFileExists($dir . '/plain_key.txt');
-            $this->assertFileDoesNotExist(dirname($dir) . '/escaped.txt');
+            $this->assertFileDoesNotExist($base . '/escaped.txt');
 
             // clear() maps each file back to its key (the extension used to be
             // appended twice, so nothing was ever removed) and leaves guard files.
@@ -96,6 +95,8 @@ class XoopsCacheKeyTest extends TestCase
         } finally {
             array_map('unlink', glob($dir . '/*') ?: []);
             rmdir($dir);
+            array_map('unlink', glob($base . '/*') ?: []);
+            rmdir($base);
         }
     }
 

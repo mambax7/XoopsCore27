@@ -344,8 +344,9 @@ class XoopsCaptcha
      */
     public function setCode($code = null)
     {
-        $code ??= $this->handler->getCode();
-        if (!empty($code)) {
+        // The text challenge can ask "0 + 0": a zero answer is a real code.
+        $code = (string) ($code ?? $this->handler->getCode());
+        if ('' !== $code) {
             $_SESSION[$this->name . '_code'] = $code;
 
             return true;
@@ -448,9 +449,10 @@ class XoopsCaptchaMethod
     public function verify($sessionName = null)
     {
         $is_valid = false;
-        if (!empty($_SESSION["{$sessionName}_code"])) {
+        $code     = (string) ($_SESSION["{$sessionName}_code"] ?? '');
+        if ('' !== $code) {
             $func     = !empty($this->config['casesensitive']) ? 'strcmp' : 'strcasecmp';
-            $is_valid = !$func(trim(Request::getString($sessionName, '', 'POST')), $_SESSION["{$sessionName}_code"]);
+            $is_valid = !$func(trim(Request::getString($sessionName, '', 'POST')), $code);
         }
 
         return $is_valid;

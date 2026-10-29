@@ -257,6 +257,12 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         die('You are not allowed to delete tables');
     }
 
+    // Table names compare without case only where the server stores them so
+    // (lower_case_table_names 1 or 2); with 0, XOOPS_TEST_x is not xoops_x.
+    // Unreadable setting: fold case anyway, the direction that skips more.
+    $result = $db->query('SELECT @@lower_case_table_names');
+    $row    = $db->isResultSet($result) ? $db->fetchRow($result) : false;
+    $fold   = (false !== $row && 0 === (int) $row[0]) ? 'strval' : 'strtolower';
     while (false !== ($row_table = $db->fetchArray($srs))) {
         $table = $row_table['Name'];
         if (substr($table, 0, strlen($prefix) + 1) !== $prefix . '_') {
@@ -264,7 +270,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         }
         // A shorter prefix can still match the working tables (prefix "xoops"
         // against working prefix "xoops_test"): never drop one of those.
-        if (str_starts_with(strtolower($table), strtolower(XOOPS_DB_PREFIX . '_'))) {
+        if (str_starts_with($fold($table), $fold(XOOPS_DB_PREFIX . '_'))) {
             continue;
         }
         $drs = $db->exec("DROP TABLE `$table`");
