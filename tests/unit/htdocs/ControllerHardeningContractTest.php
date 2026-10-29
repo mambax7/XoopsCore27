@@ -134,7 +134,10 @@ final class ControllerHardeningContractTest extends TestCase
         // is cached as PNG), decoded from the cached bytes for older entries.
         $this->assertStringContainsString("\$cached_image['image_mimetype'] = \$imageMimetype;", $src);
         $this->assertStringContainsString("\$cachedMimetype = \$cached_image['image_mimetype'] ?? null;", $src);
-        $this->assertStringContainsString('header("Content-type: {$cachedMimetype}");', $src);
+        // Every response of the script carries nosniff: cache hit and edited
+        // image as well as the original.
+        $this->assertStringContainsString('header("Content-type: {$cachedMimetype}"); header(\'X-Content-Type-Options: nosniff\');', $src);
+        $this->assertStringContainsString('header("Content-type: {$imageMimetype}"); header(\'X-Content-Type-Options: nosniff\'); header("Content-disposition: filename={$imageFilename}");', $src);
     }
 
     #[Test]

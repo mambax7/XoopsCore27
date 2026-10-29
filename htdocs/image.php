@@ -410,6 +410,7 @@ if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET
         $cachedMimetype = false !== $cachedInfo ? $cachedInfo['mime'] : $imageMimetype;
     }
     header("Content-type: {$cachedMimetype}");
+    header('X-Content-Type-Options: nosniff');
     header('Content-Length: ' . strlen($cached_image['image_data']));
     echo $cached_image['image_data'];
     exit();
@@ -764,6 +765,7 @@ if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('nobrowsercache', 'GE
     header('Pragma: no-cache'); // HTTP/1.0
 }
 header("Content-type: {$imageMimetype}");
+header('X-Content-Type-Options: nosniff');
 header("Content-disposition: filename={$imageFilename}");
 header('Content-Length: ' . strlen($imageData));
 echo $imageData;
