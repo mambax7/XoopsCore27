@@ -220,7 +220,7 @@ switch ($op) {
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
             $block->setVar('visible', $visible);
-            if (!$block_handler->insert($block)) {
+            if (false === $block_handler->insert($block)) {
                 $error = true;
             }
         }
@@ -236,7 +236,7 @@ switch ($op) {
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
             $block->setVar('side', $side);
-            if (!$block_handler->insert($block)) {
+            if (false === $block_handler->insert($block)) {
                 $error = true;
             }
         }
@@ -252,7 +252,7 @@ switch ($op) {
                 if ($order > 0) {
                     $block = $block_handler->get($order);
                     $block->setVar('weight', $i);
-                    if (!$block_handler->insert($block)) {
+                    if (false === $block_handler->insert($block)) {
                         $error = true;
                     }
                     ++$i;
@@ -284,7 +284,7 @@ switch ($op) {
         $content = Request::getText('content_block', '', 'POST');
         $block->setVar('content', $content);
         $myts = \MyTextSanitizer::getInstance();
-        echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', $block->getVar('c_type')) . '</div>';
+        echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', (string) $block->getVar('c_type')) . '</div>';
         break;
 
     case 'save':
