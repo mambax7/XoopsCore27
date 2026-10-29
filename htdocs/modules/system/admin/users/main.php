@@ -38,6 +38,16 @@ $op = Request::getString('op', 'list');
 $member_handler = xoops_getHandler('member');
 
 if ('users_2fa_reset' === $op) {
+    // The reset handler verifies the actor, not the target: keep the webmaster
+    // protection the edit and save paths apply. Read the uid from the same
+    // source the handler uses, so a GET uid cannot shadow the POST one.
+    $target = $member_handler->getUser(Request::getInt('uid', 0, 'POST' === Request::getMethod() ? 'POST' : 'GET'));
+    if (is_object($target) && !system_users_mayEdit($target)) {
+        xoops_cp_header();
+        xoops_error(_NOPERM);
+        xoops_cp_footer();
+        exit();
+    }
     $xoops2faAdminReset = true;
     include XOOPS_ROOT_PATH . '/include/manage2fa.php';
     exit();

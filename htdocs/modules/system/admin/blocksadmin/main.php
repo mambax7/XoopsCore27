@@ -361,10 +361,18 @@ switch ($op) {
                 'name'      => Request::getString('name', '', 'POST'),
             ]);
         }
-        // A stored system or module block keeps its type: relabelling it would
-        // lift the protection the delete handler applies to those types.
-        $storedType = $block->isNew() ? '' : (string) $block->getVar('block_type');
-        $block_type = in_array($storedType, ['S', 'M'], true) ? $storedType : Request::getString('block_type', '');
+        // A stored block keeps its type: relabelling it would lift the protection
+        // the delete handler applies to system and module blocks. A new block is
+        // only ever custom or a clone; a forged M/S row would let the delete
+        // handler count a duplicate and release the genuine module block.
+        if ($block->isNew()) {
+            $block_type = Request::getString('block_type', '', 'POST');
+            if (!in_array($block_type, ['C', 'D'], true)) {
+                redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
+            }
+        } else {
+            $block_type = (string) $block->getVar('block_type');
+        }
         $block->setVar('block_type', $block_type);
 
         $blockVars = [

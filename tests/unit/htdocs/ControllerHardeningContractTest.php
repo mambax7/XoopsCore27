@@ -211,7 +211,20 @@ final class ControllerHardeningContractTest extends TestCase
         $refusal = strpos($final, '$block_handler->deletionRefusal($block)');
         $this->assertNotFalse($refusal);
         $this->assertLessThan(strpos($final, '$block_handler->delete($block)'), $refusal);
-        $this->assertStringContainsString("in_array(\$storedType, ['S', 'M'], true) ? \$storedType : Request::getString('block_type', '')", $src);
+        $this->assertStringContainsString("if (!in_array(\$block_type, ['C', 'D'], true)) {", $src);
+        $this->assertStringContainsString("\$block_type = (string) \$block->getVar('block_type');", $src);
+    }
+
+    #[Test]
+    public function aTwoFactorResetHonoursTheWebmasterGuard(): void
+    {
+        $main  = self::src('modules/system/admin/users/main.php');
+        $reset = strpos($main, "if ('users_2fa_reset' === \$op) {");
+        $guard = strpos($main, 'if (is_object($target) && !system_users_mayEdit($target)) {', (int) $reset);
+        $this->assertNotFalse($guard);
+        $this->assertLessThan(strpos($main, "include XOOPS_ROOT_PATH . '/include/manage2fa.php';"), $guard);
+        // Same request source as manage2fa.php, so the guarded uid is the reset uid.
+        $this->assertStringContainsString("Request::getInt('uid', 0, 'POST' === Request::getMethod() ? 'POST' : 'GET')", $main);
     }
 
     #[Test]

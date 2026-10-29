@@ -262,7 +262,6 @@ class CriteriaTest extends TestCase
         return [
             'single'            => ['uid'],
             'dotted backticked' => ['`u`.`uid`'],
-            'list with dirs'    => ['t.weight ASC, t.title desc'],
             'tight comma'       => ['a,b'],
         ];
     }
@@ -276,6 +275,17 @@ class CriteriaTest extends TestCase
 
         $this->assertSame(' GROUP BY ' . $clause, $el->getGroupby());
         $this->assertSame($clause, $el->getSort());
+    }
+
+    public function testSortDirectionsPassOnlyTheSortGrammar(): void
+    {
+        $el = new CriteriaElement();
+        $el->setSort('t.weight ASC, t.title desc');
+        $el->setGroupBy('uid DESC');
+
+        $this->assertSame('t.weight ASC, t.title desc', $el->getSort());
+        // MySQL 8.0.13 rejects a direction inside GROUP BY; the clause is dropped.
+        $this->assertSame('', $el->getGroupby());
     }
 
     /**
