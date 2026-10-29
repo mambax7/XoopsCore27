@@ -202,6 +202,8 @@ final class ControllerHardeningContractTest extends TestCase
         $src  = self::src('xoops_lib/modules/protector/admin/prefix_manager.php');
         $this->assertStringContainsString('if (0 === strcasecmp($prefix, XOOPS_DB_PREFIX)) {', $src);
         $this->assertStringContainsString("\$result = \$db->query('SELECT @@lower_case_table_names');", $src);
+        // Only a readable 0 compares case-sensitively; 1, 2 and an unreadable setting fold case (skips more).
+        $this->assertStringContainsString("\$fold = (false !== \$row && 0 === (int) \$row[0]) ? 'strval' : 'strtolower';", $src);
         $skip = strpos($src, "if (str_starts_with(\$fold(\$table), \$fold(XOOPS_DB_PREFIX . '_'))) { continue; }");
         $this->assertNotFalse($skip);
         $drop = strpos($src, '$drs = $db->exec("DROP TABLE `$table`");');
