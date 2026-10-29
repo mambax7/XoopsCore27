@@ -251,6 +251,8 @@ case 'users_save':
             xoops_error($edituser->getHtmlErrors());
             break;
         }
+        xoops_load('XoopsUserUtility');
+        XoopsUserUtility::refreshSessionFingerprint($edituser);
 
         // Groups: only an administrator of the Groups section may change
         // memberships (the form sends them as hidden fields to everyone else).

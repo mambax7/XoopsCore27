@@ -181,8 +181,13 @@ switch ($op) {
                 $err[] = $uploader_rank_img->getErrors();
             }
         } else {
-            $obj->setVar('rank_image', 'ranks/' . basename(Request::getString('rank_image', '', 'POST')));
-            if (!$userrank_Handler->insert($obj)) {
+            $file = system_selectedUploadFile('ranks', Request::getString('rank_image', '', 'POST'));
+            if (null === $file) {
+                $err[] = sprintf(_FAILSAVEIMG, $obj->getVar('rank_title'));
+            } else {
+                $obj->setVar('rank_image', $file);
+            }
+            if (null !== $file && !$userrank_Handler->insert($obj)) {
                 $err[] = sprintf(_FAILSAVEIMG, $obj->getVar('rank_title'));
             }
         }

@@ -76,6 +76,8 @@ if (!Request::hasVar('submit', 'POST')) {
         $member_handler = xoops_getHandler('member');
         $msg = _PROFILE_MA_ERRORDURINGSAVE;
         if ($member_handler->insertUser($GLOBALS['xoopsUser'])) {
+            xoops_load('XoopsUserUtility');
+            XoopsUserUtility::refreshSessionFingerprint($GLOBALS['xoopsUser']);
             $msg = _PROFILE_MA_PASSWORDCHANGED;
         }
     }

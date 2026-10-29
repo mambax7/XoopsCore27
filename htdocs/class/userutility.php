@@ -110,6 +110,40 @@ class XoopsUserUtility
     }
 
     /**
+     * Fingerprint of the stored password hash, kept in the server-side session.
+     *
+     * include/common.php ends a session whose stored fingerprint no longer
+     * matches the account, so a password change through any path (recovery,
+     * profile, administrator, directory sync) signs out the sessions that were
+     * established with the old password. Unkeyed: the value never leaves the
+     * server.
+     *
+     * @param XoopsUser $user the account the session belongs to
+     * @return string 64 lowercase hex characters
+     */
+    public static function sessionFingerprint(XoopsUser $user): string
+    {
+        return hash('sha256', 'xoops-session-pfp:' . (string) $user->getVar('pass', 'n'));
+    }
+
+    /**
+     * Re-stamp the current session after its own account's password changed.
+     *
+     * Keeps the browser that made the change signed in while every other
+     * session of the account ends on its next request. Does nothing when the
+     * changed account is not the one signed in here.
+     *
+     * @param XoopsUser $user the account whose password was just saved
+     * @return void
+     */
+    public static function refreshSessionFingerprint(XoopsUser $user): void
+    {
+        if (isset($_SESSION['xoopsUserId']) && (int) $_SESSION['xoopsUserId'] === (int) $user->getVar('uid')) {
+            $_SESSION['xoopsUserPfp'] = self::sessionFingerprint($user);
+        }
+    }
+
+    /**
      * XoopsUserUtility::sendWelcome
      *
      * @param mixed $user

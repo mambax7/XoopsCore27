@@ -181,6 +181,13 @@ xoops_loadLanguage('user');
 xoops_loadLanguage('user2fa');
 $user = new XoopsUser($job['uid']);
 $GLOBALS['xoopsUser'] = $user;
+// A seeded session for this account stands for one a sign-in created, so it
+// carries the password stamp sign-in writes; a job that sets the key itself
+// (even to null) tests the stamp check.
+if (isset($job['seed']['xoopsUserId']) && !array_key_exists('xoopsUserPfp', $job['seed'])
+    && (int) $job['seed']['xoopsUserId'] === (int) $job['uid']) {
+    $_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint($user);
+}
 if ($job['request'] === 'manage') {
     require XOOPS_VAR_PATH . '/manage-controller.php';
     requestResult(['manage' => ['error' => $error, 'message' => $message, 'codes' => $codes, 'secret' => $setupSecret, 'confirm' => $confirm, 'enrolled' => $enrolled]]);

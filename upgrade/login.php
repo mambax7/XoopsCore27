@@ -136,6 +136,8 @@ if ('' === $uname || '' === $pass) {
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();
+        xoops_load('XoopsUserUtility');
+        $_SESSION['xoopsUserPfp']    = XoopsUserUtility::sessionFingerprint($user);
         // The stamp include/common.php checks on every request: without it an
         // enrolled webmaster signed in while the policy is off loses this
         // session on the redirect.

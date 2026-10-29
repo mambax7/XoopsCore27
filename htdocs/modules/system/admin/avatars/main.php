@@ -226,12 +226,16 @@ switch ($op) {
                 $err[] = $uploader->getErrors();
             }
         } else {
-            $file = basename(Request::getString('avatar_file', 'blank.gif', 'POST'));
+            $file = system_selectedUploadFile('avatars', Request::getString('avatar_file', 'blank.gif', 'POST'));
             $avatar->setVar('avatar_name', Request::getString('avatar_name', '', 'POST'));
             $avatar->setVar('avatar_display', Request::getBool('avatar_display', false, 'POST'));
             $avatar->setVar('avatar_weight', Request::getInt('avatar_weight', 0, 'POST'));
-            $avatar->setVar('avatar_file', 'avatars/' . $file);
-            if (!$avt_handler->insert($avatar)) {
+            if (null === $file) {
+                $err[] = sprintf(_FAILSAVEIMG, $avatar->getVar('avatar_name'));
+            } else {
+                $avatar->setVar('avatar_file', $file);
+            }
+            if (null !== $file && !$avt_handler->insert($avatar)) {
                 $err[] = sprintf(_FAILSAVEIMG, $avatar->getVar('avatar_name'));
             }
         }
@@ -288,7 +292,7 @@ switch ($op) {
         $xoBreadCrumb->addHelp(system_adminVersion('avatars', 'help') . '#delete');
         $xoBreadCrumb->render();
         $msg = '<div class="spacer"><img src="' . XOOPS_UPLOAD_URL . '/'
-            . $avatar->getVar('avatar_file', 's')
+            . htmlspecialchars((string) $avatar->getVar('avatar_file', 'n'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . '" alt="" /></div><div class="txtcenter bold">'
             . $avatar->getVar('avatar_name', 's')
             . '</div>' . _AM_SYSTEM_AVATAR_SUREDEL;

@@ -203,3 +203,28 @@ function modify_chmod($value_chmod, $path_file, $id)
 
     return $chmod;
 }
+
+/**
+ * Validate an existing image picked from an upload folder instead of uploading one.
+ *
+ * The avatar, smilie and rank managers store the picked name and later print
+ * it inside HTML attributes, so only a plain file name that exists in the
+ * folder is accepted: letters, digits, space, _ . ( ) + -, not starting with
+ * a dot or space. Quotes, angle brackets, &, slashes and control characters
+ * are refused.
+ *
+ * @param string $folder upload subfolder: 'avatars', 'smilies' or 'ranks'
+ * @param string $name   submitted file name
+ *
+ * @return string|null "<folder>/<name>", or null when the name is not acceptable
+ */
+function system_selectedUploadFile(string $folder, string $name): ?string
+{
+    if (1 !== preg_match('/^[A-Za-z0-9_][A-Za-z0-9 _.()+-]*\z/', $name)
+        || !is_file(XOOPS_UPLOAD_PATH . '/' . $folder . '/' . $name)
+    ) {
+        return null;
+    }
+
+    return $folder . '/' . $name;
+}

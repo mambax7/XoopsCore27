@@ -189,8 +189,13 @@ switch ($op) {
                 $err[] = $uploader_smilies_img->getErrors();
             }
         } else {
-            $obj->setVar('smile_url', 'smilies/' . basename(Request::getString('smile_url', '', 'POST')));
-            if (!$smilies_Handler->insert($obj)) {
+            $file = system_selectedUploadFile('smilies', Request::getString('smile_url', '', 'POST'));
+            if (null === $file) {
+                $err[] = sprintf(_FAILSAVEIMG, $obj->getVar('code'));
+            } else {
+                $obj->setVar('smile_url', $file);
+            }
+            if (null !== $file && !$smilies_Handler->insert($obj)) {
                 $err[] = sprintf(_FAILSAVEIMG, $obj->getVar('code'));
             }
         }
