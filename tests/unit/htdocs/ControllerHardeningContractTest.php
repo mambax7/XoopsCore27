@@ -110,20 +110,31 @@ final class ControllerHardeningContractTest extends TestCase
     #[Test]
     public function originalImagesAreServedAsTheirDecodedType(): void
     {
-        $src    = self::src('image.php');
-        $stored = strpos($src, "\$imageMimetype = \$image->getVar('image_mimetype');");
-        $db     = strpos($src, "\$imageMimetype = \$srcInfo['mime'];");
-        $file   = strpos($src, "\$imageMimetype = \$imagesize['mime'];");
-        $this->assertNotFalse($stored);
-        $this->assertNotFalse($db);
-        $this->assertNotFalse($file);
-        // Both storage branches replace the stored type with the decoded one
-        // before the original is sent, and that header is followed by nosniff.
+        $src = self::src('image.php');
+        // Image manager: the stored (client-declared) type is read first, then
+        // both storage types (db blob, upload-folder file) fall through to one
+        // decode of the bytes that replaces it.
+        $stored     = strpos($src, "\$imageMimetype = \$image->getVar('image_mimetype');");
+        $dbBlob     = strpos($src, "\$imageData = \$image->getVar('image_body');");
+        $uploadFile = strpos($src, '$imageData = file_get_contents($imagePath); } // Cap the raw blob');
+        $decoded    = strpos($src, "\$imageMimetype = \$srcInfo['mime'];");
+        // Local URL: decoded by getimagesize() on the file.
+        $localUrl = strpos($src, "\$imageMimetype = \$imagesize['mime'];");
+        foreach ([$stored, $dbBlob, $uploadFile, $decoded, $localUrl] as $position) {
+            $this->assertNotFalse($position);
+        }
+        $this->assertLessThan($dbBlob, $stored);
+        $this->assertLessThan($decoded, $dbBlob);
+        $this->assertLessThan($decoded, $uploadFile);
+        // The original is sent with the decoded type, and that header is followed by nosniff.
         $served = strpos($src, 'doConditionalGet($etag, $last_modified_string); header("Content-type: {$imageMimetype}"); header(\'X-Content-Type-Options: nosniff\');');
         $this->assertNotFalse($served);
-        $this->assertLessThan($db, $stored);
-        $this->assertLessThan($file, $stored);
-        $this->assertLessThan($served, max($db, $file));
+        $this->assertLessThan($served, max($decoded, $localUrl));
+        // A cached edited image is sent with the type it was encoded as (a GIF
+        // is cached as PNG), decoded from the cached bytes for older entries.
+        $this->assertStringContainsString("\$cached_image['image_mimetype'] = \$imageMimetype;", $src);
+        $this->assertStringContainsString("\$cachedMimetype = \$cached_image['image_mimetype'] ?? null;", $src);
+        $this->assertStringContainsString('header("Content-type: {$cachedMimetype}");', $src);
     }
 
     #[Test]
@@ -223,7 +234,8 @@ final class ControllerHardeningContractTest extends TestCase
     public function prefixManagerNeverDropsWorkingTables(): void
     {
         $src  = self::src('xoops_lib/modules/protector/admin/prefix_manager.php');
-        $this->assertStringContainsString('if (0 === strcasecmp($prefix, XOOPS_DB_PREFIX)) {', $src);
+        // Compared as the server compares names: with lower_case_table_names 0, XOOPS is not xoops.
+        $this->assertStringContainsString('if ($fold($prefix) === $fold(XOOPS_DB_PREFIX)) {', $src);
         $this->assertStringContainsString("\$result = \$db->query('SELECT @@lower_case_table_names');", $src);
         // Only a readable 0 compares case-sensitively; 1, 2 and an unreadable setting fold case (skips more).
         $this->assertStringContainsString("\$fold = (false !== \$row && 0 === (int) \$row[0]) ? 'strval' : 'strtolower';", $src);

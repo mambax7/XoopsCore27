@@ -402,7 +402,14 @@ $edited_image_filename = 'editedimage_' . md5($_SERVER['REQUEST_URI']) . '_' . $
 $cached_image = XoopsCache::read($edited_image_filename);
 if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET') && !empty($cached_image)
     && ($cached_image['cached_time'] >= $imageCreatedTime)) {
-    header("Content-type: {$imageMimetype}");
+    // The cached bytes carry the type they were encoded as (a GIF is cached as
+    // PNG); an entry written before that was stored is decoded.
+    $cachedMimetype = $cached_image['image_mimetype'] ?? null;
+    if (!is_string($cachedMimetype) || '' === $cachedMimetype) {
+        $cachedInfo     = getimagesizefromstring((string) ($cached_image['image_data'] ?? ''));
+        $cachedMimetype = false !== $cachedInfo ? $cachedInfo['mime'] : $imageMimetype;
+    }
+    header("Content-type: {$cachedMimetype}");
     header('Content-Length: ' . strlen($cached_image['image_data']));
     echo $cached_image['image_data'];
     exit();
@@ -727,6 +734,7 @@ unset($sourceImage, $destination_image);
  */
 $cached_image['edited_image_filename'] = $edited_image_filename;
 $cached_image['image_data'] = $imageData;
+$cached_image['image_mimetype'] = $imageMimetype;
 $cached_image['cached_time'] = $imageCreatedTime;
 XoopsCache::write($edited_image_filename, $cached_image);
 

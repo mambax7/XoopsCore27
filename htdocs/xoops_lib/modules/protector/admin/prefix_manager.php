@@ -255,9 +255,8 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
-    // check if prefix is working (case-insensitively: with lower_case_table_names
-    // MySQL reports the working tables in lower case)
-    if (0 === strcasecmp($prefix, XOOPS_DB_PREFIX)) {
+    // check if prefix is working, compared as the server compares table names
+    if ($fold($prefix) === $fold(XOOPS_DB_PREFIX)) {
         die("You can't drop working tables");
     }
     if (prefixExtendsWorkingPrefix($prefix, $fold)) {
