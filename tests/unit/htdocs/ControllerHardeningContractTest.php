@@ -250,22 +250,24 @@ final class ControllerHardeningContractTest extends TestCase
     }
 
     #[Test]
-    public function prefixManagerRefusesPrefixesThatExtendTheWorkingOne(): void
+    public function prefixManagerRefusesPrefixesThatOverlapTheWorkingOne(): void
     {
         // xoops_backup under a working prefix xoops: its tables all pass the
         // working-prefix skip above, so a delete would report success and drop nothing.
+        // xoops under a working prefix xoops_test: the delete would drop every
+        // xoops_* table except the working ones. Both directions are refused.
         $src = self::src('xoops_lib/modules/protector/admin/prefix_manager.php');
         $this->assertStringContainsString(
-            "function prefixExtendsWorkingPrefix(string \$prefix, string \$fold): bool { return str_starts_with(\$fold(\$prefix . '_'), \$fold(XOOPS_DB_PREFIX . '_')); }",
+            "function prefixOverlapsWorkingPrefix(string \$prefix, string \$fold): bool { \$candidate = \$fold(\$prefix . '_'); \$working = \$fold(XOOPS_DB_PREFIX . '_'); return str_starts_with(\$candidate, \$working) || str_starts_with(\$working, \$candidate); }",
             $src
         );
-        $copyGuard = strpos($src, 'if (prefixExtendsWorkingPrefix($new_prefix, $fold)) { die(');
+        $copyGuard = strpos($src, 'if (prefixOverlapsWorkingPrefix($new_prefix, $fold)) { die(');
         $this->assertNotFalse($copyGuard);
         $this->assertLessThan(strpos($src, '$crs = $db->exec($create_sql);'), $copyGuard);
-        $deleteGuard = strpos($src, 'if (prefixExtendsWorkingPrefix($prefix, $fold)) { die(');
+        $deleteGuard = strpos($src, 'if (prefixOverlapsWorkingPrefix($prefix, $fold)) { die(');
         $this->assertNotFalse($deleteGuard);
         $this->assertLessThan(strpos($src, '$drs = $db->exec("DROP TABLE `$table`");'), $deleteGuard);
-        $this->assertStringContainsString("if (\$prefix['name'] == XOOPS_DB_PREFIX || prefixExtendsWorkingPrefix(\$prefix['name'], \$fold)) { \$del_button = '';", $src);
+        $this->assertStringContainsString("if (\$prefix['name'] == XOOPS_DB_PREFIX || prefixOverlapsWorkingPrefix(\$prefix['name'], \$fold)) { \$del_button = '';", $src);
     }
 
     #[Test]
