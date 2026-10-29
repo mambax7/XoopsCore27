@@ -59,7 +59,19 @@ final class ControllerHardeningContractTest extends TestCase
     public function commentModeIsLimitedToTheRealModes(string $file): void
     {
         // com_mode reaches links and an inline onclick handler.
-        $this->assertStringContainsString("if (!in_array(\$com_mode, ['flat', 'thread', 'nest'], true)) {", self::src($file));
+        $src   = self::src($file);
+        $guard = strpos($src, "if (!in_array(\$com_mode, ['flat', 'thread', 'nest'], true)) {");
+        $this->assertNotFalse($guard);
+        // The guard precedes the first place the value leaves the controller
+        // (a link, a template variable, or the comment form's hidden field).
+        $sinks = array_filter([
+            strpos($src, '. $com_mode'),
+            strpos($src, '$com_mode ==='),
+            strpos($src, "assign('comment_mode'"),
+            strpos($src, "path('include/comment_form.php')"),
+        ], 'is_int');
+        $this->assertNotEmpty($sinks, $file);
+        $this->assertLessThan(min($sinks), $guard, $file);
     }
 
     #[Test]
@@ -98,9 +110,20 @@ final class ControllerHardeningContractTest extends TestCase
     #[Test]
     public function originalImagesAreServedAsTheirDecodedType(): void
     {
-        $src = self::src('image.php');
-        $this->assertStringContainsString("\$imageMimetype = \$srcInfo['mime'];", $src);
-        $this->assertStringContainsString("header('X-Content-Type-Options: nosniff');", $src);
+        $src    = self::src('image.php');
+        $stored = strpos($src, "\$imageMimetype = \$image->getVar('image_mimetype');");
+        $db     = strpos($src, "\$imageMimetype = \$srcInfo['mime'];");
+        $file   = strpos($src, "\$imageMimetype = \$imagesize['mime'];");
+        $this->assertNotFalse($stored);
+        $this->assertNotFalse($db);
+        $this->assertNotFalse($file);
+        // Both storage branches replace the stored type with the decoded one
+        // before the original is sent, and that header is followed by nosniff.
+        $served = strpos($src, 'doConditionalGet($etag, $last_modified_string); header("Content-type: {$imageMimetype}"); header(\'X-Content-Type-Options: nosniff\');');
+        $this->assertNotFalse($served);
+        $this->assertLessThan($db, $stored);
+        $this->assertLessThan($file, $stored);
+        $this->assertLessThan($served, max($db, $file));
     }
 
     #[Test]
@@ -209,6 +232,25 @@ final class ControllerHardeningContractTest extends TestCase
         $drop = strpos($src, '$drs = $db->exec("DROP TABLE `$table`");');
         $this->assertNotFalse($drop);
         $this->assertLessThan($drop, $skip);
+    }
+
+    #[Test]
+    public function prefixManagerRefusesPrefixesThatExtendTheWorkingOne(): void
+    {
+        // xoops_backup under a working prefix xoops: its tables all pass the
+        // working-prefix skip above, so a delete would report success and drop nothing.
+        $src = self::src('xoops_lib/modules/protector/admin/prefix_manager.php');
+        $this->assertStringContainsString(
+            "function prefixExtendsWorkingPrefix(string \$prefix, string \$fold): bool { return str_starts_with(\$fold(\$prefix . '_'), \$fold(XOOPS_DB_PREFIX . '_')); }",
+            $src
+        );
+        $copyGuard = strpos($src, 'if (prefixExtendsWorkingPrefix($new_prefix, $fold)) { die(');
+        $this->assertNotFalse($copyGuard);
+        $this->assertLessThan(strpos($src, '$crs = $db->exec($create_sql);'), $copyGuard);
+        $deleteGuard = strpos($src, 'if (prefixExtendsWorkingPrefix($prefix, $fold)) { die(');
+        $this->assertNotFalse($deleteGuard);
+        $this->assertLessThan(strpos($src, '$drs = $db->exec("DROP TABLE `$table`");'), $deleteGuard);
+        $this->assertStringContainsString("if (\$prefix['name'] == XOOPS_DB_PREFIX || prefixExtendsWorkingPrefix(\$prefix['name'], \$fold)) { \$del_button = '';", $src);
     }
 
     #[Test]
