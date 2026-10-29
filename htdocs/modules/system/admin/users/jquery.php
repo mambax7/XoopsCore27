@@ -32,8 +32,10 @@ if (!is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin($
 // Same section rule as admin.php: System module admin rights alone do not
 // cover the Users section.
 include_once XOOPS_ROOT_PATH . '/modules/system/constants.php';
+/** @var XoopsGroupPermHandler $grouppermHandler */
+$grouppermHandler = xoops_getHandler('groupperm');
 if (!in_array(XOOPS_GROUP_ADMIN, $xoopsUser->getGroups())
-    && !xoops_getHandler('groupperm')->checkRight('system_admin', XOOPS_SYSTEM_USER, $xoopsUser->getGroups(), $xoopsModule->getVar('mid'))) {
+    && !$grouppermHandler->checkRight('system_admin', XOOPS_SYSTEM_USER, $xoopsUser->getGroups(), $xoopsModule->getVar('mid'))) {
     exit(_NOPERM);
 }
 

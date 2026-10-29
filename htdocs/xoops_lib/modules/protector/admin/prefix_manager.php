@@ -34,6 +34,7 @@ function prefixExtendsWorkingPrefix(string $prefix, string $fold): bool
 
 include XOOPS_ROOT_PATH . '/include/cp_header.php';
 include __DIR__ . '/admin_header.php';
+/** @var XoopsMySQLDatabase $db */
 $db = XoopsDatabaseFactory::getDatabaseConnection();
 
 // Table names compare without case only where the server stores them so

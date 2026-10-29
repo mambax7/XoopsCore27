@@ -73,7 +73,7 @@ switch ($op) {
         $xoBreadCrumb->addHelp(system_adminVersion('users', 'help') . '#edit');
         $xoBreadCrumb->addLink(_AM_SYSTEM_USERS_NAV_EDIT_USER);
         $xoBreadCrumb->render();
-        $target = xoops_getHandler('member')->getUser($uid);
+        $target = $member_handler->getUser($uid);
         if (is_object($target) && !system_users_mayEdit($target)) {
             xoops_error(_NOPERM);
             break;

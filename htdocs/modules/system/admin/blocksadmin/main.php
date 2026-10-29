@@ -200,6 +200,7 @@ switch ($op) {
         $xoBreadCrumb->addLink(_AM_SYSTEM_BLOCKS_ADDBLOCK);
         $xoBreadCrumb->render();
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         /** @var  SystemBlock $block */
         $block         = $block_handler->create();
@@ -227,6 +228,7 @@ switch ($op) {
 
     case 'drag':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get variable
         $block_id = Request::getInt('bid', 0);
@@ -242,6 +244,7 @@ switch ($op) {
 
     case 'order':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         if (Request::hasVar('blk', 'POST')) {
             $i = 0;
@@ -264,7 +267,7 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
-        /** @var XoopsBlockHandler $block_handler */
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         $block         = $block_handler->create();
         $blockVars = [
@@ -288,6 +291,7 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -465,6 +469,7 @@ switch ($op) {
 
     case 'edit':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -529,6 +534,7 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -574,6 +580,7 @@ switch ($op) {
 
     case 'clone':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
