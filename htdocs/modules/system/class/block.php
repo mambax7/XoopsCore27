@@ -319,7 +319,7 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
     /**
      * @param XoopsObject|SystemBlock $obj
      *
-     * @return int|bool object id on success, otherwise false
+     * @return int|false object id on success, otherwise false
      */
     public function insert(XoopsObject $obj, $force = true)
     {

@@ -41,7 +41,7 @@ $db = XoopsDatabaseFactory::getDatabaseConnection();
 // (lower_case_table_names 1 or 2); with 0, XOOPS_TEST_x is not xoops_x.
 // Unreadable setting: fold case anyway, the direction that skips more.
 $result = $db->query('SELECT @@lower_case_table_names');
-$row    = $db->isResultSet($result) ? $db->fetchRow($result) : false;
+$row    = ($db->isResultSet($result) && $result instanceof \mysqli_result) ? $db->fetchRow($result) : false;
 $fold   = (false !== $row && 0 === (int) $row[0]) ? 'strval' : 'strtolower';
 
 // COPY TABLES
@@ -65,7 +65,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
 
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
     $srs = $db->query($sql);
-    if (!$db->isResultSet($srs)) {
+    if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
         throw new RuntimeException(
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
             E_USER_ERROR,
@@ -88,7 +88,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
 
         $sql = 'SHOW CREATE TABLE ' . $old_table;
         $crs = $db->query($sql);
-        if (!$db->isResultSet($crs)) {
+        if (!$db->isResultSet($crs) || !($crs instanceof \mysqli_result)) {
             throw new RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
                 E_USER_ERROR,
@@ -136,7 +136,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     // get table list
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
     $srs = $db->query($sql);
-    if (!$db->isResultSet($srs)) {
+    if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
         throw new RuntimeException(
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
             E_USER_ERROR,
@@ -156,7 +156,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         }
         $sql = "SHOW CREATE TABLE `$table`";
         $drawCreate = $db->query($sql);
-        if (!$db->isResultSet($drawCreate)) {
+        if (!$db->isResultSet($drawCreate) || !($drawCreate instanceof \mysqli_result)) {
             throw new RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
                 E_USER_ERROR,
@@ -169,7 +169,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         $exportString .= "\nDROP TABLE IF EXISTS `$table`;\n{$create[1]};\n\n";
         $sql      = "SELECT * FROM `$table`";
         $result = $db->query($sql);
-        if (!$db->isResultSet($result)) {
+        if (!$db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
                 E_USER_ERROR,
@@ -231,7 +231,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         }
 
         $exportString .= $insertValues;
-        if ($db->isResultSet($result)) {
+        if ($db->isResultSet($result) && $result instanceof \mysqli_result) {
             $db->freeRecordSet($result);
         }
     }
@@ -266,7 +266,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
 
     // check if prefix_xoopscomments exists
     $check_rs = $db->query("SELECT 1 FROM `{$prefix}_xoopscomments` LIMIT 1");
-    if (!$check_rs) {
+    if (!$db->isResultSet($check_rs) || !($check_rs instanceof \mysqli_result)) {
         die('This is not a prefix for XOOPS');
     }
     $db->freeRecordSet($check_rs);
@@ -274,7 +274,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     // get table list
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
     $srs = $db->query($sql);
-    if (!$db->isResultSet($srs)) {
+    if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
         throw new RuntimeException(
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
             E_USER_ERROR,
@@ -310,7 +310,7 @@ include __DIR__ . '/mymenu.php';
 // query
 $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
 $srs = $db->query($sql);
-if (!$db->isResultSet($srs)) {
+if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
     throw new RuntimeException(
         \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
         E_USER_ERROR,

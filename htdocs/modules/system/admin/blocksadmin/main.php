@@ -269,7 +269,8 @@ switch ($op) {
         // Initialize blocks handler
         /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
-        $block         = $block_handler->create();
+        /** @var SystemBlock $block */
+        $block = $block_handler->create();
         $blockVars = [
             'title'      => Request::getString('title', '', 'POST'),
             'side'       => Request::getInt('side', 0, 'POST'),
