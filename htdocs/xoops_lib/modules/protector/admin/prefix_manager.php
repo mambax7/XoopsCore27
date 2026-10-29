@@ -19,17 +19,21 @@ function validatePrefix(string $raw): string
 }
 
 /**
- * Tables of a prefix that extends the working one (xoops_backup while the site
- * runs on xoops) cannot be told apart from working tables by name: a module
+ * Tables of a prefix that extends the working one, or that the working one
+ * extends (xoops_backup while the site runs on xoops, or xoops while it runs
+ * on xoops_test), cannot be told apart from working tables by name: a module
  * table backup_items under xoops is also items under xoops_backup. Such a
  * prefix is neither created nor dropped here.
  *
  * @param string $prefix candidate prefix
  * @param string $fold   'strval' or 'strtolower', as the server compares names
  */
-function prefixExtendsWorkingPrefix(string $prefix, string $fold): bool
+function prefixOverlapsWorkingPrefix(string $prefix, string $fold): bool
 {
-    return str_starts_with($fold($prefix . '_'), $fold(XOOPS_DB_PREFIX . '_'));
+    $candidate = $fold($prefix . '_');
+    $working   = $fold(XOOPS_DB_PREFIX . '_');
+
+    return str_starts_with($candidate, $working) || str_starts_with($working, $candidate);
 }
 
 include XOOPS_ROOT_PATH . '/include/cp_header.php';
@@ -59,8 +63,8 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     }
 
     $new_prefix = empty($new_prefix) ? 'x' . substr(bin2hex(random_bytes(4)), -5) : $new_prefix;
-    if (prefixExtendsWorkingPrefix($new_prefix, $fold)) {
-        die("A prefix starting with the working prefix '" . htmlspecialchars(XOOPS_DB_PREFIX, ENT_QUOTES | ENT_HTML5) . "_' cannot be created here: its tables could not be deleted again");
+    if (prefixOverlapsWorkingPrefix($new_prefix, $fold)) {
+        die("A prefix that overlaps the working prefix '" . htmlspecialchars(XOOPS_DB_PREFIX, ENT_QUOTES | ENT_HTML5) . "' cannot be created here: its tables could not be deleted again");
     }
 
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
@@ -260,7 +264,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     if ($fold($prefix) === $fold(XOOPS_DB_PREFIX)) {
         die("You can't drop working tables");
     }
-    if (prefixExtendsWorkingPrefix($prefix, $fold)) {
+    if (prefixOverlapsWorkingPrefix($prefix, $fold)) {
         die("Tables of the prefix '" . htmlspecialchars($prefix, ENT_QUOTES | ENT_HTML5) . "' cannot be told apart from the working tables by name: drop them manually");
     }
 
@@ -370,7 +374,7 @@ foreach ($prefixes as $prefix) {
     $prefix4disp  = htmlspecialchars($prefix['name'], ENT_QUOTES | ENT_HTML5);
     $ticket_input = $GLOBALS['xoopsSecurity']->getTokenHTML();
 
-    if ($prefix['name'] == XOOPS_DB_PREFIX || prefixExtendsWorkingPrefix($prefix['name'], $fold)) {
+    if ($prefix['name'] == XOOPS_DB_PREFIX || prefixOverlapsWorkingPrefix($prefix['name'], $fold)) {
         $del_button   = '';
         $style_append = 'background-color:#FFFFFF';
     } else {

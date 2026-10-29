@@ -71,13 +71,13 @@ final class BlockDeletionRefusalTest extends TestCase
         };
     }
 
-    private function block(string $type): \XoopsBlock
+    private function block(string $type, string $showFunc = 'b_news_show'): \XoopsBlock
     {
         $block = new \XoopsBlock();
         $block->setVar('block_type', $type);
         $block->setVar('mid', 3);
         $block->setVar('func_num', 2);
-        $block->setVar('show_func', 'b_news_show');
+        $block->setVar('show_func', $showFunc);
 
         return $block;
     }
@@ -95,6 +95,14 @@ final class BlockDeletionRefusalTest extends TestCase
         $handler = $this->handler(2);
         $this->assertNull($handler->deletionRefusal($this->block('M')));
         $this->assertMatchesRegularExpression('/block_type`?\s*=\s*\'M\'/', $handler->asked, 'custom copies are not counted');
+    }
+
+    #[Test]
+    public function anEmptyShowFuncIsStillCompared(): void
+    {
+        $handler = $this->handler(2);
+        $this->assertNull($handler->deletionRefusal($this->block('M', '')));
+        $this->assertMatchesRegularExpression('/show_func`?\s*=\s*\'\'/', $handler->asked, 'an empty show_func must not drop out of the count');
     }
 
     #[Test]
