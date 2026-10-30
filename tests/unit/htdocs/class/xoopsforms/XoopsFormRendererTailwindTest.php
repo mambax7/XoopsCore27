@@ -150,6 +150,26 @@ class XoopsFormRendererTailwindTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;', $html);
     }
 
+    public function testRenderFormCheckBoxKeepsImageLabelsEscaped(): void
+    {
+        xoops_load('XoopsFormCheckBox');
+        $element = new \XoopsFormCheckBox('Caption', 'icon', '1');
+        $element->addOption('1', '<img src="https://example.org/pixel.gif" alt="Icon">');
+        $html = $this->renderer->renderFormCheckBox($element);
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringContainsString('&lt;img', $html);
+    }
+
+    public function testRenderFormRadioPreservesTextAroundImage(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Caption', 'icon', '1');
+        $element->addOption('1', 'Before & <img src="/icon.gif" alt="Icon"> Urgent <script>alert(1)</script>');
+        $html = $this->renderer->renderFormRadio($element);
+        $this->assertStringContainsString('Before &amp; <img src="/icon.gif" alt="Icon"> Urgent ', $html);
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
     public function testRenderFormRadioKeepsSafeImageLabel(): void
     {
         xoops_load('XoopsFormRadio');

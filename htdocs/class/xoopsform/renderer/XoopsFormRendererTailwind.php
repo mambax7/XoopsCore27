@@ -337,7 +337,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
                 . self::ATTR_TITLE_LEAD . $this->esc(strip_tags((string) $name)) . '"'
                 . self::ATTR_VALUE . $this->esc($value) . '"'
                 . $checked . $extra . '>'
-                . '<span class="label-text">' . $this->renderOptionLabel((string) $name) . $delimiter . '</span>'
+                . '<span class="label-text">' . ($type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name)) . $delimiter . '</span>'
                 . '</label>';
         }
         $ret .= '</div>';
@@ -367,14 +367,23 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
      */
     protected function renderOptionLabel(string $label): string
     {
-        if (stripos(ltrim($label), '<img ') === 0) {
+        if (stripos($label, '<img ') !== false) {
             $document = new \DOMDocument();
             if ($document->loadHTML('<?xml encoding="UTF-8">' . $label, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING)) {
                 $image = $document->getElementsByTagName('img')->item(0);
                 if ($image instanceof \DOMElement) {
                     $src = $image->getAttribute('src');
                     if (str_starts_with($src, '/') || preg_match('~^https?://~i', $src)) {
-                        return '<img src="' . $this->esc($src) . '" alt="' . $this->esc($image->getAttribute('alt')) . '">';
+                        $rendered = '';
+                        foreach ($image->parentNode->childNodes as $node) {
+                            if ($node === $image) {
+                                $rendered .= '<img src="' . $this->esc($src) . '" alt="' . $this->esc($image->getAttribute('alt')) . '">';
+                            } elseif ($node instanceof \DOMText) {
+                                $rendered .= $this->esc($node->nodeValue);
+                            }
+                        }
+
+                        return $rendered;
                     }
                 }
             }

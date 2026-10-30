@@ -39,6 +39,18 @@ const field = execFileSync('php', [path.join(__dirname, 'fixtures/editor-sizing.
                 + '<tr><td>Icons</td><td style="white-space:nowrap">' + '<div class="form-check form-check-inline"><input type="radio" name="icon"><label class="form-check-label"><img src="http://xoops.test/test-image.svg" width="16" height="16"></label></div>'.repeat(7) + '</td></tr>'
                 + '<tr><td>Options</td><td style="white-space:nowrap">' + '<label>Option <input type="checkbox"></label> '.repeat(10) + '</td></tr>'
                 + '<tr><td>Message</td><td style="white-space:nowrap">' + field + '</td></tr></table></form></main>');
+            await page.evaluate(() => {
+                const table = document.createElement('table');
+                table.id = 'unrelated-table';
+                table.innerHTML = '<tbody><tr><td style="white-space:nowrap">Other</td><td>Table</td></tr></tbody>';
+                document.querySelector('form').appendChild(table);
+            });
+            const unrelated = await page.evaluate(() => {
+                const table = document.getElementById('unrelated-table');
+                return { layout: getComputedStyle(table).tableLayout, whiteSpace: getComputedStyle(table.rows[0].cells[0]).whiteSpace };
+            });
+            assert.equal(unrelated.layout, 'auto', `${theme}: unrelated tables keep auto layout`);
+            assert.equal(unrelated.whiteSpace, 'nowrap', `${theme}: unrelated table cell wrapping is unchanged`);
             const fits = () => page.evaluate(() => {
                 const column = document.getElementById('column').getBoundingClientRect();
                 return [...document.querySelectorAll('form, form > table, #message, .sceditor-container')]

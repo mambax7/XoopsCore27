@@ -19,17 +19,17 @@ form:has(.xoops-editor) {
 }
 
 /* Auto-layout tables otherwise size the entire form from a toolbar or a nowrap row. */
-form:has(.xoops-editor) > table {
+form > table:has(.xoops-editor) {
     table-layout: fixed;
     inline-size: 100%;
 }
 
-form:has(.xoops-editor) > table > tbody > tr > :is(td, th) {
+form > table:has(.xoops-editor) > tbody > tr > :is(td, th) {
     white-space: normal !important;
     overflow-wrap: anywhere;
 }
 
-form:has(.xoops-editor) > table > tbody > tr > :is(td, th):first-child:not(:last-child):not([colspan]) {
+form > table:has(.xoops-editor) > tbody > tr > :is(td, th):first-child:not(:last-child):not([colspan]) {
     inline-size: 20%;
 }
 
