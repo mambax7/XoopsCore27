@@ -330,14 +330,25 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             ++$idSuffix;
             $checked = $this->isOptionChecked($value, $elementValue) ? ' checked' : '';
             $inputId = $this->esc($elementId . $idSuffix);
+            $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name);
+            $ariaLabel = '';
+            if ($type === 'radio' && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
+                $attributes = new \DOMDocument();
+                $attributes->loadHTML('<input' . $extra . '>', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+                $input = $attributes->getElementsByTagName('input')->item(0);
+                if ($input instanceof \DOMElement && !$input->hasAttribute('aria-label') && !$input->hasAttribute('aria-labelledby')) {
+                    $caption = trim(strip_tags((string) $element->getCaption()));
+                    $ariaLabel = ' aria-label="' . $this->esc(($caption !== '' ? $caption . ': ' : '') . (string) $value) . '"';
+                }
+            }
             $ret .= '<label class="' . $labelCls . '">'
                 . '<input class="' . $type . ' ' . $type . '-primary" type="' . $type . '"'
                 . self::ATTR_NAME . $this->esc($elementName) . '"'
                 . ' id="' . $inputId . '"'
                 . self::ATTR_TITLE_LEAD . $this->esc(strip_tags((string) $name)) . '"'
                 . self::ATTR_VALUE . $this->esc($value) . '"'
-                . $checked . $extra . '>'
-                . '<span class="label-text">' . $this->esc((string) $name) . $delimiter . '</span>'
+                . $checked . $ariaLabel . $extra . '>'
+                . '<span class="label-text">' . $labelHtml . $delimiter . '</span>'
                 . '</label>';
         }
         $ret .= '</div>';
@@ -360,6 +371,36 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
         }
 
         return (string) $optionValue === (string) $current;
+    }
+
+    /**
+     * Keep message icons without allowing arbitrary markup or image event handlers in option labels.
+     */
+    protected function renderOptionLabel(string $label): string
+    {
+        if (stripos($label, '<img ') !== false) {
+            $document = new \DOMDocument();
+            if ($document->loadHTML('<?xml encoding="UTF-8">' . $label, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING)) {
+                $image = $document->getElementsByTagName('img')->item(0);
+                if ($image instanceof \DOMElement) {
+                    $src = $image->getAttribute('src');
+                    if (str_starts_with($src, '/') || preg_match('~^https?://~i', $src)) {
+                        $rendered = '';
+                        foreach ($image->parentNode->childNodes as $node) {
+                            if ($node === $image) {
+                                $rendered .= '<img src="' . $this->esc($src) . '" alt="' . $this->esc($image->getAttribute('alt')) . '">';
+                            } elseif ($node instanceof \DOMText) {
+                                $rendered .= $this->esc($node->nodeValue);
+                            }
+                        }
+
+                        return $rendered;
+                    }
+                }
+            }
+        }
+
+        return $this->esc($label);
     }
 
     /**

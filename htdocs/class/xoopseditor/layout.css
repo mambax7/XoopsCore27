@@ -1,0 +1,47 @@
+/* Shared editor layout: themes supply appearance; the owning form supplies width. */
+.xoops-editor {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    contain: inline-size;
+}
+
+.xoops-editor > :is(textarea, .sceditor-container, .tox-tinymce, .mce-tinymce, .EasyMDEContainer) {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+}
+
+form:has(.xoops-editor) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+}
+
+/* Auto-layout tables otherwise size the entire form from a toolbar or a nowrap row. */
+form > table:has(.xoops-editor) {
+    table-layout: fixed;
+    inline-size: 100%;
+}
+
+form > table:has(.xoops-editor) > tbody > tr > :is(td, th) {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+}
+
+form > table:has(.xoops-editor) > tbody > tr > :is(td, th):first-child:not(:last-child):not([colspan]) {
+    inline-size: 20%;
+}
+
+form:has(.xoops-editor) :is(input, select, textarea) {
+    box-sizing: border-box;
+    max-inline-size: 100%;
+}
+
+form:has(.xoops-editor) .form-check-inline {
+    display: inline-flex;
+    align-items: center;
+    inline-size: auto;
+    max-inline-size: 100%;
+    gap: .35em;
+}

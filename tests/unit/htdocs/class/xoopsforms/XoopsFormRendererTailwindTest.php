@@ -150,6 +150,97 @@ class XoopsFormRendererTailwindTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;', $html);
     }
 
+    public function testRenderFormCheckBoxKeepsImageLabelsEscaped(): void
+    {
+        xoops_load('XoopsFormCheckBox');
+        $element = new \XoopsFormCheckBox('Caption', 'icon', '1');
+        $element->addOption('1', '<img src="https://example.org/pixel.gif" alt="Icon">');
+        $html = $this->renderer->renderFormCheckBox($element);
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringContainsString('&lt;img', $html);
+    }
+
+    public function testRenderFormRadioPreservesTextAroundImage(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Caption', 'icon', '1');
+        $element->addOption('1', 'Before & <img src="/icon.gif" alt="Icon"> Urgent <script>alert(1)</script>');
+        $html = $this->renderer->renderFormRadio($element);
+        $this->assertStringContainsString('Before &amp; <img src="/icon.gif" alt="Icon"> Urgent ', $html);
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function testImageOnlyRadioPreservesExplicitAccessibleNames(): void
+    {
+        xoops_load('XoopsFormRadio');
+        foreach (['aria-label="Descriptive name"', 'aria-labelledby="icon-description"'] as $extra) {
+            $element = new \XoopsFormRadio('Message Icon', 'icon', 'icon1.gif');
+            $element->addOption('icon1.gif', '<img src="/icon1.gif" alt="">');
+            $element->setExtra($extra);
+            $html = $this->renderer->renderFormRadio($element);
+            $this->assertStringContainsString($extra, $html);
+            $this->assertStringNotContainsString('aria-label="Message Icon: icon1.gif"', $html);
+        }
+    }
+
+    public function testImageOnlyRadioIgnoresAriaTextInsideOtherAttributes(): void
+    {
+        xoops_load('XoopsFormRadio');
+        foreach (['data-tooltip="Use aria-label=icon"', "title='Mention aria-labelledby=icon'"] as $extra) {
+            $element = new \XoopsFormRadio('Message Icon', 'icon', 'icon1.gif');
+            $element->addOption('icon1.gif', '<img src="/icon1.gif" alt="">');
+            $element->setExtra($extra);
+            $html = $this->renderer->renderFormRadio($element);
+            $this->assertStringContainsString('aria-label="Message Icon: icon1.gif"', $html);
+        }
+    }
+
+    public function testImageOnlyRadioOptionsHaveDistinctAccessibleNames(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Message Icon', 'icon', 'icon1.gif');
+        $element->addOption('icon1.gif', '<img src="/icon1.gif" alt="">');
+        $element->addOption('icon2.gif', '<img src="/icon2.gif" alt="">');
+        $html = $this->renderer->renderFormRadio($element);
+        $this->assertStringContainsString('aria-label="Message Icon: icon1.gif"', $html);
+        $this->assertStringContainsString('aria-label="Message Icon: icon2.gif"', $html);
+    }
+
+    public function testRenderFormRadioKeepsSafeImageLabel(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Caption', 'icon', '1');
+        $element->addOption('1', '<img src="/images/subject/icon1.gif" alt="Message">');
+        $html = $this->renderer->renderFormRadio($element);
+
+        $this->assertStringContainsString('<img src="/images/subject/icon1.gif" alt="Message">', $html);
+    }
+
+    public function testRenderFormRadioDropsImageHandlersAndExtraMarkup(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Caption', 'icon', '1');
+        $element->addOption('1', '<img src="https://example.org/icon.gif" alt="Message" onerror="alert(1)"><script>alert(2)</script>');
+        $html = $this->renderer->renderFormRadio($element);
+
+        $this->assertStringContainsString('<img src="https://example.org/icon.gif" alt="Message">', $html);
+        $this->assertStringNotContainsString('onerror=', $html);
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function testRenderFormRadioEscapesUnsafeImageSources(): void
+    {
+        xoops_load('XoopsFormRadio');
+        foreach (['javascript:alert(1)', 'java&#x73;cript:alert(1)', 'data:image/svg+xml,payload'] as $src) {
+            $element = new \XoopsFormRadio('Caption', 'icon', '1');
+            $element->addOption('1', '<img src="' . $src . '" alt="Message">');
+            $html = $this->renderer->renderFormRadio($element);
+
+            $this->assertStringNotContainsString('<img', $html);
+            $this->assertStringContainsString('&lt;img', $html);
+        }
+    }
+
     public function testRenderThemeFormDoesNotThrowOnFormExtras(): void
     {
         xoops_load('XoopsThemeForm');

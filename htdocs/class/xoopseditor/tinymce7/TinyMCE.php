@@ -112,6 +112,11 @@ class TinyMCE
 
 		// 4. Merge any remaining constructor configs that were not explicitly handled
 		$this->setting = array_merge($this->setting, $this->config);
+
+        $contentCss = $this->setting['content_css'] ?? [];
+        $contentCss = is_array($contentCss) ? $contentCss : ($contentCss === '' ? [] : explode(',', $contentCss));
+        $contentCss[] = XOOPS_URL . '/class/xoopseditor/content.css?v=' . (int) filemtime(__DIR__ . '/../content.css');
+        $this->setting['content_css'] = $contentCss;
 	}
 
 	/**

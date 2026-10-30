@@ -1,0 +1,5 @@
+/* Preview sizing only: keep the stored image dimensions and let smaller frames fit them. */
+img {
+    max-width: 100% !important;
+    height: auto !important;
+}

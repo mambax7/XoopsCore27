@@ -3,6 +3,16 @@
  * famfamfam sprite has no tile for them, and its fallback position 0 0 is the
  * YouTube icon — so without these rules all three looked like YouTube.
  */
+/* Form layouts can inherit nowrap; let toolbar groups flow onto additional rows. */
+.sceditor-container div.sceditor-toolbar {
+    white-space: normal;
+}
+
+/* Source text must not inherit the toolbar container's bold weight. */
+.sceditor-container textarea {
+    font-weight: 400;
+}
+
 .sceditor-button-siteurl div,
 .sceditor-button-wikipage div,
 .sceditor-button-mp3 div {
