@@ -332,7 +332,9 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             $inputId = $this->esc($elementId . $idSuffix);
             $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name);
             $ariaLabel = '';
-            if ($type === 'radio' && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
+            if ($type === 'radio'
+                && !preg_match('~(?:^|\s)aria-(?:label|labelledby)\s*=~i', $extra)
+                && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
                 $caption = trim(strip_tags((string) $element->getCaption()));
                 $ariaLabel = ' aria-label="' . $this->esc(($caption !== '' ? $caption . ': ' : '') . (string) $value) . '"';
             }
