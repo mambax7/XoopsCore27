@@ -742,7 +742,10 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
             $this->db->quote(trim((string) $block->getVar('show_func')))
         );
 
-        return $this->db->exec($sql) && 1 === $this->db->getAffectedRows();
+        /** @var XoopsMySQLDatabase $db */
+        $db = $this->db;
+
+        return $db->exec($sql) && 1 === $db->getAffectedRows();
     }
 
     /**
