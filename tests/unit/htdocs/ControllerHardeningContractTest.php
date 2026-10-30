@@ -324,6 +324,9 @@ final class ControllerHardeningContractTest extends TestCase
         $tail = substr($src, (int) strpos($src, '$myts->displayTarea('));
         $this->assertStringContainsString('$myts->displayTarea(', $src);
         $this->assertDoesNotMatchRegularExpression('/(raw)?urldecode\(/', $src);
-        $this->assertStringNotContainsString('html_entity_decode(', $tail);
+        $this->assertDoesNotMatchRegularExpression(
+            '/html_entity_decode\(|htmlspecialchars_decode\(|undoHtmlSpecialChars\(/',
+            $tail
+        );
     }
 }
