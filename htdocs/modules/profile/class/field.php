@@ -690,4 +690,17 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
             'user_mailok',
         ];
     }
+
+    /**
+     * Account columns a member never sets through a profile field: identity,
+     * credentials, standing and counters. Registration and the member's own
+     * edit form skip a field with one of these names, whatever its edit
+     * permission, and set the columns that need a value themselves.
+     *
+     * @return string[]
+     */
+    public function getProtectedUserVars(): array
+    {
+        return ['uid', 'uname', 'email', 'pass', 'level', 'rank', 'posts', 'actkey', 'user_regdate', 'last_login'];
+    }
 }

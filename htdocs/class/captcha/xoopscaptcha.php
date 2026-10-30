@@ -227,8 +227,8 @@ class XoopsCaptcha
             // Skip CAPTCHA for member if set
         } elseif (!empty($skipMember) && is_object($GLOBALS['xoopsUser'])) {
             $is_valid = true;
-            // Kill too many attempts
-        } elseif (!empty($maxAttempts) && $attempt > $maxAttempts) {
+            // Kill too many attempts: $attempt counts failures so far
+        } elseif (!empty($maxAttempts) && $attempt >= $maxAttempts) {
             $this->message[] = _CAPTCHA_TOOMANYATTEMPTS;
             // Verify the code
         } else {
@@ -312,7 +312,7 @@ class XoopsCaptcha
         $_SESSION[$this->name . '_attempt']     = $attempt;
 
         // Failure on too many attempts
-        if (!empty($maxAttempts) && $attempt > $maxAttempts) {
+        if (!empty($maxAttempts) && $attempt >= $maxAttempts) {
             $form = _CAPTCHA_TOOMANYATTEMPTS;
             // Load the form element
         } else {

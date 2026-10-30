@@ -107,6 +107,8 @@ $profile_handler = xoops_getModuleHandler('profile');
 
 $fields     = $profile_handler->loadFields();
 $userfields = $profile_handler->getUserVars();
+// Never written through a profile field: neither a default nor a posted value.
+$protected  = $profile_handler->_fHandler->getProtectedUserVars();
 
 if ($uid == 0) {
     // No user yet? Create one and set default values.
@@ -115,7 +117,7 @@ if ($uid == 0) {
     if (count($fields) > 0) {
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
-            if (in_array($fieldname, $userfields)) {
+            if (in_array($fieldname, $userfields) && !in_array($fieldname, $protected, true)) {
                 $default = $fields[$i]->getVar('field_default');
                 if ($default === '' || $default === null) {
                     continue;
@@ -166,7 +168,7 @@ if ($current_step == 0) {
 
 // Set vars from $_POST/$_SESSION['profile_post']
 foreach (array_keys($fields) as $field) {
-    if (!Request::hasVar($field, 'POST')) {
+    if (!Request::hasVar($field, 'POST') || in_array($field, $protected, true)) {
         continue;
     }
 

@@ -793,11 +793,8 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
 {
     global $xoopsConfig, $xoopsLogger, $xoopsUserIsAdmin;
 
-    $xoopsPreload = XoopsPreload::getInstance();
-    $xoopsPreload->triggerEvent('core.include.functions.redirectheader.start', [$url, $time, $message, $addredirect, $allowExternalLink]);
-    // under normal circumstance this event will exit, so listen for the .start above
-    $xoopsPreload->triggerEvent('core.include.functions.redirectheader', [$url, $time, $message, $addredirect, $allowExternalLink]);
-
+    // Check the target before any preload sees it: the System preload sends the
+    // Location header itself and exits when redirect_message_ajax is on.
     if (preg_match('/[\x00-\x1F\x7F]|about:|script:/i', $url)) {
         if (!preg_match('/^\b(java)?script:([\s]*)history\.go\(-\d*\)([\s]*[;]*[\s]*)$/si', $url)) {
             $url = XOOPS_URL;
@@ -818,6 +815,12 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
             $url = XOOPS_URL;
         }
     }
+
+    $xoopsPreload = XoopsPreload::getInstance();
+    $xoopsPreload->triggerEvent('core.include.functions.redirectheader.start', [$url, $time, $message, $addredirect, $allowExternalLink]);
+    // under normal circumstance this event will exit, so listen for the .start above
+    $xoopsPreload->triggerEvent('core.include.functions.redirectheader', [$url, $time, $message, $addredirect, $allowExternalLink]);
+
     if (defined('XOOPS_CPFUNC_LOADED')) {
         $theme = 'default';
     } else {

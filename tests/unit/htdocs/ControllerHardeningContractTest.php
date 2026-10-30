@@ -329,4 +329,96 @@ final class ControllerHardeningContractTest extends TestCase
             $tail
         );
     }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function profileWritePaths(): array
+    {
+        return [
+            'own edit'     => ['modules/profile/edituser.php', 'if (in_array($fieldname, $protected, true)) { continue; }'],
+            'registration' => ['modules/profile/register.php', "if (!Request::hasVar(\$field, 'POST') || in_array(\$field, \$protected, true)) { continue; }"],
+            'reg defaults' => ['modules/profile/register.php', "if (in_array(\$fieldname, \$userfields) && !in_array(\$fieldname, \$protected, true)) {"],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('profileWritePaths')]
+    public function profileFieldsNeverWriteProtectedAccountColumns(string $file, string $skip): void
+    {
+        // A field named rank, posts, level or pass maps onto the user row.
+        $src = self::src($file);
+        $this->assertStringContainsString('$protected = $profile_handler->_fHandler->getProtectedUserVars();', $src);
+        $this->assertStringContainsString($skip, $src);
+        // The only exemption anywhere is a webmaster's own rank.
+        $this->assertDoesNotMatchRegularExpression('/\$protected = [^;]*\? \[\]/', $src);
+        $this->assertSame(substr_count($src, 'array_diff($protected'), substr_count($src, "array_diff(\$protected, ['rank'])"));
+    }
+
+    #[Test]
+    public function sectionTogglesNeedThatSectionsRight(): void
+    {
+        $src    = self::src('modules/system/admin.php');
+        $toggle = (int) strpos($src, "\$op === 'system_activate'");
+        $write  = (int) strpos($src, '$config_handler->insertConfig($conf)');
+        $right  = strpos($src, "checkRight('system_admin', \$category, \$group, \$xoopsModule->getVar('mid'))", $toggle);
+        $this->assertStringContainsString("if (!preg_match('/^[a-z0-9_]+\\z/', \$part) || !is_file(\$sectionFile)) {", $src);
+        $this->assertNotFalse($right);
+        $this->assertGreaterThan($toggle, $right);
+        $this->assertLessThan($write, $right);
+    }
+
+    #[Test]
+    public function theUserPickerMatchesOnlyPublicAddresses(): void
+    {
+        $src = self::src('include/findusers.php');
+        $this->assertStringContainsString(
+            "if (!\$xoopsUser->isAdmin() && ('' !== trim(Request::getString('email', '', 'POST')) || 'email' === Request::getString('user_sort', '', 'POST'))) { \$criteria->add(new Criteria('user_viewemail', 1)); }",
+            $src
+        );
+        // Before the count and the result query use the criteria.
+        $this->assertLessThan(
+            (int) strpos($src, '$total = $user_handler->getCount($criteria'),
+            (int) strpos($src, "new Criteria('user_viewemail', 1)")
+        );
+    }
+
+    #[Test]
+    public function aLoginPostIsCountedAgainstItsOwnName(): void
+    {
+        // An autologin_uname cookie (e.g. "deleted") must not replace or skip
+        // the posted name in the brute-force count.
+        $src = self::src('xoops_lib/modules/protector/class/protector.php');
+        $this->assertStringContainsString(
+            "\$victim_uname = \\Xmf\\Request::getString('uname', '', 'POST'); if ('' === \$victim_uname) {",
+            $src
+        );
+        $this->assertStringNotContainsString("empty(\$_COOKIE['autologin_uname']) ? \$_POST['uname']", $src);
+        // The caller must not skip the count for the password "0".
+        $this->assertStringContainsString(
+            "if (('' !== \$uname && '' !== \$pass) || ('' !== \$autologin_uname && '' !== \$autologin_pass)) {",
+            self::src('xoops_lib/modules/protector/include/postcheck_functions.php')
+        );
+    }
+
+    #[Test]
+    public function captchaAttemptsStopAtTheLimit(): void
+    {
+        $src = self::src('class/captcha/xoopscaptcha.php');
+        $this->assertSame(2, substr_count($src, '$attempt >= $maxAttempts'));
+        $this->assertStringNotContainsString('$attempt > $maxAttempts', $src);
+    }
+
+    #[Test]
+    public function redirectTargetsAreCheckedBeforeAnyPreload(): void
+    {
+        // The System preload sends Location itself when redirect_message_ajax is on.
+        $src     = self::src('include/functions.php');
+        $start   = (int) strpos($src, 'function redirect_header(');
+        $local   = strpos($src, '!xoops_isLocalUrl($url)', $start);
+        $preload = strpos($src, "triggerEvent('core.include.functions.redirectheader.start'", $start);
+        $this->assertNotFalse($local);
+        $this->assertNotFalse($preload);
+        $this->assertLessThan($preload, $local);
+    }
 }

@@ -548,6 +548,12 @@ if (!Request::hasVar('user_submit', 'POST')) {
             }
         }
     }
+    // Matches and sort order on e-mail must not reveal an address its owner
+    // hides: anyone but an administrator only reaches public addresses.
+    if (!$xoopsUser->isAdmin()
+        && ('' !== trim(Request::getString('email', '', 'POST')) || 'email' === Request::getString('user_sort', '', 'POST'))) {
+        $criteria->add(new Criteria('user_viewemail', 1));
+    }
     if (Request::hasVar('url', 'POST')) {
         $url = formatURL(trim(Request::getUrl('url', '', 'POST')));
         $criteria->add(new Criteria('url', $url . '%', 'LIKE'));

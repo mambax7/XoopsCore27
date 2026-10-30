@@ -413,4 +413,23 @@ class ProfileFieldTest extends TestCase
         $handler = new \ProfileFieldHandler($db);
         $this->assertCount(31, $handler->getUserVars());
     }
+
+    #[Test]
+    public function protectedUserVarsAreAccountColumnsMembersNeverSet(): void
+    {
+        $handler   = new \ProfileFieldHandler(new XoopsTestStubDatabase());
+        $protected = $handler->getProtectedUserVars();
+
+        // Every protected name is a user column, so a field with that name
+        // would write to the account rather than the profile table.
+        $this->assertSame([], array_diff($protected, $handler->getUserVars()));
+        $expected = ['uid', 'uname', 'email', 'pass', 'level', 'rank', 'posts', 'actkey', 'user_regdate', 'last_login'];
+        sort($expected);
+        sort($protected);
+        $this->assertSame($expected, $protected);
+        // The fields the installer gives members to edit stay editable.
+        foreach (['name', 'url', 'user_from', 'user_sig', 'bio', 'theme', 'user_viewemail'] as $name) {
+            $this->assertNotContains($name, $protected);
+        }
+    }
 }

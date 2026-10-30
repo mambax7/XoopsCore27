@@ -79,7 +79,25 @@ if (false !== $error) {
             http_response_code(403);
             exit('Forbidden');
         }
-        $part           = Request::getString('type', '');
+        $part = Request::getString('type', '');
+        // Only an existing System section, and only for someone allowed to
+        // administer that section.
+        $sectionFile = XOOPS_ROOT_PATH . '/modules/system/admin/' . $part . '/xoops_version.php';
+        if (!preg_match('/^[a-z0-9_]+\z/', $part) || !is_file($sectionFile)) {
+            http_response_code(403);
+            exit('Forbidden');
+        }
+        $modversion = [];
+        require $sectionFile;
+        $category = (int) ($modversion['category'] ?? 0);
+        unset($modversion);
+        $group = $xoopsUser->getGroups();
+        if ($category <= 0
+            || (!in_array(XOOPS_GROUP_ADMIN, $group)
+                && false === xoops_getHandler('groupperm')->checkRight('system_admin', $category, $group, $xoopsModule->getVar('mid')))) {
+            http_response_code(403);
+            exit('Forbidden');
+        }
         /** @var XoopsConfigHandler $config_handler */
         $config_handler = xoops_getHandler('config');
 

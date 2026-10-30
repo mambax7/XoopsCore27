@@ -1511,10 +1511,16 @@ class Protector
         $ip4sql  = $xoopsDB->quote($ip->asReadable());
         $uri4sql = $xoopsDB->quote($uri);
 
-        $victim_uname = empty($_COOKIE['autologin_uname']) ? $_POST['uname'] : $_COOKIE['autologin_uname'];
-        // some UA send 'deleted' as a value of the deleted cookie.
-        if ('deleted' === $victim_uname) {
-            return null;
+        // A password POST always counts against the name it submits; an
+        // autologin cookie (which the client controls) must not replace it.
+        // Read as postcheck_functions.php does when it decides to call this.
+        $victim_uname = \Xmf\Request::getString('uname', '', 'POST');
+        if ('' === $victim_uname) {
+            $victim_uname = \Xmf\Request::getString('autologin_uname', '', 'COOKIE');
+            // some UA send 'deleted' as a value of the deleted cookie.
+            if ('' === $victim_uname || 'deleted' === $victim_uname) {
+                return null;
+            }
         }
         $mal4sql = $xoopsDB->quote("BRUTE FORCE: $victim_uname");
 
