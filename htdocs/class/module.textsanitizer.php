@@ -327,20 +327,79 @@ class MyTextSanitizer
         // Convert line breaks and multiple spaces to a single space
         $text = preg_replace('/[\n\s]+/', ' ', $text);
 
+        // Link only text between tags. A URL inside an attribute that BBCode
+        // generated (href, src, title) must never get an anchor written into it,
+        // and the text of an existing anchor is never linked a second time.
+        // Tag names follow HTML (any name, custom elements included); a quote
+        // opens a value only after "=". A bare "<http://...>" stays text: the
+        // anchor written into it leaves "<<a", which the browser shows as text.
+        // Comments, CDATA, <!...> and <?...> are one part each and run to the end
+        // of the text when unclosed, so they never end before the browser's.
+        $bareUrl = '(?!(?:https?|s?ftp|file|custom)://[^\s<>"\']*>)';
+        $parts = preg_split(
+            '#(<!--.*?(?:-->|\z)|<!\[CDATA\[.*?(?:\]\]>|\z)|<[!?][^<>]*+(?:>|\z)|</[^a-z<>][^<>]*+(?:>|\z)'
+            . '|</?' . $bareUrl . '[a-z][^\s/<>]*+(?:[\s/](?:[^<>"\'=]|=\s*+(?:"[^"]*"|\'[^\']*\'|[^\s<>"\'][^\s<>]*+)?)*+)?>)#is',
+            $text,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE
+        );
+        if (false === $parts) {
+            return $text; // PCRE failure: leave it unlinked rather than guess
+        }
+        $inAnchor = 0;
+        $rawText  = ''; // open script/style/textarea/...: its content is not markup
+        $broken   = false;
+        foreach ($parts as $i => $part) {
+            if ($i % 2 === 1) {
+                if ($rawText !== '') {
+                    if (preg_match('#^</' . $rawText . '(?=[\s/>])#i', $part)) {
+                        $rawText = '';
+                    }
+                } elseif (preg_match('#^<(script|style|textarea|title|xmp|iframe|noembed|noframes|noscript|plaintext)(?=[\s/>])#i', $part, $m)) {
+                    $rawText = strtolower($m[1]);
+                    $broken  = $broken || 'plaintext' === $rawText; // never closes
+                } elseif (preg_match('#^<(/?)a(?=[\s/>])#i', $part, $m)) {
+                    // <a/> opens an anchor in HTML, and </a/ > closes one.
+                    $inAnchor = max(0, $inAnchor + ($m[1] === '' ? 1 : -1));
+                }
+            } elseif (!$broken && $rawText === '' && $part !== '') {
+                // A tag that did not parse (unclosed, a stray quote) may hold every
+                // later "tag" in one of its attributes, inside an anchor or not:
+                // link nothing from its "<" on.
+                $cut = preg_split('#<(?=[!?/]|' . $bareUrl . '[a-z])#i', $part, 2);
+                $broken = isset($cut[1]);
+                if ($inAnchor === 0) {
+                    $parts[$i] = $this->makeClickableText($cut[0]) . ($broken ? '<' . $cut[1] : '');
+                }
+            }
+        }
+
+        return implode('', $parts);
+    }
+
+    /**
+     * Link URLs and email addresses in a run of text that contains no tags
+     *
+     * @param string $text
+     *
+     * @return string
+     */
+    private function makeClickableText(string $text): string
+    {
         // Convert email addresses into clickable mailto links
         $pattern = "/(^|[\s\n]|<br\s*\/?>)([-_a-z0-9\'+*$^&%=~!?{}]+(?:\.[-_a-z0-9\'+*$^&%=~!?{}]+)*@[-a-z0-9.]+\.[a-z]{2,6})/i";
         $text = preg_replace_callback($pattern, [$this, 'makeClickableCallbackEmailAddress'], $text);
 
         // Convert URLs into clickable links, allowing for angle brackets, file paths, and custom protocols
-        $pattern = "/(?:\s|^|[\(\[\{>])(<)?((https?:\/\/|s?ftp:\/\/|file:\/\/|custom:\/\/|www\.)[^\s<>\(\)\[\]]+[^\s<>\(\)\[\]\.,!\"'\(\)\[\]{}<>])(?<![\.,!\"'\(\)\[\]{}])/";
+        $pattern = "/(\s|^|[\(\[\{>])(<)?((https?:\/\/|s?ftp:\/\/|file:\/\/|custom:\/\/|www\.)[^\s<>\(\)\[\]]+[^\s<>\(\)\[\]\.,!\"'\(\)\[\]{}<>])(?<![\.,!\"'\(\)\[\]{}])/";
         $text = preg_replace_callback(
             $pattern,
             function ($matches) {
                 // Decode only the matched URL token so a pre-encoded URL round-trips
                 // to a single, safely re-encoded href (&amp; stays &amp;, not &amp;amp;).
-                $url = html_entity_decode($matches[2], ENT_QUOTES, 'UTF-8');
-                $prefix = $matches[0][0] ?? ''; // Get the prefix character (space, bracket, etc.)
-                $openingBracket = $matches[1] ?? ''; // Check for the opening angle bracket
+                $url = html_entity_decode($matches[3], ENT_QUOTES, 'UTF-8');
+                $prefix = $matches[1]; // space, bracket or '' at the start of the text
+                $openingBracket = $matches[2]; // opening angle bracket, if any
 
                 // Ensure the URL is not a javascript: URL
                 if (stripos($url, 'javascript:') === 0) {
@@ -365,18 +424,13 @@ class MyTextSanitizer
                     return $matches[0];
                 }
 
-                // Check if the URL is already inside an anchor tag, specifically looking for href attribute
-                if (!preg_match('#<a\s[^>]*href\s*=\s*(["\'])' . preg_quote($url, '/') . '\\1[^>]*>#i', $url)) { // <-- Change here!
-                    $relAttr = (strpos($url, 'ftp://') === 0 || strpos($url, 'sftp://') === 0 || strpos($url, 'file://') === 0 || strpos($url, 'custom://') === 0) ? 'external' : 'external noopener nofollow';
-                    return $prefix . $openingBracket . '<a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="' . $relAttr . '">' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '</a>';
-                }
-
-                return $matches[0]; // Return the original match if it's already an anchor tag
+                $relAttr = (strpos($url, 'ftp://') === 0 || strpos($url, 'sftp://') === 0 || strpos($url, 'file://') === 0 || strpos($url, 'custom://') === 0) ? 'external' : 'external noopener nofollow';
+                return $prefix . $openingBracket . '<a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="' . $relAttr . '">' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '</a>';
             },
             $text
         );
 
-        return $text;
+        return (string) $text;
     }
 
     /**

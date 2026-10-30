@@ -22,20 +22,17 @@ $xoopsLogger->activated = false;
 $myts                   = \MyTextSanitizer::getInstance();
 
 XoopsLoad::load('XoopsRequest');
-$content = rawurldecode(XoopsRequest::getText('text', '', 'POST'));
+// PHP has already decoded the form body once; decoding again would turn
+// literal %3C...%3E text into markup.
+$content = XoopsRequest::getText('text', '', 'POST');
 
 if (!$GLOBALS['xoopsSecurity']->validateToken(XoopsRequest::getString('token', '', 'POST'), false)) {
     $content = 'Direct access is not allowed!!!';
 }
 $html    = \Xmf\Request::getInt('html', 0, 'POST') ? 1 : 0;
+// Nothing may decode the output after this: displayTarea() is the last step,
+// so its escaping is what the browser sees.
 $content = $myts->displayTarea($content, $html, 1, 1, 1, 1);
-if (preg_match_all('/%u([[:alnum:]]{4})/', $content, $matches)) {
-    foreach ($matches[1] as $uniord) {
-        $utf     = '&#x' . $uniord . ';';
-        $content = str_replace('%u' . $uniord, $utf, $content);
-    }
-    $content = urldecode($content);
-}
 
 if (!headers_sent()) {
     $charset = (defined('_CHARSET') ? _CHARSET : 'UTF-8');
