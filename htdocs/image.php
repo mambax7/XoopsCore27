@@ -220,6 +220,17 @@ function exitInvalidRequest()
 }
 
 /**
+ * Send the blank placeholder image and terminate the request.
+ */
+function exitBlankImage()
+{
+    header('Content-type: image/gif');
+    header('X-Content-Type-Options: nosniff');
+    readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
+    exit();
+}
+
+/**
  * check local image url for possible issues
  *
  * @param string $imageUrl url to local image starting at site root with a '/'
@@ -273,9 +284,7 @@ if (!empty($imageId)) {
     $images = $imageHandler->getObjects($criteria, false, true);
     if (count($images) != 1) {
         // No Xoops images or to many Xoops images
-        header('Content-type: image/gif');
-        readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
-        exit();
+        exitBlankImage();
     }
     $image = $images[0];
     // Get image category
@@ -283,9 +292,7 @@ if (!empty($imageId)) {
     $imgcatHandler = xoops_getHandler('imagecategory');
     if (!$imgcat = $imgcatHandler->get($imgcatId)) {
         // No Image category
-        header('Content-type: image/gif');
-        readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
-        exit();
+        exitBlankImage();
     }
     // Get image data
     $imageFilename = $image->getVar('image_name'); // image filename
@@ -387,9 +394,7 @@ if (!empty($imageId)) {
     }
 } else {
     // No id, no url, no src parameters
-    header('Content-type: image/gif');
-    readfile(XOOPS_ROOT_PATH . '/uploads/blank.gif');
-    exit();
+    exitBlankImage();
 }
 
 /*

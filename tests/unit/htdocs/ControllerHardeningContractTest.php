@@ -138,6 +138,12 @@ final class ControllerHardeningContractTest extends TestCase
         // image as well as the original.
         $this->assertStringContainsString('header("Content-type: {$cachedMimetype}"); header(\'X-Content-Type-Options: nosniff\');', $src);
         $this->assertStringContainsString('header("Content-type: {$imageMimetype}"); header(\'X-Content-Type-Options: nosniff\'); header("Content-disposition: filename={$imageFilename}");', $src);
+        // The blank placeholder (no source, missing image, missing category) is
+        // sent from one place, and that place sends nosniff too.
+        $this->assertSame(1, substr_count($src, "header('Content-type: image/gif');"));
+        $this->assertSame(1, substr_count($src, 'blank.gif'));
+        $this->assertStringContainsString("header('Content-type: image/gif'); header('X-Content-Type-Options: nosniff'); readfile(XOOPS_UPLOAD_PATH . '/blank.gif');", $src);
+        $this->assertSame(3, substr_count($src, 'exitBlankImage();'));
     }
 
     #[Test]
