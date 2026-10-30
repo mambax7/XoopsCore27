@@ -330,14 +330,20 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             ++$idSuffix;
             $checked = $this->isOptionChecked($value, $elementValue) ? ' checked' : '';
             $inputId = $this->esc($elementId . $idSuffix);
+            $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name);
+            $ariaLabel = '';
+            if ($type === 'radio' && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
+                $caption = trim(strip_tags((string) $element->getCaption()));
+                $ariaLabel = ' aria-label="' . $this->esc(($caption !== '' ? $caption . ': ' : '') . (string) $value) . '"';
+            }
             $ret .= '<label class="' . $labelCls . '">'
                 . '<input class="' . $type . ' ' . $type . '-primary" type="' . $type . '"'
                 . self::ATTR_NAME . $this->esc($elementName) . '"'
                 . ' id="' . $inputId . '"'
                 . self::ATTR_TITLE_LEAD . $this->esc(strip_tags((string) $name)) . '"'
                 . self::ATTR_VALUE . $this->esc($value) . '"'
-                . $checked . $extra . '>'
-                . '<span class="label-text">' . ($type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name)) . $delimiter . '</span>'
+                . $checked . $ariaLabel . $extra . '>'
+                . '<span class="label-text">' . $labelHtml . $delimiter . '</span>'
                 . '</label>';
         }
         $ret .= '</div>';

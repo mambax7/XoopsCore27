@@ -170,6 +170,17 @@ class XoopsFormRendererTailwindTest extends TestCase
         $this->assertStringNotContainsString('<script>', $html);
     }
 
+    public function testImageOnlyRadioOptionsHaveDistinctAccessibleNames(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Message Icon', 'icon', 'icon1.gif');
+        $element->addOption('icon1.gif', '<img src="/icon1.gif" alt="">');
+        $element->addOption('icon2.gif', '<img src="/icon2.gif" alt="">');
+        $html = $this->renderer->renderFormRadio($element);
+        $this->assertStringContainsString('aria-label="Message Icon: icon1.gif"', $html);
+        $this->assertStringContainsString('aria-label="Message Icon: icon2.gif"', $html);
+    }
+
     public function testRenderFormRadioKeepsSafeImageLabel(): void
     {
         xoops_load('XoopsFormRadio');
