@@ -314,4 +314,19 @@ final class ControllerHardeningContractTest extends TestCase
         $this->assertStringNotContainsString('$criteria->groupby', $src);
         $this->assertSame(2, substr_count($src, "preg_replace('/^ GROUP BY /', '', \$criteria->getGroupby())"));
     }
+
+    #[Test]
+    public function thePreviewNeverDecodesRenderedOutput(): void
+    {
+        // PHP decodes the form body once. A second decode, before or after
+        // displayTarea(), turns literal %3Cscript%3E text into markup.
+        $src  = self::src('include/formdhtmltextarea_preview.php');
+        $tail = substr($src, (int) strpos($src, '$myts->displayTarea('));
+        $this->assertStringContainsString('$myts->displayTarea(', $src);
+        $this->assertDoesNotMatchRegularExpression('/(raw)?urldecode\(/', $src);
+        $this->assertDoesNotMatchRegularExpression(
+            '/html_entity_decode\(|htmlspecialchars_decode\(|undoHtmlSpecialChars\(/',
+            $tail
+        );
+    }
 }

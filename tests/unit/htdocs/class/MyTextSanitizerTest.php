@@ -289,6 +289,64 @@ class MyTextSanitizerTest extends TestCase
         $this->assertStringContainsString('href="https://xoops.org', $out);
     }
 
+    public function testMakeClickableNeverLinksInsideAnAttribute()
+    {
+        // What [url=http://a.example/ http://b.example/x/onmouseover=alert`1`//]t[/url] decodes to.
+        $html = '<a href="http://a.example/ http://b.example/x/onmouseover=alert`1`//" rel="noopener external" title="">t</a>';
+
+        $this->assertSame($html, $this->sanitizer->makeClickable($html));
+    }
+
+    public function testMakeClickableNeverLinksInsideAnyTag()
+    {
+        foreach ([
+            '<x-foo title=" http://evil.example/">t</x-foo>', // custom element
+            'a <a href=" http://evil.example/"',              // unclosed tag
+            '<b title=" http://evil.example/>',               // unclosed quote
+            '<b a"b=" http://evil.example/">',                // quote outside a value
+            '<!-- http://evil.example/',                      // unclosed comment
+            '<!-- <b> http://evil.example/',                  // tag inside an unclosed comment
+            '<svg><![CDATA[ <b> http://evil.example/ ]]></svg>',
+            '<textarea> http://evil.example/</textarea>',     // raw-text elements
+            '<script>let x=" http://evil.example/";</script>',
+            '<style>a{b:url( http://evil.example/)}</style>',
+            '<b a"x title="<i> http://evil.example/">',      // later tag inside a broken one
+            '<b a<b title=" http://evil.example/">',
+            '<plaintext></plaintext> http://evil.example/',   // plaintext never closes
+            '<a href="x">t <b title="</a> http://evil.example/">', // broken tag inside an anchor
+        ] as $html) {
+            $this->assertStringNotContainsString('<a href="http://evil', $this->sanitizer->makeClickable($html), $html);
+        }
+    }
+
+    public function testMakeClickableTracksAnchorsLikeHtml()
+    {
+        $this->assertSame('<a/> http://x.example/', $this->sanitizer->makeClickable('<a/> http://x.example/'));
+        $this->assertStringContainsString(
+            '</textarea> <a href="http://x.example/"',
+            $this->sanitizer->makeClickable('<textarea>t</textarea> http://x.example/')
+        );
+        $this->assertStringContainsString(
+            '</a/ > <a href="http://x.example/"',
+            $this->sanitizer->makeClickable('<a href="y">y</a/ > http://x.example/')
+        );
+    }
+
+    public function testMakeClickableDoesNotNestAnchors()
+    {
+        $html = '<a href="http://a.example/" title="">see http://b.example/ now</a>';
+
+        $this->assertSame($html, $this->sanitizer->makeClickable($html));
+    }
+
+    public function testMakeClickableLinksTextAfterATag()
+    {
+        $this->assertSame(
+            '<b><a href="http://x.example/" target="_blank" rel="external noopener nofollow">http://x.example/</a></b> and <i><a href="mailto:a@x.org">a@x.org</a></i>',
+            $this->sanitizer->makeClickable('<b>http://x.example/</b> and <i>a@x.org</i>')
+        );
+    }
+
     public function testMakeClickableLeavesEncodedMarkupEncoded()
     {
         $out = $this->sanitizer->makeClickable('&lt;img src=x onerror=alert(1)&gt;');
