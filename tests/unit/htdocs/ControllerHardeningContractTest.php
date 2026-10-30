@@ -210,7 +210,8 @@ final class ControllerHardeningContractTest extends TestCase
         $final   = substr($src, (int) strpos($src, "case 'delete_ok':"));
         $refusal = strpos($final, '$block_handler->deletionRefusal($block)');
         $this->assertNotFalse($refusal);
-        $this->assertLessThan(strpos($final, '$block_handler->delete($block)'), $refusal);
+        $this->assertLessThan(strpos($final, '$block_handler->deleteGuarded($block)'), $refusal);
+        $this->assertStringNotContainsString('$block_handler->delete($block)', $final);
         $this->assertStringContainsString("if (!in_array(\$block_type, ['C', 'D'], true)) {", $src);
         $this->assertStringContainsString("\$block_type = (string) \$block->getVar('block_type');", $src);
     }

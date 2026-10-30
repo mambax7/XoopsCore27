@@ -712,6 +712,40 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
     }
 
     /**
+     * Delete a block the administrator may delete.
+     *
+     * deletionRefusal() counts in one statement and the delete runs in a
+     * second, so two requests deleting the last two copies of a module block
+     * could each see the other and both succeed. For a module block the
+     * sibling check is part of the DELETE itself, one statement under one
+     * table lock, and zero affected rows is a refusal.
+     *
+     * @param XoopsBlock $block block as stored
+     * @return bool true when the row is gone
+     */
+    public function deleteGuarded(XoopsBlock $block): bool
+    {
+        if ($block->getVar('block_type') !== 'M') {
+            return null === $this->deletionRefusal($block) && $this->delete($block);
+        }
+        $table = $this->db->prefix('newblocks');
+        $bid   = (int) $block->getVar('bid');
+        // MySQL refuses to read the table being deleted from unless the
+        // subquery is a materialized derived table; LIMIT 1 forces that on
+        // MySQL 5.7 before 5.7.11. The same columns as deletionRefusal().
+        $sql = sprintf(
+            'DELETE FROM `%1$s` WHERE bid = %2$u AND EXISTS (SELECT 1 FROM (SELECT bid FROM `%1$s` WHERE mid = %3$u AND func_num = %4$u AND show_func = %5$s AND block_type = \'M\' AND bid <> %2$u LIMIT 1) AS sibling)',
+            $table,
+            $bid,
+            (int) $block->getVar('mid'),
+            (int) $block->getVar('func_num'),
+            $this->db->quote(trim((string) $block->getVar('show_func')))
+        );
+
+        return $this->db->exec($sql) && 1 === $this->db->getAffectedRows();
+    }
+
+    /**
      * XoopsBlock::countSimilarBlocks()
      *
      * @param  mixed $moduleId

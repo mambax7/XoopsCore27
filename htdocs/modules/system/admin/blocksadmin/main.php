@@ -556,7 +556,7 @@ switch ($op) {
             if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
                 redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
             }
-            if ($block_handler->delete($block)) {
+            if ($block_handler->deleteGuarded($block)) {
                 // Delete Group link
                 $blocklinkmodule_handler = xoops_getModuleHandler('blocklinkmodule');
                 $blocklinkmodule         = $blocklinkmodule_handler->getObjects(new CriteriaCompo(new Criteria('block_id', $block_id)));
@@ -582,6 +582,8 @@ switch ($op) {
                 }
                 redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_BLOCKS_DBUPDATED);
             }
+            // The guarded delete refused: its sibling went in the meantime.
+            redirect_header('admin.php?fct=blocksadmin', 4, $block_handler->deletionRefusal($block) ?? _AM_SYSTEM_DBERROR);
         } else {
             redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
         }
