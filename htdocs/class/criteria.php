@@ -89,7 +89,7 @@ class CriteriaElement
      */
     public function getSort()
     {
-        return $this->sanitizeOrderClause($this->sort);
+        return $this->sanitizeOrderClause($this->sort, true);
     }
 
     /**
@@ -163,7 +163,8 @@ class CriteriaElement
      */
     public function getGroupby()
     {
-        $groupby = $this->sanitizeOrderClause($this->groupby);
+        // MySQL 8.0.13 dropped ASC/DESC inside GROUP BY: a direction here is a syntax error.
+        $groupby = $this->sanitizeOrderClause($this->groupby, false);
 
         return $groupby !== '' ? " GROUP BY {$groupby}" : '';
     }
@@ -172,22 +173,29 @@ class CriteriaElement
      * Validate an ORDER BY / GROUP BY column-list fragment.
      *
      * Accepts a comma-separated list of (optionally backticked or dotted)
-     * column references, each with an optional ASC/DESC direction. Any other
+     * column references, each with an optional ASC/DESC direction when
+     * $allowDirection is set (ORDER BY) and none otherwise (GROUP BY). Any other
      * construct — parentheses, quotes, comment markers, semicolons, operators —
      * indicates an injection attempt and collapses the fragment to an empty
      * string so the caller omits the clause entirely (fail closed).
      *
-     * @param string $clause raw sort/groupby fragment
+     * @param string $clause         raw sort/groupby fragment
+     * @param bool   $allowDirection accept a trailing ASC/DESC per column
      * @return string validated fragment, or '' when it is not a safe column list
      */
-    protected function sanitizeOrderClause($clause)
+    protected function sanitizeOrderClause($clause, bool $allowDirection = true)
     {
         $clause = trim((string) $clause);
         if ($clause === '') {
             return '';
         }
+        // Structure, not just characters: each item is one column reference
+        // (table.column allowed) with an optional direction, so words such as
+        // UNION or SELECT cannot follow a column.
+        $ident = '(?:`[A-Za-z0-9_$]+`|[A-Za-z0-9_$]+)';
+        $item  = $ident . '(?:\.' . $ident . ')?' . ($allowDirection ? '(?:\s+(?:ASC|DESC))?' : '');
 
-        return preg_match('/^[A-Za-z0-9_.,`\s]+$/', $clause) ? $clause : '';
+        return preg_match('/^' . $item . '(?:\s*,\s*' . $item . ')*\z/i', $clause) ? $clause : '';
     }
     /**
      * *#@-

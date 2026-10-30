@@ -104,7 +104,13 @@ if ($thisUser->getVar('name') != '') {
 }
 if ($thisUser->getVar('url', 'E') != '') {
     $xoopsTpl->assign('lang_website', _US_WEBSITE);
-    $xoopsTpl->assign('user_websiteurl', '<a href="' . $thisUser->getVar('url', 'E') . '" rel="external">' . $thisUser->getVar('url') . '</a>');
+    // Only http(s) addresses become links; anything else is shown as text.
+    $xoopsTpl->assign(
+        'user_websiteurl',
+        1 === preg_match('#^https?://#i', (string) $thisUser->getVar('url', 'n'))
+            ? '<a href="' . $thisUser->getVar('url', 'E') . '" rel="external">' . $thisUser->getVar('url') . '</a>'
+            : $thisUser->getVar('url')
+    );
 }
 $xoopsTpl->assign('lang_email', _US_EMAIL);
 $xoopsTpl->assign('lang_privmsg', _US_PM);

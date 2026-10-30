@@ -200,6 +200,7 @@ switch ($op) {
         $xoBreadCrumb->addLink(_AM_SYSTEM_BLOCKS_ADDBLOCK);
         $xoBreadCrumb->render();
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         /** @var  SystemBlock $block */
         $block         = $block_handler->create();
@@ -219,7 +220,7 @@ switch ($op) {
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
             $block->setVar('visible', $visible);
-            if (!$block_handler->insert($block)) {
+            if (false === $block_handler->insert($block)) {
                 $error = true;
             }
         }
@@ -227,6 +228,7 @@ switch ($op) {
 
     case 'drag':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get variable
         $block_id = Request::getInt('bid', 0);
@@ -234,7 +236,7 @@ switch ($op) {
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
             $block->setVar('side', $side);
-            if (!$block_handler->insert($block)) {
+            if (false === $block_handler->insert($block)) {
                 $error = true;
             }
         }
@@ -242,6 +244,7 @@ switch ($op) {
 
     case 'order':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         if (Request::hasVar('blk', 'POST')) {
             $i = 0;
@@ -249,7 +252,7 @@ switch ($op) {
                 if ($order > 0) {
                     $block = $block_handler->get($order);
                     $block->setVar('weight', $i);
-                    if (!$block_handler->insert($block)) {
+                    if (false === $block_handler->insert($block)) {
                         $error = true;
                     }
                     ++$i;
@@ -264,9 +267,10 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
-        /** @var XoopsBlockHandler $block_handler */
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
-        $block         = $block_handler->create();
+        /** @var SystemBlock $block */
+        $block = $block_handler->create();
         $blockVars = [
             'title'      => Request::getString('title', '', 'POST'),
             'side'       => Request::getInt('side', 0, 'POST'),
@@ -280,7 +284,7 @@ switch ($op) {
         $content = Request::getText('content_block', '', 'POST');
         $block->setVar('content', $content);
         $myts = \MyTextSanitizer::getInstance();
-        echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', $block->getVar('c_type')) . '</div>';
+        echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', (string) $block->getVar('c_type')) . '</div>';
         break;
 
     case 'save':
@@ -288,6 +292,7 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -356,7 +361,18 @@ switch ($op) {
                 'name'      => Request::getString('name', '', 'POST'),
             ]);
         }
-        $block_type = Request::getString('block_type', '');
+        // A stored block keeps its type: relabelling it would lift the protection
+        // the delete handler applies to system and module blocks. A new block is
+        // only ever custom or a clone; a forged M/S row would let the delete
+        // handler count a duplicate and release the genuine module block.
+        if ($block->isNew()) {
+            $block_type = Request::getString('block_type', '', 'POST');
+            if (!in_array($block_type, ['C', 'D'], true)) {
+                redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
+            }
+        } else {
+            $block_type = (string) $block->getVar('block_type');
+        }
         $block->setVar('block_type', $block_type);
 
         $blockVars = [
@@ -462,6 +478,7 @@ switch ($op) {
 
     case 'edit':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -496,16 +513,11 @@ switch ($op) {
         $block_id = Request::getInt('bid', 0);
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
-            if ($block->getVar('block_type') === 'S') {
-                redirect_header('admin.php?fct=blocksadmin', 4, _AM_SYSTEM_BLOCKS_SYSTEMCANT);
-            } elseif ($block->getVar('block_type') === 'M') {
-                // Fix for duplicated blocks created in 2.0.9 module update
-                // A module block can be deleted if there is more than 1 that
-                // has the same func_num/show_func which is mostly likely
-                // be the one that was duplicated in 2.0.9
-                if (1 >= $count = $block_handler->countSimilarBlocks($block->getVar('mid'), $block->getVar('func_num'), $block->getVar('show_func'))) {
-                    redirect_header('admin.php?fct=blocksadmin', 4, _AM_SYSTEM_BLOCKS_MODULECANT);
-                }
+            if (!is_object($block)) {
+                redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
+            }
+            if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
+                redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
             }
             // Define main template
             $GLOBALS['xoopsOption']['template_main'] = 'system_header.tpl';
@@ -531,12 +543,20 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
-            if ($block_handler->delete($block)) {
+            // The confirmation step can be skipped by posting here directly.
+            if (!is_object($block)) {
+                redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
+            }
+            if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
+                redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
+            }
+            if ($block_handler->deleteGuarded($block)) {
                 // Delete Group link
                 $blocklinkmodule_handler = xoops_getModuleHandler('blocklinkmodule');
                 $blocklinkmodule         = $blocklinkmodule_handler->getObjects(new CriteriaCompo(new Criteria('block_id', $block_id)));
@@ -562,6 +582,8 @@ switch ($op) {
                 }
                 redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_BLOCKS_DBUPDATED);
             }
+            // The guarded delete refused: its sibling went in the meantime.
+            redirect_header('admin.php?fct=blocksadmin', 4, $block_handler->deletionRefusal($block) ?? _AM_SYSTEM_DBERROR);
         } else {
             redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
         }
@@ -569,6 +591,7 @@ switch ($op) {
 
     case 'clone':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);

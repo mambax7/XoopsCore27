@@ -336,7 +336,7 @@ function b_system_info_show($options)
                         $block['groups'][$i]['users'][] = [
                             'id'      => $userinfo['uid'],
                             'name'    => $myts->htmlSpecialChars($userinfo['uname']),
-                            'msglink' => '<a href="mailto:' . $userinfo['email'] . '"><img src="' . XOOPS_URL . '/images/icons/em_small.gif" border="0" width="16" height="14" alt="" /></a>',
+                            'msglink' => '<a href="mailto:' . htmlspecialchars((string) $userinfo['email'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"><img src="' . XOOPS_URL . '/images/icons/em_small.gif" border="0" width="16" height="14" alt="" /></a>',
                             'avatar'  => XOOPS_UPLOAD_URL . '/' . $userinfo['user_avatar'],
                         ];
                     } else {

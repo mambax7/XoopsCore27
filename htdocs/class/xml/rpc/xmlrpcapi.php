@@ -78,7 +78,8 @@ class XoopsXmlRpcApi
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
         $this->user     = $member_handler->loginUser(addslashes($username), addslashes($password));
-        if (!is_object($this->user)) {
+        // Same rule as the browser login: an account that is not active may not sign in.
+        if (!is_object($this->user) || !$this->user->isActive()) {
             unset($this->user);
 
             return false;

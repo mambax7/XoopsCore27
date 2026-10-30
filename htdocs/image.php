@@ -220,6 +220,17 @@ function exitInvalidRequest()
 }
 
 /**
+ * Send the blank placeholder image and terminate the request.
+ */
+function exitBlankImage()
+{
+    header('Content-type: image/gif');
+    header('X-Content-Type-Options: nosniff');
+    readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
+    exit();
+}
+
+/**
  * check local image url for possible issues
  *
  * @param string $imageUrl url to local image starting at site root with a '/'
@@ -273,9 +284,7 @@ if (!empty($imageId)) {
     $images = $imageHandler->getObjects($criteria, false, true);
     if (count($images) != 1) {
         // No Xoops images or to many Xoops images
-        header('Content-type: image/gif');
-        readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
-        exit();
+        exitBlankImage();
     }
     $image = $images[0];
     // Get image category
@@ -283,9 +292,7 @@ if (!empty($imageId)) {
     $imgcatHandler = xoops_getHandler('imagecategory');
     if (!$imgcat = $imgcatHandler->get($imgcatId)) {
         // No Image category
-        header('Content-type: image/gif');
-        readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
-        exit();
+        exitBlankImage();
     }
     // Get image data
     $imageFilename = $image->getVar('image_name'); // image filename
@@ -312,6 +319,9 @@ if (!empty($imageId)) {
     if (false === $srcInfo || ($srcInfo[0] * $srcInfo[1]) > $imgSrcMaxPixels) {
         exitInvalidRequest();
     }
+    // Serve the type the bytes decode as, not the one the uploading client
+    // declared and the image manager stored.
+    $imageMimetype = $srcInfo['mime'];
     $sourceImage = imagecreatefromstring($imageData);
     // imagesx()/imagesy() require a GdImage; reject a decode failure rather than
     // passing false into them (a TypeError under PHP 8).
@@ -384,9 +394,7 @@ if (!empty($imageId)) {
     }
 } else {
     // No id, no url, no src parameters
-    header('Content-type: image/gif');
-    readfile(XOOPS_ROOT_PATH . '/uploads/blank.gif');
-    exit();
+    exitBlankImage();
 }
 
 /*
@@ -399,7 +407,15 @@ $edited_image_filename = 'editedimage_' . md5($_SERVER['REQUEST_URI']) . '_' . $
 $cached_image = XoopsCache::read($edited_image_filename);
 if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET') && !empty($cached_image)
     && ($cached_image['cached_time'] >= $imageCreatedTime)) {
-    header("Content-type: {$imageMimetype}");
+    // The cached bytes carry the type they were encoded as (a GIF is cached as
+    // PNG); an entry written before that was stored is decoded.
+    $cachedMimetype = $cached_image['image_mimetype'] ?? null;
+    if (!is_string($cachedMimetype) || '' === $cachedMimetype) {
+        $cachedInfo     = getimagesizefromstring((string) ($cached_image['image_data'] ?? ''));
+        $cachedMimetype = false !== $cachedInfo ? $cachedInfo['mime'] : $imageMimetype;
+    }
+    header("Content-type: {$cachedMimetype}");
+    header('X-Content-Type-Options: nosniff');
     header('Content-Length: ' . strlen($cached_image['image_data']));
     echo $cached_image['image_data'];
     exit();
@@ -460,6 +476,7 @@ if (empty($width)
     $etag = md5($imageData);
     doConditionalGet($etag, $last_modified_string);
     header("Content-type: {$imageMimetype}");
+    header('X-Content-Type-Options: nosniff');
     header('Content-Length: ' . strlen($imageData));
     echo $imageData;
     exit();
@@ -723,6 +740,7 @@ unset($sourceImage, $destination_image);
  */
 $cached_image['edited_image_filename'] = $edited_image_filename;
 $cached_image['image_data'] = $imageData;
+$cached_image['image_mimetype'] = $imageMimetype;
 $cached_image['cached_time'] = $imageCreatedTime;
 XoopsCache::write($edited_image_filename, $cached_image);
 
@@ -752,6 +770,7 @@ if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('nobrowsercache', 'GE
     header('Pragma: no-cache'); // HTTP/1.0
 }
 header("Content-type: {$imageMimetype}");
+header('X-Content-Type-Options: nosniff');
 header("Content-disposition: filename={$imageFilename}");
 header('Content-Length: ' . strlen($imageData));
 echo $imageData;

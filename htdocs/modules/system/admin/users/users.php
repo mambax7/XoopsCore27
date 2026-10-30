@@ -87,6 +87,38 @@ function xoops_2fa_admin_status_row(int $uid): XoopsFormLabel
     return new XoopsFormLabel(_US_2FAM_TITLE, $value);
 }
 
+/**
+ * Whether the current administrator may change group memberships.
+ *
+ * The user form offers the group selector only on this condition, and the
+ * save handler applies submitted memberships only on it.
+ *
+ * @return bool
+ */
+function system_users_canManageGroups(): bool
+{
+    /** @var XoopsGroupPermHandler $gperm_handler */
+    $gperm_handler = xoops_getHandler('groupperm');
+
+    return $GLOBALS['xoopsUser'] instanceof XoopsUser
+        && $gperm_handler->checkRight('system_admin', XOOPS_SYSTEM_GROUP, $GLOBALS['xoopsUser']->getGroups(), 1);
+}
+
+/**
+ * Whether the current administrator may edit the given account.
+ *
+ * Only a webmaster may edit a webmaster: a delegated Users administrator
+ * could otherwise set a webmaster's password and sign in as one.
+ *
+ * @param XoopsUser $target account being edited
+ * @return bool
+ */
+function system_users_mayEdit(XoopsUser $target): bool
+{
+    return !in_array(XOOPS_GROUP_ADMIN, $target->getGroups())
+        || ($GLOBALS['xoopsUser'] instanceof XoopsUser && in_array(XOOPS_GROUP_ADMIN, $GLOBALS['xoopsUser']->getGroups()));
+}
+
 function form_user($add_or_edit, $user = '')
 {
     global $xoopsConfig, $xoopsUser;
@@ -239,10 +271,8 @@ function form_user($add_or_edit, $user = '')
     $form->addElement(new XoopsFormRadioYN(_AM_SYSTEM_USERS_ACCEPT_EMAIL, 'user_mailok', $mailok_value));
 
     //Groups administration addition XOOPS 2.0.9: Mith
-    /** @var  XoopsGroupPermHandler $gperm_handler */
-    $gperm_handler = xoops_getHandler('groupperm');
     //If user has admin rights on groups
-    if ($gperm_handler->checkRight('system_admin', XOOPS_SYSTEM_GROUP, $xoopsUser->getGroups(), 1)) {
+    if (system_users_canManageGroups()) {
         //add group selection
         $group_select[] = new XoopsFormSelectGroup(_AM_SYSTEM_USERS_GROUPS, 'groups', false, $groups, 5, true);
     } else {

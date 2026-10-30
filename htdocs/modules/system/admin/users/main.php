@@ -38,6 +38,16 @@ $op = Request::getString('op', 'list');
 $member_handler = xoops_getHandler('member');
 
 if ('users_2fa_reset' === $op) {
+    // The reset handler verifies the actor, not the target: keep the webmaster
+    // protection the edit and save paths apply. Read the uid from the same
+    // source the handler uses, so a GET uid cannot shadow the POST one.
+    $target = $member_handler->getUser(Request::getInt('uid', 0, 'POST' === Request::getMethod() ? 'POST' : 'GET'));
+    if (is_object($target) && !system_users_mayEdit($target)) {
+        xoops_cp_header();
+        xoops_error(_NOPERM);
+        xoops_cp_footer();
+        exit();
+    }
     $xoops2faAdminReset = true;
     include XOOPS_ROOT_PATH . '/include/manage2fa.php';
     exit();
@@ -73,6 +83,11 @@ switch ($op) {
         $xoBreadCrumb->addHelp(system_adminVersion('users', 'help') . '#edit');
         $xoBreadCrumb->addLink(_AM_SYSTEM_USERS_NAV_EDIT_USER);
         $xoBreadCrumb->render();
+        $target = $member_handler->getUser($uid);
+        if (is_object($target) && !system_users_mayEdit($target)) {
+            xoops_error(_NOPERM);
+            break;
+        }
         form_user(false, $uid);
         break;
 
@@ -181,6 +196,10 @@ case 'users_save':
             xoops_error(_AM_SYSTEM_USERS_NO_SUCH_USER);
             break;
         }
+        if (!system_users_mayEdit($edituser)) {
+            xoops_error(_NOPERM);
+            break;
+        }
 
         // --- Validation ---
         if (($edituser->getVar('uname', 'n') != Request::getString('uname')) &&
@@ -245,8 +264,9 @@ case 'users_save':
         xoops_load('XoopsUserUtility');
         XoopsUserUtility::refreshSessionFingerprint($edituser);
 
-        // Groups
-        $groups = Request::getArray('groups', []);
+        // Groups: only an administrator of the Groups section may change
+        // memberships (the form sends them as hidden fields to everyone else).
+        $groups = system_users_canManageGroups() ? array_map('intval', Request::getArray('groups', [])) : [];
         if (!empty($groups)) {
             $oldgroups = $edituser->getGroups();
             // Prevent removing yourself from webmasters
@@ -343,7 +363,8 @@ case 'users_save':
         }
 
         $groups_failed = [];
-        $groups = Request::getArray('groups', []);
+        // Without Groups-section rights a new account joins Registered Users only.
+        $groups = system_users_canManageGroups() ? Request::getArray('groups', []) : [XOOPS_GROUP_USERS];
         if (!empty($groups)) {
             foreach ($groups as $group) {
                 $group = (int)$group;

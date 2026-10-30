@@ -31,6 +31,15 @@ include dirname(__DIR__, 2) . '/header.php';
 if (!is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin($xoopsModule->mid())) {
     exit(_NOPERM);
 }
+// Same section rule as admin.php: System module admin rights alone do not
+// cover the Templates section.
+include_once XOOPS_ROOT_PATH . '/modules/system/constants.php';
+/** @var XoopsGroupPermHandler $grouppermHandler */
+$grouppermHandler = xoops_getHandler('groupperm');
+if (!in_array(XOOPS_GROUP_ADMIN, $xoopsUser->getGroups())
+    && !$grouppermHandler->checkRight('system_admin', XOOPS_SYSTEM_TPLSET, $xoopsUser->getGroups(), $xoopsModule->getVar('mid'))) {
+    exit(_NOPERM);
+}
 
 error_reporting(0);
 $GLOBALS['xoopsLogger']->activated = false;

@@ -95,6 +95,10 @@ switch ($op) {
             if (!is_object($user)) {
                 redirect_header('user.php', 3, _US_NOEDITRIGHT);
             }
+            // Same rule as the edit form: only a webmaster may change a webmaster.
+            if (in_array(XOOPS_GROUP_ADMIN, $user->getGroups()) && !in_array(XOOPS_GROUP_ADMIN, $GLOBALS['xoopsUser']->getGroups())) {
+                redirect_header('user.php', 3, _US_NOEDITRIGHT);
+            }
             $profile = $profile_handler->get($uid);
             if (!is_object($profile)) {
                 $profile = $profile_handler->create();

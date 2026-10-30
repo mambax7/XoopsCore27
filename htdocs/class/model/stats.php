@@ -39,9 +39,12 @@ class XoopsModelStats extends XoopsModelAbstract
         $field   = '';
         $groupby = false;
         if (isset($criteria) && is_subclass_of($criteria, 'CriteriaElement')) {
-            if ($criteria->groupby != '') {
+            // Only the validated column list reaches SQL (getGroupby() drops
+            // anything that is not one), in the projection as in GROUP BY.
+            $columns = preg_replace('/^ GROUP BY /', '', $criteria->getGroupby());
+            if ($columns !== '') {
                 $groupby = true;
-                $field   = $criteria->groupby . ', ';
+                $field   = $columns . ', ';
             }
         }
         $sql = "SELECT {$field} COUNT(*) FROM `{$this->handler->table}`";
@@ -86,8 +89,10 @@ class XoopsModelStats extends XoopsModelAbstract
             $sql_where = $criteria->renderWhere();
             $limit     = $criteria->getLimit();
             $start     = $criteria->getStart();
-            if ($groupby = $criteria->groupby) {
-                $groupby_key = $groupby;
+            // Only the validated column list reaches SQL.
+            $columns = preg_replace('/^ GROUP BY /', '', $criteria->getGroupby());
+            if ($columns !== '') {
+                $groupby_key = $columns;
             }
         }
         $sql = "SELECT {$groupby_key}, COUNT(*) AS count" . " FROM `{$this->handler->table}`" . " {$sql_where}" . " GROUP BY {$groupby_key}";

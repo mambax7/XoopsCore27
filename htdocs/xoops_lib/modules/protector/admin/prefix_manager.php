@@ -18,9 +18,35 @@ function validatePrefix(string $raw): string
     return $raw;
 }
 
+/**
+ * Tables of a prefix that extends the working one, or that the working one
+ * extends (xoops_backup while the site runs on xoops, or xoops while it runs
+ * on xoops_test), cannot be told apart from working tables by name: a module
+ * table backup_items under xoops is also items under xoops_backup. Such a
+ * prefix is neither created nor dropped here.
+ *
+ * @param string $prefix candidate prefix
+ * @param string $fold   'strval' or 'strtolower', as the server compares names
+ */
+function prefixOverlapsWorkingPrefix(string $prefix, string $fold): bool
+{
+    $candidate = $fold($prefix . '_');
+    $working   = $fold(XOOPS_DB_PREFIX . '_');
+
+    return str_starts_with($candidate, $working) || str_starts_with($working, $candidate);
+}
+
 include XOOPS_ROOT_PATH . '/include/cp_header.php';
 include __DIR__ . '/admin_header.php';
+/** @var XoopsMySQLDatabase $db */
 $db = XoopsDatabaseFactory::getDatabaseConnection();
+
+// Table names compare without case only where the server stores them so
+// (lower_case_table_names 1 or 2); with 0, XOOPS_TEST_x is not xoops_x.
+// Unreadable setting: fold case anyway, the direction that skips more.
+$result = $db->query('SELECT @@lower_case_table_names');
+$row    = ($db->isResultSet($result) && $result instanceof \mysqli_result) ? $db->fetchRow($result) : false;
+$fold   = (false !== $row && 0 === (int) $row[0]) ? 'strval' : 'strtolower';
 
 // COPY TABLES
 if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
@@ -37,10 +63,13 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     }
 
     $new_prefix = empty($new_prefix) ? 'x' . substr(bin2hex(random_bytes(4)), -5) : $new_prefix;
+    if (prefixOverlapsWorkingPrefix($new_prefix, $fold)) {
+        die("A prefix that overlaps the working prefix '" . htmlspecialchars(XOOPS_DB_PREFIX, ENT_QUOTES | ENT_HTML5) . "' cannot be created here: its tables could not be deleted again");
+    }
 
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
     $srs = $db->query($sql);
-    if (!$db->isResultSet($srs)) {
+    if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
         throw new RuntimeException(
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
             E_USER_ERROR,
@@ -63,7 +92,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
 
         $sql = 'SHOW CREATE TABLE ' . $old_table;
         $crs = $db->query($sql);
-        if (!$db->isResultSet($crs)) {
+        if (!$db->isResultSet($crs) || !($crs instanceof \mysqli_result)) {
             throw new RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
                 E_USER_ERROR,
@@ -111,7 +140,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     // get table list
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
     $srs = $db->query($sql);
-    if (!$db->isResultSet($srs)) {
+    if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
         throw new RuntimeException(
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
             E_USER_ERROR,
@@ -131,7 +160,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         }
         $sql = "SHOW CREATE TABLE `$table`";
         $drawCreate = $db->query($sql);
-        if (!$db->isResultSet($drawCreate)) {
+        if (!$db->isResultSet($drawCreate) || !($drawCreate instanceof \mysqli_result)) {
             throw new RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
                 E_USER_ERROR,
@@ -144,7 +173,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         $exportString .= "\nDROP TABLE IF EXISTS `$table`;\n{$create[1]};\n\n";
         $sql      = "SELECT * FROM `$table`";
         $result = $db->query($sql);
-        if (!$db->isResultSet($result)) {
+        if (!$db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new RuntimeException(
                 \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
                 E_USER_ERROR,
@@ -206,7 +235,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         }
 
         $exportString .= $insertValues;
-        if ($db->isResultSet($result)) {
+        if ($db->isResultSet($result) && $result instanceof \mysqli_result) {
             $db->freeRecordSet($result);
         }
     }
@@ -231,14 +260,17 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
         redirect_header(XOOPS_URL . '/', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
     }
 
-    // check if prefix is working
-    if ($prefix == XOOPS_DB_PREFIX) {
+    // check if prefix is working, compared as the server compares table names
+    if ($fold($prefix) === $fold(XOOPS_DB_PREFIX)) {
         die("You can't drop working tables");
+    }
+    if (prefixOverlapsWorkingPrefix($prefix, $fold)) {
+        die("Tables of the prefix '" . htmlspecialchars($prefix, ENT_QUOTES | ENT_HTML5) . "' cannot be told apart from the working tables by name: drop them manually");
     }
 
     // check if prefix_xoopscomments exists
     $check_rs = $db->query("SELECT 1 FROM `{$prefix}_xoopscomments` LIMIT 1");
-    if (!$check_rs) {
+    if (!$db->isResultSet($check_rs) || !($check_rs instanceof \mysqli_result)) {
         die('This is not a prefix for XOOPS');
     }
     $db->freeRecordSet($check_rs);
@@ -246,7 +278,7 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     // get table list
     $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
     $srs = $db->query($sql);
-    if (!$db->isResultSet($srs)) {
+    if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
         throw new RuntimeException(
             \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
             E_USER_ERROR,
@@ -259,6 +291,11 @@ if (Request::hasVar('copy', 'POST') && Request::hasVar('old_prefix', 'POST')) {
     while (false !== ($row_table = $db->fetchArray($srs))) {
         $table = $row_table['Name'];
         if (substr($table, 0, strlen($prefix) + 1) !== $prefix . '_') {
+            continue;
+        }
+        // A shorter prefix can still match the working tables (prefix "xoops"
+        // against working prefix "xoops_test"): never drop one of those.
+        if (str_starts_with($fold($table), $fold(XOOPS_DB_PREFIX . '_'))) {
             continue;
         }
         $drs = $db->exec("DROP TABLE `$table`");
@@ -277,7 +314,7 @@ include __DIR__ . '/mymenu.php';
 // query
 $sql = 'SHOW TABLE STATUS FROM `' . XOOPS_DB_NAME . '`';
 $srs = $db->query($sql);
-if (!$db->isResultSet($srs)) {
+if (!$db->isResultSet($srs) || !($srs instanceof \mysqli_result)) {
     throw new RuntimeException(
         \sprintf(_DB_QUERY_ERROR, $sql) . $db->error(),
         E_USER_ERROR,
@@ -337,7 +374,7 @@ foreach ($prefixes as $prefix) {
     $prefix4disp  = htmlspecialchars($prefix['name'], ENT_QUOTES | ENT_HTML5);
     $ticket_input = $GLOBALS['xoopsSecurity']->getTokenHTML();
 
-    if ($prefix['name'] == XOOPS_DB_PREFIX) {
+    if ($prefix['name'] == XOOPS_DB_PREFIX || prefixOverlapsWorkingPrefix($prefix['name'], $fold)) {
         $del_button   = '';
         $style_append = 'background-color:#FFFFFF';
     } else {

@@ -224,8 +224,8 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
         $dbm->insert('group_permission', $gpCols . ' VALUES(0,' . $groups['XOOPS_GROUP_ADMIN'] . ',' . $sysAdminItem . ",1,'system_admin')");
     }
     // data for table 'banner'
-    $dbm->insert('banner', " (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, '" . XOOPS_URL . "/images/banners/xoops_banner_2.gif', 'http://xoops.org/', 1008813250, 0, '')");
-    $dbm->insert('banner', " (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, '" . XOOPS_URL . "/images/banners/xoopsifyIt.gif', 'http://xoops.org/', 1008813250, 1, '')");
+    $dbm->insert('banner', " (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, " . $dbm->db->quote(XOOPS_URL . '/images/banners/xoops_banner_2.gif') . ", 'http://xoops.org/', 1008813250, 0, '')");
+    $dbm->insert('banner', " (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, " . $dbm->db->quote(XOOPS_URL . '/images/banners/xoopsifyIt.gif') . ", 'http://xoops.org/', 1008813250, 1, '')");
     // default theme
     $time = time();
     $dbm->insert('tplset', " (tplset_id, tplset_name, tplset_desc, tplset_credits, tplset_created) VALUES (1, 'default', 'XOOPS Default Template Set', '', " . $time . ')');
@@ -303,8 +303,8 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
         . ' user_aim, user_yim, user_msnm, pass, posts, attachsig,'
         . ' `rank`, level, theme, timezone_offset, last_login, umode,'
         . ' uorder, notify_method, notify_mode, user_occ, bio, user_intrest, user_mailok)'
-        . " VALUES (1, '', '" . addslashes($adminname) . "', '" . addslashes($adminmail)
-        . "', '" . XOOPS_URL . "/', 'avatars/blank.gif', " . $regdate
+        . " VALUES (1, '', " . $dbm->db->quote($adminname) . ', ' . $dbm->db->quote($adminmail)
+        . ', ' . $dbm->db->quote(XOOPS_URL . '/') . ", 'avatars/blank.gif', " . $regdate
         . ", '', '', '', 1, '', '', '', '', '" . $temp
         . "', 0, 0, 7, 5, 'default', '0.0', " . time()
         . ", 'flat', 0, 1, 0, '', '', '', 0)"

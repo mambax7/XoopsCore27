@@ -61,7 +61,10 @@ switch ($op) {
 
         $display_criteria = 1;
         $form             = new XoopsThemeForm(_AM_SYSTEM_MAILUSERS_LIST, 'mailusers', 'admin.php?fct=mailusers', 'post', true);
-        $memberslist_id = Request::getArray('memberslist_id', [], 'POST');
+        $memberslist_id = array_values(array_filter(
+            array_map('intval', Request::getArray('memberslist_id', [], 'POST')),
+            static fn(int $uid): bool => $uid > 0
+        ));
         if (!empty($memberslist_id)) {
             $user_count    = count($memberslist_id);
             $display_names = '';
@@ -246,8 +249,8 @@ switch ($op) {
             }
             $mail_to_user = Request::getArray('mail_to_user', [], 'POST');
             if (!empty($mail_to_user)) {
-                foreach ($mail_to_user as $to_user) {
-                    if (!in_array($to_user, $added_id)) {
+                foreach (array_map('intval', $mail_to_user) as $to_user) {
+                    if ($to_user > 0 && !in_array($to_user, $added_id)) {
                         $added[]    = new XoopsUser($to_user);
                         $added_id[] = $to_user;
                     }

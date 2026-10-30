@@ -254,6 +254,67 @@ class CriteriaTest extends TestCase
         $this->assertSame(' GROUP BY category, status', $el->getGroupby());
     }
 
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function columnListsAccepted(): array
+    {
+        return [
+            'single'            => ['uid'],
+            'dotted backticked' => ['`u`.`uid`'],
+            'tight comma'       => ['a,b'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('columnListsAccepted')]
+    public function testColumnListsPassTheGroupAndSortGrammar(string $clause): void
+    {
+        $el = new CriteriaElement();
+        $el->setGroupBy($clause);
+        $el->setSort($clause);
+
+        $this->assertSame(' GROUP BY ' . $clause, $el->getGroupby());
+        $this->assertSame($clause, $el->getSort());
+    }
+
+    public function testSortDirectionsPassOnlyTheSortGrammar(): void
+    {
+        $el = new CriteriaElement();
+        $el->setSort('t.weight ASC, t.title desc');
+        $el->setGroupBy('uid DESC');
+
+        $this->assertSame('t.weight ASC, t.title desc', $el->getSort());
+        // MySQL 8.0.13 rejects a direction inside GROUP BY; the clause is dropped.
+        $this->assertSame('', $el->getGroupby());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function clausesRejected(): array
+    {
+        return [
+            'union select'       => ['uid UNION SELECT pass, 1 FROM xoops_users'],
+            'trailing keyword'   => ['uid HAVING 1'],
+            'two words'          => ['uid uname'],
+            'empty item'         => ['uid,,uname'],
+            'three part name'    => ['a.b.c'],
+            'function call'      => ['RAND()'],
+            'inner newline'      => ["uid\nUNION"],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('clausesRejected')]
+    public function testAnythingButAColumnListIsDropped(string $clause): void
+    {
+        $el = new CriteriaElement();
+        $el->setGroupBy($clause);
+        $el->setSort($clause);
+
+        $this->assertSame('', $el->getGroupby());
+        $this->assertSame('', $el->getSort());
+    }
+
     // =========================================================================
     // CriteriaElement — render() base class
     // =========================================================================

@@ -447,13 +447,16 @@ class XoopsMailer
             $this->multimailer->addCustomHeader($header);
         }
         try {
+            // Transport errors can quote the remote server's reply; the error
+            // list is rendered as HTML, so they are stored escaped like the
+            // other entries (language strings and escaped user names).
             if (!$this->multimailer->send()) {
-                $this->errors[] = $this->multimailer->ErrorInfo;
+                $this->errors[] = htmlspecialchars((string) $this->multimailer->ErrorInfo, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 return false;
             }
         } catch (\PHPMailer\PHPMailer\Exception $e) {
             // Normalize PHPMailer exceptions to XOOPS' error array
-            $this->errors[] = $e->getMessage();
+            $this->errors[] = htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             return false;
         }
 

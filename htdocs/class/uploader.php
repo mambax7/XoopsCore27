@@ -231,6 +231,9 @@ class XoopsMediaUploader
      */
     public function fetchMedia($media_name, $index = null)
     {
+        // Classified afresh for each file: a reused uploader must not judge
+        // this file by the previous file's extension.
+        $this->mediaRealType = '';
         if (empty($this->extensionToMime)) {
             $this->setErrors(_ER_UP_MIMETYPELOAD);
 
