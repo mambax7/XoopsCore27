@@ -332,11 +332,14 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             $inputId = $this->esc($elementId . $idSuffix);
             $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name);
             $ariaLabel = '';
-            if ($type === 'radio'
-                && !preg_match('~(?:^|\s)aria-(?:label|labelledby)\s*=~i', $extra)
-                && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
-                $caption = trim(strip_tags((string) $element->getCaption()));
-                $ariaLabel = ' aria-label="' . $this->esc(($caption !== '' ? $caption . ': ' : '') . (string) $value) . '"';
+            if ($type === 'radio' && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
+                $attributes = new \DOMDocument();
+                $attributes->loadHTML('<input' . $extra . '>', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+                $input = $attributes->getElementsByTagName('input')->item(0);
+                if ($input instanceof \DOMElement && !$input->hasAttribute('aria-label') && !$input->hasAttribute('aria-labelledby')) {
+                    $caption = trim(strip_tags((string) $element->getCaption()));
+                    $ariaLabel = ' aria-label="' . $this->esc(($caption !== '' ? $caption . ': ' : '') . (string) $value) . '"';
+                }
             }
             $ret .= '<label class="' . $labelCls . '">'
                 . '<input class="' . $type . ' ' . $type . '-primary" type="' . $type . '"'

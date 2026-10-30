@@ -183,6 +183,18 @@ class XoopsFormRendererTailwindTest extends TestCase
         }
     }
 
+    public function testImageOnlyRadioIgnoresAriaTextInsideOtherAttributes(): void
+    {
+        xoops_load('XoopsFormRadio');
+        foreach (['data-tooltip="Use aria-label=icon"', "title='Mention aria-labelledby=icon'"] as $extra) {
+            $element = new \XoopsFormRadio('Message Icon', 'icon', 'icon1.gif');
+            $element->addOption('icon1.gif', '<img src="/icon1.gif" alt="">');
+            $element->setExtra($extra);
+            $html = $this->renderer->renderFormRadio($element);
+            $this->assertStringContainsString('aria-label="Message Icon: icon1.gif"', $html);
+        }
+    }
+
     public function testImageOnlyRadioOptionsHaveDistinctAccessibleNames(): void
     {
         xoops_load('XoopsFormRadio');
