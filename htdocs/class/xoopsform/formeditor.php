@@ -85,7 +85,11 @@ class XoopsFormEditor extends XoopsFormTextArea
     public function render()
     {
         if (is_object($this->editor)) {
-            return $this->editor->render();
+            // Forms may render once for assignment and again for output; each result must carry its styles.
+            $url = XOOPS_URL . '/class/xoopseditor/layout.css?v=' . (int) filemtime(__DIR__ . '/../xoopseditor/layout.css');
+            $html = '<link rel="stylesheet" href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '">';
+
+            return $html . '<div class="xoops-editor">' . $this->editor->render() . '</div>';
         }
         return null;
     }

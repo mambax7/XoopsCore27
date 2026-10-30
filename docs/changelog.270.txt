@@ -8,6 +8,7 @@ Enhancements:
 - the System section in the Modern admin theme sidebar is hidden when the user has no system menu items (modules/system/themes/modern/xotpl/xo_sidebar.tpl)
 
 Bug fixes:
+- editor forms stay within the content column across themes; SCEditor toolbars wrap, source text uses normal weight, restored drafts open visually and auto-grow works with CSS height settings; SCEditor and TinyMCE image previews fit without changing stored dimensions, and Tailwind message icons retain safe image labels (class/xoopseditor, class/xoopsform)
 - listing available admin themes no longer loads Modern's translations before the selected theme, preventing duplicate _OXYGEN_SYSOPTIONS warnings when previewing Default or Transition; the selected Modern header explicitly loads its main language file before using dashboard labels (modules/system/themes/modern/modern.php)
 - hide leftover Dark admin theme files from the selector after an in-place upgrade; use the core RTL flag in Default and keep Transition confirmation footers and orange hover states readable in dark mode
 - the theme selector block works again after a theme was chosen with ?xoops_theme_select= in a URL: the theme factory kept its own session copy of that choice, which overrode every later selection, and now uses the same $_SESSION['xoopsUserTheme'] as the selector and login (class/theme.php)

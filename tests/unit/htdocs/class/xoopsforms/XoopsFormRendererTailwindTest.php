@@ -150,6 +150,41 @@ class XoopsFormRendererTailwindTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;', $html);
     }
 
+    public function testRenderFormRadioKeepsSafeImageLabel(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Caption', 'icon', '1');
+        $element->addOption('1', '<img src="/images/subject/icon1.gif" alt="Message">');
+        $html = $this->renderer->renderFormRadio($element);
+
+        $this->assertStringContainsString('<img src="/images/subject/icon1.gif" alt="Message">', $html);
+    }
+
+    public function testRenderFormRadioDropsImageHandlersAndExtraMarkup(): void
+    {
+        xoops_load('XoopsFormRadio');
+        $element = new \XoopsFormRadio('Caption', 'icon', '1');
+        $element->addOption('1', '<img src="https://example.org/icon.gif" alt="Message" onerror="alert(1)"><script>alert(2)</script>');
+        $html = $this->renderer->renderFormRadio($element);
+
+        $this->assertStringContainsString('<img src="https://example.org/icon.gif" alt="Message">', $html);
+        $this->assertStringNotContainsString('onerror=', $html);
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function testRenderFormRadioEscapesUnsafeImageSources(): void
+    {
+        xoops_load('XoopsFormRadio');
+        foreach (['javascript:alert(1)', 'java&#x73;cript:alert(1)', 'data:image/svg+xml,payload'] as $src) {
+            $element = new \XoopsFormRadio('Caption', 'icon', '1');
+            $element->addOption('1', '<img src="' . $src . '" alt="Message">');
+            $html = $this->renderer->renderFormRadio($element);
+
+            $this->assertStringNotContainsString('<img', $html);
+            $this->assertStringContainsString('&lt;img', $html);
+        }
+    }
+
     public function testRenderThemeFormDoesNotThrowOnFormExtras(): void
     {
         xoops_load('XoopsThemeForm');

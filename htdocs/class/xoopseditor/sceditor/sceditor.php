@@ -240,7 +240,7 @@ class FormSCEditor extends XoopsEditor
             // format must already exist when it runs.
             $html .= '<link rel="stylesheet" href="' . $editorPath . '/minified/themes/default.min.css">' . "\n";
             // Icons for the XOOPS-only buttons, which the stock sprite does not have.
-            $html .= '<link rel="stylesheet" href="' . $editorPath . '/css/xoops-icons.css">' . "\n";
+            $html .= '<link rel="stylesheet" href="' . $editorPath . '/css/xoops-icons.css?v=' . (int) filemtime(__DIR__ . '/css/xoops-icons.css') . '">' . "\n";
             $html .= '<script src="' . $editorPath . '/minified/sceditor.min.js"></script>' . "\n";
             $html .= '<script src="' . $editorPath . '/minified/formats/bbcode.js"></script>' . "\n";
             // Localized labels/prompts for the toolbar commands; must be published before
@@ -283,7 +283,7 @@ class FormSCEditor extends XoopsEditor
         // - without this, required-field validation could read a stale (empty) value.
         $html .= '    autoUpdate: true,' . "\n";
         // Content stylesheet for the editing area, per the upstream usage docs.
-        $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
+        $html .= '    style: ' . json_encode($editorPath . '/css/content.css?v=' . (int) filemtime(__DIR__ . '/css/content.css'), JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    toolbar: ' . json_encode(SCEditorConfig::toolbar($this->settings)) . ',' . "\n";
         $html .= '    plugins: ' . json_encode(implode(',', $plugins)) . ',' . "\n";
         if (null !== $dragdrop) {
@@ -297,6 +297,18 @@ class FormSCEditor extends XoopsEditor
         $html .= '    width: ' . json_encode($this->width, JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    height: ' . json_encode($this->height, JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
         $html .= '  });' . "\n";
+        // Autosave restores drafts on window.load; apply the initial view after its ready handler.
+        $html .= '  var editor = sceditor.instance(el);' . "\n";
+        $html .= '  if (editor) {' . "\n";
+        if ($this->settings['autoexpand']) {
+            // expandToContent does numeric arithmetic; CSS lengths such as "400px" yield NaN.
+            $html .= '    editor.opts.resizeMinHeight = editor.height();' . "\n";
+            $html .= '    editor.opts.resizeMaxHeight = -1;' . "\n";
+        }
+        $html .= '    var showVisual = function() { editor.sourceMode(false); };' . "\n";
+        $html .= '    if (document.readyState === "complete") { showVisual(); }' . "\n";
+        $html .= '    else { window.addEventListener("load", showVisual, {once: true}); }' . "\n";
+        $html .= '  }' . "\n";
         $html .= '});' . "\n";
         $html .= '</script>' . "\n";
 

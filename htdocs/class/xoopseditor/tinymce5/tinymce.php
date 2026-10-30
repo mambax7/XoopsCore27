@@ -95,7 +95,7 @@ class TinyMCE
             $configured[]              = 'language';
         }
 
-        $this->setting['content_css'] = implode(',', $this->loadCss());
+        $this->setting['content_css'] = implode(',', [...$this->loadCss(), XOOPS_URL . '/class/xoopseditor/content.css?v=' . (int) filemtime(__DIR__ . '/../content.css')]);
         $configured[]                 = 'content_css';
 
         if (!empty($this->config['theme']) && is_dir(XOOPS_ROOT_PATH . $this->rootpath . '/themes/' . $this->config['theme'])) {

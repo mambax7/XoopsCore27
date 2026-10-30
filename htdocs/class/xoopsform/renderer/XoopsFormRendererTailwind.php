@@ -337,7 +337,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
                 . self::ATTR_TITLE_LEAD . $this->esc(strip_tags((string) $name)) . '"'
                 . self::ATTR_VALUE . $this->esc($value) . '"'
                 . $checked . $extra . '>'
-                . '<span class="label-text">' . $this->esc((string) $name) . $delimiter . '</span>'
+                . '<span class="label-text">' . $this->renderOptionLabel((string) $name) . $delimiter . '</span>'
                 . '</label>';
         }
         $ret .= '</div>';
@@ -360,6 +360,27 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
         }
 
         return (string) $optionValue === (string) $current;
+    }
+
+    /**
+     * Keep message icons without allowing arbitrary markup or image event handlers in option labels.
+     */
+    protected function renderOptionLabel(string $label): string
+    {
+        if (stripos(ltrim($label), '<img ') === 0) {
+            $document = new \DOMDocument();
+            if ($document->loadHTML('<?xml encoding="UTF-8">' . $label, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING)) {
+                $image = $document->getElementsByTagName('img')->item(0);
+                if ($image instanceof \DOMElement) {
+                    $src = $image->getAttribute('src');
+                    if (str_starts_with($src, '/') || preg_match('~^https?://~i', $src)) {
+                        return '<img src="' . $this->esc($src) . '" alt="' . $this->esc($image->getAttribute('alt')) . '">';
+                    }
+                }
+            }
+        }
+
+        return $this->esc($label);
     }
 
     /**
