@@ -60,7 +60,7 @@ jobs:
         # cannot push directly. Push a fixed automation branch and let this
         # action open or update the PR; it no-ops when nothing changed.
         # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           # Intentional: GITHUB_TOKEN-created PRs do not trigger CI/Sonar
           # (GitHub recursion-prevention). That is fine here — master's
